@@ -155,6 +155,49 @@
         }
       }
     },
+    "no3ds_auto_capture_ideal": {
+      "grpc_req": {
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "no3ds_auto_capture_giropay": {
+      "grpc_req": {
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "no3ds_auto_capture_eps": {
+      "grpc_req": {
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "no3ds_auto_capture_przelewy24": {
+      "grpc_req": {
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "no3ds_auto_capture_bancontact": {
+      "grpc_req": {
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "no3ds_auto_capture_klarna": {
+      "grpc_req": {
+        "customer_id": "auto_generate",
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
     "no3ds_fail_payment": {
       "grpc_req": {
         "browser_info": {
@@ -171,6 +214,85 @@
       },
       "assert": {
         "error.connector_details.message": null
+      }
+    }
+  },
+  "refund": {
+    "refund_with_reason": {
+      "grpc_req": {
+        "reason": "CUSTOMER REQUEST"
+      }
+    }
+  },
+  "setup_recurring": {
+    "setup_recurring": {
+      "grpc_req": {
+        "return_url": "https://google.com",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5101180000000007"
+            },
+            "card_exp_month": {
+              "value": "03"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "setup_recurring_with_webhook": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5101180000000007"
+            },
+            "card_exp_month": {
+              "value": "03"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    },
+    "setup_recurring_with_order_context": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5101180000000007"
+            },
+            "card_exp_month": {
+              "value": "03"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "browser_info": {
+          "language": "en-US"
+        }
       }
     }
   }

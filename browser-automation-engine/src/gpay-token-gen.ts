@@ -790,7 +790,15 @@ async function main(): Promise<void> {
     storageState = storageStatePath;
     console.log("[gpay] Using saved browser session (storage state)");
   } catch {
-    console.log("[gpay] No saved session found — starting fresh");
+    console.log("[gpay] WARNING: No saved Google session found.");
+    console.log("[gpay]   GPay will require manual sign-in during the test flow.");
+    console.log("[gpay]   To avoid this, run one-time setup first:");
+    console.log("[gpay]");
+    console.log("[gpay]     cd browser-automation-engine && npm run gpay:login");
+    console.log("[gpay]");
+    console.log("[gpay]   This opens a browser for you to sign in to Google once.");
+    console.log("[gpay]   The session is reused for all future GPay runs.");
+    console.log();
   }
 
   let context: BrowserContext | undefined;

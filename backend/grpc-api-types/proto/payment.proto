@@ -3320,6 +3320,19 @@ message PaypalConfig {
   optional string base_url = 50;
 }
 
+message AciConfig {
+  SecretString api_key = 1;
+  SecretString entity_id = 2;
+  optional string base_url = 50;
+}
+
+message CheckoutConfig {
+  SecretString api_key = 1;
+  SecretString api_secret = 2;
+  SecretString processing_channel_id = 3;
+  optional string base_url = 50;
+}
+
 // ConnectorSpecificConfig message with oneof containing all connector configurations.
 // Comment above each field (e.g. "// PAYPAL = 62") is the Connector enum value from this file;
 message ConnectorSpecificConfig {
@@ -3545,5 +3558,11 @@ message ConnectorSpecificConfig {
 
     // PAYPAL = 62
     PaypalConfig paypal = 110;
+
+    // ACI = 2
+    AciConfig aci = 74;
+
+    // CHECKOUT = 16
+    CheckoutConfig checkout = 75;
   }
 }

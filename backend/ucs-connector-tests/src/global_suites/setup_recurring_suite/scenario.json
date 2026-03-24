@@ -85,7 +85,19 @@
       "customer_acceptance": {
         "acceptance_type": "OFFLINE"
       },
-      "setup_future_usage": "OFF_SESSION"
+      "setup_future_usage": "OFF_SESSION",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "mandate_reference.connector_mandate_id.connector_mandate_id": {
@@ -185,7 +197,19 @@
       },
       "setup_future_usage": "OFF_SESSION",
       "return_url": "https://example.com/payment/return",
-      "webhook_url": "https://example.com/payment/webhook"
+      "webhook_url": "https://example.com/payment/webhook",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "mandate_reference.connector_mandate_id.connector_mandate_id": {
@@ -288,7 +312,19 @@
       "order_category": "subscription",
       "return_url": "https://example.com/payment/return",
       "webhook_url": "https://example.com/payment/webhook",
-      "complete_authorize_url": "https://example.com/payment/complete"
+      "complete_authorize_url": "https://example.com/payment/complete",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "mandate_reference.connector_mandate_id.connector_mandate_id": {

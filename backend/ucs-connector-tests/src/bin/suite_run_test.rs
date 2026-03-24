@@ -10,10 +10,7 @@ use std::{fs, path::PathBuf};
 use serde::Deserialize;
 use serde_json::Value;
 use ucs_connector_tests::harness::{
-    report::{
-        append_report_batch_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms,
-        ReportEntry,
-    },
+    report::{append_report_batch_best_effort, extract_pm_and_pmt, now_epoch_ms, ReportEntry},
     scenario_api::{
         get_the_grpc_req_for_connector, run_all_connectors_with_options,
         run_all_suites_with_options, run_suite_test_with_options, ExecutionBackend,
@@ -85,10 +82,6 @@ fn main() {
         backend: ExecutionBackend::Grpcurl,
         report: args.report,
     };
-
-    if args.report {
-        clear_report();
-    }
 
     let mut report_entries = Vec::new();
 

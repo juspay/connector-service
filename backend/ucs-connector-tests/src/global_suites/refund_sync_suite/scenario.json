@@ -18,7 +18,8 @@
       "status": {
         "one_of": [
           "REFUND_SUCCESS",
-          "PENDING"
+          "PENDING",
+          "REFUND_PENDING"
         ]
       },
       "error": {
@@ -47,7 +48,8 @@
       "status": {
         "one_of": [
           "REFUND_SUCCESS",
-          "PENDING"
+          "PENDING",
+          "REFUND_PENDING"
         ]
       },
       "error": {

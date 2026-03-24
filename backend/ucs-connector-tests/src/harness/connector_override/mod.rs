@@ -6,6 +6,7 @@ use crate::harness::scenario_types::{FieldAssert, ScenarioError};
 
 mod cybersource;
 mod default;
+mod helcim;
 mod json_merge;
 mod loader;
 
@@ -66,6 +67,10 @@ impl OverrideRegistry {
     pub fn resolve(&self, connector: &str) -> Box<dyn ConnectorOverride> {
         if connector.eq_ignore_ascii_case("cybersource") {
             return Box::new(cybersource::CybersourceConnectorOverride::new());
+        }
+
+        if connector.eq_ignore_ascii_case("helcim") {
+            return Box::new(helcim::HelcimConnectorOverride::new());
         }
 
         Box::new(default::DefaultConnectorOverride::new(

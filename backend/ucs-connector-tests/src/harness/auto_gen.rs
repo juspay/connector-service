@@ -163,9 +163,15 @@ where
     Ok(tree.current())
 }
 
-/// Generates `<prefix>_<uuid>` helper identifiers.
+/// Generates `<prefix>_<short-uuid>` helper identifiers.
+///
+/// Uses the first 24 hex characters of a UUIDv4 (96 bits of entropy) to keep
+/// the total length ≤ 28 characters (e.g. `mti_<24hex>`). Some connectors such
+/// as TrustPay (max 35) and Nexinets (max 30) reject longer merchant reference
+/// values.
 fn prefixed_uuid(prefix: &str) -> String {
-    format!("{prefix}_{}", Uuid::new_v4().simple())
+    let full = Uuid::new_v4().simple().to_string();
+    format!("{prefix}_{}", &full[..24])
 }
 
 fn email_strategy() -> BoxedStrategy<String> {

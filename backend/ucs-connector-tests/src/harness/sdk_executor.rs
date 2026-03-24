@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
-use connector_service_ffi::errors::UniffiError;
 use grpc_api_types::payments::{
-    self, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
-    FfiOptions, RequestError, ResponseError,
+    self, ffi_result, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest,
+    FfiConnectorHttpResponse, FfiOptions, FfiResult, RequestError, ResponseError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -17,8 +16,8 @@ use crate::harness::{
     scenario_types::ScenarioError,
 };
 
-type RequestTransformer = fn(Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>;
-type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>;
+type RequestTransformer = fn(Vec<u8>, Vec<u8>) -> Vec<u8>;
+type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>;
 
 /// Returns whether a suite is currently wired for SDK/FFI execution.
 pub fn supports_sdk_suite(suite: &str) -> bool {
@@ -195,55 +194,91 @@ where
     let request_payload: Req = parse_sdk_payload(suite, scenario, connector, grpc_req)?;
     let request_bytes = request_payload.encode_to_vec();
 
-    let ffi_http_request_bytes = req_transformer(request_bytes.clone(), options_bytes.to_vec())
-        .map_err(|error| ScenarioError::SdkExecution {
+    // Run request transformer — returns encoded FfiResult bytes.
+    let req_result_bytes = req_transformer(request_bytes.clone(), options_bytes.to_vec());
+    let req_result = FfiResult::decode(req_result_bytes.as_slice()).map_err(|e| {
+        ScenarioError::SdkExecution {
             message: format!(
-                "sdk request transformer invocation failed for '{}/{}': {:?}",
-                suite, scenario, error
+                "sdk request transformer returned invalid FfiResult for '{}/{}': {}",
+                suite, scenario, e
             ),
-        })?;
+        }
+    })?;
 
-    let ffi_http_request = FfiConnectorHttpRequest::decode(ffi_http_request_bytes.as_slice())
-        .map_err(|decode_error| {
-            if let Ok(request_error) = RequestError::decode(ffi_http_request_bytes.as_slice()) {
-                return map_request_error("request transformer", suite, scenario, request_error);
-            }
-
-            ScenarioError::SdkExecution {
+    let ffi_http_request = match req_result.payload {
+        Some(ffi_result::Payload::HttpRequest(http_request)) => http_request,
+        Some(ffi_result::Payload::IntegrationError(ie)) => {
+            return Err(ScenarioError::SdkExecution {
                 message: format!(
-                    "sdk decode failed for '{}'/'{}' request bytes: {}",
-                    suite, scenario, decode_error
+                    "sdk request transformer failed for '{}/{}': {} (code: {})",
+                    suite, scenario, ie.error_message, ie.error_code
                 ),
-            }
-        })?;
+            });
+        }
+        other => {
+            return Err(ScenarioError::SdkExecution {
+                message: format!(
+                    "sdk request transformer returned unexpected FfiResult variant for '{}/{}': {:?}",
+                    suite, scenario, other
+                ),
+            });
+        }
+    };
 
     let ffi_http_response = execute_connector_http_request(ffi_http_request, suite, scenario)?;
     let ffi_http_response_bytes = ffi_http_response.encode_to_vec();
 
-    let proto_response_bytes = res_transformer(
+    // Run response transformer — also returns encoded FfiResult bytes.
+    let res_result_bytes = res_transformer(
         ffi_http_response_bytes,
         request_bytes,
         options_bytes.to_vec(),
-    )
-    .map_err(|error| ScenarioError::SdkExecution {
-        message: format!(
-            "sdk response transformer invocation failed for '{}/{}': {:?}",
-            suite, scenario, error
-        ),
-    })?;
-
-    let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|decode_error| {
-        if let Ok(response_error) = ResponseError::decode(proto_response_bytes.as_slice()) {
-            return map_response_error("response transformer", suite, scenario, response_error);
-        }
-
+    );
+    let res_result = FfiResult::decode(res_result_bytes.as_slice()).map_err(|e| {
         ScenarioError::SdkExecution {
             message: format!(
-                "sdk decode failed for '{}'/'{}' response bytes: {}",
-                suite, scenario, decode_error
+                "sdk response transformer returned invalid FfiResult for '{}/{}': {}",
+                suite, scenario, e
             ),
         }
     })?;
+
+    let ffi_http_response_inner = match res_result.payload {
+        Some(ffi_result::Payload::HttpResponse(http_response)) => http_response,
+        Some(ffi_result::Payload::ConnectorResponseTransformationError(cre)) => {
+            return Err(ScenarioError::SdkExecution {
+                message: format!(
+                    "sdk response transformer failed for '{}/{}': {} (code: {})",
+                    suite, scenario, cre.error_message, cre.error_code
+                ),
+            });
+        }
+        other => {
+            return Err(ScenarioError::SdkExecution {
+                message: format!(
+                    "sdk response transformer returned unexpected FfiResult variant for '{}/{}': {:?}",
+                    suite, scenario, other
+                ),
+            });
+        }
+    };
+
+    // The body of the HTTP response payload contains the encoded proto response.
+    let proto_response =
+        Res::decode(ffi_http_response_inner.body.as_slice()).map_err(|decode_error| {
+            if let Ok(response_error) =
+                ResponseError::decode(ffi_http_response_inner.body.as_slice())
+            {
+                return map_response_error("response transformer", suite, scenario, response_error);
+            }
+
+            ScenarioError::SdkExecution {
+                message: format!(
+                    "sdk decode failed for '{}'/'{}' response bytes: {}",
+                    suite, scenario, decode_error
+                ),
+            }
+        })?;
 
     serde_json::to_string_pretty(&proto_response)
         .map_err(|source| ScenarioError::JsonSerialize { source })

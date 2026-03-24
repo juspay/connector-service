@@ -4,6 +4,7 @@
     "authorize",
     "capture",
     "void",
-    "get"
+    "get",
+    "refund"
   ]
 }

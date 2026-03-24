@@ -3,7 +3,14 @@
   "suite_type": "dependent",
   "depends_on": [
     "create_access_token",
-    "create_customer"
+    "create_customer",
+    {
+      "suite": "tokenize_payment_method",
+      "context_map": {
+        "payment_method_token.value": "res.payment_method_token"
+      }
+    }
   ],
+  "dependency_scope": "scenario",
   "strict_dependencies": false
 }

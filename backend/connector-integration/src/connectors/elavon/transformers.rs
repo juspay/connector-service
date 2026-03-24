@@ -461,29 +461,29 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+            #[serde(default, alias = "errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorName")]
             error_name: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResult")]
             ssl_result: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTxnId")]
             ssl_txn_id: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResultMessage")]
             ssl_result_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslToken")]
             ssl_token: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTokenResponse")]
             ssl_token_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslApprovalCode")]
             ssl_approval_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTransactionType")]
             ssl_transaction_type: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslCvv2Response")]
             ssl_cvv2_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslAvsResponse")]
             ssl_avs_response: Option<String>,
         }
 
@@ -547,29 +547,29 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+            #[serde(default, alias = "errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorName")]
             error_name: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResult")]
             ssl_result: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTxnId")]
             ssl_txn_id: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResultMessage")]
             ssl_result_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslToken")]
             ssl_token: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTokenResponse")]
             ssl_token_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslApprovalCode")]
             ssl_approval_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTransactionType")]
             ssl_transaction_type: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslCvv2Response")]
             ssl_cvv2_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslAvsResponse")]
             ssl_avs_response: Option<String>,
         }
 
@@ -633,29 +633,29 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+            #[serde(default, alias = "errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "errorName")]
             error_name: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResult")]
             ssl_result: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTxnId")]
             ssl_txn_id: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslResultMessage")]
             ssl_result_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslToken")]
             ssl_token: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTokenResponse")]
             ssl_token_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslApprovalCode")]
             ssl_approval_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslTransactionType")]
             ssl_transaction_type: Option<String>,
-            #[serde(default)]
+            #[serde(default, alias = "sslCvv2Response")]
             ssl_cvv2_response: Option<Secret<String>>,
-            #[serde(default)]
+            #[serde(default, alias = "sslAvsResponse")]
             ssl_avs_response: Option<String>,
         }
 

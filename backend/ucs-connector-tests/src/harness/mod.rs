@@ -6,6 +6,7 @@
 
 pub mod auto_gen;
 pub mod connector_override;
+pub mod cred_masking;
 pub mod credentials;
 pub mod executor;
 pub mod metadata;

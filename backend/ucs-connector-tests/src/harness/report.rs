@@ -17,7 +17,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::harness::scenario_loader::load_suite_spec;
+use crate::harness::cred_masking::{mask_json_value, mask_sensitive_text};
+use crate::harness::scenario_loader::{
+    discover_all_connectors, load_connector_spec, load_suite_spec,
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -242,23 +245,69 @@ pub fn extract_pm_and_pmt(grpc_req: Option<&Value>) -> (Option<String>, Option<S
 // Markdown generation
 // ---------------------------------------------------------------------------
 
-/// Canonical suite ordering for table rows.
+/// Canonical suite ordering for table columns.
+/// Core payment flows come first, then recurring/mandate flows, then auxiliary
+/// setup flows (customer, auth/3DS, tokens) at the end.
 const SUITE_ORDER: &[&str] = &[
-    "create_access_token",
-    "create_customer",
-    "pre_authenticate",
-    "authenticate",
-    "post_authenticate",
+    // Core payment flows
     "authorize",
-    "complete_authorize",
     "capture",
     "void",
     "refund",
     "get",
     "refund_sync",
+    "complete_authorize",
+    // Recurring / mandate flows
     "setup_recurring",
     "recurring_charge",
+    "revoke_mandate",
+    // Auxiliary / setup flows
+    "create_access_token",
+    "create_customer",
+    "pre_authenticate",
+    "authenticate",
+    "post_authenticate",
 ];
+
+/// Human-readable display names for suite columns.
+fn suite_display_name(suite: &str) -> String {
+    let name = match suite {
+        "authorize" => "Authorize",
+        "capture" => "Capture",
+        "void" => "Void",
+        "refund" => "Refund",
+        "get" => "Payment Sync",
+        "refund_sync" => "Refund Sync",
+        "complete_authorize" => "Complete Auth",
+        "setup_recurring" => "Setup Mandate",
+        "recurring_charge" => "Mandate Pay",
+        "revoke_mandate" => "Revoke Mandate",
+        "create_access_token" => "Create Token",
+        "create_customer" => "Customer",
+        "pre_authenticate" => "Pre Auth",
+        "authenticate" => "Auth",
+        "post_authenticate" => "Post Auth",
+        "create_session_token" => "Session Token",
+        "create_sdk_session_token" => "SDK Session",
+        "tokenize_payment_method" => "Tokenize PM",
+        "incremental_authorization" => "Incremental Auth",
+        "create_order" => "Create Order",
+        other => {
+            return other
+                .split('_')
+                .map(|w| {
+                    let mut c = w.chars();
+                    match c.next() {
+                        None => String::new(),
+                        Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+    };
+    name.to_string()
+}
 
 fn suite_service_name(suite: &str) -> String {
     let known = match suite {
@@ -322,8 +371,6 @@ struct MatrixEntry {
     grpc_response: Option<String>,
 }
 
-const MASKED_VALUE: &str = "***MASKED***";
-
 fn sanitize_report_entry_in_place(entry: &mut ReportEntry) {
     if let Some(error) = entry.error.as_mut() {
         *error = mask_sensitive_text(error);
@@ -344,125 +391,6 @@ fn sanitize_report_entry_in_place(entry: &mut ReportEntry) {
     if let Some(res_body) = entry.res_body.as_mut() {
         mask_json_value(res_body);
     }
-}
-
-fn normalize_sensitive_key(key: &str) -> String {
-    key.chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .map(|ch| ch.to_ascii_lowercase())
-        .collect()
-}
-
-fn is_sensitive_key(key: &str) -> bool {
-    let key = normalize_sensitive_key(key);
-    key.contains("secret")
-        || key.contains("token")
-        || key.contains("password")
-        || key.contains("authorization")
-        || key == "apikey"
-        || key == "xapikey"
-        || key == "xauth"
-        || key == "key1"
-        || key == "xkey1"
-        || key == "key2"
-        || key == "xkey2"
-        || key.contains("signature")
-        || key.contains("cardnumber")
-        || key.contains("cvv")
-        || key.contains("cvc")
-        || key == "expmonth"
-        || key == "expyear"
-}
-
-fn mask_json_value(value: &mut Value) {
-    match value {
-        Value::Object(map) => {
-            for (key, child) in map.iter_mut() {
-                if is_sensitive_key(key) {
-                    *child = Value::String(MASKED_VALUE.to_string());
-                } else {
-                    mask_json_value(child);
-                }
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                mask_json_value(item);
-            }
-        }
-        Value::String(text) => {
-            *text = mask_sensitive_text(text);
-        }
-        _ => {}
-    }
-}
-
-fn mask_sensitive_text(text: &str) -> String {
-    let mut masked_lines = Vec::new();
-    for line in text.lines() {
-        let line = mask_sensitive_header_line(line);
-        masked_lines.push(mask_bearer_tokens(&line));
-    }
-    masked_lines.join("\n")
-}
-
-fn mask_sensitive_header_line(line: &str) -> String {
-    let Some(colon_index) = line.find(':') else {
-        return line.to_string();
-    };
-
-    let key_candidate = line[..colon_index]
-        .split_whitespace()
-        .last()
-        .unwrap_or_default()
-        .trim_matches('"')
-        .trim_matches('>')
-        .trim_matches('<');
-
-    if !is_sensitive_key(key_candidate) {
-        return line.to_string();
-    }
-
-    let mut masked = format!("{} {}", &line[..=colon_index], MASKED_VALUE);
-    if line[colon_index + 1..].contains('"') {
-        masked.push('"');
-    }
-    if line.trim_end().ends_with('\\') {
-        masked.push_str(" \\");
-    }
-    masked
-}
-
-fn mask_bearer_tokens(line: &str) -> String {
-    let mut masked = line.to_string();
-    let mut search_start = 0usize;
-
-    loop {
-        if search_start >= masked.len() {
-            break;
-        }
-
-        let lowercase = masked.to_ascii_lowercase();
-        let Some(relative_start) = lowercase[search_start..].find("bearer ") else {
-            break;
-        };
-
-        let start = search_start + relative_start;
-
-        let token_start = start + "bearer ".len();
-        let token_end = masked[token_start..]
-            .find(|ch: char| ch.is_whitespace() || ch == '"' || ch == '\'' || ch == ',')
-            .map(|offset| token_start + offset)
-            .unwrap_or(masked.len());
-
-        if &masked[token_start..token_end] != MASKED_VALUE {
-            masked.replace_range(token_start..token_end, MASKED_VALUE);
-            search_start = token_start + MASKED_VALUE.len();
-        } else {
-            search_start = token_end;
-        }
-    }
-    masked
 }
 
 fn sanitize_anchor(value: &str) -> String {
@@ -591,25 +519,7 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         )
     })?;
 
-    let scenarios_dir = report_dir.join("scenarios");
-    if scenarios_dir.exists() {
-        fs::remove_dir_all(&scenarios_dir).map_err(|e| {
-            format!(
-                "failed to clear scenario report directory '{}': {e}",
-                scenarios_dir.display()
-            )
-        })?;
-    }
-
     let connectors_dir = report_dir.join("connectors");
-    if connectors_dir.exists() {
-        fs::remove_dir_all(&connectors_dir).map_err(|e| {
-            format!(
-                "failed to clear connector report directory '{}': {e}",
-                connectors_dir.display()
-            )
-        })?;
-    }
     fs::create_dir_all(&connectors_dir).map_err(|e| {
         format!(
             "failed to create connector report directory '{}': {e}",
@@ -661,65 +571,74 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         }
     }
 
-    if deduped.is_empty() {
-        let overview_path = md_path(json_path);
-        fs::write(
-            &overview_path,
-            "# UCS Connector Test Report
-
-> No test results found.
-",
-        )
-        .map_err(|e| {
-            format!(
-                "failed to write markdown '{}': {e}",
-                overview_path.display()
-            )
-        })?;
-
-        let legacy_md = legacy_md_path(json_path);
-        if legacy_md.exists() {
-            let _ = fs::remove_file(legacy_md);
-        }
-
-        return Ok(());
-    }
-
-    // 2. Collect connectors and suites.
-    let connectors: Vec<String> = {
+    // 2. Build full connector × suite universe from specs.json files.
+    //    Falls back to only tested connectors/suites when discovery fails.
+    let all_connectors: Vec<String> = discover_all_connectors().unwrap_or_else(|_| {
         let mut set = BTreeSet::new();
         for entry in deduped.values() {
             set.insert(entry.connector.clone());
         }
         set.into_iter().collect()
-    };
+    });
 
-    let mut suites: Vec<String> = {
-        let mut set = BTreeSet::new();
-        for entry in deduped.values() {
-            set.insert(entry.suite.clone());
+    // Map: connector -> set of supported suites (from specs.json)
+    let mut connector_supported_suites: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut all_suites_set = BTreeSet::new();
+    for connector in &all_connectors {
+        if let Ok(Some(spec)) = load_connector_spec(connector) {
+            let suite_set: BTreeSet<String> = spec.supported_suites.into_iter().collect();
+            for suite in &suite_set {
+                all_suites_set.insert(suite.clone());
+            }
+            connector_supported_suites.insert(connector.clone(), suite_set);
         }
-        set.into_iter().collect()
-    };
-    suites.sort_by(|left, right| {
-        suite_sort_key(left)
-            .cmp(&suite_sort_key(right))
+    }
+    // Also include any suites that appear in test results but not in specs
+    for entry in deduped.values() {
+        all_suites_set.insert(entry.suite.clone());
+    }
+
+    // Sort suites: first by SUITE_ORDER, then by popularity (# connectors supporting), then alphabetically
+    let mut all_suites: Vec<String> = all_suites_set.into_iter().collect();
+    all_suites.sort_by(|left, right| {
+        let left_key = suite_sort_key(left);
+        let right_key = suite_sort_key(right);
+        left_key
+            .cmp(&right_key)
+            .then_with(|| {
+                // For suites not in SUITE_ORDER, sort by popularity descending
+                let left_count = connector_supported_suites
+                    .values()
+                    .filter(|suites| suites.contains(left))
+                    .count();
+                let right_count = connector_supported_suites
+                    .values()
+                    .filter(|suites| suites.contains(right))
+                    .count();
+                right_count.cmp(&left_count)
+            })
             .then_with(|| left.cmp(right))
     });
 
-    let mut connector_suite_map: BTreeMap<(String, String), Vec<MatrixEntry>> = BTreeMap::new();
-    for entry in deduped.values() {
-        connector_suite_map
-            .entry((entry.connector.clone(), entry.suite.clone()))
-            .or_default()
-            .push(entry.clone());
-    }
-    for entries in connector_suite_map.values_mut() {
-        entries.sort_by(|left, right| left.scenario.cmp(&right.scenario));
-    }
+    let connector_suite_map: BTreeMap<(String, String), Vec<MatrixEntry>> = {
+        let mut map: BTreeMap<(String, String), Vec<MatrixEntry>> = BTreeMap::new();
+        for entry in deduped.values() {
+            map.entry((entry.connector.clone(), entry.suite.clone()))
+                .or_default()
+                .push(entry.clone());
+        }
+        for entries in map.values_mut() {
+            entries.sort_by(|left, right| left.scenario.cmp(&right.scenario));
+        }
+        map
+    };
 
-    // 3. Build overview markdown.
-    let mut md = String::with_capacity(4096);
+    // Compute tested connectors set for summary
+    let tested_connectors: BTreeSet<String> =
+        deduped.values().map(|e| e.connector.clone()).collect();
+
+    // 3. Build overview markdown with full matrix.
+    let mut md = String::with_capacity(8192);
     md.push_str(
         "# UCS Connector Test Report
 
@@ -735,29 +654,51 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
 "
     ));
 
+    // Summary statistics
+    let total_entries: usize = connector_suite_map.values().map(|v| v.len()).sum();
+    let total_passed: usize = connector_suite_map
+        .values()
+        .flat_map(|v| v.iter())
+        .filter(|e| e.result == "PASS")
+        .count();
+    let total_failed = total_entries.saturating_sub(total_passed);
+    md.push_str(&format!(
+        "**Summary**: {} connectors discovered, {} tested | {} passed, {} failed across {} scenarios\n\n",
+        all_connectors.len(),
+        tested_connectors.len(),
+        total_passed,
+        total_failed,
+        total_entries
+    ));
+
     md.push_str(
         "## Connector Flow Matrix
 
 ",
     );
+    md.push_str(
+        "Legend: percentage = tested (links to details), `—` = supported but not yet tested, `-` = not supported\n\n",
+    );
 
     md.push_str("| Connector |");
-    for suite in &suites {
-        md.push_str(&format!(" {} |", suite));
+    for suite in &all_suites {
+        md.push_str(&format!(" {} |", suite_display_name(suite)));
     }
     md.push('\n');
 
     md.push_str("|:----------|");
-    for _ in &suites {
+    for _ in &all_suites {
         md.push_str(":------:|");
     }
     md.push('\n');
 
-    for connector in &connectors {
+    for connector in &all_connectors {
         md.push_str(&format!("| `{}` |", connector));
-        for suite in &suites {
+        let supported = connector_supported_suites.get(connector);
+        for suite in &all_suites {
             let key = (connector.clone(), suite.clone());
             if let Some(entries) = connector_suite_map.get(&key) {
+                // Tested: show pass rate with link
                 let total = entries.len();
                 let passed = entries
                     .iter()
@@ -765,7 +706,11 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
                     .count();
                 let link = connector_suite_relative_path(connector, suite);
                 md.push_str(&format!(" [{:.1}%]({}) |", percent(passed, total), link));
+            } else if supported.is_some_and(|s| s.contains(suite)) {
+                // Supported but not tested
+                md.push_str(" — |");
             } else {
+                // Not supported
                 md.push_str(" - |");
             }
         }
@@ -783,7 +728,7 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
     fs::write(&out_path, &md)
         .map_err(|e| format!("failed to write markdown '{}': {e}", out_path.display()))?;
 
-    // 5. Write connector suite + scenario detail markdown files.
+    // 5. Write connector suite + scenario detail markdown files (only for tested data).
     for ((connector, suite), entries) in &connector_suite_map {
         let suite_path = connector_suite_file_path(&report_dir, connector, suite);
         if let Some(parent) = suite_path.parent() {
@@ -1100,6 +1045,7 @@ mod tests {
     use std::fs;
 
     use super::*;
+    use crate::harness::cred_masking::MASKED_VALUE;
 
     #[test]
     fn extract_pm_and_pmt_from_card_request() {
@@ -1126,13 +1072,20 @@ mod tests {
 
     #[test]
     fn suite_ordering_is_consistent() {
-        assert!(suite_sort_key("create_access_token") < suite_sort_key("authorize"));
+        // Core payment flows come first
         assert!(suite_sort_key("authorize") < suite_sort_key("capture"));
         assert!(suite_sort_key("capture") < suite_sort_key("refund"));
         assert!(suite_sort_key("refund") < suite_sort_key("get"));
         assert!(suite_sort_key("get") < suite_sort_key("refund_sync"));
+        // Recurring flows come next
         assert!(suite_sort_key("refund_sync") < suite_sort_key("setup_recurring"));
         assert!(suite_sort_key("setup_recurring") < suite_sort_key("recurring_charge"));
+        // Auxiliary flows come last
+        assert!(suite_sort_key("recurring_charge") < suite_sort_key("create_access_token"));
+        assert!(suite_sort_key("create_access_token") < suite_sort_key("create_customer"));
+        assert!(suite_sort_key("create_customer") < suite_sort_key("pre_authenticate"));
+        assert!(suite_sort_key("pre_authenticate") < suite_sort_key("authenticate"));
+        assert!(suite_sort_key("authenticate") < suite_sort_key("post_authenticate"));
     }
 
     #[test]
@@ -1362,8 +1315,8 @@ mod tests {
     #[test]
     fn bearer_masking_is_idempotent_and_masks_multiple_tokens() {
         let line = "authorization: Bearer abc123 Bearer ***MASKED*** Bearer def456";
-        let masked_once = mask_bearer_tokens(line);
-        let masked_twice = mask_bearer_tokens(&masked_once);
+        let masked_once = mask_sensitive_text(line);
+        let masked_twice = mask_sensitive_text(&masked_once);
 
         assert_eq!(masked_once, masked_twice);
         assert!(!masked_once.contains("abc123"));

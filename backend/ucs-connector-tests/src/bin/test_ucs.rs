@@ -31,9 +31,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use ucs_connector_tests::harness::{
     credentials::load_connector_config,
-    report::{
-        append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,
-    },
+    report::{append_report_batch_best_effort, extract_pm_and_pmt, now_epoch_ms, ReportEntry},
     scenario_api::{
         get_the_grpc_req_for_connector, run_all_suites_with_options,
         run_scenario_test_with_options, run_suite_test_with_options, ExecutionBackend,
@@ -191,9 +189,6 @@ fn run_non_interactive(args: &[String]) -> Result<(), String> {
     };
 
     println!("[test_ucs] non-interactive run starting...");
-    if report {
-        clear_report();
-    }
 
     let (passed, failed, skipped) = execute_plan(
         &connector_selection,
@@ -457,9 +452,6 @@ fn run_interactive(args: &[String]) -> Result<(), String> {
     };
 
     println!("\n[test_ucs] starting run...");
-    if report {
-        clear_report();
-    }
 
     let (passed, failed, skipped) = execute_plan(
         &connector_selection,
@@ -488,7 +480,8 @@ fn build_equivalent_command(
     endpoint: &str,
     report: bool,
 ) -> String {
-    let mut parts = vec!["make cargo ARGS=\"run -p ucs-connector-tests --bin test_ucs --".to_string()];
+    let mut parts =
+        vec!["make cargo ARGS=\"run -p ucs-connector-tests --bin test_ucs --".to_string()];
 
     match connector_selection {
         ConnectorSelection::All(_) => parts.push("--all-connectors".to_string()),
@@ -637,6 +630,8 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
         return;
     }
 
+    let mut batch: Vec<ReportEntry> = Vec::new();
+
     for result in &summary.results {
         let template_req =
             get_the_grpc_req_for_connector(&result.suite, &result.scenario, &summary.connector)
@@ -644,7 +639,7 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
         let req_for_report = result.req_body.as_ref().or(template_req.as_ref());
         let (pm, pmt) = extract_pm_and_pmt(req_for_report);
         if report {
-            write_report_entry(
+            batch.push(build_report_entry(
                 &result.suite,
                 &result.scenario,
                 &summary.connector,
@@ -666,7 +661,7 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
                 result.res_body.clone(),
                 result.grpc_request.clone(),
                 result.grpc_response.clone(),
-            );
+            ));
         }
 
         if result.passed {
@@ -687,6 +682,10 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
                 compact_error_for_console(result.error.as_deref())
             );
         }
+    }
+
+    if !batch.is_empty() {
+        append_report_batch_best_effort(batch);
     }
 
     println!(
@@ -738,7 +737,7 @@ fn truncate_for_console(text: &str, max_chars: usize) -> String {
     }
 }
 
-fn write_report_entry(
+fn build_report_entry(
     suite: &str,
     scenario: &str,
     connector: &str,
@@ -754,8 +753,8 @@ fn write_report_entry(
     res_body: Option<Value>,
     grpc_request: Option<String>,
     grpc_response: Option<String>,
-) {
-    append_report_best_effort(ReportEntry {
+) -> ReportEntry {
+    ReportEntry {
         run_at_epoch_ms: now_epoch_ms(),
         suite: suite.to_string(),
         scenario: scenario.to_string(),
@@ -772,7 +771,7 @@ fn write_report_entry(
         res_body,
         grpc_request,
         grpc_response,
-    });
+    }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

@@ -297,8 +297,14 @@ if [[ "${SKIP_NETLIFY}" != "1" && -z "${NETLIFY_AUTH_TOKEN:-}" ]]; then
         POLL_STATUS=$(echo "${POLL_RESULT}" | grep -o '"status": *"[^"]*"' | sed 's/"status": *"//;s/"//' || true)
 
         if [[ "${POLL_STATUS}" == "authorized" ]]; then
-          # Read the token from the netlify config file that the CLI just wrote
-          NETLIFY_CONFIG="${HOME}/.config/netlify/config.json"
+          # Read the token from the netlify config file that the CLI just wrote.
+          # The Netlify CLI uses env-paths which varies by OS:
+          #   macOS:  ~/Library/Preferences/netlify/config.json
+          #   Linux:  ${XDG_CONFIG_HOME:-~/.config}/netlify/config.json
+          case "$(uname -s)" in
+            Darwin*) NETLIFY_CONFIG="${HOME}/Library/Preferences/netlify/config.json" ;;
+            *)       NETLIFY_CONFIG="${XDG_CONFIG_HOME:-${HOME}/.config}/netlify/config.json" ;;
+          esac
           if [[ -f "${NETLIFY_CONFIG}" ]]; then
             POLL_TOKEN=$(python3 -c "
 import json, sys
@@ -383,8 +389,22 @@ if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
     # Generate a stable site name from the machine hostname + repo name
     SITE_SLUG="ucs-gpay-$(hostname -s | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/-*$//')-$(date +%s)"
 
+    # Discover the user's Netlify account slug so sites:create doesn't prompt
+    # interactively.  The API returns a JSON array; we pick the first account.
+    ACCOUNT_SLUG=$(cd "${BAE_DIR}" && ${NETLIFY_CMD} api listAccountsForUser \
+      --auth "${NETLIFY_AUTH_TOKEN}" 2>/dev/null \
+      | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['slug'])" 2>/dev/null || true)
+
+    # Note: --json is not supported by all Netlify CLI versions for sites:create,
+    # so we parse the plain-text output instead.  --disable-linking prevents the
+    # CLI from writing its own .netlify/state.json in a potentially wrong location.
     CREATE_OUTPUT=$(cd "${BAE_DIR}" && NETLIFY_AUTH_TOKEN="${NETLIFY_AUTH_TOKEN}" \
-      ${NETLIFY_CMD} sites:create --name "${SITE_SLUG}" --json 2>&1) || {
+      ${NETLIFY_CMD} sites:create \
+        --name "${SITE_SLUG}" \
+        --disable-linking \
+        --auth "${NETLIFY_AUTH_TOKEN}" \
+        ${ACCOUNT_SLUG:+--account-slug "${ACCOUNT_SLUG}"} \
+        2>&1) || {
       warn "Could not create Netlify site automatically."
       warn "Create one manually at https://app.netlify.com and then link it:"
       warn "  cd browser-automation-engine && netlify link"
@@ -394,7 +414,8 @@ if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
     }
 
     if [[ "${SKIP_NETLIFY}" != "1" ]]; then
-      SITE_ID=$(echo "${CREATE_OUTPUT}" | grep -o '"id": *"[^"]*"' | head -1 | sed 's/"id": *"//;s/"//')
+      # Plain-text output contains a line like:  "Project ID: <uuid>"
+      SITE_ID=$(echo "${CREATE_OUTPUT}" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
       if [[ -z "${SITE_ID}" ]]; then
         warn "Could not extract site ID from create output. Raw output:"
         echo "${CREATE_OUTPUT}" | sed 's/^/    /'
@@ -516,6 +537,42 @@ LAUNCHER
   success "You can now run:  test-prism"
 fi
 
+# ── Step 8: Google Pay session setup ──────────────────────────────────────────
+GPAY_PROFILE_DIR="${BAE_DIR}/gpay/.webkit-profile"
+GPAY_STORAGE_STATE="${GPAY_PROFILE_DIR}/storage-state.json"
+
+if [[ -f "${GPAY_STORAGE_STATE}" ]]; then
+  success "Google Pay session found: ${GPAY_STORAGE_STATE}"
+else
+  info "Google Pay requires a one-time Google sign-in."
+  echo ""
+  echo "  This opens a WebKit browser where you sign in to your Google account."
+  echo "  The session is saved locally and reused for all future GPay test runs."
+  echo ""
+
+  # Only prompt if stdin is a terminal (interactive mode)
+  if [[ -t 0 ]]; then
+    read -rp "  Sign in to Google now? [Y/n] " gpay_login_answer
+    gpay_login_answer="${gpay_login_answer:-Y}"
+    if [[ "${gpay_login_answer}" =~ ^[Yy] ]]; then
+      info "Launching Google sign-in browser..."
+      (cd "${BAE_DIR}" && npm run gpay:login 2>&1) || {
+        warn "Google sign-in failed or was cancelled."
+        warn "You can run it later:  cd browser-automation-engine && npm run gpay:login"
+      }
+      if [[ -f "${GPAY_STORAGE_STATE}" ]]; then
+        success "Google Pay session saved successfully."
+      fi
+    else
+      warn "Skipped Google sign-in."
+      warn "Run later:  cd browser-automation-engine && npm run gpay:login"
+    fi
+  else
+    warn "Non-interactive terminal — skipping Google sign-in."
+    warn "Run manually:  cd browser-automation-engine && npm run gpay:login"
+  fi
+fi
+
 # ── Done ───────────────────────────────────────────────────────────────────────
 # Write setup sentinel so test-prism knows setup has been completed.
 mkdir -p "${UCS_CONFIG_DIR}"
@@ -533,9 +590,15 @@ echo "  Full usage:                                test-prism --help"
 echo ""
 
 if [[ -n "${GPAY_HOSTED_URL:-}" ]]; then
-  echo "  Google Pay support: ENABLED (${GPAY_HOSTED_URL})"
+  echo "  Google Pay hosted URL: ENABLED (${GPAY_HOSTED_URL})"
 else
-  echo "  Google Pay support: DISABLED (GPAY_HOSTED_URL not set)"
+  echo "  Google Pay hosted URL: DISABLED (GPAY_HOSTED_URL not set)"
   echo "  To enable: set GPAY_HOSTED_URL or allow Netlify deploy during setup"
+fi
+
+if [[ -f "${GPAY_STORAGE_STATE}" ]]; then
+  echo "  Google Pay session:    SAVED (${GPAY_STORAGE_STATE})"
+else
+  echo "  Google Pay session:    NOT SET — run: cd browser-automation-engine && npm run gpay:login"
 fi
 echo ""

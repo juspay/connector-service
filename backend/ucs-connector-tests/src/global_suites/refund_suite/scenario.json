@@ -23,7 +23,8 @@
       "status": {
         "one_of": [
           "REFUND_SUCCESS",
-          "PENDING"
+          "PENDING",
+          "REFUND_PENDING"
         ]
       },
       "connector_refund_id": {
@@ -59,7 +60,8 @@
       "status": {
         "one_of": [
           "REFUND_SUCCESS",
-          "PENDING"
+          "PENDING",
+          "REFUND_PENDING"
         ]
       },
       "connector_refund_id": {
@@ -95,7 +97,8 @@
       "status": {
         "one_of": [
           "REFUND_SUCCESS",
-          "PENDING"
+          "PENDING",
+          "REFUND_PENDING"
         ]
       },
       "connector_refund_id": {

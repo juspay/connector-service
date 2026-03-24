@@ -4,6 +4,7 @@
     "pre_authenticate",
     "authenticate",
     "post_authenticate",
-    "authorize"
+    "authorize",
+    "refund"
   ]
 }

@@ -3,7 +3,7 @@
     "grpc_req": {
       "merchant_payment_method_id": "auto_generate",
       "amount": {
-        "minor_amount": 0,
+        "minor_amount": 6000,
         "currency": "USD"
       },
       "payment_method": {
@@ -30,7 +30,8 @@
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
-        }
+        },
+        "connector_customer_id": ""
       },
       "address": {
         "billing_address": {
@@ -71,7 +72,7 @@
     "grpc_req": {
       "merchant_payment_method_id": "auto_generate",
       "amount": {
-        "minor_amount": 0,
+        "minor_amount": 6000,
         "currency": "USD"
       },
       "payment_method": {
@@ -98,7 +99,8 @@
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
-        }
+        },
+        "connector_customer_id": ""
       },
       "address": {
         "billing_address": {
@@ -138,7 +140,7 @@
     "grpc_req": {
       "merchant_payment_method_id": "auto_generate",
       "amount": {
-        "minor_amount": 0,
+        "minor_amount": 6000,
         "currency": "USD"
       },
       "payment_method": {
@@ -165,7 +167,8 @@
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
-        }
+        },
+        "connector_customer_id": ""
       },
       "metadata": {
         "value": "{\"source\":\"mobile\",\"device_id\":\"test-device-123\"}"
@@ -185,7 +188,7 @@
     "grpc_req": {
       "merchant_payment_method_id": "auto_generate",
       "amount": {
-        "minor_amount": 0,
+        "minor_amount": 6000,
         "currency": "USD"
       },
       "payment_method": {
@@ -212,7 +215,8 @@
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
-        }
+        },
+        "connector_customer_id": ""
       },
       "test_mode": true
     },
@@ -226,7 +230,7 @@
     "grpc_req": {
       "merchant_payment_method_id": "auto_generate",
       "amount": {
-        "minor_amount": 0,
+        "minor_amount": 6000,
         "currency": "USD"
       },
       "payment_method": {
@@ -253,7 +257,8 @@
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
-        }
+        },
+        "connector_customer_id": ""
       },
       "test_mode": true
     },

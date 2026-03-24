@@ -1420,6 +1420,10 @@ fn source_path_candidates(path: &str) -> Vec<String> {
         candidates.push("connector_feature_data".to_string());
     }
 
+    if path == "payment_method_token.value" {
+        candidates.push("payment_method_token".to_string());
+    }
+
     if path == "refund_id" {
         candidates.push("connector_refund_id".to_string());
     }
@@ -2410,6 +2414,182 @@ pub fn execute_tonic_request_from_payload(
                 );
                 let mut client = grpc_api_types::payments::recurring_payment_service_client::RecurringPaymentServiceClient::new(channel.clone());
                 let response = client.charge(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "revoke_mandate" => {
+                let payload: grpc_api_types::payments::RecurringPaymentServiceRevokeRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::recurring_payment_service_client::RecurringPaymentServiceClient::new(channel.clone());
+                let response = client.revoke(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "tokenize_payment_method" => {
+                let payload: grpc_api_types::payments::PaymentMethodServiceTokenizeRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_method_service_client::PaymentMethodServiceClient::new(channel.clone());
+                let response = client.tokenize(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "incremental_authorization" => {
+                let payload: grpc_api_types::payments::PaymentServiceIncrementalAuthorizationRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.incremental_authorization(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "create_session_token" => {
+                let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::merchant_authentication_service_client::MerchantAuthenticationServiceClient::new(channel.clone());
+                let response = client.create_session_token(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "create_sdk_session_token" => {
+                let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateSdkSessionTokenRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::merchant_authentication_service_client::MerchantAuthenticationServiceClient::new(channel.clone());
+                let response = client.create_sdk_session_token(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "create_order" => {
+                let payload: grpc_api_types::payments::PaymentServiceCreateOrderRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.create_order(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "reverse" => {
+                let payload: grpc_api_types::payments::PaymentServiceReverseRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.reverse(request).await.map_err(|error| {
+                    ScenarioError::GrpcurlExecution {
+                        message: format!(
+                            "tonic execution failed for '{suite}/{scenario}': {error}"
+                        ),
+                    }
+                })?;
+                serialize_tonic_response(&response.into_inner())
+            }
+            "verify_redirect_response" => {
+                let payload: grpc_api_types::payments::PaymentServiceVerifyRedirectResponseRequest =
+                    parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
+                let mut request = tonic::Request::new(payload);
+                add_connector_metadata(
+                    &mut request,
+                    &config,
+                    &merchant_id,
+                    &tenant_id,
+                    &request_id,
+                    &connector_request_reference_id,
+                );
+                let mut client = grpc_api_types::payments::payment_service_client::PaymentServiceClient::new(channel.clone());
+                let response = client.verify_redirect_response(request).await.map_err(|error| {
                     ScenarioError::GrpcurlExecution {
                         message: format!(
                             "tonic execution failed for '{suite}/{scenario}': {error}"

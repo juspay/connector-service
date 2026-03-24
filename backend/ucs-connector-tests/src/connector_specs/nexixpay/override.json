@@ -2,6 +2,8 @@
   "pre_authenticate": {
     "threeds_card_pre_authenticate": {
       "grpc_req": {
+        "merchant_transaction_id": "pay_1234",
+        "merchant_order_id": "pay_1234",
         "amount": {
           "minor_amount": 100,
           "currency": "EUR"
@@ -86,6 +88,8 @@
   "authorize": {
     "threeds_manual_capture_credit_card": {
       "grpc_req": {
+        "merchant_transaction_id": "pay_1234",
+        "merchant_order_id": "pay_1234",
         "amount": {
           "minor_amount": 100,
           "currency": "EUR"
@@ -105,6 +109,27 @@
               "value": "123"
             }
           }
+        },
+        "authentication_data": {
+          "connector_transaction_id": "pay_1234"
+        }
+      }
+    }
+  },
+  "void": {
+    "void_authorized_payment": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      }
+    },
+    "void_without_cancellation_reason": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
         }
       }
     }

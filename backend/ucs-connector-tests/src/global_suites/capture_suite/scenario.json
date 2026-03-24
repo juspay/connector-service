@@ -7,6 +7,18 @@
         "currency": "USD"
       },
       "merchant_capture_id": "auto_generate",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      },
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -42,6 +54,18 @@
         "currency": "USD"
       },
       "merchant_capture_id": "auto_generate",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      },
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -77,6 +101,18 @@
       },
       "merchant_capture_id": "auto_generate",
       "merchant_order_id": "auto_generate",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      },
       "state": {
         "connector_customer_id": "",
         "access_token": {

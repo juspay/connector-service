@@ -124,7 +124,19 @@
       "description": "No3DS auto capture Google Pay (encrypted token)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -270,7 +282,19 @@
       "description": "No3DS auto capture card payment (credit)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -416,7 +440,19 @@
       "description": "No3DS auto capture card payment (debit)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -562,7 +598,19 @@
       "description": "No3DS manual capture card payment (credit)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -708,7 +756,19 @@
       "description": "No3DS manual capture card payment (debit)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -853,7 +913,19 @@
       "description": "3DS manual capture card payment (credit)",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -983,7 +1055,19 @@
       "description": "No3DS auto capture iDEAL payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1114,7 +1198,19 @@
       "description": "No3DS auto capture Giropay payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1258,7 +1354,19 @@
       "description": "No3DS auto capture Bancontact payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1389,7 +1497,19 @@
       "description": "No3DS auto capture Klarna payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1520,7 +1640,19 @@
       "description": "No3DS auto capture Affirm payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1651,7 +1783,19 @@
       "description": "No3DS auto capture Afterpay/Clearpay payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1799,7 +1943,19 @@
       "description": "No3DS fail payment flow",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -1930,7 +2086,19 @@
       "description": "No3DS auto capture Przelewy24 payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -2061,7 +2229,19 @@
       "description": "No3DS auto capture Alipay payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -2192,7 +2372,19 @@
       "description": "No3DS auto capture EPS payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -2323,7 +2515,19 @@
       "description": "No3DS SEPA bank transfer payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -2454,7 +2658,19 @@
       "description": "No3DS ACH bank transfer payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {
@@ -2585,7 +2801,19 @@
       "description": "No3DS BACS bank transfer payment",
       "payment_channel": "ECOMMERCE",
       "test_mode": true,
-      "locale": "en-US"
+      "locale": "en-US",
+      "browser_info": {
+        "ip_address": "127.0.0.1",
+        "accept_header": "application/json",
+        "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+        "accept_language": "en-US",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "java_enabled": false,
+        "java_script_enabled": true,
+        "time_zone_offset_minutes": -480
+      }
     },
     "assert": {
       "status": {

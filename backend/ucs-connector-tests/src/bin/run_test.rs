@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ucs_connector_tests::harness::{
     auto_gen::resolve_auto_generate,
-    report::{
-        append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,
-    },
+    report::{append_report_best_effort, extract_pm_and_pmt, now_epoch_ms, ReportEntry},
     scenario_api::{
         build_grpcurl_request_from_payload, do_assertion,
         execute_grpcurl_request_from_payload_with_trace, get_the_assertion_for_connector,
@@ -75,10 +73,6 @@ fn main() {
             defaults.creds_file.as_deref().unwrap_or("<none>")
         );
         return;
-    }
-
-    if args.report {
-        clear_report();
     }
 
     let endpoint = args.endpoint.clone().or(defaults.endpoint.clone());

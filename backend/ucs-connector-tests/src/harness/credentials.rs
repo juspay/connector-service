@@ -47,7 +47,7 @@ pub enum CredentialError {
 
 /// Non-auth metadata fields present in the creds file that must be stripped
 /// before wrapping as a connector config.
-const STRIP_FIELDS: &[&str] = &["metadata", "public_key", "public_api_key"];
+const STRIP_FIELDS: &[&str] = &["metadata"];
 
 /// Default local credentials path used when env overrides are not set.
 fn default_creds_path() -> PathBuf {
