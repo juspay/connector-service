@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -133,9 +133,9 @@ docs-check:
 	@echo "▶ Checking connector annotation coverage…"
 	python3 scripts/generators/docs/generate.py --check
 
-## Launch AI editor with skills
-ai:
-	@editors=""; \
+# Shared shell function: detect AI editors, prompt if multiple, set up symlink
+define DETECT_EDITOR
+	editors=""; \
 	command -v claude >/dev/null 2>&1 && editors="$$editors claude"; \
 	command -v opencode >/dev/null 2>&1 && editors="$$editors opencode"; \
 	command -v cursor >/dev/null 2>&1 && editors="$$editors cursor"; \
@@ -162,11 +162,52 @@ ai:
 		windsurf) mkdir -p .windsurf && ln -sfn ../.skills .windsurf/rules ;; \
 		codex)    mkdir -p .agents && ln -sfn ../.skills .agents/skills ;; \
 	esac; \
-	echo "Skills linked for $$choice"; \
+	echo "Skills linked for $$choice"
+endef
+
+# Launch editor with a specific skill
+# Usage: $(call LAUNCH_SKILL,skill-name)
+# - claude: "query" as positional arg with /skill-name slash command
+# - opencode: --prompt flag (skills auto-invoke, prompt hints the agent)
+# - codex: $skill-name mention syntax as positional arg
+# - cursor/windsurf: open project (skills auto-load as rules)
+define LAUNCH_SKILL
+	case $$choice in \
+		claude)   exec claude "/$(1)" ;; \
+		opencode) exec opencode --prompt "Use the $(1) skill" ;; \
+		codex)    exec codex '$$$(1)' ;; \
+		cursor)   echo "Skill '$(1)' available as a rule in Cursor"; exec cursor . ;; \
+		windsurf) echo "Skill '$(1)' available as a rule in Windsurf"; exec windsurf . ;; \
+	esac
+endef
+
+## Launch AI editor with skills
+ai:
+	@$(DETECT_EDITOR); \
 	case $$choice in \
 		claude|opencode|codex) exec $$choice ;; \
 		cursor|windsurf) exec $$choice . ;; \
 	esac
+
+## Generate a technical specification for a connector
+gen-tech-spec:
+	@$(DETECT_EDITOR); \
+	$(call LAUNCH_SKILL,generate-tech-spec)
+
+## Implement a new connector from scratch
+new-connector:
+	@$(DETECT_EDITOR); \
+	$(call LAUNCH_SKILL,new-connector)
+
+## Add payment flow(s) to an existing connector
+add-flow:
+	@$(DETECT_EDITOR); \
+	$(call LAUNCH_SKILL,add-connector-flow)
+
+## Add payment method support to an existing connector
+add-payment-method:
+	@$(DETECT_EDITOR); \
+	$(call LAUNCH_SKILL,add-payment-method)
 
 ## Show this help
 help:
@@ -203,7 +244,11 @@ help:
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"
 	@echo
 	@echo "AI Targets:"
-	@echo "  ai       Detect AI editor, set up skills symlink, and launch"
+	@echo "  ai                 Detect AI editor, set up skills symlink, and launch"
+	@echo "  gen-tech-spec      Generate a technical specification for a connector"
+	@echo "  new-connector      Implement a new connector from scratch"
+	@echo "  add-flow           Add payment flow(s) to an existing connector"
+	@echo "  add-payment-method Add payment method support to an existing connector"
 	@echo
 	@echo "Other Targets:"
 	@echo "  test-ucs Run interactive UCS connector tests"
