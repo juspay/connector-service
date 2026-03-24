@@ -4,11 +4,11 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId
     },
     errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -16,6 +16,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
@@ -144,12 +145,18 @@ pub struct NuveiPaymentOption<
 pub struct NuveiCard<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    pub card_number: RawCardNumber<T>,
-    pub card_holder_name: Secret<String>,
-    pub expiration_month: Secret<String>,
-    pub expiration_year: Secret<String>,
-    #[serde(rename = "CVV")]
-    pub cvv: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_number: Option<RawCardNumber<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_month: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_year: Option<Secret<String>>,
+    #[serde(rename = "CVV", skip_serializing_if = "Option::is_none")]
+    pub cvv: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_token: Option<NuveiExternalToken>,
 }
 
 // ACH Bank Transfer specific structures
@@ -163,6 +170,44 @@ pub struct NuveiAlternativePaymentMethod {
     pub routing_number: Secret<String>,
     #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
     pub sec_code: Option<String>,
+}
+
+// Apple Pay External Token - Used for wallet tokenization
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiExternalToken {
+    pub external_token_provider: NuveiExternalTokenProvider,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mobile_token: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci_provider: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum NuveiExternalTokenProvider {
+    ApplePay,
+    GooglePay,
+}
+
+// For Encrypted Apple Pay: JSON structure to be encoded into mobile_token
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplePayCamelCase {
+    payment_data: Secret<String>,
+    payment_method: ApplePayPaymentMethodCamelCase,
+    transaction_identifier: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplePayPaymentMethodCamelCase {
+    display_name: Secret<String>,
+    network: Secret<String>,
+    #[serde(rename = "type")]
+    pm_type: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -422,6 +467,66 @@ pub struct NuveiErrorResponse {
     pub status: Option<String>,
 }
 
+// Helper function to build Apple Pay card data
+fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+    apple_pay_data: &domain_types::payment_method_data::ApplePayWalletData,
+) -> Result<NuveiCard<T>, error_stack::Report<errors::ConnectorError>> {
+    use domain_types::payment_method_data::ApplePayPaymentData;
+
+    match &apple_pay_data.payment_data {
+        // Decrypted Apple Pay: Extract PAN, expiry, cryptogram, ECI
+        ApplePayPaymentData::Decrypted(apple_pay_decrypt_data) => {
+            Ok(NuveiCard {
+                card_number: None,
+                card_holder_name: None,
+                expiration_month: Some(apple_pay_decrypt_data.application_expiration_month.clone()),
+                expiration_year: Some(apple_pay_decrypt_data.application_expiration_year.clone()),
+                cvv: None,
+                external_token: Some(NuveiExternalToken {
+                    external_token_provider: NuveiExternalTokenProvider::ApplePay,
+                    mobile_token: None,
+                    cryptogram: Some(
+                        apple_pay_decrypt_data
+                            .payment_data
+                            .online_payment_cryptogram
+                            .clone(),
+                    ),
+                    eci_provider: apple_pay_decrypt_data.payment_data.eci_indicator.clone(),
+                }),
+            })
+        }
+        // Encrypted Apple Pay: JSON-encode entire Apple Pay data
+        ApplePayPaymentData::Encrypted(encrypted_data) => {
+            let apple_pay_json = ApplePayCamelCase {
+                payment_data: Secret::new(encrypted_data.clone()),
+                payment_method: ApplePayPaymentMethodCamelCase {
+                    display_name: Secret::new(apple_pay_data.payment_method.display_name.clone()),
+                    network: Secret::new(apple_pay_data.payment_method.network.clone()),
+                    pm_type: Secret::new(apple_pay_data.payment_method.pm_type.clone()),
+                },
+                transaction_identifier: Secret::new(apple_pay_data.transaction_identifier.clone()),
+            };
+
+            let mobile_token_json = serde_json::to_string(&apple_pay_json)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            Ok(NuveiCard {
+                card_number: None,
+                card_holder_name: None,
+                expiration_month: None,
+                expiration_year: None,
+                cvv: None,
+                external_token: Some(NuveiExternalToken {
+                    external_token_provider: NuveiExternalTokenProvider::ApplePay,
+                    mobile_token: Some(Secret::new(mobile_token_json)),
+                    cryptogram: None,
+                    eci_provider: None,
+                }),
+            })
+        }
+    }
+}
+
 // Session Token Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -650,11 +755,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 NuveiPaymentOption {
                     card: Some(NuveiCard {
-                        card_number: card_data.card_number.clone(),
-                        card_holder_name,
-                        expiration_month: card_data.card_exp_month.clone(),
-                        expiration_year: card_data.card_exp_year.clone(),
-                        cvv: card_data.card_cvc.clone(),
+                        card_number: Some(card_data.card_number.clone()),
+                        card_holder_name: Some(card_holder_name),
+                        expiration_month: Some(card_data.card_exp_month.clone()),
+                        expiration_year: Some(card_data.card_exp_year.clone()),
+                        cvv: Some(card_data.card_cvc.clone()),
+                        external_token: None,
                     }),
                     alternative_payment_method: None,
                 }
@@ -708,6 +814,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     other => {
                         return Err(errors::ConnectorError::NotSupported {
                             message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
+                }
+            }
+            PaymentMethodData::Wallet(ref wallet_data) => {
+                use domain_types::payment_method_data::WalletData;
+
+                match wallet_data {
+                    WalletData::ApplePay(apple_pay_data) => NuveiPaymentOption {
+                        card: Some(build_apple_pay_card(apple_pay_data)?),
+                        alternative_payment_method: None,
+                    },
+                    _ => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("Wallet type {:?} not supported for Nuvei", wallet_data),
                             connector: "nuvei",
                         }
                         .into())
