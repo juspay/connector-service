@@ -343,13 +343,25 @@ env.globals["to_camel"] = to_camel
 # ── Generators ───────────────────────────────────────────────────────────────
 
 def render(template_name: str, output_path: Path, **kwargs) -> None:
-    """Render a Jinja2 template and write to output_path."""
+    """Render a Jinja2 template and write to output_path.
+
+    Args:
+        template_name: Name of the template file to render.
+        output_path: Path where the rendered content will be written.
+        **kwargs: Template variables to pass to the renderer.
+    """
     tmpl = env.get_template(template_name)
     content = tmpl.render(**kwargs).rstrip("\n") + "\n"
     write(output_path, content)
 
 
 def gen_python(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate Python SDK flow definitions.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     render(
         "python/flows.py.j2",
         SDK_ROOT / "python/src/payments/_generated_flows.py",
@@ -359,7 +371,12 @@ def gen_python(flows: list[dict], single_flows: list[dict]) -> None:
 
 
 def gen_python_clients(flows: list[dict], single_flows: list[dict]) -> None:
-    """Generate _generated_service_clients.py — per-service client classes."""
+    """Generate _generated_service_clients.py — per-service client classes.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_groups = {**groups}
@@ -376,7 +393,12 @@ def gen_python_clients(flows: list[dict], single_flows: list[dict]) -> None:
 
 
 def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
-    """Generate connector_client.pyi — per-service client stubs for IDE completions."""
+    """Generate connector_client.pyi — per-service client stubs for IDE completions.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
 
@@ -396,6 +418,12 @@ def gen_python_stub(flows: list[dict], single_flows: list[dict] = []) -> None:
 
 
 def gen_javascript(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate JavaScript SDK code.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     gen_flows_js(flows, single_flows)
     gen_connector_client_ts(flows, single_flows)
     gen_uniffi_client_ts(flows, single_flows)
@@ -403,7 +431,12 @@ def gen_javascript(flows: list[dict], single_flows: list[dict]) -> None:
 
 
 def gen_flows_js(flows: list[dict], single_flows: list[dict]) -> None:
-    """Generate _generated_flows.js — flow metadata used by UniffiClient for FFI symbol dispatch."""
+    """Generate _generated_flows.js — flow metadata used by UniffiClient for FFI symbol dispatch.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     max_len = max((len(f["name"]) for f in flows), default=0)
     max_len_s = max((len(f["name"]) for f in single_flows), default=0)
 
@@ -418,7 +451,12 @@ def gen_flows_js(flows: list[dict], single_flows: list[dict]) -> None:
 
 
 def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
-    """Generate _generated_connector_client_flows.ts — per-service client classes."""
+    """Generate _generated_connector_client_flows.ts — per-service client classes.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_services = sorted(set(groups) | set(single_groups))
@@ -433,7 +471,12 @@ def gen_connector_client_ts(flows: list[dict], single_flows: list[dict]) -> None
 
 
 def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
-    """Generate _generated_uniffi_client_flows.ts — UniffiClient subclass with typed flow methods."""
+    """Generate _generated_uniffi_client_flows.ts — UniffiClient subclass with typed flow methods.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     render(
         "javascript/uniffi_client.ts.j2",
         SDK_ROOT / "javascript/src/payments/_generated_uniffi_client_flows.ts",
@@ -443,6 +486,12 @@ def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
 
 
 def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
+    """Generate Kotlin SDK code.
+
+    Args:
+        flows: List of standard flows.
+        single_flows: List of single-step flows.
+    """
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_services = sorted(set(groups) | set(single_groups))
@@ -459,7 +508,11 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
 
 
 def gen_rust_handlers(flows: list[dict]) -> None:
-    """Generate _generated_flow_registrations.rs — included by handlers/payments.rs."""
+    """Generate _generated_flow_registrations.rs — included by handlers/payments.rs.
+
+    Args:
+        flows: List of standard flows.
+    """
     all_types = sorted({t for f in flows for t in (f["request"], f["response"])})
 
     render(
@@ -471,7 +524,11 @@ def gen_rust_handlers(flows: list[dict]) -> None:
 
 
 def gen_rust_ffi_flows(flows: list[dict]) -> None:
-    """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs."""
+    """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs.
+
+    Args:
+        flows: List of standard flows.
+    """
     req_types = sorted({f["request"] for f in flows})
 
     render(
@@ -483,7 +540,11 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
 
 
 def _grpc_groups() -> tuple[list[str], dict[str, list[dict]]]:
-    """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators)."""
+    """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators).
+
+    Returns:
+        Tuple of (list of service names, dict mapping service names to flow lists).
+    """
     all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
     groups: dict[str, list[dict]] = {}
     for flow_name, meta in sorted(all_rpcs.items(), key=lambda kv: kv[1]["service"]):
@@ -527,7 +588,10 @@ def gen_javascript_grpc_example_flows() -> None:
 
 
 def gen_rust_grpc_client() -> None:
-    """Generate _generated_grpc_client.rs from all proto RPCs (not filtered by FFI impl)."""
+    """Generate _generated_grpc_client.rs from all proto RPCs (not filtered by FFI impl).
+
+    Also runs rustfmt on the generated file to ensure consistent formatting.
+    """
     import subprocess
 
     all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
