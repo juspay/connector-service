@@ -39,7 +39,55 @@ Prism provides built-in verification for both risks, but you must enable and use
 
 Prism performs several integrity checks automatically. Here's what you should verify and how Prism helps:
 
+### How Integrity Checks Work
+
+Prism uses a `FlowIntegrity` trait to compare request and response data. The core implementation is in [`backend/interfaces/src/integrity.rs`](../../backend/interfaces/src/integrity.rs):
+
+```rust
+/// Trait for integrity objects that can perform field-by-field comparison
+pub trait FlowIntegrity {
+    /// The integrity object type for this flow
+    type IntegrityObject;
+
+    /// Compare request and response integrity objects
+    fn compare(
+        req_integrity_object: Self::IntegrityObject,
+        res_integrity_object: Self::IntegrityObject,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError>;
+}
+
+/// Trait for data types that can provide integrity objects
+pub trait GetIntegrityObject<T: FlowIntegrity> {
+    /// Extract integrity object from response data
+    fn get_response_integrity_object(&self) -> Option<T::IntegrityObject>;
+
+    /// Generate integrity object from request data
+    fn get_request_integrity_object(&self) -> T::IntegrityObject;
+}
+```
+
 ### Amount and Currency Verification
+
+For payment authorization, Prism extracts amount and currency from the request and compares with the response:
+
+```rust
+// From backend/interfaces/src/integrity.rs
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
+    for PaymentsAuthorizeData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<AuthoriseIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> AuthoriseIntegrityObject {
+        AuthoriseIntegrityObject {
+            amount: self.minor_amount,
+            currency: self.currency,
+        }
+    }
+}
+```
 
 Webhooks include amounts. Prism verifies these match your records.
 
@@ -139,6 +187,86 @@ const client = new ConnectorServiceClient({
 ## 3. Signature Verification - How It Works
 
 Typically Payment processors sign webhooks with a shared secret. You verify the signature before trusting the payload. Prism handles this for every supported processor.
+
+### Implementation from the Connector Service
+
+The signature verification is implemented per connector. Here are real examples from the codebase:
+
+#### Ppro Connector (HMAC-SHA256)
+
+From [`backend/connector-integration/src/connectors/ppro.rs`](../../backend/connector-integration/src/connectors/ppro.rs):
+
+```rust
+fn verify_webhook_source(
+    &self,
+    request: RequestDetails,
+    connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+    let connector_webhook_secrets = connector_webhook_secret
+        .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+    let signature = request
+        .headers
+        .get("Webhook-Signature")
+        .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+    let algorithm = crypto::HmacSha256;
+    let expected_signature =
+        hex::decode(signature).change_context(errors::ConnectorError::WebhookDecodingFailed)?;
+
+    algorithm
+        .verify_signature(
+            &connector_webhook_secrets.secret,
+            &expected_signature,
+            &request.body,
+        )
+        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+}
+```
+
+#### Authorize.Net Connector (HMAC-SHA512)
+
+From [`backend/connector-integration/src/connectors/authorizedotnet.rs`](../../backend/connector-integration/src/connectors/authorizedotnet.rs):
+
+```rust
+fn verify_webhook_source(
+    &self,
+    request: RequestDetails,
+    connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+) -> Result<bool, error_stack::Report<ConnectorError>> {
+    let webhook_secret = match connector_webhook_secret {
+        Some(secrets) => secrets.secret,
+        None => return Ok(false),
+    };
+
+    // Extract X-ANET-Signature header (case-insensitive)
+    let signature_header = request
+        .headers
+        .get("X-ANET-Signature")
+        .or_else(|| request.headers.get("x-anet-signature"))?;
+
+    // Parse "sha512=<hex>" format
+    let signature_hex = match signature_header.strip_prefix("sha512=") {
+        Some(hex) => hex,
+        None => return Ok(false),
+    };
+
+    // Decode hex signature
+    let expected_signature = match hex::decode(signature_hex) {
+        Ok(sig) => sig,
+        Err(_) => return Ok(false),
+    };
+
+    // Compute HMAC-SHA512 of request body
+    use common_utils::crypto::{HmacSha512, SignMessage};
+    let crypto_algorithm = HmacSha512;
+    let computed_signature = crypto_algorithm
+        .sign_message(&webhook_secret, &request.body)?;
+
+    // Constant-time comparison to prevent timing attacks
+    Ok(computed_signature == expected_signature)
+}
+```
 
 ### Supported Algorithms
 
