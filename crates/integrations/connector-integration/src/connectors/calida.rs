@@ -103,19 +103,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let security_header = request
             .headers
             .get("x-eorder-webhook-signature")
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook signature not found".to_string(),
             ))?
             .clone();
 
         let signature = hex::decode(security_header).change_context(
-            ConnectorRequestError::NotImplemented("webhook signature not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook signature not found".to_string()),
         )?;
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))
+            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
             .into_request_err()?;
 
         let sorted_payload = sort_and_minify_json(&parsed)?;
@@ -124,7 +122,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))?;
 
@@ -141,7 +139,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: CalidaWebhookResponse = request
             .body
             .parse_struct("CalidaWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))
             .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
@@ -553,7 +551,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = CalidaAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("token {}", auth.api_key.expose()).into_masked(),
@@ -568,7 +566,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: CalidaErrorResponse = res
             .response
             .parse_struct("CalidaErrorResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -593,7 +591,7 @@ impl ConnectorValidation for Calida<DefaultPCIHolder> {
         pm_data: PaymentMethodData<DefaultPCIHolder>,
     ) -> CustomResult<(), ConnectorRequestError> {
         match pm_data {
-            PaymentMethodData::Card(_) => Err(ConnectorRequestError::NotImplemented(
+            PaymentMethodData::Card(_) => Err(ConnectorRequestError::not_implemented(
                 "validate_mandate_payment does not support cards".to_string(),
             )
             .into()),
@@ -674,7 +672,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             Ok(format!(
                 "{}api/{}/order/{}/status",

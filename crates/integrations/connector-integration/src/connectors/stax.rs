@@ -82,7 +82,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = StaxAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_key.expose()).into(),
@@ -97,9 +97,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: StaxErrorResponse = res
             .response
             .parse_struct("StaxErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -112,9 +110,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.get_error_message(),
             reason: Some(
                 std::str::from_utf8(&res.response)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
                     .to_owned(),
             ),
             attempt_status: None,
@@ -364,7 +360,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url_payments(req);
             Ok(format!("{base_url}/transaction/{transaction_id}"))
         }
@@ -393,7 +389,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url_payments(req);
             Ok(format!("{base_url}/transaction/{transaction_id}/capture"))
         }

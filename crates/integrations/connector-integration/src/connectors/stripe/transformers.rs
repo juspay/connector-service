@@ -107,7 +107,7 @@ impl TryFrom<&ConnectorSpecificConfig> for StripeAuthType {
             ConnectorSpecificConfig::Stripe { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -842,7 +842,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
             | common_enums::PaymentMethodType::SepaGuaranteedDebit
-            | common_enums::PaymentMethodType::Oxxo => Err(ConnectorRequestError::NotImplemented(
+            | common_enums::PaymentMethodType::Oxxo => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -918,7 +918,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::VietQr
             | common_enums::PaymentMethodType::Mifinity
             | common_enums::PaymentMethodType::Satispay
-            | common_enums::PaymentMethodType::Wero => Err(ConnectorRequestError::NotImplemented(
+            | common_enums::PaymentMethodType::Wero => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1078,7 +1078,7 @@ impl TryFrom<&common_enums::BankNames> for StripeBankNames {
             common_enums::BankNames::AliorBank => Self::AliorBank,
             common_enums::BankNames::Boz => Self::Boz,
 
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             ))?,
         })
@@ -1101,6 +1101,7 @@ fn validate_shipping_address_against_payment_method(
                 if !missing_fields.is_empty() {
                     return Err(ConnectorRequestError::MissingRequiredFields {
                         field_names: missing_fields,
+                context: Default::default()
                     }
                     .into());
                 }
@@ -1108,6 +1109,7 @@ fn validate_shipping_address_against_payment_method(
             }
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "shipping.address",
+                context: Default::default()
             }
             .into()),
         },
@@ -1127,7 +1129,7 @@ impl TryFrom<&PayLaterData> for StripePaymentMethodType {
             | PayLaterData::PayBrightRedirect {}
             | PayLaterData::WalleyRedirect {}
             | PayLaterData::AlmaRedirect {}
-            | PayLaterData::AtomeRedirect {} => Err(ConnectorRequestError::NotImplemented(
+            | PayLaterData::AtomeRedirect {} => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )),
         }
@@ -1146,7 +1148,7 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             BankRedirectData::Eps { .. } => Ok(Self::Eps),
             BankRedirectData::Blik { .. } => Ok(Self::Blik),
             BankRedirectData::OnlineBankingFpx { .. } => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 ))
             }
@@ -1161,7 +1163,7 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )),
         }
@@ -1179,7 +1181,7 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::CashappQr(_) => Ok(Some(StripePaymentMethodType::Cashapp)),
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
-        WalletData::MobilePayRedirect(_) => Err(ConnectorRequestError::NotImplemented(
+        WalletData::MobilePayRedirect(_) => Err(ConnectorRequestError::not_implemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )),
         WalletData::PaypalRedirect(_)
@@ -1207,7 +1209,7 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::Mifinity(_)
         | WalletData::MbWay(_)
         | WalletData::Satispay(_)
-        | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+        | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )),
     }
@@ -1222,7 +1224,7 @@ impl TryFrom<&payment_method_data::BankDebitData> for StripePaymentMethodType {
             payment_method_data::BankDebitData::BecsBankDebit { .. } => Ok(Self::Becs),
             payment_method_data::BankDebitData::BacsBankDebit { .. } => Ok(Self::Bacs),
             payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 ))
             }
@@ -1275,7 +1277,7 @@ fn get_bank_debit_data(
             Ok((Some(StripePaymentMethodType::Bacs), Some(bacs_data)))
         }
         payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
-            Err(ConnectorRequestError::NotImplemented(
+            Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             ))
         }
@@ -1392,6 +1394,7 @@ fn create_stripe_payment_method<
                             email: payment_request_details.billing_address.email.ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "billing_address.email",
+                context: Default::default()
                                 },
                             )?,
                         },
@@ -1410,6 +1413,7 @@ fn create_stripe_payment_method<
                         country: payment_request_details.billing_address.country.ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "billing_address.country",
+                context: Default::default()
                             },
                         )?,
                     }),
@@ -1430,7 +1434,7 @@ fn create_stripe_payment_method<
                 payment_request_details.billing_address,
             )),
             payment_method_data::BankTransferData::Pix { .. } => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
@@ -1448,20 +1452,20 @@ fn create_stripe_payment_method<
             | payment_method_data::BankTransferData::CimbVaBankTransfer { .. }
             | payment_method_data::BankTransferData::DanamonVaBankTransfer { .. }
             | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
             }
         },
-        PaymentMethodData::Crypto(_) => Err(ConnectorRequestError::NotImplemented(
+        PaymentMethodData::Crypto(_) => Err(ConnectorRequestError::not_implemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )
         .into()),
 
         PaymentMethodData::GiftCard(giftcard_data) => match giftcard_data.deref() {
             GiftCardData::Givex(_) | GiftCardData::PaySafeCard {} => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
@@ -1471,19 +1475,19 @@ fn create_stripe_payment_method<
             CardRedirectData::Knet {}
             | CardRedirectData::Benefit {}
             | CardRedirectData::MomoAtm {}
-            | CardRedirectData::CardRedirect {} => Err(ConnectorRequestError::NotImplemented(
+            | CardRedirectData::CardRedirect {} => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
         },
-        PaymentMethodData::Reward => Err(ConnectorRequestError::NotImplemented(
+        PaymentMethodData::Reward => Err(ConnectorRequestError::not_implemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )
         .into()),
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
             VoucherData::Boleto(_) | VoucherData::Oxxo => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
@@ -1499,7 +1503,7 @@ fn create_stripe_payment_method<
             | VoucherData::MiniStop(_)
             | VoucherData::FamilyMart(_)
             | VoucherData::Seicomart(_)
-            | VoucherData::PayEasy(_) => Err(ConnectorRequestError::NotImplemented(
+            | VoucherData::PayEasy(_) => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1513,7 +1517,7 @@ fn create_stripe_payment_method<
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-            Err(ConnectorRequestError::NotImplemented(
+            Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into())
@@ -1655,7 +1659,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
             WalletData::GooglePay(gpay_data) => Ok(Self::try_from(gpay_data)?),
             WalletData::PaypalRedirect(_) | WalletData::MobilePayRedirect(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
@@ -1684,7 +1688,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::Mifinity(_)
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+            | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1710,6 +1714,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     code: Secret::new(blik_code.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "blik_code",
+                context: Default::default()
                         },
                     )?),
                 })),
@@ -1750,7 +1755,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 ))
             }
             BankRedirectData::OnlineBankingFpx { .. } => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 )
                 .into())
@@ -1767,7 +1772,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::Sofort { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1787,11 +1792,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .get_encrypted_google_pay_token()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "gpay wallet_token",
+                context: Default::default()
                     })?
                     .as_bytes()
                     .parse_struct::<StripeGpayToken>("StripeGpayToken")
                     .change_context(ConnectorRequestError::InvalidWalletToken {
                         wallet_name: "Google Pay".to_string(),
+                context: Default::default()
                     })?
                     .id,
             ),
@@ -1934,6 +1941,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         billing_address: billing_address.ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "billing_address",
+                context: Default::default()
                             },
                         )?,
                         request_incremental_authorization: item
@@ -1979,6 +1987,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .get_required_value("payment_token")
                         .change_context(ConnectorRequestError::InvalidWalletToken {
                             wallet_name: "Apple Pay".to_string(),
+                context: Default::default()
                         })?;
 
                     let domain_types::router_data::PaymentMethodToken::Token(payment_method_token) =
@@ -2015,6 +2024,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                         .change_context(
                                             ConnectorRequestError::MissingRequiredField {
                                                 field_name: "online",
+                context: Default::default()
                                             },
                                         )?;
                                     StripeMandateRequest {
@@ -2025,6 +2035,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                                 .change_context(
                                                     ConnectorRequestError::MissingRequiredField {
                                                         field_name: "ip_address",
+                context: Default::default()
                                                     },
                                                 )?,
                                             user_agent: online_mandate.user_agent,
@@ -2726,7 +2737,7 @@ where
         };
 
         let connector_metadata =
-            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount)
+            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount, item.http_code)
                 .into_response_err()?;
 
         let status = common_enums::AttemptStatus::from(item.response.status);
@@ -2808,6 +2819,7 @@ impl From<StripePaymentStatus> for common_enums::AuthorizationStatus {
 pub fn get_connector_metadata(
     next_action: Option<&StripeNextActionResponse>,
     amount: MinorUnit,
+    http_status: u16,
 ) -> CustomResult<Option<Value>, ConnectorRequestError> {
     let next_action_response = next_action
         .and_then(|next_action_response| match next_action_response {
@@ -2909,7 +2921,7 @@ pub fn get_connector_metadata(
             _ => None,
         })
         .transpose()
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(http_status))
         .into_request_err()?;
     Ok(next_action_response)
 }
@@ -2985,7 +2997,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
             });
 
         let connector_metadata =
-            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount)
+            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount, item.http_code)
                 .into_response_err()?;
 
         let status = common_enums::AttemptStatus::from(item.response.status.to_owned());
@@ -3035,7 +3047,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
+                    item.http_code,
                 ))?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
@@ -3841,12 +3853,14 @@ fn mandatory_parameters_for_sepa_bank_debit_mandates(
             name: Some(
                 billing_name.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing_name",
+                context: Default::default()
                 })?,
             ),
 
             email: Some(
                 billing_email.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing_email",
+                context: Default::default()
                 })?,
             ),
             ..StripeBillingAddress::default()
@@ -4013,31 +4027,20 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<PaymentSyncResponse, Self>) -> Result<Self, Self::Error> {
-        let id = item.router_data.request.connector_transaction_id.clone();
-        match id.get_connector_transaction_id() {
-            Ok(x) if x.starts_with("set") => match item.response {
-                PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
-                    Self::try_from(ResponseRouterData {
-                        response: setup_intent_response,
-                        router_data: item.router_data,
-                        http_code: item.http_code,
-                    })
-                }
-                _ => Err(ConnectorResponseError::response_handling_failed(None))?,
-            },
-            Ok(_) => match item.response {
-                PaymentSyncResponse::PaymentIntentSyncResponse(payment_intent_sync_response) => {
-                    Self::try_from(ResponseRouterData {
-                        response: payment_intent_sync_response,
-                        router_data: item.router_data,
-                        http_code: item.http_code,
-                    })
-                }
-                _ => Err(ConnectorResponseError::response_handling_failed(None))?,
-            },
-            Err(err) => {
-                Err(err).change_context(ConnectorResponseError::MissingConnectorTransactionID {
-                    http_status_code: None,
+        // Untagged serde already disambiguates PI vs setup intent; prev code of routing on connector_transaction_id could fail sync when the txn id is missing or not a ConnectorTransactionId.
+        match item.response {
+            PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
+                Self::try_from(ResponseRouterData {
+                    response: setup_intent_response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
+                })
+            }
+            PaymentSyncResponse::PaymentIntentSyncResponse(payment_intent_sync_response) => {
+                Self::try_from(ResponseRouterData {
+                    response: payment_intent_sync_response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
                 })
             }
         }
@@ -4058,7 +4061,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
+                    item.http_code,
                 ))?;
 
         let amount_in_minor_unit =
@@ -4075,7 +4078,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(None));
+        .change_context(ConnectorResponseError::response_handling_failed(item.http_code));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = Some(response_integrity_object);
@@ -4097,7 +4100,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
+                    item.http_code,
                 ))?;
 
         let capture_amount_in_minor_unit = item
@@ -4119,7 +4122,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(None));
+        .change_context(ConnectorResponseError::response_handling_failed(item.http_code));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = response_integrity_object;
@@ -4279,6 +4282,7 @@ impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseDat
         match item.request.split_refunds.as_ref() {
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "split_refunds",
+                context: Default::default()
             }
             .into()),
 
@@ -4349,7 +4353,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
+                    item.http_code,
                 ))?;
 
         let refund_amount_in_minor_unit =
@@ -4597,7 +4601,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 | payment_method_data::BankTransferData::InstantBankTransferPoland {}
                 | payment_method_data::BankTransferData::IndonesianBankTransfer { .. }
                 | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
-                    Err(ConnectorRequestError::NotImplemented(
+                    Err(ConnectorRequestError::not_implemented(
                         get_unimplemented_payment_method_error_message("stripe"),
                     )
                     .into())
@@ -4616,7 +4620,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                 ))?
             }
@@ -4779,7 +4783,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
                 let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
 
                 let field_str = mismatched_fields.join(", ");
-                Err(ConnectorRequestError::MandatePaymentDataMismatch { fields: field_str })?
+                Err(ConnectorRequestError::MandatePaymentDataMismatch {
+                    fields: field_str,
+                    context: Default::default(),
+                })?
             }
         }
 
@@ -5007,6 +5014,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::Card(_) => Err(ConnectorRequestError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Stripe",
+                context: Default::default()
                         })?,
                     };
 
@@ -5032,6 +5040,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 billing_address: billing_address.ok_or(
                                     ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing_address",
+                context: Default::default()
                                     },
                                 )?,
                                 request_incremental_authorization: false,
@@ -5174,12 +5183,14 @@ fn get_payment_method_type_for_saved_payment_method_payment<
                     }
                     None => Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "payment_method_type",
+                context: Default::default()
                     }
                     .into()),
                 }
             }
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "recurring_mandate_payment_data",
+                context: Default::default()
             }
             .into()),
         }?;

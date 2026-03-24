@@ -259,7 +259,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
             let date = date_time::date_as_yyyymmddthhmmssmmmz()
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             let auth = dlocal::DlocalAuthType::try_from(&req.connector_config)?;
 
             let sign_req: String = match self.get_request_body(req)? {
@@ -277,7 +277,7 @@ macros::create_all_prerequisites!(
                 auth.secret.peek().as_bytes(),
                 sign_req.as_bytes(),
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
             .attach_printable("Failed to sign the message")?;
             let auth_string: String = format!("V2-HMAC-SHA256, Signature: {}", hex::encode(authz));
             let headers = vec![
@@ -343,9 +343,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: dlocal::DlocalErrorResponse = res
             .response
             .parse_struct("Dlocal ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -419,7 +417,7 @@ macros::macro_connector_implementation!(
                 req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
             ))
         }
     }

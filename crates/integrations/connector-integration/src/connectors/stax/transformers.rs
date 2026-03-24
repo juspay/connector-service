@@ -130,7 +130,7 @@ impl TryFrom<&ConnectorSpecificConfig> for StaxAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -269,7 +269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         let payment_method_id = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(_) | PaymentMethodData::BankDebit(_) => {
@@ -288,11 +288,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 } else {
                     return Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "payment_method_token (from PaymentMethodToken flow) or connector_mandate_id (for saved payment methods)",
+                context: Default::default()
                     })?;
                 }
             }
             _ => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "Only card and ACH bank debit payments are supported for Stax".to_string(),
                 ))?;
             }
@@ -302,7 +303,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .is_auto_capture()
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             total,
@@ -502,7 +503,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self { total })
     }
@@ -556,9 +557,7 @@ fn get_payment_status(
             StaxTransactionType::Charge => AttemptStatus::Charged,
             _ => {
                 return Err(errors::report_response_as_request(
-                    error_stack::Report::from(ConnectorResponseError::response_handling_failed(
-                        None,
-                    )),
+                    error_stack::Report::from(ConnectorResponseError::response_handling_failed_http_status_unknown()),
                 ))
             }
         }
@@ -608,7 +607,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self { total })
     }
@@ -634,14 +633,16 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_handling_failed(None))?;
+            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // MUST find and validate child transaction with type="refund"
         // Following HS pattern: filter by amount and find most recent by created_at
-        let refund_status = get_refund_status(response, refund_amount).into_response_err()?;
+        let refund_status =
+            get_refund_status(response, refund_amount, item.http_code).into_response_err()?;
 
         // Extract refund ID from the child transaction
-        let connector_refund_id = extract_refund_id(response, refund_amount).into_response_err()?;
+        let connector_refund_id =
+            extract_refund_id(response, refund_amount, item.http_code).into_response_err()?;
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -688,6 +689,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 fn get_refund_status(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
+    http_status: u16,
 ) -> Result<RefundStatus, error_stack::Report<ConnectorRequestError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
@@ -701,7 +703,7 @@ fn get_refund_status(
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
         errors::report_response_as_request(error_stack::Report::from(
-            ConnectorResponseError::response_handling_failed(None),
+            ConnectorResponseError::response_handling_failed(http_status),
         ))
     })?;
 
@@ -726,6 +728,7 @@ fn get_refund_status(
 fn extract_refund_id(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
+    http_status: u16,
 ) -> Result<String, error_stack::Report<ConnectorRequestError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
@@ -739,7 +742,7 @@ fn extract_refund_id(
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
         errors::report_response_as_request(error_stack::Report::from(
-            ConnectorResponseError::response_handling_failed(None),
+            ConnectorResponseError::response_handling_failed(http_status),
         ))
     })?;
 
@@ -830,9 +833,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         if item.router_data.request.email.is_none() {
             Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
+                context: Default::default()
             })?
         } else if item.router_data.request.name.is_none() {
-            Err(ConnectorRequestError::MissingRequiredField { field_name: "name" })?
+            Err(ConnectorRequestError::MissingRequiredField {
+                field_name: "name",
+                context: Default::default(),
+            })?
         } else {
             Ok(Self {
                 email: item
@@ -948,6 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id",
+                context: Default::default()
             })?;
 
         // Extract card data from payment_method_data
@@ -990,6 +998,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             // No names in billing - try card_holder_name
                             card_data.card_holder_name.clone().ok_or(ConnectorRequestError::MissingRequiredField {
                                 field_name: "card_holder_name or billing.first_name+last_name (required by Stax for payment method tokenization)",
+                context: Default::default()
                             })?
                         }
                     }
@@ -997,6 +1006,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     // No billing address - use card_holder_name
                     card_data.card_holder_name.clone().ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "card_holder_name or billing.first_name+last_name (required by Stax for payment method tokenization)",
+                context: Default::default()
                     })?
                 };
 
@@ -1035,15 +1045,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or_else(|| card_holder_name.clone())
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
+                context: Default::default()
                     })?;
 
                 // bank_name is already None if Unspecified was sent in gRPC request
                 let bank_type = bank_type.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "bank_type",
+                context: Default::default()
                 })?;
                 let bank_holder_type =
                     bank_holder_type.ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "bank_holder_type",
+                context: Default::default()
                     })?;
 
                 Ok(Self::Bank(StaxBankTokenizeData {
@@ -1074,7 +1087,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     "Only card and ACH bank debit tokenization are supported for Stax".to_string(),
                 ))?
             }

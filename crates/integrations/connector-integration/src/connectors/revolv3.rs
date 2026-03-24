@@ -61,7 +61,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = revolv3::Revolv3AuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::REVOLV3_TOKEN.to_string(),
             auth.api_key.expose().into(),
@@ -76,9 +76,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: revolv3::Revolv3ErrorResponse = res
             .response
             .parse_struct("Revolv3ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -534,7 +532,7 @@ macros::macro_connector_implementation!(
     ) -> CustomResult<String, ConnectorRequestError> {
             let invoice_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/Invoices/{invoice_id}"))
     }
@@ -566,7 +564,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let invoice_id = req.request.connector_transaction_id.clone();
-            if invoice_id.is_empty() {Err(ConnectorRequestError::MissingConnectorTransactionID)?};
+            if invoice_id.is_empty() {Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?};
             let base_url = req.resource_common_data.connectors.revolv3.base_url.to_string();
             Ok(format!("{base_url}/api/Invoices/{invoice_id}/refund"))
         }
@@ -629,7 +627,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let payment_method_authorization_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/Payments/capture/{payment_method_authorization_id}"))
         }
@@ -701,7 +699,7 @@ macros::macro_connector_implementation!(
                 }
                 MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
                     let payment_method_id = connector_mandate_data.get_connector_mandate_id()
-                        .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+                        .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
                     if req.request.is_auto_capture()? {
                         Ok(format!("{base_url}/api/payments/sale/{payment_method_id}"))
                     } else {
@@ -712,6 +710,7 @@ macros::macro_connector_implementation!(
                     Err(ConnectorRequestError::FlowNotSupported {
                         flow: "Network Token with NTI".to_string(),
                         connector: "revolv3".to_string(),
+                context: Default::default()
                     })?
                 }
             }

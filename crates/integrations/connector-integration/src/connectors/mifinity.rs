@@ -497,7 +497,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = MifinityAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::KEY.to_string(),
             auth.key.expose().into_masked(),

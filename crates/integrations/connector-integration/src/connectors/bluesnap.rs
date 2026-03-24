@@ -216,7 +216,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<bool, ConnectorRequestError> {
         let connector_webhook_secret = connector_webhook_secret
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Connector webhook secret not configured")?;
@@ -229,7 +229,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use common_utils::crypto::{HmacSha256, SignMessage};
         let expected_signature = HmacSha256
             .sign_message(&connector_webhook_secret.secret, &message)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Failed to sign webhook message with HMAC-SHA256")?;
@@ -246,11 +246,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             request
                 .headers
                 .get("bls-signature")
-                .ok_or(ConnectorRequestError::NotImplemented(
+                .ok_or(ConnectorRequestError::not_implemented(
                     "webhook signature not found".to_string(),
                 ))?;
 
-        hex::decode(signature_str).change_context(ConnectorRequestError::NotImplemented(
+        hex::decode(signature_str).change_context(ConnectorRequestError::not_implemented(
             "webhook signature not found".to_string(),
         ))
     }
@@ -261,7 +261,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
         let timestamp = request.headers.get("bls-ipn-timestamp").ok_or(
-            ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
         )?;
 
         let body_str = String::from_utf8_lossy(&request.body);
@@ -281,7 +281,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 | transformers::BluesnapWebhookEvent::ChargebackStatusChanged => {
                     let dispute_body: transformers::BluesnapDisputeWebhookBody =
                         serde_urlencoded::from_bytes(&request.body).change_context(
-                            ConnectorRequestError::NotImplemented(
+                            ConnectorRequestError::not_implemented(
                                 "webhook body decoding failed".to_string(),
                             ),
                         )?;
@@ -295,7 +295,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Err(_) => {
                 let dispute_body: transformers::BluesnapDisputeWebhookBody =
                     serde_urlencoded::from_bytes(&request.body).change_context(
-                        ConnectorRequestError::NotImplemented(
+                        ConnectorRequestError::not_implemented(
                             "webhook body decoding failed".to_string(),
                         ),
                     )?;
@@ -314,7 +314,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body).change_context(
-                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+                ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
             )?;
 
         let status = match webhook_body.transaction_type {
@@ -369,13 +369,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body).change_context(
-                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+                ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
             )?;
 
         let connector_refund_id =
             webhook_body
                 .reversal_ref_num
-                .ok_or(ConnectorRequestError::NotImplemented(
+                .ok_or(ConnectorRequestError::not_implemented(
                     "webhook reference id not found".to_string(),
                 ))?;
 
@@ -546,7 +546,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
             };
             Ok(format!("{}/services/2/transactions/{}", self.connector_base_url_payments(req), connector_tx_id))
         }
@@ -875,7 +875,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = bluesnap::BluesnapAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.generate_basic_auth().into(),
@@ -890,9 +890,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: bluesnap::BluesnapErrorResponse = res
             .response
             .parse_struct("BluesnapErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

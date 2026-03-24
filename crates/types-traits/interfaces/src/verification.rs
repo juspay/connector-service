@@ -67,6 +67,6 @@ pub trait SourceVerification {
         // Verify the signature against the message
         algorithm
             .verify_signature(&extracted_secrets, &signature, &message)
-            .change_context(domain_types::errors::ConnectorRequestError::SourceVerificationFailed)
+            .change_context(domain_types::errors::ConnectorRequestError::SourceVerificationFailed { context: Default::default() })
     }
 }

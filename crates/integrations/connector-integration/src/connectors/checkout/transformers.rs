@@ -354,7 +354,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CheckoutAuthType {
                 processing_channel_id: processing_channel_id.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
         }
     }
 }
@@ -515,12 +515,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .get_expiry_month()
                                 .change_context(ConnectorRequestError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_month",
+                context: Default::default()
                                 })?;
 
                             let expiry_year = google_pay_decrypted_data
                                 .get_four_digit_expiry_year()
                                 .change_context(ConnectorRequestError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_year",
+                context: Default::default()
                                 })?;
 
                             let cryptogram = google_pay_decrypted_data.cryptogram.clone();
@@ -542,6 +544,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         domain_types::payment_method_data::GpayTokenizationData::Encrypted(_) => {
                             Err(ConnectorRequestError::MissingRequiredField {
                                 field_name: "google_pay_decrypted_data",
+                context: Default::default()
                             })
                         }
                     }
@@ -573,12 +576,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 }));
                             Ok((p_source, None, Some(false), store_for_future_use))
                         }
-                        None => Err(ConnectorRequestError::NotImplemented(
+                        None => Err(ConnectorRequestError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("checkout"),
                         )),
                     }
                 }
-                _ => Err(ConnectorRequestError::NotImplemented(
+                _ => Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("checkout"),
                 )),
             },
@@ -637,7 +640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
                 Ok((payment_source, None, Some(false), store_for_future))
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -915,12 +918,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None,
                         ))
                     }
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("checkout"),
                     )),
                 }
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -1197,7 +1200,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 });
                 Ok((payment_source, None, Some(false), payment_type, Some(true)))
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -1524,7 +1527,7 @@ fn get_connector_meta(
             }))
         }
         common_enums::CaptureMethod::Scheduled => {
-            Err(ConnectorRequestError::CaptureMethodNotSupported.into())
+            Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() }.into())
         }
     }
 }
@@ -1868,10 +1871,11 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
                 psync_flow: CheckoutPaymentIntent::Authorize,
             }),
             Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(ConnectorRequestError::CaptureMethodNotSupported)
+                Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() })
             }
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "capture_method",
+                context: Default::default()
             }),
         }?;
 
@@ -2313,7 +2317,7 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .response
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {
             response: Ok(RefundsResponseData {

@@ -105,7 +105,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = cryptopay::CryptopayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.api_key.peek().to_owned().into_masked(),
@@ -124,9 +124,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cryptopay::CryptopayErrorResponse = res
             .response
             .parse_struct("CryptopayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -309,14 +307,14 @@ macros::create_all_prerequisites!(
                         .unwrap_or_default();
                     let md5_payload = crypto::Md5
                         .generate_digest(body.as_bytes())
-                        .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
                     encode(md5_payload)
                 }
             };
             let api_method = method.to_string();
 
             let now = date_time::date_as_yyyymmddthhmmssmmmz()
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             let date = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
             let content_type = self.get_content_type().to_string();
@@ -331,7 +329,7 @@ macros::create_all_prerequisites!(
                 auth.api_secret.peek().as_bytes(),
                 sign_req.as_bytes(),
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
             .attach_printable("Failed to sign the message")?;
             let authz = BASE64_ENGINE.encode(authz);
             let auth_string: String = format!("HMAC {}:{}", auth.api_key.peek(), authz);
@@ -430,11 +428,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let base64_signature = request
             .headers
             .get("x-cryptopay-signature")
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for Cryptopay")?;
-        hex::decode(base64_signature).change_context(ConnectorRequestError::NotImplemented(
+        hex::decode(base64_signature).change_context(ConnectorRequestError::not_implemented(
             "webhook source verification failed".to_string(),
         ))
     }
@@ -445,7 +443,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let message = std::str::from_utf8(&request.body)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
@@ -462,7 +460,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(ConnectorRequestError::NotImplemented(
+            None => Err(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))?,
         };
@@ -475,7 +473,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification failed for Cryptopay")
@@ -490,7 +488,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             ))?;
         match notif.data.status {
@@ -510,11 +508,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             ))?;
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         );
 
         response.map(|mut response| {

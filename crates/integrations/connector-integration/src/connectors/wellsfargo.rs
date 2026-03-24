@@ -397,6 +397,7 @@ macros::create_all_prerequisites!(
                 .decode(api_secret.as_bytes())
                 .change_context(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_account_details.api_secret",
+                context: Default::default()
                 })
                 .attach_printable("Failed to decode base64-encoded API secret")?;
 
@@ -424,11 +425,11 @@ macros::create_all_prerequisites!(
 
             let base_url = &req.resource_common_data.get_connectors().wellsfargo.base_url;
             let wellsfargo_host = Url::parse(base_url)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                 .attach_printable("Failed to parse Wells Fargo base URL")?;
             let host = wellsfargo_host
                 .host_str()
-                .ok_or(ConnectorRequestError::RequestEncodingFailed)?;
+                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             // Get the request body for digest calculation
             let request_body = self.get_request_body(req)?;
@@ -692,7 +693,7 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
                 .attach_printable("Missing connector transaction ID for capture")?;
 
             Ok(format!(
@@ -802,7 +803,7 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
                 .attach_printable("Missing connector transaction ID for payment sync")?;
 
             Ok(format!(

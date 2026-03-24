@@ -139,12 +139,14 @@ where
                 return Err(ConnectorRequestError::NotSupported {
                     message: format!("payment method {pm} is not supported by PPRO"),
                     connector: "ppro",
+                context: Default::default()
                 }
                 .into())
             }
             None => {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
+                context: Default::default()
                 }
                 .into())
             }
@@ -452,6 +454,7 @@ where
                 .minor_amount_authorized)
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "amount or minor_amount_authorized",
+                context: Default::default()
             })?;
 
         Ok(Self { amount })
@@ -898,12 +901,14 @@ where
                 return Err(ConnectorRequestError::NotSupported {
                     message: format!("payment method {pm} is not supported for PPRO mandates"),
                     connector: "ppro",
+                context: Default::default()
                 }
                 .into())
             }
             None => {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
+                context: Default::default()
                 }
                 .into())
             }

@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = stripe::StripeAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![
             (
                 headers::AUTHORIZATION.to_string(),
@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: stripe::ErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -755,7 +755,7 @@ macros::macro_connector_implementation!(
                     x,
                     "?expand[0]=latest_charge" //updated payment_id(if present) reside inside latest_charge field
                 )),
-                x => x.change_context(ConnectorRequestError::MissingConnectorTransactionID),
+                x => x.change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
             }
         }
     }
@@ -791,7 +791,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}{}/{}/capture",
                 self.connector_base_url_payments(req),
@@ -865,7 +865,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let payment_id = &req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}v1/payment_intents/{}/increment_authorization",
                 self.connector_base_url_payments(req),

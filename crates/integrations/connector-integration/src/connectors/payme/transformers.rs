@@ -44,7 +44,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PaymeAuthType {
                 payme_client_key: payme_client_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -99,7 +99,9 @@ impl TryFrom<SaleStatus> for RefundStatus {
             SaleStatus::Initial | SaleStatus::Authorized => Ok(Self::Pending),
             SaleStatus::Failed => Ok(Self::Failure),
             SaleStatus::Voided | SaleStatus::PartialVoid | SaleStatus::Chargeback => {
-                Err(ConnectorResponseError::response_handling_failed(None))?
+                Err(ConnectorRequestError::not_implemented(
+                    "refund status mapping not defined for this sale status".to_string(),
+                ))?
             }
         }
     }
@@ -180,6 +182,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "reference_id (payme_sale_id from CreateOrder)",
+                context: Default::default()
         })?
         .clone();
 
@@ -190,6 +193,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
             return Err(ConnectorRequestError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "payme",
+                context: Default::default()
             }
             .into())
         }
@@ -203,6 +207,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
+                context: Default::default()
             })?;
 
     let buyer_name = router_data
@@ -211,6 +216,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "customer.name",
+                context: Default::default()
         })?
         .clone();
 
@@ -422,7 +428,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let sale_payme_id = item
             .request
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
@@ -488,7 +494,7 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
         } else {
             // Get the first sale item from the items array
             let sale_item = response.items.first().ok_or(
-                ConnectorResponseError::response_deserialization_failed(None),
+                ConnectorResponseError::response_deserialization_failed(item.http_code),
             )?;
 
             // Map PayMe sale status to AttemptStatus using SaleStatus enum
@@ -551,7 +557,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
@@ -864,7 +870,7 @@ impl TryFrom<ResponseRouterData<PaymeRSyncResponse, Self>>
 
         // Get the first transaction item from the items array
         let transaction_item = response.items.first().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Map PayMe sale status to RefundStatus using SaleStatus enum
@@ -923,6 +929,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
+                context: Default::default()
                 })?;
 
         Ok(Self {

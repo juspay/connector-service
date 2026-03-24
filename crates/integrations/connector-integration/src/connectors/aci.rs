@@ -202,7 +202,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = aci::AciAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_key.peek()).into_masked(),
@@ -217,9 +217,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: aci::AciErrorResponse = res
             .response
             .parse_struct("AciErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
         with_error_response_body!(event_builder, response);
         Ok(ErrorResponse {
             status_code: res.status_code,
@@ -334,17 +332,18 @@ macros::create_all_prerequisites!(
                     .get_connector_mandate_id()
                     .ok_or_else(|| {
                         error_stack::report!(ConnectorRequestError::MissingRequiredField {
-                            field_name: "connector_mandate_id"
+                            field_name: "connector_mandate_id",
+                context: Default::default()
                         })
                     }),
                 MandateReferenceId::NetworkMandateId(_) => {
-                    Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                    Err(error_stack::report!(ConnectorRequestError::not_implemented(
                         "Network mandate ID not supported for repeat payments in aci"
                             .to_string(),
                     )))
                 }
                 MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                    Err(error_stack::report!(ConnectorRequestError::not_implemented(
                         "Network token with NTI not supported for aci".to_string(),
                     )))
                 }
@@ -440,7 +439,7 @@ macros::macro_connector_implementation!(
             req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
             "?entityId=",
             auth.entity_id.peek()
         ))
@@ -478,7 +477,7 @@ macros::macro_connector_implementation!(
             req.request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
         ))
         }
     }

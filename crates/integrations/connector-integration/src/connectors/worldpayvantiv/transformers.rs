@@ -164,6 +164,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method".to_string(),
                     connector: "worldpayvantiv",
+                context: Default::default()
                 }
                 .into());
             }
@@ -291,7 +292,7 @@ impl TryFrom<&ConnectorSpecificConfig> for WorldpayvantivAuthType {
                 report_group: report_group.clone(),
                 merchant_config_currency: merchant_config_currency.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -507,6 +508,7 @@ impl TryFrom<common_enums::CardNetwork> for WorldpayvativCardType {
             _ => Err(ConnectorRequestError::NotSupported {
                 message: "Card network".to_string(),
                 connector: "worldpayvantiv",
+                context: Default::default()
             }
             .into()),
         }
@@ -526,6 +528,7 @@ impl TryFrom<&domain_types::utils::CardIssuer> for WorldpayvativCardType {
             _ => Err(ConnectorRequestError::NotSupported {
                 message: "Card network".to_string(),
                 connector: "worldpayvantiv",
+                context: Default::default()
             }
             .into()),
         }
@@ -1289,6 +1292,7 @@ fn get_payment_flow_type(
                 "Unable to determine payment flow type from merchant transaction ID: {merchant_txn_id}"
             ),
             connector: "worldpayvantiv",
+                context: Default::default()
         })
     }
 }
@@ -1476,7 +1480,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             (_, _) => Err(error_stack::Report::from(
-                ConnectorResponseError::unexpected_response_error(None),
+                ConnectorResponseError::unexpected_response_error(item.http_code),
             )
             .attach_printable(
                 "Only one of 'sale_response' or 'authorization_response' is expected",
@@ -1574,6 +1578,7 @@ where
                         }
                         None => Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "apple_pay_decrypted_data",
+                context: Default::default()
                         }
                         .into()),
                     }
@@ -1589,11 +1594,13 @@ where
                                 .get_expiry_month()
                                 .change_context(ConnectorRequestError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_month",
+                context: Default::default()
                                 })?;
                             let expiry_year = google_pay_decrypted_data
                                 .get_four_digit_expiry_year()
                                 .change_context(ConnectorRequestError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_year",
+                context: Default::default()
                                 })?;
                             let formatted_year = &expiry_year.expose()[2..];
                             let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
@@ -1620,6 +1627,7 @@ where
                         domain_types::payment_method_data::GpayTokenizationData::Encrypted(_) => {
                             Err(ConnectorRequestError::MissingRequiredField {
                                 field_name: "google_pay_decrypted_data",
+                context: Default::default()
                             }
                             .into())
                         }
@@ -1628,6 +1636,7 @@ where
                 _ => Err(ConnectorRequestError::NotSupported {
                     message: "Wallet type".to_string(),
                     connector: "worldpayvantiv",
+                context: Default::default()
                 }
                 .into()),
             }
@@ -1635,6 +1644,7 @@ where
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Payment method".to_string(),
             connector: "worldpayvantiv",
+                context: Default::default()
         }
         .into()),
     }
@@ -1652,6 +1662,7 @@ fn determine_apple_pay_card_type(
         _ => Err(ConnectorRequestError::NotSupported {
             message: format!("Apple Pay network: {network}"),
             connector: "worldpayvantiv",
+                context: Default::default()
         }
         .into()),
     }
@@ -1669,6 +1680,7 @@ fn determine_google_pay_card_type(
         _ => Err(ConnectorRequestError::NotSupported {
             message: format!("Google Pay network: {network}"),
             connector: "worldpayvantiv",
+                context: Default::default()
         }
         .into()),
     }
@@ -1727,6 +1739,7 @@ fn get_valid_transaction_id(
     } else {
         Err(ConnectorRequestError::InvalidConnectorConfig {
             config: "Transaction ID length exceeds maximum limit",
+                context: Default::default()
         }
         .into())
     }
@@ -1817,7 +1830,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         let merchant_txn_id = item
             .router_data
             .resource_common_data
@@ -2168,7 +2181,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         let merchant_txn_id = item
             .router_data
             .resource_common_data

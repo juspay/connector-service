@@ -302,9 +302,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: hyperpg::HyperpgErrorResponse = res
             .response
             .parse_struct("HyperpgErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))
             .attach_printable("Failed to deserialize Hyperpg error response")?;
 
         with_error_response_body!(event_builder, response);
@@ -361,7 +359,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&auth))
         }
 
@@ -391,7 +389,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&auth))
         }
 
@@ -423,7 +421,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&auth))
         }
 
@@ -433,18 +431,22 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_meta = req.request.get_connector_feature_data()?;
 
+            let hyperpg_meta: hyperpg::HyperpgMeta = connector_meta
+                .parse_value("HyperpgMeta")
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
-    let hyperpg_meta: hyperpg::HyperpgMeta = connector_meta
-        .parse_value("HyperpgMeta")
-        .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            let order_id = hyperpg_meta.order_id.ok_or(
+                ConnectorRequestError::MissingRequiredField {
+                    field_name: "order_id",
+                    context: Default::default(),
+                },
+            )?;
 
-
-    let order_id = hyperpg_meta.order_id.ok_or(
-        ConnectorRequestError::MissingRequiredField { field_name: "order_id"},
-    )?;
-
-
-            Ok(format!("{}/orders/{}/refunds", self.connector_base_url_refunds(req), order_id))
+            Ok(format!(
+                "{}/orders/{}/refunds",
+                self.connector_base_url_refunds(req),
+                order_id
+            ))
         }
     }
 );
@@ -466,7 +468,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&auth))
         }
 

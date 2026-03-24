@@ -95,6 +95,7 @@ pub fn missing_field_err(
     Box::new(move || {
         ConnectorRequestError::MissingRequiredField {
             field_name: message,
+                context: Default::default()
         }
         .into()
     })
@@ -120,11 +121,13 @@ where
             .map_err(Report::from)
             .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
+                context: Default::default()
             })?,
         _ => serde_json::from_value(json_value.clone())
             .map_err(Report::from)
             .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
+                context: Default::default()
             })?,
     };
 
@@ -136,15 +139,13 @@ pub(crate) fn handle_json_response_deserialization_failure(
     _connector: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
     let response_data = String::from_utf8(res.response.to_vec()).change_context(
-        ConnectorResponseError::response_deserialization_failed(None),
+        ConnectorResponseError::response_deserialization_failed(res.status_code),
     )?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseError::response_deserialization_failed(
-            None,
-        ))?,
+        Ok(_) => Err(ConnectorResponseError::response_deserialization_failed(res.status_code))?,
         // in case of unexpected response but in html or string format
         Err(_error_msg) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -188,6 +189,7 @@ pub(crate) fn safe_base64_decode(base64_data: String) -> Result<Vec<u8>, Error> 
     })
     .ok_or(ConnectorRequestError::InvalidDataFormat {
         field_name: "base64_data",
+                context: Default::default()
     })
     .attach_printable(format!(
         "Base64 decoding failed for all engines. Errors: {:?}",
@@ -277,7 +279,7 @@ pub fn serialize_to_xml_string_with_root<T: Serialize>(
     data: &T,
 ) -> Result<String, Error> {
     let xml_content = quick_xml::se::to_string_with_root(root_name, data)
-        .change_context(ConnectorRequestError::RequestEncodingFailed)
+        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
         .attach_printable("Failed to serialize XML with root")?;
 
     let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{xml_content}");
@@ -368,7 +370,7 @@ where
                         .get_connector_reference_id(),
                     amount: capture_sync_response
                         .get_amount_captured()
-                        .change_context(ConnectorRequestError::AmountConversionFailed)
+                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
                         .attach_printable(
                             "failed to convert back captured response amount to minor unit",
                         )?,

@@ -53,7 +53,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BarclaycardAuthType {
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -98,6 +98,7 @@ fn build_bill_to(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing.address",
+                context: Default::default()
         })?;
 
     let administrative_area = address
@@ -110,6 +111,7 @@ fn build_bill_to(
         })
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing_address.state",
+                context: Default::default()
         })?;
 
     Ok(requests::BillTo {
@@ -422,7 +424,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "Only card payments are supported".to_string(),
             )),
         }?;
@@ -455,6 +457,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get_payment_method_billing()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing",
+                context: Default::default()
             })?;
 
         let bill_to = build_bill_to(billing, email)?;
@@ -573,6 +576,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
+                context: Default::default()
                 })?;
         let amount = BarclaycardAmountConvertor::convert(
             router_data
@@ -580,6 +584,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
+                context: Default::default()
                 })?,
             currency,
         )?;
@@ -606,6 +611,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 reason: router_data.request.cancellation_reason.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "cancellation_reason",
+                context: Default::default()
                     },
                 )?,
             },

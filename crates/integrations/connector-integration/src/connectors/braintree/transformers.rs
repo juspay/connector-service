@@ -199,7 +199,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BraintreeAuthType {
                 merchant_config_currency: merchant_config_currency.clone(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
         }
     }
 }
@@ -232,7 +232,10 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for BraintreeMeta {
     type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(ConnectorRequestError::InvalidConnectorConfig { config: "metadata" })?;
+            .change_context(ConnectorRequestError::InvalidConnectorConfig {
+                config: "metadata",
+                context: Default::default(),
+            })?;
         Ok(metadata)
     }
 }
@@ -322,7 +325,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         let (query, transaction_body) = (
             match item.router_data.request.is_auto_capture()? {
                 true => constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
@@ -399,7 +402,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector_feature_data
                     .clone(),
             )
-            .change_context(ConnectorRequestError::InvalidConnectorConfig { config: "metadata" })?
+            .change_context(ConnectorRequestError::InvalidConnectorConfig {
+                config: "metadata",
+                context: Default::default(),
+            })?
         };
         validate_currency(
             item.router_data.request.currency,
@@ -425,7 +431,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed)?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
                 let order_id = item
                     .router_data
                     .resource_common_data
@@ -449,6 +455,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     payment_method_id: payment_method_id.clone().ok_or(
                                         ConnectorRequestError::MissingRequiredField {
                                             field_name: "google_pay token",
+                context: Default::default()
                                         },
                                     )?,
                                     transaction: WalletTransactionBody {
@@ -503,6 +510,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     payment_method_id: payment_method_id.clone().ok_or(
                                         ConnectorRequestError::MissingRequiredField {
                                             field_name: "apple_pay token",
+                context: Default::default()
                                         },
                                     )?,
                                     transaction: WalletTransactionBody {
@@ -538,7 +546,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         }))
                     }
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("braintree"),
                     )
                     .into()),
@@ -561,7 +569,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("braintree"),
                 )
                 .into())
@@ -1098,6 +1106,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 auth.merchant_account_id
                     .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                         config: "merchant_account_id",
+                context: Default::default()
                     })?;
             let merchant_config_currency = auth
                 .merchant_config_currency
@@ -1105,6 +1114,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 .and_then(|s| s.parse::<enums::Currency>().ok())
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "merchant_config_currency",
+                context: Default::default()
                 })?;
             BraintreeMeta {
                 merchant_account_id,
@@ -1124,7 +1134,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         let variables = BraintreeRefundVariables {
             input: BraintreeRefundInput {
                 transaction_id: item.router_data.request.connector_transaction_id.clone(),
@@ -1235,7 +1245,13 @@ where
                 .and_then(|v| v.as_str())
                 .and_then(|s| s.parse().ok())
         })
-        .ok_or_else(|| ConnectorRequestError::MissingRequiredField { field_name }.into())
+        .ok_or_else(|| {
+            ConnectorRequestError::MissingRequiredField {
+                field_name,
+                context: Default::default(),
+            }
+            .into()
+        })
 }
 
 fn extract_metadata_string_field(
@@ -1251,7 +1267,13 @@ fn extract_metadata_string_field(
                 .and_then(|v| v.as_str())
                 .map(|s| Secret::new(s.to_string()))
         })
-        .ok_or_else(|| ConnectorRequestError::MissingRequiredField { field_name }.into())
+        .ok_or_else(|| {
+            ConnectorRequestError::MissingRequiredField {
+                field_name,
+                context: Default::default(),
+            }
+            .into()
+        })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1296,6 +1318,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let merchant_account_id = auth.merchant_account_id.ok_or(
                     ConnectorRequestError::InvalidConnectorConfig {
                         config: "merchant_account_id",
+                context: Default::default()
                     },
                 )?;
                 let merchant_config_currency = auth
@@ -1304,6 +1327,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .and_then(|s| s.parse::<enums::Currency>().ok())
                     .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                         config: "merchant_config_currency",
+                context: Default::default()
                     })?;
                 BraintreeMeta {
                     merchant_account_id,
@@ -1386,7 +1410,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
                     .refunds
                     .edges
                     .first()
-                    .ok_or(ConnectorRequestError::MissingConnectorRefundID)?;
+                    .ok_or(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() })?;
                 let connector_refund_id = &edge_data.node.id;
                 let response = Ok(RefundsResponseData {
                     connector_refund_id: connector_refund_id.to_string(),
@@ -1496,7 +1520,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("braintree"),
                 )
                 .into())
@@ -1635,7 +1659,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         let variables = VariableCaptureInput {
             input: CaptureInputData {
                 transaction_id: item
@@ -1643,7 +1667,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
                 transaction: CaptureTransactionBody { amount },
             },
         };
@@ -1888,25 +1912,25 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 let meta_value: serde_json::Value = connector_meta.expose();
                                 meta_value
                                     .get("apple_pay_combined")
-                                    .ok_or(ConnectorRequestError::NoConnectorMetaData)
+                                    .ok_or(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                                     .attach_printable("Missing apple_pay_combined metadata")
                                     .into_response_err()?
                                     .get("manual")
-                                    .ok_or(ConnectorRequestError::NoConnectorMetaData)
+                                    .ok_or(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                                     .attach_printable("Missing manual metadata")
                                     .into_response_err()?
                                     .get("payment_request_data")
-                                    .ok_or(ConnectorRequestError::NoConnectorMetaData)
+                                    .ok_or(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                                     .attach_printable("Missing payment_request_data metadata")
                                     .into_response_err()?
                                     .clone()
                                     .parse_value("PaymentRequestMetadata")
-                                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                                    .change_context(ConnectorResponseError::response_deserialization_failed(item.http_code))
                                     .attach_printable(
                                         "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
                                     )?
                             }
-                            None => Err(ConnectorRequestError::NoConnectorMetaData)
+                            None => Err(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                                 .attach_printable("connector_feature_data is None")
                                 .into_response_err()?,
                         };
@@ -1925,6 +1949,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 country_code: item.router_data.request.country.ok_or(
                                     ConnectorRequestError::MissingRequiredField {
                                         field_name: "country",
+                context: Default::default()
                                     },
                                 )?,
                                 currency_code: item.router_data.request.currency,
@@ -1963,10 +1988,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 .expose()
                                 .parse_value("GpaySessionTokenData")
                                 .change_context(
-                                    ConnectorResponseError::response_deserialization_failed(None),
+                                    ConnectorResponseError::response_deserialization_failed(item.http_code),
                                 )
                                 .attach_printable("Failed to parse gpay metadata")?,
-                            None => Err(ConnectorRequestError::NoConnectorMetaData)
+                            None => Err(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                                 .attach_printable("connector_feature_data is None")
                                 .into_response_err()?,
                         };
@@ -1987,6 +2012,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     country_code: item.router_data.request.country.ok_or(
                                         ConnectorRequestError::MissingRequiredField {
                                             field_name: "country",
+                context: Default::default()
                                         },
                                     )?,
                                     currency_code: item.router_data.request.currency,
@@ -2012,7 +2038,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             .connector_feature_data
                             .clone()
                             .parse_value::<PaypalSdkSessionTokenData>("PaypalSdkSessionTokenData")
-                            .change_context(ConnectorRequestError::NoConnectorMetaData)
+                            .change_context(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })
                             .attach_printable("Failed to parse paypal_sdk metadata.".to_string())
                             .into_response_err()?;
 
@@ -2033,7 +2059,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     _ => {
-                        return Err(ConnectorRequestError::NotImplemented(
+                        return Err(ConnectorRequestError::not_implemented(
                             format!(
                                 "SDK session token generation is not supported for payment method: {:?}",
                                 item.router_data.request.payment_method_type
@@ -2160,7 +2186,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(Self {
             query: constants::TRANSACTION_QUERY.to_string(),
             variables: PSyncInput {
@@ -2223,7 +2249,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                     .transactions
                     .edges
                     .first()
-                    .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+                    .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
                 let status = enums::AttemptStatus::from(edge_data.node.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
                     Err(create_failure_error_response(
@@ -2292,7 +2318,7 @@ where
                 .collect::<String>();
             Ok(cleaned_number)
         }
-        _ => Err(ConnectorRequestError::NotImplemented("given payment method".to_owned()).into()),
+        _ => Err(ConnectorRequestError::not_implemented("given payment method".to_owned()).into()),
     }
 }
 
@@ -2363,6 +2389,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order_id = reference_id.ok_or(
             ConnectorRequestError::MissingConnectorRelatedTransactionID {
                 id: "order_id".to_string(),
+                context: Default::default()
             },
         )?;
         let amount = item
@@ -2372,7 +2399,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         let (query, transaction_body) = if item.router_data.request.is_mandate_payment() {
             (
                 if item.router_data.request.is_auto_capture()? {
@@ -2472,7 +2499,7 @@ fn get_braintree_redirect_form<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
-                ConnectorRequestError::NotImplemented("given payment method".to_owned()),
+                ConnectorRequestError::not_implemented("given payment method".to_owned()),
             )?,
         },
         acs_url: complete_authorize_url,
@@ -2484,13 +2511,14 @@ fn validate_currency(
     merchant_config_currency: Option<enums::Currency>,
 ) -> Result<(), ConnectorRequestError> {
     let merchant_config_currency =
-        merchant_config_currency.ok_or(ConnectorRequestError::NoConnectorMetaData)?;
+        merchant_config_currency.ok_or(ConnectorRequestError::NoConnectorMetaData { context: Default::default() })?;
     if request_currency != merchant_config_currency {
         Err(ConnectorRequestError::NotSupported {
             message: format!(
                 "currency {request_currency} is not supported for this merchant account",
             ),
             connector: "Braintree",
+                context: Default::default()
         })?
     }
     Ok(())
@@ -2598,7 +2626,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector_feature_data
                     .clone(),
             )
-            .change_context(ConnectorRequestError::InvalidConnectorConfig { config: "metadata" })?
+            .change_context(ConnectorRequestError::InvalidConnectorConfig {
+                config: "metadata",
+                context: Default::default(),
+            })?
         };
         validate_currency(
             item.router_data.request.currency,
@@ -2609,6 +2640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let connector_mandate_id = item.router_data.request.connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
+                        context: Default::default(),
                     },
                 )?;
                 Ok(Self::Mandate(MandatePaymentRequest::try_from((
@@ -2635,7 +2667,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("braintree"),
                 )
                 .into())

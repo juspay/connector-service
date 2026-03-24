@@ -207,7 +207,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("billwerk"),
                 )
                 .into())
@@ -243,7 +243,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            return Err(ConnectorRequestError::NotImplemented(
+            return Err(ConnectorRequestError::not_implemented(
                 "Three_ds payments through Billwerk".to_string(),
             )
             .into());
@@ -395,7 +395,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BillwerkAuthType {
                 api_key: api_key.to_owned(),
                 public_api_key: public_api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }

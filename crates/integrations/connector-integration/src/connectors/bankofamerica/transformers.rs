@@ -594,7 +594,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -618,7 +618,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -736,7 +736,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_refund_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed)?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -1438,7 +1438,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BankOfAmericaAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType)?
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
         }
     }
 }
@@ -1756,7 +1756,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?,
             },
@@ -1777,7 +1777,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?
             }
@@ -1819,6 +1819,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Err(ConnectorRequestError::NotSupported {
                 message: "Card 3DS".to_string(),
                 connector: "BankOfAmerica",
+                context: Default::default()
             })?
         };
 
@@ -1887,7 +1888,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         Ok(Self {
             amount_details: Amount {
                 total_amount: amount,
@@ -2308,7 +2309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_amount_to_capture,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed)?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -2354,11 +2355,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "Amount",
+                context: Default::default()
                 })?;
 
         let currency = item.router_data.request.currency.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "Currency",
+                context: Default::default()
             },
         )?;
 
@@ -2378,12 +2381,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(amount, currency)
-                        .change_context(ConnectorRequestError::AmountConversionFailed)?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
                     currency,
                 },
                 reason: item.router_data.request.cancellation_reason.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "Cancellation Reason",
+                context: Default::default()
                     },
                 )?,
             },

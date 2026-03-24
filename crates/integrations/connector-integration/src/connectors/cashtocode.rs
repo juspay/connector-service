@@ -155,19 +155,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             request
                 .headers
                 .get("authorization")
-                .ok_or(ConnectorRequestError::NotImplemented(
+                .ok_or(ConnectorRequestError::not_implemented(
                     "webhook signature not found".to_string(),
                 ))?;
 
         let signature = base64_signature.as_bytes();
 
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Could not convert secret to UTF-8")?;
         let signature_auth = String::from_utf8(signature.to_vec())
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Could not convert secret to UTF-8")?;
@@ -196,7 +196,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
             .parse_struct("CashtocodePaymentsSyncResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -410,9 +410,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cashtocode::CashtocodeErrorResponse = res
             .response
             .parse_struct("CashtocodeErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -603,8 +601,8 @@ fn get_b64_auth_cashtocode(
         username: Option<Secret<String>>,
         password: Option<Secret<String>>,
     ) -> Result<Maskable<String>, ConnectorRequestError> {
-        let username = username.ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
-        let password = password.ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+        let username = username.ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let password = password.ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(format!(
             "Basic {}",
             base64::engine::general_purpose::STANDARD.encode(format!(
@@ -625,7 +623,7 @@ fn get_b64_auth_cashtocode(
             auth_type.username_evoucher.to_owned(),
             auth_type.password_evoucher.to_owned(),
         ),
-        _ => return Err(ConnectorRequestError::MissingPaymentMethodType)?,
+        _ => return Err(ConnectorRequestError::MissingPaymentMethodType { context: Default::default() })?,
     }?;
 
     Ok(vec![(headers::AUTHORIZATION.to_string(), auth_header)])

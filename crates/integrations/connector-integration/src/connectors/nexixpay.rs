@@ -126,6 +126,7 @@ macros::create_all_prerequisites!(
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data",
+                context: Default::default()
                 })?;
 
             metadata_obj
@@ -134,6 +135,7 @@ macros::create_all_prerequisites!(
                 .map(|s| s.to_string())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data.operationId",
+                context: Default::default()
                 }.into())
         }
 
@@ -396,7 +398,7 @@ macros::macro_connector_implementation!(
             } else {
                 // No metadata available, use connector_transaction_id
                 req.request.get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?
             };
             Ok(format!("{}/operations/{}", self.connector_base_url_payments(req), operation_id))
         }
@@ -505,7 +507,7 @@ macros::macro_connector_implementation!(
             } else {
                 // No metadata available, use connector_transaction_id
                 req.request.get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?
             };
             Ok(format!("{}/operations/{}/captures", self.connector_base_url_payments(req), operation_id))
         }
@@ -810,7 +812,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = nexixpay::NexixpayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![
             (headers::X_API_KEY.to_string(), auth.api_key.expose().into()),
             (
@@ -828,9 +830,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: nexixpay::NexixpayErrorResponse = res
             .response
             .parse_struct("NexixpayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

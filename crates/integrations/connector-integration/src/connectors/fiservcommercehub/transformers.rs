@@ -47,7 +47,7 @@ impl FiservcommercehubAuthType {
         let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
         let signature = crypto::HmacSha256
             .sign_message(self.api_secret.peek().as_bytes(), raw_signature.as_bytes())
-            .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
         Ok(general_purpose::STANDARD.encode(signature))
     }
 
@@ -82,7 +82,7 @@ impl TryFrom<&ConnectorSpecificConfig> for FiservcommercehubAuthType {
                 terminal_id: terminal_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorRequestError::FailedToObtainAuthType
+                errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -254,20 +254,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .first()
             .ok_or_else(|| {
                 error_stack::report!(errors::ConnectorRequestError::MissingRequiredField {
-                    field_name: "key_id"
+                    field_name: "key_id",
+                context: Default::default()
                 })
             })?
             .to_string();
 
         let encoded_public_key = parts.get(1).ok_or_else(|| {
             error_stack::report!(errors::ConnectorRequestError::MissingRequiredField {
-                field_name: "encoded_public_key"
+                field_name: "encoded_public_key",
+                context: Default::default()
             })
         })?;
 
         let public_key_der = general_purpose::STANDARD
             .decode(encoded_public_key)
-            .map_err(|_| error_stack::report!(errors::ConnectorRequestError::RequestEncodingFailed))
+            .map_err(|_| error_stack::report!(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() }))
             .attach_printable("Failed to decode Base64 RSA public key")?;
 
         let auth_type = &router_data.connector_config;
@@ -282,6 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map(|n| n.peek().clone())
                     .ok_or(errors::ConnectorRequestError::MissingRequiredField {
                         field_name: "card_holder_name",
+                context: Default::default()
                     })?;
                 let expiration_month = card.card_exp_month.peek().to_string();
                 let expiration_year = card.card_exp_year.peek().to_string();
@@ -299,7 +302,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let encrypted_bytes =
                     RsaOaepSha256::encrypt(&public_key_der, plain_block.as_bytes())
-                        .change_context(errors::ConnectorRequestError::RequestEncodingFailed)
+                        .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                         .attach_printable("RSA OAEP-SHA256 encryption of card data failed")?;
 
                 let encryption_block =
@@ -317,7 +320,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             _ => {
                 return Err(error_stack::report!(
-                    errors::ConnectorRequestError::NotImplemented(
+                    errors::ConnectorRequestError::not_implemented(
                         "This payment method is not implemented".to_string(),
                     )
                 ))
@@ -540,7 +543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(errors::ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(Self {
             merchant_details: FiservcommercehubPSyncMerchantDetails {
                 merchant_id: auth.merchant_id.clone(),
@@ -577,7 +580,7 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let psync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseError::response_deserialization_failed(None)
+                errors::ConnectorResponseError::response_deserialization_failed(item.http_code)
             )
         })?;
         let status = AttemptStatus::from(&psync_item.gateway_response.transaction_state);
@@ -782,7 +785,7 @@ impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseError::response_deserialization_failed(None)
+                errors::ConnectorResponseError::response_deserialization_failed(item.http_code)
             )
         })?;
         let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);

@@ -37,6 +37,7 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
             .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
+                context: Default::default()
             })?;
         Ok(metadata)
     }
@@ -118,6 +119,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )
         .change_context(ConnectorRequestError::InvalidConnectorConfig {
             config: "merchant_connector_account.metadata",
+                context: Default::default()
         })?;
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
@@ -130,7 +132,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 item.router_data.request.minor_amount,
                                 item.router_data.request.currency,
                             )
-                            .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                         currency: item.router_data.request.currency,
                     };
                     let phone_details =
@@ -173,6 +175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let client_reference = item.router_data.request.customer_id.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "client_reference",
+                context: Default::default()
                         },
                     )?;
                     let destination_account_number = metadata.destination_account_number;
@@ -229,7 +232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
                 .into()),
@@ -252,7 +255,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
                 .into())
@@ -273,7 +276,7 @@ impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
             ConnectorSpecificConfig::Mifinity { key, .. } => Ok(Self {
                 key: key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }

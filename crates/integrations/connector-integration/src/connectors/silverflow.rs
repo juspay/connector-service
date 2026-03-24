@@ -345,7 +345,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let charge_key = req.request.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/charges/{}", self.connector_base_url_payments(req), charge_key))
         }
     }
@@ -417,7 +417,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let charge_key = req.request.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/charges/{}/clear", self.connector_base_url_payments(req), charge_key))
         }
     }
@@ -674,7 +674,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = silverflow::SilverflowAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
         // Create HTTP Basic authentication header
         // Format: "Basic " + base64(api_key:api_secret)
@@ -697,9 +697,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("SilverflowErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
-                ))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
         };
 
         crate::with_error_response_body!(event_builder, response);

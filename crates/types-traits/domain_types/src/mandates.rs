@@ -70,6 +70,7 @@ impl MandateAmountData {
         date_time::format_date(date, format).change_context(
             crate::errors::ConnectorRequestError::InvalidDataFormat {
                 field_name: "date_format",
+                context: Default::default()
             },
         )
     }

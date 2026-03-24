@@ -132,7 +132,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -143,9 +143,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             let authorization = auth.generate_hmac_signature(
@@ -190,7 +190,7 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -258,7 +258,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -269,9 +269,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             let authorization = auth.generate_hmac_signature(
@@ -313,7 +313,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -324,9 +324,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             let authorization = auth.generate_hmac_signature(
@@ -369,7 +369,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -380,9 +380,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             let authorization = auth.generate_hmac_signature(
@@ -425,7 +425,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -436,9 +436,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             let authorization = auth.generate_hmac_signature(
@@ -511,7 +511,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("FiservcommercehubErrorResponse")
             .change_context(
-                errors::ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
+                errors::ConnectorResponseError::response_deserialization_failed(res.status_code),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -853,7 +853,7 @@ macros::macro_connector_implementation!(
             let request_body: FiservcommercehubAuthorizeRequest =
                 FiservcommercehubAuthorizeRequest::try_from(input_data)?;
             let request_body_str = serde_json::to_string(&request_body)
-                .change_context(errors::ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let headers = self.build_authorize_headers(req, &request_body_str)?;
 

@@ -59,7 +59,7 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                             .filter(|redirect_str| !redirect_str.is_empty())
                             .map(|url| {
                                 Url::parse(url).change_context(
-                                    ConnectorRequestError::FailedToObtainIntegrationUrl,
+                                    ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() },
                                 )
                             })
                             .transpose()
@@ -136,7 +136,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RapydAuthType {
                 access_key: access_key.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType)?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
         }
     }
 }
@@ -277,6 +277,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 .get_encrypted_google_pay_token()
                                 .change_context(ConnectorRequestError::MissingRequiredField {
                                     field_name: "gpay wallet_token",
+                context: Default::default()
                                 })?
                                 .to_owned(),
                         )),
@@ -287,6 +288,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             .get_encrypted_apple_pay_payment_data_mandatory()
                             .change_context(ConnectorRequestError::MissingRequiredField {
                                 field_name: "Apple pay encrypted data",
+                context: Default::default()
                             })?;
                         Some(RapydWallet {
                             payment_type: "apple_pay".to_string(),
@@ -305,7 +307,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             _ => None,
         }
         .get_required_value("payment_method not implemented")
-        .change_context(ConnectorRequestError::NotImplemented(
+        .change_context(ConnectorRequestError::not_implemented(
             "payment_method".to_owned(),
         ))?;
         let return_url = item.router_data.request.get_router_return_url()?;
@@ -316,7 +318,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
         Ok(Self {
             amount,
             currency: item.router_data.request.currency,
@@ -453,7 +455,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         Ok(Self {
             amount: Some(amount),
             receipt_email: None,
@@ -485,7 +487,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         Ok(Self {
             payment: item
                 .router_data

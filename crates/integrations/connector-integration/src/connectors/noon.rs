@@ -174,14 +174,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookSignature = request
             .body
             .parse_struct("NoonWebhookSignature")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook signature not found".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for noon")?;
         let signature = webhook_body.signature;
         BASE64_ENGINE
             .decode(signature)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook signature not found".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for noon")
@@ -195,7 +195,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookBody = request
             .body
             .parse_struct("NoonWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook signature not found".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for noon")?;
@@ -219,7 +219,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: noon::NoonWebhookEvent = request
             .body
             .parse_struct("NoonWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             ))
             .attach_printable("Failed to parse webhook event type from Noon webhook body")?;
@@ -228,7 +228,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             noon::NoonWebhookEventTypes::Sale | noon::NoonWebhookEventTypes::Capture => {
                 match &details.order_status {
                     noon::NoonPaymentStatus::Captured => EventType::PaymentIntentSuccess,
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         "webhook event type not found".to_string(),
                     ))?,
                 }
@@ -251,7 +251,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(ConnectorRequestError::NotImplemented(
+            None => Err(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))?,
         };
@@ -264,7 +264,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Noon webhook signature verification failed")
@@ -305,7 +305,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let resource: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))
             .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
@@ -490,7 +490,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: NoonErrorResponse = res
             .response
             .parse_struct("NoonErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

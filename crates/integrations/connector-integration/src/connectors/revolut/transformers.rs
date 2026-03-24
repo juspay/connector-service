@@ -462,7 +462,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RevolutAuthType {
                 secret_api_key: secret_api_key.to_owned(),
                 signing_secret: signing_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -973,7 +973,7 @@ fn map_webhook_event_to_attempt_status(
         RevolutWebhookEvent::OrderAuthorised => Ok(AttemptStatus::Authorized),
         RevolutWebhookEvent::OrderCancelled => Ok(AttemptStatus::Voided),
         RevolutWebhookEvent::OrderFailed => Ok(AttemptStatus::Failure),
-        _ => Err(ConnectorRequestError::NotImplemented(
+        _ => Err(ConnectorRequestError::not_implemented(
             "webhook event type not found".to_string(),
         )),
     }

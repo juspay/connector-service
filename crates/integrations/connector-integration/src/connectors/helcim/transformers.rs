@@ -33,6 +33,7 @@ pub fn check_currency(
         Err(ConnectorRequestError::NotSupported {
             message: format!("currency {currency} is not supported for this merchant account"),
             connector: "Helcim",
+                context: Default::default()
         })
     }
 }
@@ -49,7 +50,7 @@ impl TryFrom<&ConnectorSpecificConfig> for HelcimAuthType {
             ConnectorSpecificConfig::Helcim { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -141,7 +142,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
-            _ => return Err(ConnectorRequestError::NotImplemented("payment method".into()).into()),
+            _ => return Err(ConnectorRequestError::not_implemented("payment method").into()),
         };
 
         let req_address = item
@@ -167,7 +168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -348,7 +349,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                 })
             }
             SyncRequestType::MultipleCaptureSync => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     "manual multiple capture sync".to_string(),
                 )
                 .into())
@@ -398,7 +399,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         Ok(Self {
             pre_auth_transaction_id: item
@@ -406,7 +407,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .get_connector_transaction_id()?
                 .parse::<u64>()
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             amount,
             ip_address,
             ecommerce: None,
@@ -477,7 +478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .parse::<u64>()
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             ip_address,
             ecommerce: None,
         })
@@ -566,7 +567,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
-            _ => return Err(ConnectorRequestError::NotImplemented("payment method".into()).into()),
+            _ => return Err(ConnectorRequestError::not_implemented("payment method").into()),
         };
 
         let req_address = item
@@ -595,7 +596,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .unwrap_or(common_utils::types::MinorUnit::new(0)),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -702,7 +703,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         let ip_address = item.router_data.request.get_ip_address()?;
         let amount = item
@@ -712,7 +713,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         Ok(Self {
             amount,

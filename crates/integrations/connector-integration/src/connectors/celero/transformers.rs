@@ -78,7 +78,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CeleroAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -291,13 +291,13 @@ impl<T: PaymentMethodDataTypes>
                 },
             },
             PaymentMethodData::BankDebit(_bank_debit_data) => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "ACH payments not yet implemented".to_string(),
                 )
                 .into())
             }
             _ => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "Payment method not supported".to_string(),
                 )
                 .into())
@@ -307,13 +307,14 @@ impl<T: PaymentMethodDataTypes>
         let is_auto_capture = item
             .request
             .is_auto_capture()
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // Validate reference ID is not empty
         let reference_id = &item.resource_common_data.connector_request_reference_id;
         if reference_id.is_empty() {
             return Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_request_reference_id",
+                context: Default::default()
             }
             .into());
         }
@@ -614,7 +615,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
 
         // Extract first transaction data (API returns array but we expect single transaction)
         let transaction_data = response.data.first().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract card response for detailed checking

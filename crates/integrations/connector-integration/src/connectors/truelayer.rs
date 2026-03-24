@@ -59,14 +59,14 @@ pub trait AccessTokenProvider {
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
     }
 }
 
@@ -313,10 +313,10 @@ macros::create_all_prerequisites!(
 
             let payload = self.build_payload(method, path, headers, body);
             let pem = base64_decode(private_key)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let signer = ES512.signer_from_pem(&pem)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let tl_headers = headers.keys().cloned().collect::<Vec<_>>().join(",");
 
@@ -324,22 +324,22 @@ macros::create_all_prerequisites!(
             header.set_algorithm("ES512");
             header.set_key_id(kid);
             header.set_claim("tl_version", Some("2".into()))
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             header.set_claim("tl_headers", Some(tl_headers.into()))
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let jws = josekit::jws::serialize_compact(
                 payload.as_bytes(),
                 &header,
                 &signer,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let parts: Vec<&str> = jws.split('.').collect();
 
             match (parts.first(), parts.get(2)) {
                 (Some(first), Some(third)) => Ok(format!("{}..{}", first, third)),
-                _ => Err(ConnectorRequestError::RequestEncodingFailed.into()),
+                _ => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }.into()),
             }
         }
 
@@ -379,7 +379,7 @@ macros::create_all_prerequisites!(
                     private_key,
                     kid.as_str(),
                 )
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             let header = vec![
                 (
@@ -436,9 +436,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: truelayer::TruelayerErrorResponse = res
             .response
             .parse_struct("TruelayerErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -476,7 +474,7 @@ macros::macro_connector_implementation!(
             let access_token = req.resource_common_data
                 .access_token
                 .clone()
-                .ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+                .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             let metadata = truelayer::TruelayerMetadata::try_from(
                 &req.resource_common_data.connector_feature_data,
             )?;
@@ -522,7 +520,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = req.resource_common_data.connectors.truelayer.secondary_base_url.as_ref()
-                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
             Ok(format!("{base_url}/connect/token"))
         }
 
@@ -544,7 +542,7 @@ macros::macro_connector_implementation!(
             let response: truelayer::TruelayerAccessTokenErrorResponse = res
                 .response
                 .parse_struct("TruelayerAccessTokenErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
             with_error_response_body!(event_builder, response);
 
@@ -582,7 +580,7 @@ macros::macro_connector_implementation!(
             let access_token = req.resource_common_data
                 .access_token
                 .clone()
-                .ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+                .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -601,7 +599,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{base_url}/v3/payments/{connector_payment_id}"))
         }
 
@@ -635,7 +633,7 @@ macros::macro_connector_implementation!(
             let access_token = req.resource_common_data
                 .access_token
                 .clone()
-                .ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+                .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             let metadata = truelayer::TruelayerMetadata::try_from(
                 &req.resource_common_data.connector_feature_data,
             )?;
@@ -688,7 +686,7 @@ macros::macro_connector_implementation!(
             let access_token = req.resource_common_data
                 .access_token
                 .clone()
-                .ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+                .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -711,6 +709,7 @@ macros::macro_connector_implementation!(
             if transaction_id.is_empty() {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_transaction_id",
+                context: Default::default()
                 }
                 .into());
             }
@@ -887,6 +886,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let tl_signature_header = req.request.webhook_headers.get("tl-signature").ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "tl-signature",
+                context: Default::default()
             },
         )?;
 
@@ -896,25 +896,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .first()
             .ok_or(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
+                context: Default::default()
             })?;
         let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(header_b64)
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
+                context: Default::default()
             })?;
         let jws_header: truelayer::JwsHeaderWebhooks = serde_json::from_slice(&header_json)
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
+                context: Default::default()
             })?;
 
         let jku = jws_header
             .jku
-            .ok_or(ConnectorRequestError::MissingRequiredField { field_name: "jku" })?;
+            .ok_or(ConnectorRequestError::MissingRequiredField {
+                field_name: "jku",
+                context: Default::default(),
+            })?;
 
         if truelayer::ALLOWED_JKUS.contains(&jku.as_str()) {
             Ok(jku)
         } else {
-            Err(ConnectorRequestError::InvalidDataFormat { field_name: "jku" }.into())
+            Err(ConnectorRequestError::InvalidDataFormat {
+                field_name: "jku",
+                context: Default::default(),
+            }
+            .into())
         }
     }
 
@@ -939,7 +949,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > {
         let response: truelayer::Jwks =
             res.response.parse_struct("truelayer Jwks").change_context(
-                ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
+                ConnectorResponseError::response_deserialization_failed(res.status_code),
             )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -950,7 +960,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
+        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
     }
 
     fn get_error_response_v2(
@@ -975,7 +985,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
             .body
             .parse_struct("TruelayerPayoutsWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -995,7 +1005,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -1046,12 +1056,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
         let status = truelayer::get_truelayer_refund_webhook_status(details._type).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
         let (error_code, error_message) = if status == RefundStatus::Failure {
@@ -1089,7 +1099,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhooksBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         Ok(Box::new(details))

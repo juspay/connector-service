@@ -537,9 +537,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             } else {
                 res.response
                     .parse_struct("PowertranzErrorResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
             };
 
             with_response_body!(event_builder, response);
@@ -627,7 +625,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}/Transactions/{}",
                 self.connector_base_url_payments(req),

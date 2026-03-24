@@ -36,6 +36,7 @@ pub fn ffi_headers_to_masked_metadata(
 
 /// Load development config from the embedded config string.
 /// This avoids runtime path lookup by embedding the config at build time.
+#[allow(clippy::result_large_err)] // `ConnectorRequestError` carries integration context; boxing `Err` here is not worth API churn.
 pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, ConnectorRequestError> {
     toml::from_str(embedded_config)
         .map(Arc::new)

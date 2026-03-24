@@ -293,6 +293,7 @@ macros::create_all_prerequisites!(
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data",
+                context: Default::default()
                 })?;
 
             metadata_obj
@@ -301,6 +302,7 @@ macros::create_all_prerequisites!(
                 .map(|s| s.to_string())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data.link_data",
+                context: Default::default()
                 }.into())
         }
     }
@@ -330,7 +332,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = worldpay::WorldpayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.api_key.into_masked(),
@@ -345,9 +347,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response = if !res.response.is_empty() {
             res.response
                 .parse_struct("WorldpayErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
-                ))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
         } else {
             WorldpayErrorResponse::default(res.status_code)
         };
@@ -422,7 +422,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}api/payments/{}",
                 self.connector_base_url_payments(req),
@@ -456,7 +456,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             // Always use /partialSettlements endpoint (same as Hyperswitch)
             Ok(format!(

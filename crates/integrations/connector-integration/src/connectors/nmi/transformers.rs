@@ -45,7 +45,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
                 public_key: public_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -318,10 +318,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
-            ) => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            ) => Err(error_stack::report!(ConnectorRequestError::not_implemented(
                 "Bank Debit type not supported for NMI".to_string()
             ))),
-            _ => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            _ => Err(error_stack::report!(ConnectorRequestError::not_implemented(
                 "Payment method not supported".to_string()
             ))),
         }
@@ -359,6 +359,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
                 .ok_or_else(|| {
                     error_stack::report!(ConnectorRequestError::MissingRequiredField {
                         field_name: "bank_account_holder_name",
+                context: Default::default()
                     })
                 })?;
 
@@ -373,7 +374,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             };
             Ok(ach_data)
         }
-        _ => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+        _ => Err(error_stack::report!(ConnectorRequestError::not_implemented(
             "Only ACH Bank Debit is supported for NMI".to_string()
         ))),
     }
@@ -525,7 +526,7 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
             .into_response_err()?;
 
         // Find the transaction matching the requested transaction_id
@@ -616,6 +617,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_connector_transaction_id()
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_transaction_id",
+                context: Default::default()
             })?;
 
         // Convert amount from minor to major units using framework converter
@@ -625,7 +627,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -739,7 +741,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -849,7 +851,8 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             // Empty response - treat as pending with proper error for connector_refund_id
             return Err(errors::report_request_as_response(error_stack::report!(
                 ConnectorRequestError::MissingConnectorRelatedTransactionID {
-                    id: "connector_refund_id".to_string()
+                    id: "connector_refund_id".to_string(),
+                context: Default::default()
                 }
             )));
         };

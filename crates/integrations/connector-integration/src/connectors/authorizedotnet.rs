@@ -202,7 +202,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookEventType = request
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             ))
             .attach_printable_lazy(|| {
@@ -236,7 +236,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Received unknown webhook event type from Authorize.Net - rejecting webhook"
                 );
                 return Err(
-                    error_stack::report!(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))
+                    error_stack::report!(ConnectorRequestError::not_implemented("webhook event type not found".to_string()))
                         .attach_printable("Unknown webhook event type"),
                 )
             }
@@ -253,7 +253,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))
             .attach_printable_lazy(|| {
@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))
             .attach_printable_lazy(|| {
@@ -439,7 +439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: transformers::ResponseMessages = res
             .response
             .parse_struct("ResponseMessages")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_response_body!(event_builder, response);
 
@@ -556,7 +556,7 @@ macros::create_all_prerequisites!(
             )];
             let mut api_key = self
                 .get_auth_header(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             header.append(&mut api_key);
             Ok(header)
         }

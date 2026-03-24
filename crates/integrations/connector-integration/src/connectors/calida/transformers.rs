@@ -36,7 +36,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CalidaAuthType {
             ConnectorSpecificConfig::Calida { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -128,11 +128,13 @@ impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
             Value::String(s) => serde_json::from_str(s).change_context(
                 ConnectorRequestError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data string",
+                context: Default::default()
                 },
             ),
             value => serde_json::from_value(value.clone()).change_context(
                 ConnectorRequestError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data value",
+                context: Default::default()
                 },
             ),
         }
@@ -166,7 +168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.capture_method == Some(enums::CaptureMethod::Manual) {
-            return Err(ConnectorRequestError::CaptureMethodNotSupported.into());
+            return Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() }.into());
         }
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}) => {
@@ -177,7 +179,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
                 let calida_mca_metadata = CalidaMetadataObject::try_from(
                     &item.router_data.resource_common_data.get_connector_meta()?,
                 )?;
@@ -218,27 +220,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_optional_billing_zip(),
                     webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
-                        .change_context(ConnectorResponseError::response_deserialization_failed(
-                            None,
-                        ))
+                        .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
                         .into_request_err()?,
                     success_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))
+                    .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
                     .into_request_err()?,
                     failure_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))
+                    .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
                     .into_request_err()?,
                 })
             }
-            _ => Err(ConnectorRequestError::NotImplemented("Payment method".to_string()).into()),
+            _ => Err(ConnectorRequestError::not_implemented("Payment method".to_string()).into()),
         }
     }
 }
@@ -407,6 +403,6 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, ConnectorRequestErr
 
     let sorted_value = sort_value(value);
     serde_json::to_string(&sorted_value).map_err(|_| {
-        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string())
+        ConnectorRequestError::not_implemented("webhook body decoding failed".to_string())
     })
 }

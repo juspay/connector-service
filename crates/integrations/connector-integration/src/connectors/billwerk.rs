@@ -468,7 +468,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = billwerk::BillwerkAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", auth.api_key.peek()));
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -484,9 +484,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: billwerk::BillwerkErrorResponse = res
             .response
             .parse_struct("BillwerkErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_response_body!(event_builder, response);
 
@@ -534,7 +532,7 @@ macros::macro_connector_implementation!(
         let base_url = req.resource_common_data.connectors.billwerk
             .secondary_base_url
             .as_ref()
-            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
         Ok(format!("{base_url}v1/token"))
     }}
 );
@@ -629,7 +627,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}v1/charge/{connector_payment_id}/settle",
             self.connector_base_url_payments(req)

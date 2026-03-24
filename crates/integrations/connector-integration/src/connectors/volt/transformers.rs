@@ -222,7 +222,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | BankRedirectData::OnlineBankingFpx { .. }
                     | BankRedirectData::OnlineBankingThailand { .. }
                     | BankRedirectData::LocalBankRedirect {} => {
-                        Err(ConnectorRequestError::NotImplemented(
+                        Err(ConnectorRequestError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("Volt"),
                         ))
                     }
@@ -295,7 +295,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Volt"),
                 )
                 .into())
@@ -404,7 +404,7 @@ impl TryFrom<&ConnectorSpecificConfig> for VoltAuthType {
                 client_id: client_id.to_owned(),
                 client_secret: client_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }

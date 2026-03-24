@@ -48,6 +48,7 @@ fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, ConnectorRequestE
                     connector: "Nexixpay".to_string(),
                     max_length: MAX_ORDER_ID_LENGTH,
                     received_length: payment_id.len(),
+                context: Default::default()
                 },
             ))
         }
@@ -70,7 +71,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NexixpayAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -134,12 +135,11 @@ pub fn get_payment_id(
 ) -> CustomResult<String, ConnectorRequestError> {
     let connector_metadata = metadata.ok_or(ConnectorRequestError::MissingRequiredField {
         field_name: "connector_feature_data",
+                context: Default::default()
     })?;
     let nexixpay_meta_data =
         serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))
+            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
             .into_request_err()?;
     let payment_flow = payment_intent.unwrap_or(nexixpay_meta_data.psync_flow);
     let payment_id = match payment_flow {
@@ -150,6 +150,7 @@ pub fn get_payment_id(
     payment_id.ok_or_else(|| {
         ConnectorRequestError::MissingRequiredField {
             field_name: "operation_id",
+                context: Default::default()
         }
         .into()
     })
@@ -271,6 +272,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             payment_method_data => Err(ConnectorRequestError::NotSupported {
                 message: format!("Payment method {payment_method_data:?}"),
                 connector: "Nexixpay",
+                context: Default::default()
             })?,
         };
 
@@ -287,6 +289,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let authentication_data = item.request.authentication_data.as_ref().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "authentication_data (must be present for 3DS flow)",
+                context: Default::default()
             },
         )?;
 
@@ -294,6 +297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ConnectorRequestError::MissingRequiredField {
                 field_name:
                     "authentication_data.transaction_id (operationId from PostAuthenticate)",
+                context: Default::default()
             },
         )?;
         // Extract PaRes from redirect_response.payload (same as PostAuthenticate)
@@ -384,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.minor_amount, item.request.currency)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             currency: item.request.currency,
             description: item
                 .request
@@ -660,7 +664,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount - handle partial vs full capture
         let capture_amount = StringMinorUnitForConnector
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             amount: capture_amount,
@@ -774,7 +778,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert refund amount
         let refund_amount = StringMinorUnitForConnector
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             amount: refund_amount,
@@ -856,6 +860,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount for void operation",
+                context: Default::default()
                 })?;
 
         let currency =
@@ -863,11 +868,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency for void operation",
+                context: Default::default()
                 })?;
 
         let void_amount_string = StringMinorUnitForConnector
             .convert(void_amount, currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         Ok(Self {
             amount: void_amount_string,
@@ -1142,12 +1148,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_data = match item.request.payment_method_data.as_ref().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_data",
+                context: Default::default()
             },
         )? {
             PaymentMethodData::Card(card) => card,
             payment_method_data => Err(ConnectorRequestError::NotSupported {
                 message: format!("Payment method {payment_method_data:?} for 3DS"),
                 connector: "Nexixpay",
+                context: Default::default()
             })?,
         };
 
@@ -1233,13 +1241,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
+                context: Default::default()
                 })?;
 
         let order = NexixpayPreAuthOrder {
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.amount, currency)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             currency,
             customer_info,
             description: item.resource_common_data.description.clone(),
@@ -1444,6 +1453,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirect_response = item.request.redirect_response.as_ref().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "redirect_response",
+                context: Default::default()
             },
         )?;
 
@@ -1453,6 +1463,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "request.redirect_response.payload",
+                context: Default::default()
             })?
             .peek();
 
@@ -1461,6 +1472,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             serde_json::from_value(redirect_payload_value.clone()).map_err(|_| {
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "redirection_payload",
+                context: Default::default()
                 }
             })?;
 
@@ -1480,6 +1492,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "operationId (paymentId from redirect or connector_feature_data)",
+                context: Default::default()
             })?;
 
         // Extract PaRes (3DS authentication response) from redirect payload
@@ -1487,6 +1500,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .pa_res
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "PaRes from redirect_response",
+                context: Default::default()
             })?
             .peek()
             .to_string();

@@ -67,6 +67,7 @@ impl TryFrom<Option<&pii::SecretSerdeValue>> for WorldpayConnectorMetadataObject
             crate::utils::to_connector_meta_from_secret::<Self>(meta_data.cloned())
                 .change_context(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_feature_data",
+                context: Default::default()
                 })?;
         Ok(metadata)
     }
@@ -86,7 +87,7 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
                 .into_request_err()?;
 
             Ok(PaymentInstrument::Card(CardPayment {
@@ -128,7 +129,7 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
                 .into_request_err()?;
 
             Ok(PaymentInstrument::RawCardForNTI(RawCardDetails {
@@ -141,7 +142,7 @@ fn fetch_payment_instrument<
             }))
         }
         PaymentMethodData::MandatePayment => {
-            Err(ConnectorRequestError::NotImplemented(
+            Err(ConnectorRequestError::not_implemented(
                 "MandatePayment should not be used in Authorize flow - use RepeatPayment flow for MIT transactions".to_string()
             ).into())
         }
@@ -154,6 +155,7 @@ fn fetch_payment_instrument<
                             .get_encrypted_google_pay_token()
                             .change_context(ConnectorRequestError::MissingRequiredField {
                                 field_name: "gpay wallet_token",
+                context: Default::default()
                             })?,
                     ),
                     ..WalletPayment::default()
@@ -198,7 +200,7 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::MbWay(_)
             | WalletDataPaymentMethod::Satispay(_)
             | WalletDataPaymentMethod::Wero(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("worldpay"),
                 )
                 .into())
@@ -218,7 +220,7 @@ fn fetch_payment_instrument<
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
-        | PaymentMethodData::NetworkToken(_) => Err(ConnectorRequestError::NotImplemented(
+        | PaymentMethodData::NetworkToken(_) => Err(ConnectorRequestError::not_implemented(
             utils::get_unimplemented_payment_method_error_message("worldpay"),
         )
         .into()),
@@ -235,17 +237,18 @@ impl TryFrom<(enums::PaymentMethod, Option<enums::PaymentMethodType>)> for Payme
             (enums::PaymentMethod::Wallet, pmt) => {
                 let pm = pmt.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
+                context: Default::default()
                 })?;
                 match pm {
                     enums::PaymentMethodType::ApplePay => Ok(Self::ApplePay),
                     enums::PaymentMethodType::GooglePay => Ok(Self::GooglePay),
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("worldpay"),
                     )
                     .into()),
                 }
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("worldpay"),
             )
             .into()),
@@ -276,6 +279,7 @@ fn create_three_ds_request<
             let browser_info = router_data.request.browser_info.as_ref().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "browser_info",
+                context: Default::default()
                 },
             )?;
 
@@ -285,6 +289,7 @@ fn create_three_ds_request<
                 .get_required_value("accept_header")
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "accept_header",
+                context: Default::default()
                 })?;
 
             let user_agent_header = browser_info
@@ -293,6 +298,7 @@ fn create_three_ds_request<
                 .get_required_value("user_agent")
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "user_agent",
+                context: Default::default()
                 })?;
 
             let channel = Some(ThreeDSRequestChannel::Browser);
@@ -426,6 +432,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             auth.merchant_name
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_config.merchant_name",
+                context: Default::default()
                 })?;
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
@@ -511,6 +518,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             auth.merchant_name
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_config.merchant_name",
+                context: Default::default()
                 })?;
 
         // Extract payment instrument from mandate_reference
@@ -519,6 +527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let href = connector_mandate_ref.get_connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
+                context: Default::default()
                     },
                 )?;
 
@@ -530,13 +539,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             MandateReferenceId::NetworkMandateId(_network_txn_id) => {
                 // NTI flow would need raw card details, which RepeatPayment doesn't have
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "NetworkMandateId not supported in RepeatPayment".to_string(),
                 )
                 .into());
             }
             MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "NetworkTokenWithNTI not supported in RepeatPayment yet".to_string(),
                 )
                 .into());
@@ -617,7 +626,7 @@ impl TryFrom<&ConnectorSpecificConfig> for WorldpayAuthType {
                     merchant_name: merchant_name.clone(),
                 })
             }
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType)?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
         }
     }
 }
@@ -889,6 +898,7 @@ impl<F, T>
                 resource_id: ResponseId::foreign_try_from((
                     router_data.response,
                     optional_correlation_id.clone(),
+                    router_data.http_code,
                 ))
                 .into_response_err()?,
                 redirection_data: redirection_data.map(Box::new),
@@ -980,7 +990,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))
+            resource_id: ResponseId::foreign_try_from((item.response.clone(), None, item.http_code))
                 .into_response_err()?,
             redirection_data: None,
             mandate_reference: None,
@@ -1178,7 +1188,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))
+            resource_id: ResponseId::foreign_try_from((item.response.clone(), None, item.http_code))
                 .into_response_err()?,
             redirection_data: None,
             mandate_reference: None,
@@ -1200,21 +1210,21 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     }
 }
 
-impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>)> for ResponseIdStr {
+impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>, u16)> for ResponseIdStr {
     type Error = error_stack::Report<ConnectorRequestError>;
     fn foreign_try_from(
-        item: (WorldpayPaymentsResponse, Option<String>),
+        item: (WorldpayPaymentsResponse, Option<String>, u16),
     ) -> Result<Self, Self::Error> {
-        get_resource_id(item.0, item.1, |id| Self { id })
+        get_resource_id(item.0, item.1, |id| Self { id }, item.2)
     }
 }
 
-impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>)> for ResponseId {
+impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>, u16)> for ResponseId {
     type Error = error_stack::Report<ConnectorRequestError>;
     fn foreign_try_from(
-        item: (WorldpayPaymentsResponse, Option<String>),
+        item: (WorldpayPaymentsResponse, Option<String>, u16),
     ) -> Result<Self, Self::Error> {
-        get_resource_id(item.0, item.1, Self::ConnectorTransactionId)
+        get_resource_id(item.0, item.1, Self::ConnectorTransactionId, item.2)
     }
 }
 
@@ -1252,11 +1262,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::response_handling_failed(None))
+            .ok_or(ConnectorResponseError::response_handling_failed_http_status_unknown())
             .into_request_err()?;
 
         let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
             .into_request_err()?;
 
         Ok(parsed_request)
@@ -1295,11 +1305,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::response_handling_failed(None))
+            .ok_or(ConnectorResponseError::response_handling_failed_http_status_unknown())
             .into_request_err()?;
 
         let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
             .into_request_err()?;
 
         Ok(parsed_request)

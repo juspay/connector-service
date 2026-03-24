@@ -314,7 +314,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
 
         let response_str = String::from_utf8(response_bytes.to_vec())
             .change_context(ConnectorResponseError::response_deserialization_failed(
-                Some(status_code),
+                status_code,
             ))
             .into_request_err()?;
 

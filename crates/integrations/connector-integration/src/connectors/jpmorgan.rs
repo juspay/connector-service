@@ -283,7 +283,7 @@ macros::create_all_prerequisites!(
                     "Bearer {}",
                     &req.resource_common_data
                         .access_token()
-                        .ok_or(ConnectorRequestError::FailedToObtainAuthType)?
+                        .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
                         .access_token.peek()
                 )
                 .into_masked(),
@@ -344,9 +344,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: JpmorganErrorResponse = res
             .response
             .parse_struct("JpmorganErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -550,7 +548,7 @@ macros::macro_connector_implementation!(
             Ok(format!(
                 "{}/am/oauth2/alpha/access_token",
                 req.resource_common_data.connectors.jpmorgan.secondary_base_url.as_ref()
-                    .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?
+                    .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?
             ))
         }
     }
@@ -608,7 +606,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/payments/{}", self.connector_base_url(req), transaction_id))
         }
     }
@@ -639,7 +637,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/payments/{}/captures", self.connector_base_url(req), transaction_id))
         }
     }

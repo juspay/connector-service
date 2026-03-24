@@ -273,6 +273,7 @@ pub fn get_resource_id<T, F>(
     response: WorldpayPaymentsResponse,
     connector_transaction_id: Option<String>,
     transform_fn: F,
+    http_status: u16,
 ) -> Result<T, error_stack::Report<ConnectorRequestError>>
 where
     F: Fn(String) -> T,
@@ -303,7 +304,7 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed(http_status))
         })
         .transpose()
         .into_request_err()?;
@@ -313,6 +314,7 @@ where
         .ok_or_else(|| {
             ConnectorRequestError::MissingRequiredField {
                 field_name: "_links.self.href or transactionReference",
+                context: Default::default()
             }
             .into()
         })

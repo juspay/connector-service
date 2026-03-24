@@ -52,14 +52,14 @@ pub trait AccessTokenProvider {
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
     }
 }
 
@@ -341,9 +341,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -437,7 +435,7 @@ macros::macro_connector_implementation!(
         let response: volt::VoltAuthErrorResponse = res
             .response
             .parse_struct("VoltAuthErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
          with_error_response_body!(event_builder, response);
 
@@ -484,7 +482,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{base_url}/payments/{connector_payment_id}"))
         }
     }
@@ -517,7 +515,7 @@ macros::macro_connector_implementation!(
             let base_url = req.resource_common_data.connectors.volt
             .secondary_base_url
             .as_ref()
-            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
                 "{base_url}/payments/{connector_payment_id}/request-refund",

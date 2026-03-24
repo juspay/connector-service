@@ -77,7 +77,7 @@ impl TryFrom<&ConnectorSpecificConfig> for GlobalpayAuthType {
                 app_key: app_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -223,7 +223,7 @@ impl
             })
         } else {
             Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             ))
         }
     }
@@ -397,7 +397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // Convert to 2-digit year using built-in helper method
                 let expiry_year_2digit = card_data
                     .get_card_expiry_year_2_digit()
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
                 // Determine cvv_indicator based on whether CVV is provided
                 let cvv_indicator = if card_data.card_cvc.peek().is_empty() {
@@ -424,7 +424,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
                     BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
                     _ => {
-                        return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                        return Err(error_stack::report!(ConnectorRequestError::not_implemented(
                             "Bank redirect payment method not supported".to_string()
                         )))
                     }
@@ -440,7 +440,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
                     "Payment method not supported".to_string()
                 )))
             }
@@ -479,7 +479,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_amount,
                 item.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             currency: item.request.currency,
             reference: item
                 .resource_common_data
@@ -526,7 +526,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_amount_to_capture,
                 item.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             capture_sequence: item.request.multiple_capture_data.as_ref().map(|mcd| {
                 if mcd.capture_sequence == 1 {
                     Sequence::First
@@ -602,7 +602,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             })
             .filter(|redirect_str| !redirect_str.is_empty())
             .map(|url| {
-                Url::parse(url).change_context(ConnectorRequestError::FailedToObtainIntegrationUrl)
+                Url::parse(url).change_context(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })
             })
             .transpose()
             .into_response_err()?;
@@ -868,7 +868,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_refund_amount,
                 item.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
         })
     }
 }
@@ -956,7 +956,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Validate that we have a connector transaction ID (required for URL construction)
         if item.request.connector_transaction_id.is_empty() {
             return Err(error_stack::report!(
-                ConnectorRequestError::MissingConnectorTransactionID
+                ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }
             ));
         }
 
@@ -967,7 +967,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .zip(item.request.currency)
             .map(|(amount_value, currency)| {
                 GlobalpayAmountConvertor::convert(amount_value, currency)
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
             })
             .transpose()?;
 

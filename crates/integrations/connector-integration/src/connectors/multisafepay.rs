@@ -300,7 +300,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let auth = multisafepay::MultisafepayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(format!("{}/orders?api_key={}", self.connector_base_url_payments(req), auth.api_key.expose()))
         }
     }
@@ -333,10 +333,10 @@ macros::macro_connector_implementation!(
             let connector_transaction_id = req
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             let auth = multisafepay::MultisafepayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             Ok(format!("{}/orders/{}?api_key={}", self.connector_base_url_payments(req), connector_transaction_id, auth.api_key.expose()))
         }
@@ -399,7 +399,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = req.request.connector_transaction_id.clone();
             let auth = multisafepay::MultisafepayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(format!(
                 "{}/orders/{}/refunds?api_key={}",
                 self.connector_base_url_refunds(req), connector_transaction_id, auth.api_key.expose()
@@ -437,11 +437,11 @@ macros::macro_connector_implementation!(
             let connector_refund_id = req.request.connector_refund_id.clone();
 
             if connector_refund_id.is_empty() {
-                return Err(ConnectorRequestError::MissingConnectorRefundID)?;
+                return Err(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() })?;
             }
 
             let auth = multisafepay::MultisafepayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             Ok(format!("{}/orders/{}?api_key={}", self.connector_base_url_refunds(req), connector_refund_id, auth.api_key.expose()))
         }
@@ -635,9 +635,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: multisafepay::MultisafepayErrorResponse = res
             .response
             .parse_struct("MultisafepayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

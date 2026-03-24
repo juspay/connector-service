@@ -113,7 +113,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
             let auth = fiservemea::FiservemeaAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // Generate client request ID and timestamp
             let client_request_id = fiservemea::FiservemeaAuthType::generate_client_request_id();
@@ -123,9 +123,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(), // For GET requests
-                _ => return Err(ConnectorRequestError::RequestEncodingFailed)?,
+                _ => return Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
             };
 
             // Generate HMAC signature
@@ -379,7 +379,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.connector_base_url_payments(req);
             let transaction_id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/{}", base_url.trim_end_matches('/'), transaction_id))
         }
     }
@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.connector_base_url_payments(req);
             let transaction_id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/{}", base_url.trim_end_matches('/'), transaction_id))
         }
     }
@@ -507,6 +507,7 @@ macros::macro_connector_implementation!(
             if refund_id.is_empty() {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_refund_id",
+                context: Default::default()
                 }.into());
             }
             Ok(format!("{}/{}", base_url.trim_end_matches('/'), refund_id))
@@ -711,7 +712,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let _auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         // For fiservemea, auth headers are handled in get_headers method with HMAC
         // This method is kept for compatibility but returns empty vector
         Ok(vec![])
@@ -727,9 +728,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("FiservemeaErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
-                ))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
         };
 
         with_error_response_body!(event_builder, response);

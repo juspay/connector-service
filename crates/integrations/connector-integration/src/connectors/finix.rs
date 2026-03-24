@@ -68,7 +68,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = finix::FinixAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         let encoded_auth = auth.generate_basic_auth();
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("FinixErrorResponse")
             .change_context(
-            ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
+            ConnectorResponseError::response_deserialization_failed(res.status_code),
         )?;
 
         with_error_response_body!(event_builder, response);

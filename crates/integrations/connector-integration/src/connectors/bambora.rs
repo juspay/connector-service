@@ -311,7 +311,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = bambora::BamboraAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.generate_authorization_header().into(),
@@ -326,9 +326,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: bambora::BamboraErrorResponse = res
             .response
             .parse_struct("BamboraErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -409,7 +407,7 @@ macros::macro_connector_implementation!(
             let transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id.clone(),
                 ResponseId::EncodedData(_) | ResponseId::NoResponseId => {
-                    return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                    return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
                 }
             };
             Ok(format!(
@@ -452,7 +450,7 @@ macros::macro_connector_implementation!(
             let transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id.clone(),
                 ResponseId::EncodedData(_) | ResponseId::NoResponseId => {
-                    return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                    return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
                 }
             };
             Ok(format!(
@@ -491,7 +489,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_id = &req.request.connector_transaction_id;
             if transaction_id.is_empty() {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
             }
             Ok(format!(
                 "{}/payments/{}/void",
@@ -529,7 +527,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_id = &req.request.connector_transaction_id;
             if transaction_id.is_empty() {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
             }
             Ok(format!(
                 "{}/payments/{}/returns",
@@ -570,7 +568,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_refund_id = &req.request.connector_refund_id;
             if connector_refund_id.is_empty() {
-                return Err(ConnectorRequestError::MissingConnectorRefundID.into());
+                return Err(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() }.into());
             }
             Ok(format!(
                 "{}/payments/{}",

@@ -72,7 +72,7 @@ pub(crate) mod headers {
 /// Some responses might come as a JSON string containing XML, this function handles that case
 fn unwrap_json_wrapped_xml(response_bytes: &[u8], status_code: u16) -> CustomResult<String, ConnectorRequestError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
+        .change_context(ConnectorResponseError::response_handling_failed(status_code))
         .attach_printable("Failed to convert response bytes to UTF-8 string")
         .into_request_err()?;
 
@@ -80,7 +80,7 @@ fn unwrap_json_wrapped_xml(response_bytes: &[u8], status_code: u16) -> CustomRes
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
+            .change_context(ConnectorResponseError::response_handling_failed(status_code))
             .attach_printable("Failed to parse JSON-wrapped XML response")
             .into_request_err()?
     } else {
@@ -208,7 +208,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+        Err(error_stack::report!(ConnectorRequestError::not_implemented(
             "webhooks not implemented".to_string()
         )))
     }
@@ -219,7 +219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+        Err(error_stack::report!(ConnectorRequestError::not_implemented(
             "webhooks not implemented".to_string()
         )))
     }
@@ -230,7 +230,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+        Err(error_stack::report!(ConnectorRequestError::not_implemented(
             "webhooks not implemented".to_string()
         )))
     }
@@ -340,7 +340,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .map_err(|_parse_error| ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .map_err(|_parse_error| ConnectorResponseError::response_handling_failed(res.status_code))?;
 
         with_response_body!(event_builder, response);
 
@@ -397,11 +397,11 @@ macros::create_all_prerequisites!(
             if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
                 // This is an XML response - convert to JSON
                 let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-                    .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
+                    .change_context(ConnectorResponseError::response_handling_failed(status_code))
                     .into_request_err()?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
+                    .change_context(ConnectorResponseError::response_handling_failed(status_code))
                     .into_request_err()?;
 
                 Ok(bytes::Bytes::from(json_bytes))
@@ -505,7 +505,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let txn_id = req.request.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
                 .as_ref()
                 .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
@@ -562,7 +562,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -631,7 +631,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -724,7 +724,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -793,7 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -869,7 +869,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }

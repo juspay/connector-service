@@ -41,7 +41,7 @@ impl TryFrom<&ConnectorSpecificConfig> for AirwallexAuthType {
             })
         } else {
             Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             ))
         }
     }
@@ -333,6 +333,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_full_name()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing.first_name",
+                context: Default::default()
                                     })?,
                                 country_code: item
                                     .router_data
@@ -340,6 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_country()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "country_code",
+                context: Default::default()
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Trustly,
@@ -356,6 +358,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_full_name()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing.first_name",
+                context: Default::default()
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Blik,
@@ -366,6 +369,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     return Err(ConnectorRequestError::NotSupported {
                         message: "Bank Redirect Payment Method".to_string(),
                         connector: "Airwallex",
+                context: Default::default()
                     }
                     .into())
                 }
@@ -374,6 +378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment Method".to_string(),
                     connector: "Airwallex",
+                context: Default::default()
                 }
                 .into())
             }
@@ -687,7 +692,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::MinorUnit::new(capture_amount),
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // Generate unique request_id for idempotency using connector_request_reference_id
         let request_id = format!(
@@ -817,7 +822,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::MinorUnit::new(refund_amount),
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // Generate unique request_id for idempotency using connector_request_reference_id
         let request_id = format!(
@@ -1074,6 +1079,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_full_name()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing.first_name",
+                context: Default::default()
                                     })?,
                                 country_code: item
                                     .router_data
@@ -1081,6 +1087,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_country()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "country_code",
+                context: Default::default()
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Trustly,
@@ -1097,6 +1104,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_billing_full_name()
                                     .map_err(|_| ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing.first_name",
+                context: Default::default()
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Blik,
@@ -1107,6 +1115,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     return Err(ConnectorRequestError::NotSupported {
                         message: "Bank Redirect Payment Method".to_string(),
                         connector: "Airwallex",
+                context: Default::default()
                     }
                     .into())
                 }
@@ -1115,6 +1124,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment Method".to_string(),
                     connector: "Airwallex",
+                context: Default::default()
                 }
                 .into())
             }
@@ -1259,7 +1269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // For now, no order data - can be enhanced later when order details are needed
         let order = None;

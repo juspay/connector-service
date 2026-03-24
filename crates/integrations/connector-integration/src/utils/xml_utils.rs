@@ -11,13 +11,16 @@ use serde_json::{Map, Value};
 /// 4. Parses the XML into a JSON structure
 /// 5. Flattens nested "$text" fields to create a clean key-value structure
 /// 6. Returns the processed JSON data as `Bytes`
-pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, ConnectorResponseError> {
+pub fn preprocess_xml_response_bytes(
+    xml_data: Bytes,
+    http_status: u16,
+) -> Result<Bytes, ConnectorResponseError> {
     // Log raw bytes for debugging
     tracing::info!(bytes=?xml_data, "Raw XML bytes received for preprocessing");
 
     // Convert to UTF-8 string
     let response_str = std::str::from_utf8(&xml_data)
-        .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?
+        .map_err(|_| ConnectorResponseError::response_deserialization_failed(http_status))?
         .trim();
 
     // Handle XML declarations by removing them if present
@@ -59,9 +62,7 @@ pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, Connector
             tracing::error!(error=?err, "Failed to parse XML to JSON structure");
 
             // Create a basic JSON structure with error information
-            return Err(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ));
+            return Err(ConnectorResponseError::response_deserialization_failed(http_status));
         }
     };
 
@@ -71,7 +72,7 @@ pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, Connector
     // Convert JSON Value to string and then to bytes
     let json_string = serde_json::to_string(&flattened_json).map_err(|e| {
         tracing::error!(error=?e, "Failed to convert to JSON string");
-        ConnectorResponseError::response_deserialization_failed(None)
+        ConnectorResponseError::response_deserialization_failed(http_status)
     })?;
 
     tracing::info!(json=?json_string, "Flattened JSON structure");

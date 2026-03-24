@@ -446,7 +446,7 @@ impl TryFrom<&domain_types::router_data::ConnectorSpecificConfig> for Wellsfargo
                 merchant_account: merchant_account.clone(),
                 api_secret: api_secret.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -555,6 +555,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     domain_types::utils::get_card_issuer(card_data.card_number.peek())
                         .change_context(ConnectorRequestError::MissingRequiredField {
                             field_name: "card_type",
+                context: Default::default()
                         })
                         .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
@@ -571,7 +572,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             // Connector supports these but not yet implemented
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_) => Err(ConnectorRequestError::NotImplemented(
+            | PaymentMethodData::NetworkToken(_) => Err(ConnectorRequestError::not_implemented(
                 "Payment method supported by connector but not yet implemented".to_string(),
             ))?,
             // Connector does not support these payment methods
@@ -592,6 +593,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::MobilePayment(_) => Err(ConnectorRequestError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "Wellsfargo",
+                context: Default::default()
             })?,
         };
 
@@ -604,7 +606,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed)
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
@@ -619,6 +621,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
+                context: Default::default()
             })?;
 
         // Convert Email type to Secret<String>
@@ -738,7 +741,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed)
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
@@ -847,11 +850,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .amount
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "amount",
+                context: Default::default()
             })?;
         let currency = request
             .currency
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "currency",
+                context: Default::default()
             })?;
 
         // Convert amount using the framework's amount converter
@@ -859,7 +864,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed)
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
@@ -924,7 +929,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed)
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
         let amount_details = Amount {
@@ -987,6 +992,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
+                context: Default::default()
             })?;
         let email_secret = Secret::new(email.peek().to_string());
 
@@ -1076,6 +1082,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     domain_types::utils::get_card_issuer(card_data.card_number.peek())
                         .change_context(ConnectorRequestError::MissingRequiredField {
                             field_name: "card_type",
+                context: Default::default()
                         })
                         .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
@@ -1090,7 +1097,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 }))
             }
             _ => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "Payment method not supported for SetupMandate".to_string(),
                 )
                 .into());

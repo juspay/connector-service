@@ -46,7 +46,7 @@ impl TryFrom<&ConnectorSpecificConfig> for IatapayAuthType {
                 merchant_id: merchant_id.to_owned(),
                 client_secret: client_secret.to_owned(),
             }),
-            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType)),
+            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
         }
     }
 }
@@ -196,7 +196,7 @@ where
             BankRedirectData::Ideal { .. } => Ok(CountryAlpha2::NL),
             // LocalBankRedirect → Austria
             BankRedirectData::LocalBankRedirect { .. } => Ok(CountryAlpha2::AT),
-            _ => Err(Report::new(ConnectorRequestError::NotImplemented(
+            _ => Err(Report::new(ConnectorRequestError::not_implemented(
                 "Unsupported bank redirect type for Iatapay".to_string(),
             ))),
         },
@@ -213,7 +213,7 @@ where
             RealTimePaymentData::VietQr {} => Ok(CountryAlpha2::VN),
         },
 
-        _ => Err(Report::new(ConnectorRequestError::NotImplemented(
+        _ => Err(Report::new(ConnectorRequestError::not_implemented(
             "Payment method not supported by Iatapay".to_string(),
         ))),
     }
@@ -280,12 +280,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "router_return_url",
+                context: Default::default()
             },
         )?;
 
         let webhook_url = item.router_data.request.webhook_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "webhook_url",
+                context: Default::default()
             },
         )?;
 
@@ -374,7 +376,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
                         let metadata_value = serde_json::to_value(metadata_map).change_context(
-                            ConnectorResponseError::response_handling_failed(None),
+                            ConnectorResponseError::response_handling_failed(item.http_code),
                         )?;
                         (Some(metadata_value), None)
                     }
@@ -602,6 +604,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             notification_url: router_data.request.webhook_url.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "webhook_url",
+                context: Default::default()
                 },
             )?,
         })

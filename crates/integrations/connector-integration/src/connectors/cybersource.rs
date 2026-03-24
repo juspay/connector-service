@@ -302,10 +302,10 @@ macros::create_all_prerequisites!(
         let merchant_account = auth.merchant_account.clone();
         let base_url = self.base_url(req.resource_common_data.connectors());
         let cybersource_host =
-            url::Url::parse(base_url).change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            url::Url::parse(base_url).change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
         let host = cybersource_host
             .host_str()
-            .ok_or(ConnectorRequestError::RequestEncodingFailed)?;
+            .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
         let path: String = self
             .get_url(req)?
             .chars()
@@ -412,6 +412,7 @@ macros::create_all_prerequisites!(
             .decode(api_secret.expose())
             .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "connector_account_details.api_secret",
+                context: Default::default()
             })?;
         let key = hmac::Key::new(hmac::HMAC_SHA256, &key_value);
         let signature_value =
@@ -744,7 +745,7 @@ macros::macro_connector_implementation!(
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}tss/v2/transactions/{}",
             self.connector_base_url_payments(req),
@@ -782,7 +783,7 @@ macros::macro_connector_implementation!(
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}pts/v2/payments/{}/captures",
             self.connector_base_url_payments(req),
@@ -1012,7 +1013,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         } else {
             // If http_code != 204 || http_code != 4xx, we dont know any other response scenario yet.
             let response_value: serde_json::Value = serde_json::from_slice(&res.response)
-                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
             let response_string = response_value.to_string();
 
             event_builder.map(|i| {

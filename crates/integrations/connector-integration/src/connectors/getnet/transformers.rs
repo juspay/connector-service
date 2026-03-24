@@ -81,7 +81,7 @@ impl TryFrom<&ConnectorSpecificConfig> for GetnetAuthType {
                 seller_id: seller_id.to_owned(),
             }),
             _other => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -215,6 +215,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method ".to_string(),
                     connector: "Getnet",
+                context: Default::default()
                 }
                 .into())
             }
@@ -229,6 +230,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             .or_else(|| item.resource_common_data.get_optional_billing_full_name())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method.card.card_holder_name",
+                context: Default::default()
             })?;
 
         let card = GetnetCard {
@@ -357,7 +359,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let capture_amount = router_data.request.amount_to_capture;
 
@@ -673,6 +675,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
+                context: Default::default()
                 })?;
 
         Ok(Self {

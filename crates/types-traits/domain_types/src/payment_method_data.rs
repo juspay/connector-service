@@ -73,7 +73,7 @@ impl PaymentMethodDataTypes for DefaultPCIHolder {
     fn is_cobadged_inner(inner: &Self::Inner) -> Result<bool, ConnectorRequestError> {
         inner
             .is_cobadged_card()
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
     }
 }
 
@@ -97,7 +97,7 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed)?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .to_string(),
         ))
     }
@@ -110,10 +110,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<u8>()
             .map_err(|_| ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
+                context: Default::default()
             })?;
         let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
             ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
+                context: Default::default()
             }
         })?;
         Ok(Secret::new(month.two_digits()))
@@ -147,6 +149,7 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<i8>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
+                context: Default::default()
             })
             .map(Secret::new)
     }
@@ -214,6 +217,7 @@ impl Card<DefaultPCIHolder> {
             .parse::<i32>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
+                context: Default::default()
             })
             .map(Secret::new)
     }
@@ -308,7 +312,7 @@ impl NetworkTokenData {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed)?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .to_string(),
         ))
     }
@@ -693,7 +697,7 @@ impl WalletData {
             Self::GooglePay(data) => Ok(data.get_googlepay_encrypted_payment_data()?),
             Self::ApplePay(data) => Ok(data.get_applepay_decoded_payment_data()?),
             Self::PaypalSdk(data) => Ok(Secret::new(data.token.clone())),
-            _ => Err(ConnectorRequestError::InvalidWallet.into()),
+            _ => Err(ConnectorRequestError::InvalidWallet { context: Default::default() }.into()),
         }
     }
     pub fn get_wallet_token_as_json<T>(&self, wallet_name: String) -> Result<T, Error>
@@ -701,7 +705,10 @@ impl WalletData {
         T: DeserializeOwned,
     {
         serde_json::from_str::<T>(self.get_wallet_token()?.peek())
-            .change_context(ConnectorRequestError::InvalidWalletToken { wallet_name })
+            .change_context(ConnectorRequestError::InvalidWalletToken {
+                wallet_name,
+                context: Default::default(),
+            })
     }
 
     pub fn get_encoded_wallet_token(&self) -> Result<String, Error> {
@@ -712,13 +719,14 @@ impl WalletData {
                 let token_as_vec = serde_json::to_vec(&json_token).change_context(
                     ConnectorRequestError::InvalidWalletToken {
                         wallet_name: "Google Pay".to_string(),
+                        context: Default::default(),
                     },
                 )?;
                 let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
                 Ok(encoded_token)
             }
             _ => Err(
-                ConnectorRequestError::NotImplemented("SELECTED PAYMENT METHOD".to_owned()).into(),
+                ConnectorRequestError::not_implemented("SELECTED PAYMENT METHOD".to_owned()).into(),
             ),
         }
     }
@@ -833,6 +841,7 @@ impl GooglePayWalletData {
             .get_encrypted_google_pay_payment_data_mandatory()
             .change_context(ConnectorRequestError::InvalidWalletToken {
                 wallet_name: "Google Pay".to_string(),
+                context: Default::default()
             })?;
 
         Ok(Secret::new(encrypted_data.token.clone()))
@@ -843,7 +852,8 @@ impl GooglePayWalletData {
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "card_exp_month"
+                field_name: "card_exp_month",
+                context: Default::default()
             })
         })
     }
@@ -853,7 +863,8 @@ impl GooglePayWalletData {
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "card_exp_year"
+                field_name: "card_exp_year",
+                context: Default::default()
             })
         })
     }
@@ -863,7 +874,8 @@ impl GooglePayWalletData {
     ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_primary_account_number"
+                field_name: "application_primary_account_number",
+                context: Default::default()
             })
         })
     }
@@ -1157,7 +1169,8 @@ impl ApplePayWalletData {
     ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_primary_account_number"
+                field_name: "application_primary_account_number",
+                context: Default::default()
             })
         })
     }
@@ -1167,7 +1180,8 @@ impl ApplePayWalletData {
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_expiration_month"
+                field_name: "application_expiration_month",
+                context: Default::default()
             })
         })
     }
@@ -1177,7 +1191,8 @@ impl ApplePayWalletData {
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_expiration_year"
+                field_name: "application_expiration_year",
+                context: Default::default()
             })
         })
     }
@@ -1187,7 +1202,8 @@ impl ApplePayWalletData {
     ) -> Result<ApplePayCryptogramData, error_stack::Report<ConnectorRequestError>> {
         let decrypted_payment_data = value.ok_or_else(|| {
             report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "decrypted_payment_data"
+                field_name: "decrypted_payment_data",
+                context: Default::default()
             })
         })?;
 
@@ -1196,7 +1212,8 @@ impl ApplePayWalletData {
                 .online_payment_cryptogram
                 .ok_or_else(|| {
                     report!(ConnectorRequestError::MissingRequiredField {
-                        field_name: "online_payment_cryptogram"
+                        field_name: "online_payment_cryptogram",
+                context: Default::default()
                     })
                 })?,
             eci_indicator: decrypted_payment_data.eci_indicator,
@@ -1209,6 +1226,7 @@ impl ApplePayWalletData {
             .get_encrypted_apple_pay_payment_data_mandatory()
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "Apple pay encrypted data",
+                context: Default::default()
             })?;
         let token = Secret::new(
             String::from_utf8(
@@ -1216,10 +1234,12 @@ impl ApplePayWalletData {
                     .decode(apple_pay_encrypted_data)
                     .change_context(ConnectorRequestError::InvalidWalletToken {
                         wallet_name: "Apple Pay".to_string(),
+                context: Default::default()
                     })?,
             )
             .change_context(ConnectorRequestError::InvalidWalletToken {
                 wallet_name: "Apple Pay".to_string(),
+                context: Default::default()
             })?,
         );
         Ok(token)
@@ -1281,7 +1301,7 @@ impl CardDetailsForNetworkTransactionId {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed)?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .to_string(),
         ))
     }
@@ -1344,6 +1364,7 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i8>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
+                context: Default::default()
             })
             .map(Secret::new)
     }
@@ -1354,6 +1375,7 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i32>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
+                context: Default::default()
             })
             .map(Secret::new)
     }

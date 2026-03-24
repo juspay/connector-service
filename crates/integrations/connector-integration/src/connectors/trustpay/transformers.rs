@@ -68,7 +68,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustpayAuthType {
                 secret_key: secret_key.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
         }
     }
 }
@@ -184,7 +184,7 @@ impl TryFrom<&BankRedirectData> for TrustpayPaymentMethod {
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("trustpay"),
             )
             .into()),
@@ -200,7 +200,7 @@ impl TryFrom<&BankTransferData> for TrustpayBankTransferPaymentMethod {
             BankTransferData::InstantBankTransfer {} => Ok(Self::InstantBankTransfer),
             BankTransferData::InstantBankTransferFinland {} => Ok(Self::InstantBankTransferFI),
             BankTransferData::InstantBankTransferPoland {} => Ok(Self::InstantBankTransferPL),
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("trustpay"),
             )
             .into()),
@@ -887,7 +887,7 @@ impl TryFrom<WebhookStatus> for enums::AttemptStatus {
         match item {
             WebhookStatus::Paid => Ok(Self::Charged),
             WebhookStatus::Rejected => Ok(Self::AuthorizationFailed),
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             )),
         }
@@ -901,7 +901,7 @@ impl TryFrom<WebhookStatus> for enums::RefundStatus {
             WebhookStatus::Paid => Ok(Self::Success),
             WebhookStatus::Refunded => Ok(Self::Success),
             WebhookStatus::Rejected => Ok(Self::Failure),
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             )),
         }
@@ -1569,9 +1569,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => Ok(get_card_request_data(
                 item.router_data.clone(),
@@ -1613,12 +1613,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         redirect_url: item.router_data.request.get_router_return_url()?,
                         enrollment_status: STATUS,
                         eci: token_data.eci.clone().ok_or(
-                            ConnectorRequestError::MissingRequiredField { field_name: "eci" },
+                            ConnectorRequestError::MissingRequiredField { field_name: "eci", context: Default::default() },
                         )?,
                         authentication_status: STATUS,
                         verification_id: token_data.get_cryptogram().ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "verification_id",
+                context: Default::default()
                             },
                         )?,
                     },
@@ -1639,7 +1640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("trustpay"),
                 )
                 .into())
@@ -1703,11 +1704,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
         match item.router_data.resource_common_data.payment_method {
             Some(enums::PaymentMethod::BankRedirect) => {
                 let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
-                    .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                    .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
                 Ok(Self::BankRedirectRefund(Box::new(
                     TrustpayRefundRequestBankRedirect {
                         merchant_identification: MerchantIdentification {
@@ -1853,7 +1854,7 @@ pub fn handle_webhooks_refund_response(
         connector_refund_id: response
             .references
             .payment_id
-            .ok_or(ConnectorRequestError::MissingConnectorRefundID)?,
+            .ok_or(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() })?,
         refund_status,
         status_code,
     };
@@ -2054,7 +2055,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         let is_apple_pay = item
             .router_data
@@ -2109,6 +2110,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_type",
+                context: Default::default()
             })
             .into_response_err()?;
 
@@ -2124,7 +2126,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             ) => get_google_pay_session(instance_id, &secrets, google_pay_response, item)
                 .into_response_err(),
             _ => Err(report_request_as_response(report!(
-                ConnectorRequestError::InvalidWallet
+                ConnectorRequestError::InvalidWallet { context: Default::default() }
             ))),
         }
     }
@@ -2164,7 +2166,7 @@ pub(crate) fn get_apple_pay_session(
                     apple_pay_init_result.total.amount.clone(),
                     apple_pay_init_result.currency_code,
                 )
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed(item.http_code))
                 .into_request_err()?,
                 total_type: None,
             },

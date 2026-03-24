@@ -319,9 +319,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: getnet::GetnetErrorResponse = res
             .response
             .parse_struct("GetnetErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))
             .attach_printable("Failed to deserialize Getnet error response")?;
 
         with_error_response_body!(event_builder, response);
@@ -358,7 +356,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -390,7 +388,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -421,7 +419,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -432,7 +430,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let payment_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
                 .attach_printable("Missing connector transaction ID")?;
             Ok(format!("{}/dpm/hub-payment-info/v1/payments/info/{}", self.connector_base_url_payments(req), payment_id))
         }
@@ -457,7 +455,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -489,7 +487,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -540,7 +538,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
             Ok(self.build_headers(&access_token))
         }
@@ -573,7 +571,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = getnet::GetnetAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to obtain access token")?;
 
             // Generate Base64(client_id:client_secret) for Basic Auth

@@ -484,7 +484,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = celero::CeleroAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.api_key.into_masked(),
@@ -499,9 +499,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: celero::CeleroErrorResponse = res
             .response
             .parse_struct("CeleroErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -581,7 +579,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/api/transaction/{}", self.connector_base_url_payments(req), transaction_id))
         }
     }
@@ -615,6 +613,7 @@ macros::macro_connector_implementation!(
             if transaction_id.is_empty() {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_transaction_id",
+                context: Default::default()
                 }
                 .into());
             }
@@ -650,7 +649,7 @@ macros::macro_connector_implementation!(
             use domain_types::connector_types::ResponseId;
             let transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
             };
             Ok(format!("{}/api/transaction/{}/capture", self.connector_base_url_payments(req), transaction_id))
         }
@@ -715,6 +714,7 @@ macros::macro_connector_implementation!(
             if transaction_id.is_empty() {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_transaction_id",
+                context: Default::default()
                 }
                 .into());
             }

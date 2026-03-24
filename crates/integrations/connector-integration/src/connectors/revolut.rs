@@ -240,7 +240,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let signature_header = request
             .headers
             .get("revolut-signature")
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for Revolut")?;
@@ -251,14 +251,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let hex_signature = signature_parts
             .get(1)
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Invalid signature format for Revolut")?;
 
         hex::decode(hex_signature)
             .attach_printable("Failed to decode hex signature")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
     }
@@ -272,14 +272,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let timestamp = request
             .headers
             .get("revolut-request-timestamp")
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Missing timestamp header for Revolut")?;
 
         // 2. Get the Raw Body
         let body = std::str::from_utf8(&request.body)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification message parsing failed for Revolut")?;
@@ -306,9 +306,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let auth = revolut::RevolutAuthType::try_from(
                     connector_account_details
                         .as_ref()
-                        .ok_or(ConnectorRequestError::FailedToObtainAuthType)?,
+                        .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
                 )
-                .change_context(ConnectorRequestError::NotImplemented(
+                .change_context(ConnectorRequestError::not_implemented(
                     "webhook source verification failed".to_string(),
                 ))?;
 
@@ -316,7 +316,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     secret: auth
                         .signing_secret
                         .as_ref()
-                        .ok_or(ConnectorRequestError::NotImplemented(
+                        .ok_or(ConnectorRequestError::not_implemented(
                             "webhook source verification failed".to_string(),
                         ))?
                         .peek()
@@ -335,7 +335,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification failed for Revolut")
@@ -350,7 +350,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         match notif.event {
@@ -387,11 +387,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .body
             .parse_struct("RevolutWebhookBody")
             .attach_printable("Failed to parse Revolut webhook body")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::NotImplemented("webhook response encoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook response encoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -585,7 +585,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = revolut::RevolutAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.secret_api_key.peek()).into(),
@@ -604,9 +604,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: revolut::RevolutErrorResponse = res
             .response
             .parse_struct("RevolutErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -774,7 +772,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let order_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}"))
         }
@@ -813,7 +811,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let order_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}/capture"))
         }

@@ -221,7 +221,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match res
             .response
             .parse_struct::<ElavonPaymentsResponse>("ElavonPaymentsResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))
         {
             Ok(elavon_response) => {
                 with_error_response_body!(event_builder, elavon_response);
@@ -321,10 +321,10 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
-            _status_code: u16,
+            status_code: u16,
         ) -> Result<Bytes, ConnectorResponseError> {
             // Use the utility function to preprocess XML response bytes
-            preprocess_xml_response_bytes(response_bytes)
+            preprocess_xml_response_bytes(response_bytes, status_code)
         }
         pub fn build_headers<F, FCD, Req, Res>(
             &self,

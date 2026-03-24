@@ -131,7 +131,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PaytmAuthType {
                 website: website.to_owned(),
                 client_id: client_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -191,7 +191,7 @@ impl<
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         let paytm_amount = PaytmAmount {
             value: amount,
@@ -230,7 +230,7 @@ impl<
                     .connector
                     .amount_converter
                     .convert(details.amount, item.router_data.request.currency)
-                    .change_context(ConnectorRequestError::AmountConversionFailed)?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
                 Some(PaytmGoodsInfo {
                     merchant_goods_id: details.product_id.clone(),
@@ -453,6 +453,7 @@ impl<
                     .duration_since(UNIX_EPOCH)
                     .map_err(|_| ConnectorRequestError::InvalidDataFormat {
                         field_name: "timestamp",
+                context: Default::default()
                     })?
                     .as_secs()
                     .to_string();
@@ -486,6 +487,7 @@ impl<
                     None => {
                         return Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
+                context: Default::default()
                         }
                         .into())
                     }
@@ -551,7 +553,7 @@ impl<
                         } else {
                             // For regular URLs, parse and convert
                             let url = Url::parse(&deep_link_info.deep_link).change_context(
-                                ConnectorResponseError::response_handling_failed(None),
+                                ConnectorResponseError::response_handling_failed(item.http_code),
                             )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }
@@ -805,6 +807,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                     } else {
                         Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
+                context: Default::default()
                         }
                         .into())
                     }
@@ -815,6 +818,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Only UPI payment methods are supported".to_string(),
             connector: "Paytm",
+                context: Default::default()
         }
         .into()),
     }
@@ -831,11 +835,12 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
                 if vpa.contains('@') && vpa.len() > 3 {
                     Ok(Some(vpa))
                 } else {
-                    Err(ConnectorRequestError::RequestEncodingFailed.into())
+                    Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }.into())
                 }
             } else {
                 Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "vpa_id",
+                context: Default::default()
                 }
                 .into())
             }
@@ -854,7 +859,7 @@ pub fn generate_paytm_signature(
     let rng = SystemRandom::new();
     let mut salt_bytes = [0u8; constants::SALT_LENGTH];
     rng.fill(&mut salt_bytes)
-        .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+        .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
     // Step 2: Convert salt to Base64 (same logic)
     let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
@@ -904,7 +909,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -924,7 +929,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -951,7 +956,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -991,12 +996,13 @@ pub fn create_paytm_header(
     channel_id: Option<&str>,
 ) -> CustomResult<PaytmRequestHeader, ConnectorRequestError> {
     let _payload = serde_json::to_string(request_body)
-        .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
     let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| ConnectorRequestError::InvalidDataFormat {
             field_name: "timestamp",
+                context: Default::default()
         })?
         .as_secs()
         .to_string();

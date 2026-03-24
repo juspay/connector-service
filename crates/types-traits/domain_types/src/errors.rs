@@ -106,6 +106,64 @@ pub struct ApiError {
     pub error_object: Option<serde_json::Value>,
 }
 
+/// Fields used when mapping request-phase connector errors to gRPC `IntegrationError`.
+/// Does not depend on generated proto types.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct IntegrationErrorContext {
+    /// Human-readable remediation (maps to `IntegrationError.suggested_action`).
+    pub suggested_action: Option<String>,
+    /// Optional documentation URL (maps to `IntegrationError.doc_url`).
+    pub doc_url: Option<String>,
+    /// Connector- or flow-specific detail; **appended** to the base error message when building
+    /// `IntegrationError.error_message` — see [`combine_error_message_with_context`].
+    pub additional_context: Option<String>,
+}
+
+/// Fields used when mapping response-phase connector errors to
+/// `ConnectorResponseTransformationError`.
+///
+/// For rare cases (e.g. HTTP status unknown **and** [`Self::additional_context`] set), build
+/// [`ConnectorResponseError`] with a struct literal instead of adding more constructor helpers.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ResponseTransformationErrorContext {
+    /// HTTP status from the connector response when known.
+    pub http_status_code: Option<u16>,
+    /// Connector-specific detail; **appended** to the base error message for
+    /// `ConnectorResponseTransformationError.error_message` — see [`combine_error_message_with_context`].
+    pub additional_context: Option<String>,
+}
+
+/// Combines the base error string with optional extra context for gRPC `error_message`.
+///
+/// **Rule:** If `additional_context` is `Some` and non-empty after trim, returns
+/// `"{trimmed_base}. {trimmed_context}"`. Otherwise returns `trimmed_base` only.
+pub fn combine_error_message_with_context(
+    base_message: impl AsRef<str>,
+    additional_context: Option<&str>,
+) -> String {
+    let base = base_message.as_ref().trim_end();
+    match additional_context.map(str::trim).filter(|s| !s.is_empty()) {
+        None => base.to_string(),
+        Some(ctx) => format!("{base}. {ctx}"),
+    }
+}
+
+impl IntegrationErrorContext {
+    /// Override or set appended detail for proto `error_message` (see [`combine_error_message_with_context`]).
+    pub fn with_additional_context(mut self, detail: impl Into<String>) -> Self {
+        self.additional_context = Some(detail.into());
+        self
+    }
+}
+
+impl ResponseTransformationErrorContext {
+    /// Set appended detail for proto `ConnectorResponseTransformationError.error_message`.
+    pub fn with_additional_context(mut self, detail: impl Into<String>) -> Self {
+        self.additional_context = Some(detail.into());
+        self
+    }
+}
+
 /// Errors that occur on the request transformationside:
 /// - proto → domain (`ForeignTryFrom`)
 /// - domain → connector bytes (`build_request_v2`)
@@ -114,89 +172,222 @@ pub struct ApiError {
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ConnectorRequestError {
     #[error("Error while obtaining URL for the integration")]
-    FailedToObtainIntegrationUrl,
+    FailedToObtainIntegrationUrl {
+        context: IntegrationErrorContext,
+    },
     #[error("Failed to encode connector request")]
-    RequestEncodingFailed,
+    RequestEncodingFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("Header map construction failed")]
-    HeaderMapConstructionFailed,
+    HeaderMapConstructionFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("Request body serialization failed")]
-    BodySerializationFailed,
+    BodySerializationFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("Url parsing failed")]
-    UrlParsingFailed,
+    UrlParsingFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("URL encoding of request payload failed")]
-    UrlEncodingFailed,
+    UrlEncodingFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing required field: {field_name}")]
-    MissingRequiredField { field_name: &'static str },
+    MissingRequiredField {
+        field_name: &'static str,
+        context: IntegrationErrorContext,
+    },
     #[error("Missing required fields: {field_names:?}")]
-    MissingRequiredFields { field_names: Vec<&'static str> },
+    MissingRequiredFields {
+        field_names: Vec<&'static str>,
+        context: IntegrationErrorContext,
+    },
     #[error("Failed to obtain authentication type")]
-    FailedToObtainAuthType,
+    FailedToObtainAuthType {
+        context: IntegrationErrorContext,
+    },
     #[error("Invalid connector configuration: {config}")]
-    InvalidConnectorConfig { config: &'static str },
+    InvalidConnectorConfig {
+        config: &'static str,
+        context: IntegrationErrorContext,
+    },
     #[error("Connector metadata not found")]
-    NoConnectorMetaData,
+    NoConnectorMetaData {
+        context: IntegrationErrorContext,
+    },
     #[error("Invalid data format: {field_name}")]
-    InvalidDataFormat { field_name: &'static str },
+    InvalidDataFormat {
+        field_name: &'static str,
+        context: IntegrationErrorContext,
+    },
     #[error("An invalid wallet was used")]
-    InvalidWallet,
+    InvalidWallet {
+        context: IntegrationErrorContext,
+    },
     #[error("Failed to parse {wallet_name} wallet token")]
-    InvalidWalletToken { wallet_name: String },
+    InvalidWalletToken {
+        wallet_name: String,
+        context: IntegrationErrorContext,
+    },
     #[error("Payment Method Type not found")]
-    MissingPaymentMethodType,
+    MissingPaymentMethodType {
+        context: IntegrationErrorContext,
+    },
     #[error("Payment method data / type / experience mismatch")]
-    MismatchedPaymentData,
+    MismatchedPaymentData {
+        context: IntegrationErrorContext,
+    },
     #[error("Field {fields} doesn't match with the ones used during mandate creation")]
-    MandatePaymentDataMismatch { fields: String },
+    MandatePaymentDataMismatch {
+        fields: String,
+        context: IntegrationErrorContext,
+    },
     #[error("Missing apple pay tokenization data")]
-    MissingApplePayTokenData,
+    MissingApplePayTokenData {
+        context: IntegrationErrorContext,
+    },
     #[error("This feature is not implemented: {0}")]
-    NotImplemented(String),
+    NotImplemented(String, IntegrationErrorContext),
     #[error("{message} is not supported by {connector}")]
     NotSupported {
         message: String,
         connector: &'static str,
+        context: IntegrationErrorContext,
     },
     #[error("{flow} flow not supported by {connector} connector")]
-    FlowNotSupported { flow: String, connector: String },
+    FlowNotSupported {
+        flow: String,
+        connector: String,
+        context: IntegrationErrorContext,
+    },
     #[error("Capture method not supported")]
-    CaptureMethodNotSupported,
+    CaptureMethodNotSupported {
+        context: IntegrationErrorContext,
+    },
     #[error("The given currency is not configured with the given connector")]
     CurrencyNotSupported {
         message: String,
         connector: &'static str,
+        context: IntegrationErrorContext,
     },
     #[error("Failed to convert amount to required type")]
-    AmountConversionFailed,
+    AmountConversionFailed {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing connector transaction ID")]
-    MissingConnectorTransactionID,
+    MissingConnectorTransactionID {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing connector refund ID")]
-    MissingConnectorRefundID,
+    MissingConnectorRefundID {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing connector mandate ID")]
-    MissingConnectorMandateID,
+    MissingConnectorMandateID {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing connector mandate metadata")]
-    MissingConnectorMandateMetadata,
+    MissingConnectorMandateMetadata {
+        context: IntegrationErrorContext,
+    },
     #[error("Missing connector related transaction ID: {id}")]
-    MissingConnectorRelatedTransactionID { id: String },
+    MissingConnectorRelatedTransactionID {
+        id: String,
+        context: IntegrationErrorContext,
+    },
     #[error("Field '{field_name}' is too long for connector '{connector}'")]
     MaxFieldLengthViolated {
         connector: String,
         field_name: String,
         max_length: usize,
         received_length: usize,
+        context: IntegrationErrorContext,
     },
     #[error("Failed to verify request source (signature, webhook, etc.)")]
-    SourceVerificationFailed,
+    SourceVerificationFailed {
+        context: IntegrationErrorContext,
+    },
     /// Config/auth/metadata validation failures (e.g. invalid config override, missing header).
     #[error("{message}")]
-    ConfigurationError { code: &'static str, message: String },
+    ConfigurationError {
+        code: &'static str,
+        message: String,
+        context: IntegrationErrorContext,
+    },
 }
 
 impl ConnectorRequestError {
     /// Create a configuration/auth/metadata error with a standardized code.
     pub fn config_error(code: &'static str, message: impl Into<String>) -> Self {
+        Self::config_error_with_context(code, message, IntegrationErrorContext::default())
+    }
+
+    /// Like [`Self::config_error`], but allows connector-specific [`IntegrationErrorContext`]
+    /// (merged with central defaults in `ucs_env`).
+    pub fn config_error_with_context(
+        code: &'static str,
+        message: impl Into<String>,
+        context: IntegrationErrorContext,
+    ) -> Self {
         Self::ConfigurationError {
             code,
             message: message.into(),
+            context,
+        }
+    }
+
+    /// Connector feature not implemented; uses default empty [`IntegrationErrorContext`].
+    pub fn not_implemented(message: impl Into<String>) -> Self {
+        Self::not_implemented_with_context(message, IntegrationErrorContext::default())
+    }
+
+    /// Like [`Self::not_implemented`], but allows connector-specific [`IntegrationErrorContext`]
+    /// (merged with central defaults in `ucs_env`).
+    pub fn not_implemented_with_context(
+        message: impl Into<String>,
+        context: IntegrationErrorContext,
+    ) -> Self {
+        Self::NotImplemented(message.into(), context)
+    }
+
+    /// Optional connector-specific guidance for gRPC [`IntegrationError`] (overrides merged in `ucs_env`).
+    pub fn integration_context(&self) -> &IntegrationErrorContext {
+        match self {
+            Self::FailedToObtainIntegrationUrl { context }
+            | Self::RequestEncodingFailed { context }
+            | Self::HeaderMapConstructionFailed { context }
+            | Self::BodySerializationFailed { context }
+            | Self::UrlParsingFailed { context }
+            | Self::UrlEncodingFailed { context }
+            | Self::MissingRequiredField { context, .. }
+            | Self::MissingRequiredFields { context, .. }
+            | Self::FailedToObtainAuthType { context }
+            | Self::InvalidConnectorConfig { context, .. }
+            | Self::NoConnectorMetaData { context }
+            | Self::InvalidDataFormat { context, .. }
+            | Self::InvalidWallet { context }
+            | Self::InvalidWalletToken { context, .. }
+            | Self::MissingPaymentMethodType { context }
+            | Self::MismatchedPaymentData { context }
+            | Self::MandatePaymentDataMismatch { context, .. }
+            | Self::MissingApplePayTokenData { context }
+            | Self::NotImplemented(_, context)
+            | Self::NotSupported { context, .. }
+            | Self::FlowNotSupported { context, .. }
+            | Self::CaptureMethodNotSupported { context }
+            | Self::CurrencyNotSupported { context, .. }
+            | Self::AmountConversionFailed { context }
+            | Self::MissingConnectorTransactionID { context }
+            | Self::MissingConnectorRefundID { context }
+            | Self::MissingConnectorMandateID { context }
+            | Self::MissingConnectorMandateMetadata { context }
+            | Self::MissingConnectorRelatedTransactionID { context, .. }
+            | Self::MaxFieldLengthViolated { context, .. }
+            | Self::SourceVerificationFailed { context }
+            | Self::ConfigurationError { context, .. } => context,
         }
     }
 
@@ -218,43 +409,43 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
             error_object: None,
         };
         match self {
-            Self::FailedToObtainIntegrationUrl
-            | Self::FailedToObtainAuthType
-            | Self::RequestEncodingFailed
-            | Self::HeaderMapConstructionFailed
-            | Self::BodySerializationFailed
-            | Self::UrlParsingFailed
-            | Self::UrlEncodingFailed
-            | Self::AmountConversionFailed
+            Self::FailedToObtainIntegrationUrl { .. }
+            | Self::FailedToObtainAuthType { .. }
+            | Self::RequestEncodingFailed { .. }
+            | Self::HeaderMapConstructionFailed { .. }
+            | Self::BodySerializationFailed { .. }
+            | Self::UrlParsingFailed { .. }
+            | Self::UrlEncodingFailed { .. }
+            | Self::AmountConversionFailed { .. }
             | Self::MandatePaymentDataMismatch { .. }
-            | Self::SourceVerificationFailed => {
+            | Self::SourceVerificationFailed { .. } => {
                 ApplicationErrorResponse::InternalServerError(api_err("INTERNAL_SERVER_ERROR", 500))
             }
-            Self::InvalidWallet
+            Self::InvalidWallet { .. }
             | Self::MissingRequiredField { .. }
             | Self::MissingRequiredFields { .. }
             | Self::InvalidDataFormat { .. }
-            | Self::MismatchedPaymentData
+            | Self::MismatchedPaymentData { .. }
             | Self::InvalidWalletToken { .. }
-            | Self::MissingPaymentMethodType
+            | Self::MissingPaymentMethodType { .. }
             | Self::CurrencyNotSupported { .. }
             | Self::InvalidConnectorConfig { .. }
             | Self::NotSupported { .. }
             | Self::FlowNotSupported { .. }
-            | Self::MissingApplePayTokenData
+            | Self::MissingApplePayTokenData { .. }
             | Self::ConfigurationError { .. } => {
                 ApplicationErrorResponse::BadRequest(api_err("BAD_REQUEST", 400))
             }
-            Self::NoConnectorMetaData
+            Self::NoConnectorMetaData { .. }
             | Self::MaxFieldLengthViolated { .. }
-            | Self::MissingConnectorMandateID
-            | Self::MissingConnectorMandateMetadata
-            | Self::MissingConnectorTransactionID
-            | Self::MissingConnectorRefundID
+            | Self::MissingConnectorMandateID { .. }
+            | Self::MissingConnectorMandateMetadata { .. }
+            | Self::MissingConnectorTransactionID { .. }
+            | Self::MissingConnectorRefundID { .. }
             | Self::MissingConnectorRelatedTransactionID { .. } => {
                 ApplicationErrorResponse::Unprocessable(api_err("UNPROCESSABLE_ENTITY", 422))
             }
-            Self::NotImplemented(_) | Self::CaptureMethodNotSupported => {
+            Self::NotImplemented(..) | Self::CaptureMethodNotSupported { .. } => {
                 ApplicationErrorResponse::NotImplemented(api_err("NOT_IMPLEMENTED", 501))
             }
         }
@@ -275,6 +466,7 @@ impl ErrorSwitch<ConnectorRequestError> for ApplicationErrorResponse {
         ConnectorRequestError::ConfigurationError {
             code: "APPLICATION_ERROR",
             message: self.get_api_error().error_message.clone(),
+            context: IntegrationErrorContext::default(),
         }
     }
 }
@@ -303,23 +495,16 @@ pub fn application_report_to_connector_request(
 pub enum ConnectorResponseError {
     #[error("Failed to deserialize connector response")]
     ResponseDeserializationFailed {
-        #[allow(missing_docs)]
-        http_status_code: Option<u16>,
+        /// Always present: set `http_status_code` to `Some` when the connector HTTP response is known.
+        context: ResponseTransformationErrorContext,
     },
     #[error("Failed to handle connector response")]
     ResponseHandlingFailed {
-        #[allow(missing_docs)]
-        http_status_code: Option<u16>,
+        context: ResponseTransformationErrorContext,
     },
     #[error("The connector returned an unexpected response")]
     UnexpectedResponseError {
-        #[allow(missing_docs)]
-        http_status_code: Option<u16>,
-    },
-    #[error("Missing connector transaction ID in response")]
-    MissingConnectorTransactionID {
-        #[allow(missing_docs)]
-        http_status_code: Option<u16>,
+        context: ResponseTransformationErrorContext,
     },
 }
 
@@ -330,29 +515,125 @@ pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
 }
 
 impl ConnectorResponseError {
-    /// HTTP status code from the connector response, when available.
+    /// HTTP status code from the connector response (`None` when not applicable).
     pub fn http_status_code(&self) -> Option<u16> {
         match self {
-            Self::ResponseDeserializationFailed { http_status_code }
-            | Self::ResponseHandlingFailed { http_status_code }
-            | Self::UnexpectedResponseError { http_status_code }
-            | Self::MissingConnectorTransactionID { http_status_code } => *http_status_code,
+            Self::ResponseDeserializationFailed { context }
+            | Self::ResponseHandlingFailed { context }
+            | Self::UnexpectedResponseError { context } => context.http_status_code,
         }
     }
 
-    /// Create ResponseHandlingFailed with optional HTTP status.
-    pub fn response_handling_failed(http_status_code: Option<u16>) -> Self {
-        Self::ResponseHandlingFailed { http_status_code }
+    /// Optional connector-specific detail (appended to proto `error_message`).
+    pub fn additional_context(&self) -> Option<&str> {
+        match self {
+            Self::ResponseDeserializationFailed { context }
+            | Self::ResponseHandlingFailed { context }
+            | Self::UnexpectedResponseError { context } => context.additional_context.as_deref(),
+        }
     }
 
-    /// Create ResponseDeserializationFailed with optional HTTP status.
-    pub fn response_deserialization_failed(http_status_code: Option<u16>) -> Self {
-        Self::ResponseDeserializationFailed { http_status_code }
+    /// Build a [`ResponseTransformationErrorContext`] for gRPC mapping.
+    pub fn response_transformation_context(&self) -> ResponseTransformationErrorContext {
+        match self {
+            Self::ResponseDeserializationFailed { context }
+            | Self::ResponseHandlingFailed { context }
+            | Self::UnexpectedResponseError { context } => context.clone(),
+        }
     }
 
-    /// Create UnexpectedResponseError with optional HTTP status.
-    pub fn unexpected_response_error(http_status_code: Option<u16>) -> Self {
-        Self::UnexpectedResponseError { http_status_code }
+    /// Create ResponseHandlingFailed with the connector HTTP status from [`Response::status_code`].
+    pub fn response_handling_failed(http_status: u16) -> Self {
+        Self::ResponseHandlingFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context: None,
+            },
+        }
+    }
+
+    /// Use only when there is **no** HTTP response (e.g. base64 decode); prefer
+    /// [`Self::response_handling_failed`] with a real status from [`router_response_types::Response`].
+    pub fn response_handling_failed_http_status_unknown() -> Self {
+        Self::ResponseHandlingFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: None,
+                additional_context: None,
+            },
+        }
+    }
+
+    /// [`Self::response_handling_failed`] plus optional appended context for proto.
+    pub fn response_handling_failed_with_context(
+        http_status: u16,
+        additional_context: Option<String>,
+    ) -> Self {
+        Self::ResponseHandlingFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context,
+            },
+        }
+    }
+
+    pub fn response_deserialization_failed(http_status: u16) -> Self {
+        Self::ResponseDeserializationFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context: None,
+            },
+        }
+    }
+
+    pub fn response_deserialization_failed_http_status_unknown() -> Self {
+        Self::ResponseDeserializationFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: None,
+                additional_context: None,
+            },
+        }
+    }
+
+    pub fn response_deserialization_failed_with_context(
+        http_status: u16,
+        additional_context: Option<String>,
+    ) -> Self {
+        Self::ResponseDeserializationFailed {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context,
+            },
+        }
+    }
+
+    pub fn unexpected_response_error(http_status: u16) -> Self {
+        Self::UnexpectedResponseError {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context: None,
+            },
+        }
+    }
+
+    pub fn unexpected_response_error_http_status_unknown() -> Self {
+        Self::UnexpectedResponseError {
+            context: ResponseTransformationErrorContext {
+                http_status_code: None,
+                additional_context: None,
+            },
+        }
+    }
+
+    pub fn unexpected_response_error_with_context(
+        http_status: u16,
+        additional_context: Option<String>,
+    ) -> Self {
+        Self::UnexpectedResponseError {
+            context: ResponseTransformationErrorContext {
+                http_status_code: Some(http_status),
+                additional_context,
+            },
+        }
     }
 }
 
@@ -1270,14 +1551,27 @@ pub fn report_response_as_request(
     report: Report<ConnectorResponseError>,
 ) -> Report<ConnectorRequestError> {
     let msg = format!("response error: {}", report.current_context());
-    report.change_context(ConnectorRequestError::NotImplemented(msg))
+    report.change_context(ConnectorRequestError::not_implemented(msg))
 }
 
 /// Convert a request-phase report to response-phase (use when response context receives request errors).
+///
+/// Uses [`ConnectorResponseError::response_handling_failed_http_status_unknown`] because a
+/// [`Report<ConnectorRequestError>`] carries **no** connector HTTP status. When you have the
+/// connector HTTP status (e.g. from `router_response_types::Response::status_code` or the
+/// response-router `http_code` field), call [`report_request_as_response_with_http_status`].
 pub fn report_request_as_response(
     report: Report<ConnectorRequestError>,
 ) -> Report<ConnectorResponseError> {
-    report.change_context(ConnectorResponseError::response_handling_failed(None))
+    report.change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
+}
+
+/// Like [`report_request_as_response`], but attaches the connector HTTP status when known.
+pub fn report_request_as_response_with_http_status(
+    report: Report<ConnectorRequestError>,
+    http_status: u16,
+) -> Report<ConnectorResponseError> {
+    report.change_context(ConnectorResponseError::response_handling_failed(http_status))
 }
 
 /// Extension trait to convert `Result<T, Report<ConnectorRequestError>>` to `Result<T, Report<ConnectorResponseError>>`.
@@ -1308,8 +1602,25 @@ where
 
 impl ErrorSwitch<ConnectorRequestError> for common_utils::errors::ParsingError {
     fn switch(&self) -> ConnectorRequestError {
+        use common_utils::errors::ParsingError as Pe;
+        let field_name = match self {
+            Pe::EnumParseFailure(name) | Pe::StructParseFailure(name) | Pe::EncodeError(name) => {
+                *name
+            }
+            Pe::UnknownError => "unknown",
+            Pe::DateTimeParsingError => "datetime",
+            Pe::EmailParsingError => "email",
+            Pe::PhoneNumberParsingError => "phone_number",
+            Pe::FloatToDecimalConversionFailure => "amount",
+            Pe::DecimalToI64ConversionFailure => "integer",
+            Pe::StringToFloatConversionFailure => "float",
+            Pe::I64ToDecimalConversionFailure => "amount",
+            Pe::StringToDecimalConversionFailure { .. } => "decimal",
+            Pe::IntegerOverflow => "integer",
+        };
         ConnectorRequestError::InvalidDataFormat {
-            field_name: "connector_meta_data",
+            field_name,
+            context: IntegrationErrorContext::default(),
         }
     }
 }

@@ -271,7 +271,7 @@ macros::create_all_prerequisites!(
             // Use access_token if available (for OAuth-enabled flows)
             let access_token = req.resource_common_data.access_token
                 .as_ref()
-                .ok_or(ConnectorRequestError::FailedToObtainAuthType)?;
+                .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
@@ -301,7 +301,7 @@ macros::create_all_prerequisites!(
                         This connector requires OAuth tokens for both payments and refunds. \
                         UCS currently only auto-acquires tokens for payment flows."
                     );
-                    ConnectorRequestError::FailedToObtainAuthType
+                    ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
                 })?;
 
             let auth_header = (
@@ -349,7 +349,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = transformers::IatapayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.client_id.into_masked(),
@@ -364,9 +364,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: IatapayErrorResponse = res
             .response
             .parse_struct("IatapayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response);
@@ -445,7 +443,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             // Extract merchant_id from auth credentials
             let auth = transformers::IatapayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
@@ -575,7 +573,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // For OAuth, extract client_id and client_secret from IatapayAuthType
             let auth = transformers::IatapayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let client_id = auth.client_id.peek();
             let client_secret = auth.client_secret.peek();

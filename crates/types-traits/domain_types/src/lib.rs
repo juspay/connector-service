@@ -16,6 +16,7 @@ pub mod types;
 pub mod utils;
 
 pub use errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+    combine_error_message_with_context, ConnectorRequestError, ConnectorResponseError,
+    IntegrationErrorContext, ResponseTransformationErrorContext, ResultRequestToResponseExt,
     ResultResponseToRequestExt,
 };

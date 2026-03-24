@@ -38,7 +38,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
                 app_id: app_id.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType)),
+            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
         }
     }
 }
@@ -235,6 +235,7 @@ fn get_cashfree_payment_method_data<
                     if vpa.is_empty() {
                         return Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id for UPI collect",
+                context: Default::default()
                         });
                     }
 
@@ -274,6 +275,7 @@ fn get_cashfree_payment_method_data<
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Only UPI payment methods are supported for Cashfree V3".to_string(),
             connector: "Cashfree",
+                context: Default::default()
         }),
     }
 }
@@ -376,6 +378,7 @@ impl
             .get_payment_method_billing()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing_address",
+                context: Default::default()
             })?;
 
         // Build customer details
@@ -402,6 +405,7 @@ impl
         let return_url = item.resource_common_data.return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
+                context: Default::default()
             },
         )?;
 
@@ -409,6 +413,7 @@ impl
         let notify_url = item.request.webhook_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "webhook_url",
+                context: Default::default()
             },
         )?;
 
@@ -484,6 +489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "merchant_order_id",
+                context: Default::default()
             },
         )?;
 
@@ -564,6 +570,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let deep_link = response.data.payload.map(|p| p.default_link).ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "intent_link",
+                context: Default::default()
                     },
                 )?;
 

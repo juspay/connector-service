@@ -115,7 +115,7 @@ macros::create_all_prerequisites!(
             let access_token = req
                 .resource_common_data
                 .get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to get OAuth access token for GlobalPay")?;
 
             Ok(vec![
@@ -143,7 +143,7 @@ macros::create_all_prerequisites!(
             let access_token = req
                 .resource_common_data
                 .get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to get OAuth access token for GlobalPay")?;
 
             Ok(vec![
@@ -166,7 +166,7 @@ macros::create_all_prerequisites!(
             let access_token = req
                 .resource_common_data
                 .get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to get OAuth access token for GlobalPay refund flow")?;
 
             Ok(vec![
@@ -193,7 +193,7 @@ macros::create_all_prerequisites!(
             let access_token = req
                 .resource_common_data
                 .get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })
                 .attach_printable("Failed to get OAuth access token for GlobalPay refund flow")?;
 
             Ok(vec![
@@ -448,7 +448,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/transactions/{}", self.connector_base_url_payments(req), transaction_id))
         }
     }
@@ -522,7 +522,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/transactions/{}/capture", self.connector_base_url_payments(req), transaction_id))
         }
     }
@@ -788,9 +788,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: globalpay::GlobalpayAccessTokenResponse = res
             .response
             .parse_struct("GlobalpayAccessTokenResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_response_body!(event_builder, response);
 
@@ -888,7 +886,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         // Note: This method should not be used for OAuth-based connectors
         // Use build_payment_headers or build_refund_headers instead
-        Err(ConnectorRequestError::FailedToObtainAuthType.into())
+        Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
     }
 
     fn build_error_response(
@@ -899,9 +897,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: globalpay::GlobalpayErrorResponse = res
             .response
             .parse_struct("GlobalpayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

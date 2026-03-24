@@ -295,7 +295,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = transformers::CheckoutAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_secret.peek()).into_masked(),
@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
         } else {
             res.response.parse_struct("ErrorResponse").change_context(
-                ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
+                ConnectorResponseError::response_deserialization_failed(res.status_code),
             )?
         };
 
@@ -452,7 +452,7 @@ macros::macro_connector_implementation!(
                 req.request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
                 suffix
             ))
         }
@@ -484,7 +484,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
             };
             Ok(format!("{}payments/{}/captures", self.connector_base_url_payments(req), connector_tx_id))
         }

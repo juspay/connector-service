@@ -110,7 +110,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | WalletData::RevolutPay(_)
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+            | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Wallet payment method not supported")?,
@@ -135,7 +135,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -154,7 +154,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-            Err(ConnectorRequestError::NotImplemented(
+            Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Payment method not supported")?
@@ -258,7 +258,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -297,7 +297,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | WalletData::RevolutPay(_)
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+            | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Wallet payment method not supported")?,
@@ -317,7 +317,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-            Err(ConnectorRequestError::NotImplemented(
+            Err(ConnectorRequestError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Payment method not supported")?
@@ -337,14 +337,14 @@ fn get_card_number_string<T: PaymentMethodDataTypes>(
     // Serialize the card number and extract the string value
     // This works for both DefaultPCIHolder (cards::CardNumber) and VaultTokenHolder (String)
     let serialized = serde_json::to_value(card_number)
-        .change_context(ConnectorRequestError::RequestEncodingFailed)
+        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
         .attach_printable("Failed to serialize card number")?;
 
     // Extract the string from the JSON value
     serialized
         .as_str()
         .map(|s| s.to_string())
-        .ok_or(ConnectorRequestError::RequestEncodingFailed)
+        .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
         .attach_printable("Card number is not a valid string")
 }
 
@@ -407,7 +407,7 @@ impl TryFrom<&ConnectorSpecificConfig> for MultisafepayAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -551,7 +551,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let card_expiry_date: i64 = card_expiry_str
                     .parse::<i64>()
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                     .attach_printable("Failed to parse card expiry date as integer")?;
 
                 Some(GatewayInfo {
@@ -582,6 +582,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "email",
+                context: Default::default()
                 })
                 .attach_printable("Missing email for transaction")?
                 .expose()
@@ -596,6 +597,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 })
                 .attach_printable("Missing return URL for transaction")?,
             cancel_url: item
@@ -604,6 +606,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 })
                 .attach_printable("Missing cancel URL for transaction")?,
         };
@@ -686,7 +689,7 @@ impl<T: PaymentMethodDataTypes>
 
                 let card_expiry_date: i64 = card_expiry_str
                     .parse::<i64>()
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                     .attach_printable("Failed to parse card expiry date as integer")?;
 
                 Some(GatewayInfo {
@@ -717,6 +720,7 @@ impl<T: PaymentMethodDataTypes>
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "email",
+                context: Default::default()
                 })
                 .attach_printable("Missing email for transaction")?
                 .expose()
@@ -731,6 +735,7 @@ impl<T: PaymentMethodDataTypes>
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 })
                 .attach_printable("Missing return URL for transaction")?,
             cancel_url: item
@@ -739,6 +744,7 @@ impl<T: PaymentMethodDataTypes>
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 })
                 .attach_printable("Missing cancel URL for transaction")?,
         };

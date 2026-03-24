@@ -46,7 +46,7 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
                 merchant_identity_id: key1.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -70,7 +70,7 @@ impl TryFrom<&ConnectorSpecificConfig> for FinixAuthType {
                 merchant_identity_id: merchant_identity_id.clone(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -374,6 +374,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // This requires connector_customer_id to be present
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first, or ensure connector_customer_id is set",
+                context: Default::default()
                 }.into());
             }
         };
@@ -898,6 +899,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id",
+                context: Default::default()
             })?;
 
         match &token_data.payment_method_data {
@@ -910,6 +912,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card.card_exp_month.peek().parse::<i8>().map_err(|_| {
                         ConnectorRequestError::InvalidDataFormat {
                             field_name: "card_exp_month",
+                context: Default::default()
                         }
                     })?,
                 )),
@@ -917,6 +920,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card.card_exp_year.peek().parse::<i32>().map_err(|_| {
                         ConnectorRequestError::InvalidDataFormat {
                             field_name: "card_exp_year",
+                context: Default::default()
                         }
                     })?,
                 )),
@@ -971,14 +975,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             account_type,
                         })
                     }
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         "Only ACH Bank Debit is supported".to_string(),
                     )
                     .into()),
                 }
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
-                "Only card and bank debit tokenization are supported".into(),
+            _ => Err(ConnectorRequestError::not_implemented(
+                "Only card and bank debit tokenization are supported",
             )
             .into()),
         }

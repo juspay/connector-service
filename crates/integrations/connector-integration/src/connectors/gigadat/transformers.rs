@@ -40,6 +40,7 @@ impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for GigadatConnectorM
                 serde_json::from_value::<Self>(data.expose()).change_context(
                     ConnectorRequestError::InvalidConnectorConfig {
                         config: "merchant_connector_account.metadata",
+                context: Default::default()
                     },
                 )
             })
@@ -72,7 +73,7 @@ impl TryFrom<&ConnectorSpecificConfig> for GigadatAuthType {
                 access_token: access_token.to_owned(),
                 campaign_id: campaign_id.to_owned(),
             }),
-            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType)),
+            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
         }
     }
 }
@@ -129,7 +130,7 @@ impl TryFrom<String> for GigadatTransactionStatus {
             "STATUS_ABORTED1" => Ok(Self::StatusAborted1),
             "STATUS_PENDING" => Ok(Self::StatusPending),
             "STATUS_FAILED" => Ok(Self::StatusFailed),
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             )
             .into()),
@@ -259,6 +260,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .ok_or_else(|| {
                     Report::from(ConnectorRequestError::InvalidConnectorConfig {
                         config: "missing 'site' in connector_feature_data or metadata",
+                context: Default::default()
                     })
                 })
         })?;
@@ -274,6 +276,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_payment_billing()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address",
+                context: Default::default()
                     })?;
 
                 let billing_address =
@@ -282,11 +285,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .address
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "billing_address.address",
+                context: Default::default()
                         })?;
 
                 let name = billing_address.get_optional_full_name().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.first_name or billing_address.last_name",
+                context: Default::default()
                     },
                 )?;
 
@@ -296,11 +301,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or(item.router_data.request.email.clone())
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.email or email",
+                context: Default::default()
                     })?;
 
                 let mobile = billing.get_phone_with_country_code().map_err(|_| {
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.phone",
+                context: Default::default()
                     }
                 })?;
 
@@ -312,12 +319,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .clone()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "customer_id",
+                context: Default::default()
                     })?;
 
                 // Get browser IP
                 let browser_info = item.router_data.request.browser_info.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "browser_info",
+                context: Default::default()
                     },
                 )?;
                 let user_ip = Secret::new(
@@ -325,6 +334,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ip_address
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "browser_info.ip_address",
+                context: Default::default()
                         })?
                         .to_string(),
                 );
@@ -343,7 +353,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed)?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
                 Ok(Self {
                     user_id: customer_id,
@@ -364,11 +374,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             PaymentMethodData::BankRedirect(_) => {
-                Err(Report::new(ConnectorRequestError::NotImplemented(
+                Err(Report::new(ConnectorRequestError::not_implemented(
                     "Only Interac bank redirect is supported for Gigadat".to_string(),
                 )))
             }
-            _ => Err(Report::new(ConnectorRequestError::NotImplemented(
+            _ => Err(Report::new(ConnectorRequestError::not_implemented(
                 "Only Interac bank redirect is supported for Gigadat".to_string(),
             ))),
         }
@@ -495,7 +505,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         Ok(Self {
             amount,

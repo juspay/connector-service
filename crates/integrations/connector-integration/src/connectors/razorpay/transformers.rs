@@ -241,7 +241,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RazorpayAuthType {
                     api_secret: secret.to_owned(),
                 }),
             },
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
         }
     }
 }
@@ -303,7 +303,7 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::OpenBanking(_) => Err(ConnectorRequestError::NotImplemented(
+        | PaymentMethodData::OpenBanking(_) => Err(ConnectorRequestError::not_implemented(
             "Only Card payment method is supported for Razorpay".to_string(),
         )),
     }
@@ -352,6 +352,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|phone| phone.number.clone())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "contact",
+                context: Default::default()
             })?;
 
         let billing_email = item
@@ -364,6 +365,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(item.router_data.request.email.clone())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
+                context: Default::default()
             })?;
 
         let order_id = item
@@ -373,6 +375,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "order_id",
+                context: Default::default()
             })?;
 
         let (method, card) = extract_payment_method_and_data(
@@ -469,8 +472,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
-            _ => Err(ConnectorRequestError::NotImplemented(
-                "Only card payments are supported".into(),
+            _ => Err(ConnectorRequestError::not_implemented(
+                "Only card payments are supported",
             )
             .into()),
         }
@@ -764,6 +767,7 @@ impl<F, Req>
                     .map(|action| action.url.clone())
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "next.url",
+                context: Default::default()
                     })?;
 
                 let form_fields = HashMap::new();
@@ -1162,7 +1166,7 @@ pub fn get_webhook_object_from_body(
     body: Vec<u8>,
 ) -> Result<Payload, error_stack::Report<ConnectorRequestError>> {
     let webhook: RazorpayWebhook = body.parse_struct("RazorpayWebhook").change_context(
-        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
     )?;
     Ok(webhook.payload)
 }
@@ -1177,7 +1181,7 @@ pub(crate) fn get_razorpay_payment_webhook_status(
             RazorpayPaymentStatus::Captured => Ok(AttemptStatus::Charged),
             RazorpayPaymentStatus::Failed => Ok(AttemptStatus::AuthorizationFailed),
         },
-        RazorpayEntity::Refund => Err(ConnectorRequestError::RequestEncodingFailed),
+        RazorpayEntity::Refund => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }),
     }
 }
 
@@ -1193,7 +1197,7 @@ pub(crate) fn get_razorpay_refund_webhook_status(
             }
             RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
         },
-        RazorpayEntity::Payment => Err(ConnectorRequestError::RequestEncodingFailed),
+        RazorpayEntity::Payment => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }),
     }
 }
 
@@ -1410,6 +1414,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .as_ref()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "vpa_id",
+                context: Default::default()
                     })?
                     .peek()
                     .to_string();
@@ -1428,6 +1433,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "order_id (reference_id)",
+                context: Default::default()
             })?
             .clone();
 
@@ -1602,7 +1608,7 @@ impl<F, Req>
                     None => {
                         // Payment ID is null, this is likely an error
                         return Err(error_stack::report!(
-                            ConnectorResponseError::response_handling_failed(None)
+                            ConnectorResponseError::response_handling_failed(_status_code)
                         ));
                     }
                 }
@@ -1610,7 +1616,7 @@ impl<F, Req>
             RazorpayUpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
                 return Err(error_stack::report!(
-                    ConnectorResponseError::response_handling_failed(None)
+                    ConnectorResponseError::response_handling_failed(_status_code)
                 ));
             }
         };

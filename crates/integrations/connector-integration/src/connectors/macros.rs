@@ -129,13 +129,13 @@ pub trait BridgeRequestResponse: Send + Sync {
     {
         if bytes.is_empty() {
             serde_json::from_str("{}").change_context(
-                ConnectorResponseError::response_deserialization_failed(Some(status_code)),
+                ConnectorResponseError::response_deserialization_failed(status_code),
             )
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    Some(status_code),
+                    status_code,
                 ))
         }
     }
@@ -152,7 +152,7 @@ pub trait BridgeRequestResponse: Send + Sync {
         >,
     {
         RouterDataType::<Self::ConnectorInputData>::try_from(response)
-            .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
+            .change_context(ConnectorResponseError::response_handling_failed(status_code))
     }
 }
 
@@ -226,7 +226,7 @@ macro_rules! expand_fn_get_request_body {
                 // Validate XML structure before sending
                 crate::connectors::macros::validate_xml_structure(&soap_xml)
                     .map_err(|e| {
-                        error_stack::report!(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)
+                        error_stack::report!(domain_types::errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                             .attach_printable(e)
                     })?;
 
@@ -325,9 +325,7 @@ macro_rules! expand_fn_handle_response {
             let response_bytes = self
                 .preprocess_response_bytes(data, res.response, res.status_code)
                 .change_context(
-                    macro_types::ConnectorResponseError::response_handling_failed(Some(
-                        res.status_code,
-                    )),
+                    macro_types::ConnectorResponseError::response_handling_failed(res.status_code),
                 )?;
 
             let response_body = bridge.response(response_bytes, res.status_code)?;
@@ -870,14 +868,14 @@ macro_rules! impl_templating_mixed {
 
                     if bytes.is_empty() {
                         return Err(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code))
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code)
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -885,7 +883,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code),
                         )
                         .attach_printable("Failed to parse XML response")
                 }
@@ -921,14 +919,14 @@ macro_rules! impl_templating_mixed {
 
                     if bytes.is_empty() {
                         return Err(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code))
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code)
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -936,7 +934,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(status_code),
                         )
                         .attach_printable("Failed to parse XML response")
                 }
@@ -1204,7 +1202,10 @@ macro_rules! create_amount_converter_wrapper {
                         &common_utils::types::[<$amount_type ForConnector>],
                         amount,
                         currency,
-                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat { field_name: "amount" })
+                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat {
+                        field_name: "amount",
+                        context: Default::default(),
+                    })
                 }
 
                 pub fn convert_back(
@@ -1218,7 +1219,10 @@ macro_rules! create_amount_converter_wrapper {
                         &common_utils::types::[<$amount_type ForConnector>],
                         amount,
                         currency,
-                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat { field_name: "amount" })
+                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat {
+                        field_name: "amount",
+                        context: Default::default(),
+                    })
                 }
             }
         }

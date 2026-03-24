@@ -138,7 +138,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BluesnapAuthType {
                 password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -234,7 +234,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // Convert card number to Secret<String>
                 let card_number = Secret::new(
                     serde_json::to_string(&card_data.card_number.clone().0)
-                        .change_context(ConnectorRequestError::RequestEncodingFailed)?
+                        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                         .trim_matches('"')
                         .to_string(),
                 );
@@ -305,7 +305,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
                         let encoded_payment_token = Secret::new(
                             serde_json::to_string(&apple_pay_data.payment_data)
-                                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                         );
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
@@ -320,7 +320,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
                         let encoded_payment_token = Secret::new(
                             serde_json::to_string(&google_pay_data.tokenization_data)
-                                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                         );
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
@@ -332,7 +332,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         }
                     }
-                    _ => Err(ConnectorRequestError::NotImplemented(
+                    _ => Err(ConnectorRequestError::not_implemented(
                         "Selected wallet type is not supported".to_string(),
                     ))?,
                 };
@@ -387,7 +387,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .and_then(|addr| addr.address.as_ref())
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorRequestError::MissingRequiredField {
-                                field_name: "billing_address"
+                                field_name: "billing_address",
+                context: Default::default()
                             })
                         })?;
 
@@ -426,11 +427,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         transaction_fraud_info,
                     }))
                 }
-                _ => Err(ConnectorRequestError::NotImplemented(
+                _ => Err(ConnectorRequestError::not_implemented(
                     "Only ACH Bank Debit is supported".to_string(),
                 ))?,
             },
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "Selected payment method is not supported".to_string(),
             ))?,
         }
@@ -457,7 +458,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let connector_transaction_id = match router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(ref id) => id.clone(),
-            _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
+            _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
         };
 
         let amount = super::BluesnapAmountConvertor::convert(
@@ -711,7 +712,7 @@ pub fn map_chargeback_status_to_event_type(
 
     let status: BluesnapChargebackStatus =
         serde_json::from_value(serde_json::Value::String(cb_status.to_string())).change_context(
-            ConnectorRequestError::NotImplemented("webhook event type not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook event type not found".to_string()),
         )?;
 
     Ok(match status {

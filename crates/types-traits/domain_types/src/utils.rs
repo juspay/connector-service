@@ -85,13 +85,14 @@ pub fn handle_json_response_deserialization_failure(
     res: Response,
     _: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    let status = res.status_code;
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(ConnectorResponseError::response_handling_failed(None))?;
+        .change_context(ConnectorResponseError::response_handling_failed(status))?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseError::response_handling_failed(None))?,
+        Ok(_) => Err(ConnectorResponseError::response_handling_failed(status))?,
         // in case of unexpected response but in html or string format
         Err(_) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -119,6 +120,7 @@ pub fn missing_field_err(
     Box::new(move || {
         errors::ConnectorRequestError::MissingRequiredField {
             field_name: message,
+                context: Default::default()
         }
         .into()
     })
@@ -131,6 +133,7 @@ pub fn construct_not_supported_error_report(
     errors::ConnectorRequestError::NotSupported {
         message: capture_method.to_string(),
         connector: connector_name,
+                context: Default::default()
     }
     .into()
 }
@@ -141,7 +144,7 @@ pub fn to_currency_base_unit_with_zero_decimal_check(
 ) -> core::result::Result<String, error_stack::Report<ConnectorRequestError>> {
     currency
         .to_currency_base_unit_with_zero_decimal_check(amount)
-        .change_context(ConnectorRequestError::RequestEncodingFailed)
+        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
 }
 
 pub fn get_timestamp_in_milliseconds(datetime: &PrimitiveDateTime) -> i64 {
@@ -166,7 +169,7 @@ pub fn base64_decode(
 ) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorResponseError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
 }
 
 pub fn to_currency_base_unit(
@@ -177,6 +180,7 @@ pub fn to_currency_base_unit(
         .to_currency_base_unit(amount.get_amount_as_i64())
         .change_context(ConnectorRequestError::InvalidDataFormat {
             field_name: "amount",
+                context: Default::default()
         })
 }
 
@@ -209,11 +213,13 @@ fn get_header_field(
                 .to_str()
                 .change_context(errors::ConnectorRequestError::InvalidDataFormat {
                     field_name: "header",
+                context: Default::default()
                 })
         })
         .ok_or(report!(
             errors::ConnectorRequestError::MissingRequiredField {
-                field_name: "header"
+                field_name: "header",
+                context: Default::default()
             }
         ))?
 }
@@ -266,6 +272,7 @@ where
         _ => Err(errors::ConnectorRequestError::NotSupported {
             message: SELECTED_PAYMENT_METHOD.to_string(),
             connector: connector_name,
+                context: Default::default()
         })?,
     }
 }
@@ -286,11 +293,13 @@ where
             Some(pm_type) => Err(errors::ConnectorRequestError::NotSupported {
                 message: format!("{pm_type} mandate payment"),
                 connector,
+                context: Default::default()
             }
             .into()),
             None => Err(errors::ConnectorRequestError::NotSupported {
                 message: " mandate payment".to_string(),
                 connector,
+                context: Default::default()
             }
             .into()),
         }
@@ -304,7 +313,7 @@ pub fn convert_amount<T>(
 ) -> core::result::Result<T, error_stack::Report<errors::ConnectorRequestError>> {
     amount_convertor
         .convert(amount, currency)
-        .change_context(errors::ConnectorRequestError::AmountConversionFailed)
+        .change_context(errors::ConnectorRequestError::AmountConversionFailed { context: Default::default() })
 }
 
 pub fn convert_back_amount_to_minor_units<T>(
@@ -314,7 +323,7 @@ pub fn convert_back_amount_to_minor_units<T>(
 ) -> core::result::Result<MinorUnit, error_stack::Report<errors::ConnectorRequestError>> {
     amount_convertor
         .convert_back(amount, currency)
-        .change_context(errors::ConnectorRequestError::AmountConversionFailed)
+        .change_context(errors::ConnectorRequestError::AmountConversionFailed { context: Default::default() })
 }
 
 #[derive(Debug, Copy, Clone, strum::Display, Eq, Hash, PartialEq)]
@@ -343,13 +352,13 @@ pub fn get_card_issuer(
     for (k, v) in CARD_REGEX.iter() {
         let regex: Regex = v
             .clone()
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
         if regex.is_match(card_number) {
             return Ok(*k);
         }
     }
     Err(error_stack::Report::new(
-        ConnectorRequestError::NotImplemented("Card Type".into()),
+        ConnectorRequestError::not_implemented("Card Type"),
     ))
 }
 
@@ -392,6 +401,7 @@ pub fn extract_merchant_id_from_metadata(
         .parse::<common_utils::id_type::MerchantId>()
         .map_err(|_| ConnectorRequestError::InvalidDataFormat {
             field_name: "x-merchant-id",
+                context: Default::default()
         })?)
 }
 
@@ -588,6 +598,7 @@ pub fn convert_spain_state_to_code(
         "avila" | "esav" => Ok("AV".to_string()),
         _ => Err(errors::ConnectorRequestError::InvalidDataFormat {
             field_name: "address.state",
+                context: Default::default()
         })?,
     }
 }

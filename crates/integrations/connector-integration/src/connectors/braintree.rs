@@ -99,7 +99,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = braintree::BraintreeAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         let auth_key = format!("{}:{}", auth.public_key.peek(), auth.private_key.peek());
         let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
         Ok(vec![(
@@ -482,9 +482,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreePaymentsResponse = res
                     .response
                     .parse_struct("Braintree PaymentsResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,
@@ -496,9 +494,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreeAuthResponse = res
                     .response
                     .parse_struct("Braintree AuthResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,

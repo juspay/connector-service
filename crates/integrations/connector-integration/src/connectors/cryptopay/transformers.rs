@@ -111,7 +111,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
                 ))
             }
@@ -140,7 +140,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
         }
     }
 }

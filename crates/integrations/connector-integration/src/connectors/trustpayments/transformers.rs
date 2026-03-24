@@ -101,7 +101,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustpaymentsAuthType {
                 password: password.to_owned(),
                 site_reference: site_reference.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType)?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
         }
     }
 }
@@ -231,10 +231,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentMethodData::Card(card_data) => {
                 // Serialize to get the string representation (needed due to generic type constraints)
                 let card_number_json = serde_json::to_value(&card_data.card_number.0)
-                    .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+                    .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
                 let card_number_string = card_number_json
                     .as_str()
-                    .ok_or(ConnectorRequestError::RequestEncodingFailed)?
+                    .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
                     .to_string();
 
                 // Format expiry date as MM/YY (Trust Payments requires 2-digit year)
@@ -247,7 +247,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 })
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
                     "Payment method not supported".to_string()
                 )))
             }
@@ -270,7 +270,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // Determine settlestatus based on capture method
         let settlestatus = match router_data.request.capture_method {
@@ -324,7 +324,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .responses
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors
         if response.errorcode != "0" {
@@ -464,7 +464,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let transaction_reference = router_data
             .request
             .get_connector_transaction_id()
-            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID)?;
+            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let filter = TrustpaymentsFilter {
             sitereference: vec![TrustpaymentsFilterValue {
@@ -533,7 +533,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -562,7 +562,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -679,7 +679,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let transaction_reference = router_data
             .request
             .get_connector_transaction_id()
-            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID)?;
+            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let filter = TrustpaymentsFilter {
             sitereference: vec![TrustpaymentsFilterValue {
@@ -732,7 +732,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -883,7 +883,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -1011,7 +1011,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data.request.minor_refund_amount,
                     router_data.request.currency,
                 )
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             Some(amount)
         } else {
             // Full refund - no amount needed
@@ -1125,7 +1125,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -1150,7 +1150,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -1203,7 +1203,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRefundResponse, Self>>
             .response
             .responses
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
 
         // Map refund status
         let refund_status = get_refund_status_from_settlestatus(

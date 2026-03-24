@@ -49,7 +49,7 @@ impl TryFrom<&ConnectorSpecificConfig> for WorldpayxmlAuthType {
                 api_password: api_password.to_owned(),
                 merchant_code: merchant_code.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -134,6 +134,7 @@ where
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Selected payment method".to_string(),
             connector: "worldpayxml",
+                context: Default::default()
         }
         .into()),
     }
@@ -208,6 +209,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Selected payment method".to_string(),
                     connector: "worldpayxml",
+                context: Default::default()
                 }
                 .into())
             }
@@ -308,7 +310,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         // Convert amount using the connector's amount converter
         let converted_amount = super::WorldpayxmlAmountConvertor::convert(
@@ -456,7 +458,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         Ok(Self {
             version: API_VERSION.to_string(),
@@ -550,6 +552,7 @@ fn parse_last_event(event_str: &str) -> Result<WorldpayxmlLastEvent, ConnectorRe
     serde_json::from_str(&format!("\"{}\"", event_str)).map_err(|_| {
         ConnectorRequestError::InvalidDataFormat {
             field_name: "last_event",
+                context: Default::default()
         }
     })
 }
@@ -591,7 +594,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract order status
         let order_status = response.reply.order_status.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Check for error in order status
@@ -618,7 +621,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract payment details
         let payment = order_status.payment.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Determine if auto-capture
@@ -694,7 +697,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract captureReceived
@@ -761,7 +764,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract cancelReceived
@@ -833,7 +836,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(None),
+                    ConnectorResponseError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Special handling: If error exists but payment is None, return current status (don't fail)
@@ -886,7 +889,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(None),
+                    ConnectorResponseError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Determine if auto-capture from request data
@@ -938,9 +941,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(item.http_code))?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str)?;
@@ -1014,7 +1015,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract refundReceived
@@ -1073,7 +1074,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(None),
+                    ConnectorResponseError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Special handling: If error exists but payment is None, return Pending (don't fail)
@@ -1095,7 +1096,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(None),
+                    ConnectorResponseError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Map status from lastEvent using refund status mapping
@@ -1144,9 +1145,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::response_deserialization_failed(
-                        None,
-                    ))?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(item.http_code))?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str)?;

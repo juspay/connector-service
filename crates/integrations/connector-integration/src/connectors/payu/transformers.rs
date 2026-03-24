@@ -89,7 +89,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -298,7 +298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         // Extract authentication
         let auth = PayuAuthType::try_from(&router_data.connector_config)?;
@@ -333,6 +333,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_billing_first_name()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.first_name",
+                context: Default::default()
                 })?,
             lastname: router_data
                 .resource_common_data
@@ -342,23 +343,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_billing_email()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.email",
+                context: Default::default()
                 })?,
             phone: router_data
                 .resource_common_data
                 .get_billing_phone_number()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.phone_number",
+                context: Default::default()
                 })?,
 
             // URLs - use router return URL if available
             surl: router_data.request.get_router_return_url().map_err(|_| {
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 }
             })?,
             furl: router_data.request.get_router_return_url().map_err(|_| {
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
+                context: Default::default()
                 }
             })?,
 
@@ -374,7 +379,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_ip_address_as_optional()
                 .ok_or_else(|| {
                     report!(ConnectorRequestError::MissingRequiredField {
-                        field_name: "IP address"
+                        field_name: "IP address",
+                context: Default::default()
                     })
                 })?,
             s2s_device_info: constants::DEVICE_INFO.to_string(),
@@ -495,6 +501,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_connector_transaction_id()
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_transaction_id",
+                context: Default::default()
             })?;
 
         let command = constants::COMMAND;
@@ -669,6 +676,7 @@ fn determine_upi_flow<
                         // Missing VPA for UPI Collect - this should be an error
                         Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
+                context: Default::default()
                         })
                     }
                 }
@@ -688,6 +696,7 @@ fn determine_upi_flow<
             message: "Payment method not supported by PayU. Only UPI payments are supported"
                 .to_string(),
             connector: "PayU",
+                context: Default::default()
         }),
     }
 }

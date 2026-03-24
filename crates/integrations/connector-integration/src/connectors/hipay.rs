@@ -283,7 +283,10 @@ macros::create_all_prerequisites!(
                 .secondary_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "secondary_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "secondary_base_url",
+                    context: Default::default(),
+                }))
         }
 
         pub fn get_sync_base_url<F, Req, Res>(
@@ -297,7 +300,10 @@ macros::create_all_prerequisites!(
                 .third_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "third_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "third_base_url",
+                    context: Default::default(),
+                }))
         }
 
         pub fn get_refund_sync_base_url<Req, Res>(
@@ -311,7 +317,10 @@ macros::create_all_prerequisites!(
                 .third_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "third_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "third_base_url",
+                    context: Default::default(),
+                }))
         }
 
         pub fn build_headers<F, FCD, Req, Res>(
@@ -372,7 +381,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = hipay::HipayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
         // Use HTTP Basic Auth for HiPay
         use base64::Engine;
@@ -536,7 +545,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             let base_url = self.get_sync_base_url(req)?;
             Ok(format!(
@@ -584,7 +593,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             Ok(format!(
                 "{}/v1/maintenance/transaction/{}",
@@ -731,7 +740,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: HipayRSyncResponse = res
             .response
             .parse_struct("HipayRSyncResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response);
@@ -742,7 +751,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
+        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
     }
 
     fn get_error_response_v2(

@@ -316,7 +316,7 @@ macros::macro_connector_implementation!(
             let response: PayuSyncResponse = res
                 .response
                 .parse_struct("PayU Sync ErrorResponse")
-                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
 
             // Check if PayU returned error status (0 = error)
             if response.status == Some(0) {
@@ -394,7 +394,7 @@ macros::macro_connector_implementation!(
             let response: PayuPaymentResponse = res
                 .response
                 .parse_struct("PayU ErrorResponse")
-                        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+                        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
 
             // Check if this is an error response
             if response.error.is_some() {

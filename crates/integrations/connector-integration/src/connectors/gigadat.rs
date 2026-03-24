@@ -286,7 +286,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
             let auth = gigadat::GigadatAuthType::try_from(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(format!(
             "{}api/payment-token/{}",
             self.connector_base_url_payments(req),
@@ -324,7 +324,7 @@ macros::macro_connector_implementation!(
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}api/transactions/{}",
             self.connector_base_url_payments(req),
@@ -372,7 +372,7 @@ macros::macro_connector_implementation!(
         let response: gigadat::GigadatRefundErrorResponse = res
             .response
             .parse_struct("GigadatRefundErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -628,7 +628,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = gigadat::GigadatAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
         // Build Basic Auth: base64(access_token:security_token)
         let auth_key = format!(
@@ -652,9 +652,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: gigadat::GigadatErrorResponse = res
             .response
             .parse_struct("GigadatErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

@@ -93,9 +93,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PayboxErrorResponse = res
             .response
             .parse_struct("PayboxErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -211,7 +209,7 @@ macros::create_all_prerequisites!(
                 }
                 Err(e) => {
                     return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
+                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(status_code))
                             .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e)),
                     ));
                 }
@@ -223,7 +221,7 @@ macros::create_all_prerequisites!(
                 }
                 Err(e) => {
                     return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
+                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(status_code))
                             .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e)),
                     ));
                 }

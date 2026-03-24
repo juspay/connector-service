@@ -103,7 +103,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     merchant_id.clone().into_masked(),
                 ),
             ]),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 
@@ -115,9 +115,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PproErrorResponse = res
             .response
             .parse_struct("Ppro ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -328,6 +326,7 @@ macros::macro_connector_implementation!(
             let agr_id = req.request.connector_mandate_id().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "mandate_reference.connector_mandate_id",
+                context: Default::default()
                 },
             )?;
             Ok(format!(
@@ -419,7 +418,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -435,14 +434,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "webhooks not implemented".to_string(),
                 )
                 .into())
@@ -494,14 +493,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "webhooks not implemented".to_string(),
                 )
                 .into())
@@ -541,7 +540,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<ConnectorRequestError>,
     > {
-        Err(ConnectorRequestError::NotImplemented("process_dispute_webhook".to_string()).into())
+        Err(ConnectorRequestError::not_implemented("process_dispute_webhook".to_string()).into())
     }
 
     fn verify_webhook_source(
@@ -551,18 +550,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
         let connector_webhook_secrets = connector_webhook_secret
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature = request.headers.get("Webhook-Signature").ok_or(
-            ConnectorRequestError::NotImplemented("webhook signature not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook signature not found".to_string()),
         )?;
 
         let algorithm = crypto::HmacSha256;
         let expected_signature = hex::decode(signature).change_context(
-            ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook decoding failed".to_string()),
         )?;
 
         algorithm
@@ -571,7 +570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 &expected_signature,
                 &request.body,
             )
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
     }
@@ -586,7 +585,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -875,7 +874,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/v1/payment-charges/{}", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
@@ -914,7 +913,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/v1/payment-charges/{}/captures", self.base_url(&req.resource_common_data.connectors), id))
         }
     }

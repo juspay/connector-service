@@ -43,7 +43,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PowertranzAuthType {
                 power_tranz_id: power_tranz_id.clone(),
                 power_tranz_password: power_tranz_password.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -338,7 +338,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 let card_expiration = card_data
                     .get_card_expiry_year_month_2_digit_with_delimiter(String::new())
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -349,6 +349,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         cardholder_name: card_data.card_holder_name.clone().ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "payment_method.card.card_holder_name",
+                context: Default::default()
                             },
                         )?,
                         card_pan: card_data.card_number.clone(),
@@ -366,6 +367,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => Err(ConnectorRequestError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "powertranz",
+                context: Default::default()
             }
             .into()),
         }
@@ -409,7 +411,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 transaction_identifier: request_data
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
                 total_amount: Some(amount),
                 refund: None,
             },

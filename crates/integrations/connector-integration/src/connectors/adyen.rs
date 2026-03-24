@@ -298,7 +298,7 @@ macros::create_all_prerequisites!(
             )];
             let mut api_key = self
                 .get_auth_header(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -339,6 +339,7 @@ fn build_env_specific_endpoint(
         let endpoint_prefix = adyen_connector_metadata_object.endpoint_prefix.ok_or(
             ConnectorRequestError::InvalidConnectorConfig {
                 config: "metadata.endpoint_prefix",
+                context: Default::default()
             },
         )?;
         Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
@@ -359,7 +360,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = adyen::AdyenAuthType::try_from(auth_type)
-            .map_err(|_| ConnectorRequestError::FailedToObtainAuthType)?;
+            .map_err(|_| ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
@@ -377,7 +378,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: adyen::AdyenErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -497,7 +498,7 @@ macros::macro_connector_implementation!(
                 ResponseId::ConnectorTransactionId(id) => id,
                 _ => {
                     return Err(
-                        ConnectorRequestError::MissingConnectorTransactionID.into(),
+                        ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into(),
                     )
                 }
             };
@@ -590,7 +591,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
         }
     }
@@ -701,7 +702,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented(
+                report!(ConnectorRequestError::not_implemented(
                     "webhook body decoding failed".to_string()
                 ))
                 .attach_printable(format!("error while decoding webhook body {err}"))
@@ -718,7 +719,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented(
+                report!(ConnectorRequestError::not_implemented(
                     "webhook body decoding failed".to_string()
                 ))
                 .attach_printable(format!("error while decoding webhook body {err}"))
@@ -768,7 +769,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented(
+                report!(ConnectorRequestError::not_implemented(
                     "webhook body decoding failed".to_string()
                 ))
                 .attach_printable(format!("error while decoding webhook body {err}"))
@@ -808,7 +809,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented(
+                report!(ConnectorRequestError::not_implemented(
                     "webhook body decoding failed".to_string()
                 ))
                 .attach_printable(format!("error while decoding webhook body {err}"))
@@ -939,7 +940,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
@@ -970,7 +971,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl { context: Default::default() })?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
@@ -1135,6 +1136,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         }
         Err(ConnectorRequestError::MissingRequiredField {
             field_name: "encoded_data",
+                context: Default::default()
         }
         .into())
     }

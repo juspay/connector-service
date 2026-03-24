@@ -282,13 +282,13 @@ macros::create_all_prerequisites!(
             let temp_request_body_for_sig = self.get_request_body(req)?;
             let payload_string_for_sig = match temp_request_body_for_sig {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                     .attach_printable("Failed to serialize JSON request body for signature")?,
                 Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(ConnectorRequestError::RequestEncodingFailed)
+                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                     .attach_printable("Failed to serialize form request body for signature")?,
                 None => "".to_string(),
-                _ => return Err(ConnectorRequestError::RequestEncodingFailed)
+                _ => return Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
                     .attach_printable("Unsupported request body type for signature generation")?,
             };
 
@@ -296,7 +296,7 @@ macros::create_all_prerequisites!(
             let client_request_id = Uuid::new_v4().to_string();
 
             let auth_type_for_sig = transformers::FiservAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             let signature = self.generate_authorization_signature(
                 &auth_type_for_sig,
@@ -356,7 +356,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth: transformers::FiservAuthType = transformers::FiservAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::API_KEY.to_string(),
             auth.api_key.clone().into_masked(),
@@ -371,9 +371,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: transformers::FiservErrorResponse = res
             .response
             .parse_struct("FiservErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

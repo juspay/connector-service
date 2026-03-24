@@ -447,6 +447,7 @@ macros::create_all_prerequisites!(
                 .decode(api_secret.expose())
                 .change_context(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_account_details.api_secret",
+                context: Default::default()
                 })?;
             let key = hmac::Key::new(hmac::HMAC_SHA256, &key_value);
             let signature_value =
@@ -474,10 +475,10 @@ macros::create_all_prerequisites!(
             let merchant_account = auth.merchant_account.clone();
             let base_url = self.base_url(req.resource_common_data.connectors());
             let barclaycard_host =
-                url::Url::parse(base_url).change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                url::Url::parse(base_url).change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             let host = barclaycard_host
                 .host_str()
-                .ok_or(ConnectorRequestError::RequestEncodingFailed)?;
+                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
             let path: String = self
                 .get_url(req)?
                 .chars()
@@ -592,7 +593,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => Ok(id),
-                _ => Err(ConnectorRequestError::MissingConnectorTransactionID),
+                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
             }?;
             Ok(format!(
                 "{}/pts/v2/payments/{}/captures",
@@ -661,7 +662,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => Ok(id),
-                _ => Err(ConnectorRequestError::MissingConnectorTransactionID),
+                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
             }?;
             Ok(format!(
                 "{}/tss/v2/transactions/{}",
@@ -774,9 +775,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::BarclaycardErrorResponse = res
             .response
             .parse_struct("BarclaycardErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         match response {
             responses::BarclaycardErrorResponse::Standard(error_response) => {

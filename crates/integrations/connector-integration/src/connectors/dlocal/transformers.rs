@@ -172,7 +172,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
                 ))?
             }
@@ -225,7 +225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
             ),
             amount,
             currency: item.router_data.request.currency.to_string(),
@@ -260,7 +260,7 @@ impl TryFrom<&ConnectorSpecificConfig> for DlocalAuthType {
                 secret: secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
         }
     }
 }

@@ -307,7 +307,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -318,8 +318,12 @@ macros::macro_connector_implementation!(
             // Get order_id from reference_id (stored after CreateOrder via set_order_reference_id)
             let order_id = req.resource_common_data.reference_id
                 .as_ref()
-                .ok_or(ConnectorRequestError::MissingRequiredField { field_name: "merchant_order_id" })?;
-            Ok(format!("{}/pa/payment_intents/{}/confirm", &req.resource_common_data.connectors.airwallex.base_url, order_id))
+                .ok_or(ConnectorRequestError::MissingRequiredField { field_name: "merchant_order_id", context: Default::default() })?;
+            Ok(format!(
+                "{}/pa/payment_intents/{}/confirm",
+                &req.resource_common_data.connectors.airwallex.base_url,
+                order_id
+            ))
         }
     }
 );
@@ -341,7 +345,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -372,7 +376,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -381,7 +385,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let payment_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
             };
             Ok(format!("{}/pa/payment_intents/{}/capture", &req.resource_common_data.connectors.airwallex.base_url, payment_id))
         }
@@ -406,7 +410,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -435,7 +439,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -466,7 +470,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = airwallex::AirwallexAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -509,7 +513,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -542,7 +546,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let access_token = req.resource_common_data.get_access_token()
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             Ok(self.build_headers(&access_token))
         }
         fn get_url(
@@ -750,7 +754,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // Use build_payment_headers or build_refund_headers instead for OAuth flows
         // This method is only used for CreateAccessToken flow
         let auth = airwallex::AirwallexAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![
             (
                 "x-api-key".to_string(),
@@ -771,9 +775,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: airwallex::AirwallexErrorResponse = res
             .response
             .parse_struct("AirwallexErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 

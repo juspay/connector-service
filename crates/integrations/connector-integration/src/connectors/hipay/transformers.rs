@@ -42,7 +42,7 @@ impl TryFrom<&ConnectorSpecificConfig> for HipayAuthType {
                 api_secret: api_secret.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
             )),
         }
     }
@@ -336,10 +336,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .unwrap_or_default() // Empty string fallback
             }
             _ => {
-                return Err(ConnectorRequestError::NotImplemented(
+                return Err(ConnectorRequestError::not_implemented(
                     "Payment method not supported".to_string(),
                 ))
-                .change_context(ConnectorRequestError::NotImplemented(
+                .change_context(ConnectorRequestError::not_implemented(
                     "Payment method".to_string(),
                 ))
             }
@@ -353,7 +353,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         // Determine operation based on capture method (matching HS)
         let operation = match item.router_data.request.capture_method {
@@ -591,10 +591,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::NotImplemented(
+                Err(ConnectorRequestError::not_implemented(
                     "Payment method not supported for tokenization".to_string(),
                 ))
-                .change_context(ConnectorRequestError::NotImplemented(
+                .change_context(ConnectorRequestError::not_implemented(
                     "Payment method".to_string(),
                 ))
             }
@@ -769,7 +769,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         Ok(Self {
             operation: HipayOperation::Capture,
@@ -861,7 +861,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed)?;
+            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
 
         Ok(Self {
             operation: HipayOperation::Refund,

@@ -144,7 +144,7 @@ macros::macro_connector_implementation!(
                     "{}/transactions/authorization",
                     self.connector_base_url_payments(req)
                 )),
-                _ => Err(ConnectorRequestError::CaptureMethodNotSupported.into()),
+                _ => Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() }.into()),
             }
         }
     }
@@ -168,7 +168,7 @@ macros::macro_connector_implementation!(
         }
         fn get_url(&self, req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/transactions/authorization/{}/capture", self.connector_base_url_payments(req), connector_payment_id))
         }
     }
@@ -288,7 +288,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = transformers::PeachpaymentsAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![
             ("x-api-key".to_string(), auth.api_key.expose().into()),
             ("x-tenant-id".to_string(), auth.tenant_id.expose().into()),
@@ -304,9 +304,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::PeachpaymentsErrorResponse = res
             .response
             .parse_struct("PeachpaymentsErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -661,12 +659,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -713,13 +711,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         }
                     }
                 } else {
-                    Err(ConnectorRequestError::NotImplemented(
+                    Err(ConnectorRequestError::not_implemented(
                         "webhook event type not found".to_string(),
                     )
                     .into())
                 }
             }
-            _ => Err(ConnectorRequestError::NotImplemented(
+            _ => Err(ConnectorRequestError::not_implemented(
                 "webhook event type not found".to_string(),
             )
             .into()),
@@ -733,18 +731,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -792,18 +790,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(ConnectorRequestError::NotImplemented(
+            .ok_or(ConnectorRequestError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -848,12 +846,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         error_stack::Report<ConnectorRequestError>,
     > {
         let body = String::from_utf8(request.body.clone()).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 

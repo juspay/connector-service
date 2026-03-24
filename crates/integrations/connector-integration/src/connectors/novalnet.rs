@@ -315,7 +315,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = novalnet::NovalnetAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         let api_key: String = auth.payment_access_key.expose();
         let encoded_api_key = BASE64_ENGINE.encode(api_key);
         Ok(vec![(
@@ -332,9 +332,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: novalnet::NovalnetErrorResponse = res
             .response
             .parse_struct("NovalnetErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
-            ))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -614,11 +612,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let notif_item = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
         )?;
 
         hex::decode(notif_item.event.checksum).change_context(
-            ConnectorRequestError::NotImplemented(
+            ConnectorRequestError::not_implemented(
                 "webhook verification secret invalid".to_string(),
             ),
         )
@@ -630,7 +628,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
         )?;
 
         let (amount, currency) = match notif.transaction {
@@ -657,7 +655,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .unwrap_or("".to_string());
 
         let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook verification secret invalid".to_string(),
             ))
             .attach_printable("Could not convert webhook secret auth to UTF-8")?;
@@ -743,7 +741,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::NotImplemented("webhook event type not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook event type not found".to_string()),
         )?;
 
         let optional_transaction_status = match notif.transaction {
@@ -762,6 +760,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let transaction_status =
             optional_transaction_status.ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "transaction_status",
+                context: Default::default()
             })?;
         // NOTE: transaction_status will always be present for Webhooks
         // But we are handling optional type here, since we are reusing TransactionData Struct from NovalnetPaymentsResponseTransactionData for Webhooks response too
@@ -779,11 +778,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook reference id not found".to_string()),
         )?;
 
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -802,12 +801,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
             .parse_struct("NovalnetWebhookNotificationResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
         let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -825,7 +824,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let notif: transformers::NovalnetWebhookNotificationResponse =
             get_webhook_object_from_body(&request.body).change_context(
-                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+                ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
             )?;
         let (amount, currency, reason, reason_code) = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
@@ -849,7 +848,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(DisputeWebhookDetailsResponse {
             amount: utils::convert_amount(
                 self.amount_converter,
-                amount.ok_or(ConnectorRequestError::AmountConversionFailed)?,
+                amount.ok_or(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
                 novalnet::option_to_result(currency)?,
             )?,
             currency: novalnet::option_to_result(currency)?,
@@ -871,7 +870,7 @@ fn get_webhook_object_from_body(
 ) -> CustomResult<novalnet::NovalnetWebhookNotificationResponse, ConnectorRequestError> {
     let novalnet_webhook_notification_response = body
         .parse_struct("NovalnetWebhookNotificationResponse")
-        .change_context(ConnectorRequestError::NotImplemented(
+        .change_context(ConnectorRequestError::not_implemented(
             "webhook body decoding failed".to_string(),
         ))?;
 

@@ -372,12 +372,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // Build the request to get the body for HMAC signature
             let connector_req = AuthipayPaymentsRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             // Generate headers with HMAC signature
             self.build_headers_with_signature(
@@ -413,7 +413,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // For GET requests, use empty body for HMAC signature
             self.build_headers_for_get(&auth)
@@ -428,7 +428,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             let base_url = self.connector_base_url_payments(req);
             // Append transaction ID to base URL for GET request
@@ -456,12 +456,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // Build the request to get the body for HMAC signature
             let connector_req = AuthipayVoidRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             // Generate headers with HMAC signature
             self.build_headers_with_signature(
@@ -513,12 +513,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // Build the request to get the body for HMAC signature
             let connector_req = AuthipayCaptureRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             // Generate headers with HMAC signature
             self.build_headers_with_signature(
@@ -536,7 +536,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
             let base_url = self.connector_base_url_payments(req);
             // Secondary transaction pattern: {base_url}/{transaction_id}
@@ -564,12 +564,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // Build the request to get the body for HMAC signature
             let connector_req = AuthipayRefundRequest::try_from(req)?;
             let request_body_str = serde_json::to_string(&connector_req)
-                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
             // Generate headers with HMAC signature
             self.build_headers_with_signature(
@@ -610,7 +610,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
-                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+                .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
 
             // For GET requests, use empty body for HMAC signature
             self.build_headers_for_get(&auth)
@@ -822,9 +822,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("AuthipayErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
-                ))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
         };
 
         with_error_response_body!(event_builder, response);

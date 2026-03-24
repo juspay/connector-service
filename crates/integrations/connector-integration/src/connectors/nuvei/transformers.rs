@@ -44,7 +44,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NuveiAuthType {
                 merchant_site_id: merchant_site_id.clone(),
                 merchant_secret: merchant_secret.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -531,6 +531,7 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
                 .clone()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "session_token",
+                context: Default::default()
                 })?;
 
         let session_response_data = domain_types::connector_types::SessionTokenResponseData {
@@ -582,7 +583,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             ResponseId::EncodedData(id) => id.clone(),
             ResponseId::NoResponseId => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
             }
         };
 
@@ -647,6 +648,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or(router_data.request.customer_name.clone().map(Secret::new))
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.first_name and billing_address.last_name or customer_name",
+                context: Default::default()
                     })?;
 
                 NuveiPaymentOption {
@@ -668,12 +670,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         let metadata = router_data.request.metadata.as_ref().ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "metadata for ACH details",
+                context: Default::default()
                             },
                         )?;
 
                         let ach_data = metadata.peek().get("ach").ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "ach in metadata",
+                context: Default::default()
                             },
                         )?;
 
@@ -682,6 +686,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .and_then(|v: &serde_json::Value| v.as_str())
                             .ok_or(ConnectorRequestError::MissingRequiredField {
                                 field_name: "account_number",
+                context: Default::default()
                             })?;
 
                         let routing_number = ach_data
@@ -689,6 +694,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .and_then(|v: &serde_json::Value| v.as_str())
                             .ok_or(ConnectorRequestError::MissingRequiredField {
                                 field_name: "routing_number",
+                context: Default::default()
                             })?;
 
                         let sec_code = ach_data
@@ -710,6 +716,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         return Err(ConnectorRequestError::NotSupported {
                             message: format!("{:?} is not supported for Nuvei", other),
                             connector: "nuvei",
+                context: Default::default()
                         }
                         .into())
                     }
@@ -719,6 +726,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "nuvei",
+                context: Default::default()
                 }
                 .into())
             }
@@ -732,6 +740,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or_else(|| router_data.request.email.clone())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing_address.email",
+                context: Default::default()
             })?;
 
         let country = router_data
@@ -739,6 +748,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_optional_billing_country()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing_address.country",
+                context: Default::default()
             })?;
 
         // Get first and last name from billing (optional fields)
@@ -789,10 +799,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "browser_info",
+                context: Default::default()
             })?
             .ip_address
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "browser_info.ip_address",
+                context: Default::default()
             })?;
 
         let device_details = NuveiDeviceDetails {
@@ -813,7 +825,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         let currency = router_data.request.currency;
 
@@ -825,6 +837,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "session_token",
+                context: Default::default()
             })?;
 
         // Determine transaction type based on capture method
@@ -947,7 +960,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .transaction_id
             .clone()
             .or(response.order_id.clone())
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1008,7 +1021,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             ResponseId::EncodedData(id) => id.clone(),
             ResponseId::NoResponseId => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
             }
         };
 
@@ -1020,7 +1033,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         let currency = router_data.request.currency;
 
@@ -1095,6 +1108,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         let transaction_details = response.transaction_details.as_ref().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "transaction_details",
+                context: Default::default()
             },
         )?;
 
@@ -1129,7 +1143,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         let connector_transaction_id = transaction_details
             .transaction_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1211,7 +1225,7 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
         let connector_transaction_id = response
             .transaction_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1275,7 +1289,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::types::MinorUnit::new(router_data.request.refund_amount),
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         let currency = router_data.request.currency;
 
@@ -1339,7 +1353,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_id = router_data.request.connector_transaction_id.clone();
 
         if transaction_id.is_empty() {
-            return Err(ConnectorRequestError::MissingConnectorTransactionID.into());
+            return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
         }
 
         // Generate checksum for getTransactionDetails: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
@@ -1420,7 +1434,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
         let connector_refund_id = response
             .transaction_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -1499,7 +1513,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
         let connector_refund_id = response
             .transaction_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -1561,6 +1575,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
+                context: Default::default()
                 })?;
 
         let currency =
@@ -1569,13 +1584,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
+                context: Default::default()
                 })?;
 
         let amount = item
             .connector
             .amount_converter_webhooks
             .convert(minor_amount, currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -1663,7 +1679,7 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
         let connector_transaction_id = response
             .transaction_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
+            .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),

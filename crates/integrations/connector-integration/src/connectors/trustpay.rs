@@ -163,11 +163,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         hex::decode(webhook_response.signature).change_context(
-            ConnectorRequestError::NotImplemented("webhook signature not found".to_string()),
+            ConnectorRequestError::not_implemented("webhook signature not found".to_string()),
         )
     }
 
@@ -179,12 +179,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let trustpay_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         let response: serde_json::Value =
             request.body.parse_struct("Webhook Value").change_context(
-                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+                ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
             )?;
         let values = utils::collect_and_sort_values_by_removing_signature(
             &response,
@@ -209,19 +209,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let signature = self
             .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))?;
 
         let message = self
             .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
     }
@@ -235,7 +235,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -254,7 +254,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -307,7 +307,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -348,7 +348,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -359,7 +359,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_info
                 .references
                 .payment_id
-                .ok_or(ConnectorRequestError::NotImplemented(
+                .ok_or(ConnectorRequestError::not_implemented(
                     "webhook reference id not found".to_string(),
                 ))?;
 
@@ -399,7 +399,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented(
+            .change_context(ConnectorRequestError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
@@ -522,6 +522,7 @@ macros::create_all_prerequisites!(
                     .get_access_token()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "access_token",
+                context: Default::default()
                     })?;
                 Ok(vec![
                     (
@@ -560,6 +561,7 @@ macros::create_all_prerequisites!(
                     .get_access_token()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "access_token",
+                context: Default::default()
                     })?;
                 Ok(vec![
                     (
@@ -617,7 +619,7 @@ macros::create_all_prerequisites!(
             auth_type: &ConnectorSpecificConfig,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = trustpay::TrustpayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
@@ -807,7 +809,7 @@ macros::macro_connector_implementation!(
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}/{}",
@@ -844,7 +846,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let auth = trustpay::TrustpayAuthType::try_from(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
             let auth_value = auth
                 .project_id
                 .zip(auth.secret_key)
