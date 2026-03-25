@@ -8,6 +8,30 @@ use super::{handlers, state::AppState};
 pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(handlers::health::health))
+        .route(
+            "/composite/payments/authorize",
+            post(handlers::composite::payments::authorize),
+        )
+        .route(
+            "/composite/payments/get",
+            post(handlers::composite::payments::get),
+        )
+        .route(
+            "/composite/refunds/refund",
+            post(handlers::composite::payments::refund),
+        )
+        .route(
+            "/composite/refunds/get",
+            post(handlers::composite::refunds::refund_get),
+        )
+        .route(
+            "/composite/payments/void",
+            post(handlers::composite::payments::void),
+        )
+        .route(
+            "/composite/payments/capture",
+            post(handlers::composite::payments::capture),
+        )
         .route("/payments/authorize", post(handlers::payments::authorize))
         // .route(
         //     "/payments/authorize_only",

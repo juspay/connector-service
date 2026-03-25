@@ -5056,9 +5056,7 @@ pub(crate) fn get_adyen_webhook_event_type(
         WebhookEventCode::Capture => Ok(EventType::PaymentIntentCaptureSuccess),
         WebhookEventCode::CaptureFailed => Ok(EventType::PaymentIntentCaptureFailure),
         WebhookEventCode::OfferClosed => Ok(EventType::PaymentIntentExpired),
-        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => {
-            Ok(EventType::RefundSuccess)
-        }
+        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => Ok(EventType::RefundSuccess),
         WebhookEventCode::RefundFailed | WebhookEventCode::RefundReversed => {
             Ok(EventType::RefundFailure)
         }
@@ -5071,9 +5069,7 @@ pub(crate) fn get_adyen_webhook_event_type(
         WebhookEventCode::SecondChargeback | WebhookEventCode::PrearbitrationLost => {
             Ok(EventType::DisputeLost)
         }
-        WebhookEventCode::Unknown => {
-            Err(errors::ConnectorError::WebhookEventTypeNotFound)
-        }
+        WebhookEventCode::Unknown => Err(errors::ConnectorError::WebhookEventTypeNotFound),
     }
 }
 
