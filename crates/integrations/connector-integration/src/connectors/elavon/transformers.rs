@@ -30,8 +30,8 @@ use serde_with::skip_serializing_none;
 
 use super::ElavonRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ElavonAuthType {
@@ -885,11 +885,9 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
 
             _ => {
-                return Err(report!(
-                    IntegrationError::MissingConnectorTransactionID {
-                        context: Default::default()
-                    }
-                ))
+                return Err(report!(IntegrationError::MissingConnectorTransactionID {
+                    context: Default::default()
+                }))
                 .attach_printable("Missing connector_transaction_id for Elavon PSync")
             }
         };
@@ -937,11 +935,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let previous_connector_txn_id = match &router_data.request.connector_transaction_id {
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
-                return Err(report!(
-                    IntegrationError::MissingConnectorTransactionID {
-                        context: Default::default()
-                    }
-                ))
+                return Err(report!(IntegrationError::MissingConnectorTransactionID {
+                    context: Default::default()
+                }))
             }
         };
 

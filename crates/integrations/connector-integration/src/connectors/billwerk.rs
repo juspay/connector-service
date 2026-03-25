@@ -365,8 +365,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 macros::create_amount_converter_wrapper!(connector_name: Billwerk, amount_type: MinorUnit);
 
 use super::macros;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 macros::create_all_prerequisites!(
     connector_name: Billwerk,
     generic_type: T,
@@ -486,9 +486,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: billwerk::BillwerkErrorResponse = res
             .response
             .parse_struct("BillwerkErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, response);
 

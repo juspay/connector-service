@@ -23,8 +23,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::connectors::razorpay::transformers::ForeignTryFrom;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // ============ Authentication Types ============
 
@@ -397,13 +397,13 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             None
         };
 
-        let order_id =
-            item.order_id
-                .as_ref()
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "order_id",
-                    context: Default::default(),
-                })?;
+        let order_id = item
+            .order_id
+            .as_ref()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "order_id",
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             amount: item.amount,
@@ -684,9 +684,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(ConnectorResponseTransformationError::response_handling_failed(
-                    _status_code,
-                ));
+                return Err(
+                    ConnectorResponseTransformationError::response_handling_failed(_status_code),
+                );
             }
         };
 

@@ -6,7 +6,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -133,10 +133,10 @@ impl TryFrom<String> for GigadatTransactionStatus {
             "STATUS_ABORTED1" => Ok(Self::StatusAborted1),
             "STATUS_PENDING" => Ok(Self::StatusPending),
             "STATUS_FAILED" => Ok(Self::StatusFailed),
-            _ => Err(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            )
-            .into()),
+            _ => Err(
+                IntegrationError::not_implemented("webhook body decoding failed".to_string())
+                    .into(),
+            ),
         }
     }
 }

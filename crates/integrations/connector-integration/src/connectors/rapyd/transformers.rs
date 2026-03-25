@@ -5,7 +5,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,

@@ -51,8 +51,8 @@ use crate::connectors::macros;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 use crate::with_response_body;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -787,9 +787,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: globalpay::GlobalpayAccessTokenResponse = res
             .response
             .parse_struct("GlobalpayAccessTokenResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, response);
 
@@ -901,9 +903,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: globalpay::GlobalpayErrorResponse = res
             .response
             .parse_struct("GlobalpayErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

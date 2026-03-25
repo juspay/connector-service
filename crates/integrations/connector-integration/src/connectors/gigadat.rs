@@ -8,8 +8,8 @@ use crate::with_error_response_body;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, FloatMajorUnit};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -655,9 +655,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: gigadat::GigadatErrorResponse = res
             .response
             .parse_struct("GigadatErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

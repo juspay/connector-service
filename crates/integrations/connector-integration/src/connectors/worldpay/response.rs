@@ -302,18 +302,18 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    http_status,
-                ))
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(http_status),
+                )
         })
         .transpose()?;
     optional_reference_id
         .or_else(|| response.transaction_reference.map(&transform_fn))
         .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
-            error_stack::Report::new(ConnectorResponseTransformationError::response_handling_failed(
-                http_status,
-            ))
+            error_stack::Report::new(
+                ConnectorResponseTransformationError::response_handling_failed(http_status),
+            )
         })
 }
 

@@ -22,7 +22,7 @@ use url::Url;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::Shift4RouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 #[derive(Debug, Clone)]
 pub struct Shift4AuthType {

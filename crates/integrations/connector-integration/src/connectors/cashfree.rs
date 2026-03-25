@@ -46,8 +46,8 @@ use transformers as cashfree;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -350,9 +350,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cashfree::CashfreeErrorResponse = res
             .response
             .parse_struct("CashfreeErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, response);
 

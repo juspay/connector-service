@@ -233,11 +233,9 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethod { payment_card }
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "Only card payments are supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Only card payments are supported".to_string()
+                )))
             }
         };
 
@@ -1075,7 +1073,7 @@ pub type AuthipayRefundSyncResponse = AuthipayPaymentsResponse;
 // These delegate to the existing TryFrom<&RouterDataV2> implementations
 
 use crate::connectors::authipay::AuthipayRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<

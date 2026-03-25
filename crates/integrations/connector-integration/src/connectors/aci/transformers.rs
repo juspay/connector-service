@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -1253,7 +1253,8 @@ impl FromStr for AciPaymentStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(),
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1513,7 +1514,8 @@ impl FromStr for AciStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(),
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1695,7 +1697,8 @@ impl FromStr for AciRefundStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(),
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
             )
             .attach_printable(s.to_owned()))
         }

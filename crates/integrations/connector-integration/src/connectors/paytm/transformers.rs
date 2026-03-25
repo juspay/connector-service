@@ -17,7 +17,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -559,7 +559,9 @@ impl<
                         } else {
                             // For regular URLs, parse and convert
                             let url = Url::parse(&deep_link_info.deep_link).change_context(
-                                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                                ConnectorResponseTransformationError::response_handling_failed(
+                                    item.http_code,
+                                ),
                             )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }

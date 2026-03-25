@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub use super::requests::*;
 pub use super::responses::*;
@@ -695,7 +695,9 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
             PaysafeSyncResponse::Payments(sync_response) => {
                 let payment_response = sync_response.payments.first().ok_or_else(|| {
                     error_stack::Report::from(
-                        ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            item.http_code,
+                        ),
                     )
                 })?;
                 let status = get_paysafe_payment_status(
@@ -712,7 +714,9 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 let payment_handle_response =
                     sync_response.payment_handles.first().ok_or_else(|| {
                         error_stack::Report::from(
-                            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                            ConnectorResponseTransformationError::response_deserialization_failed(
+                                item.http_code,
+                            ),
                         )
                     })?;
                 let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;

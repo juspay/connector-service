@@ -51,28 +51,26 @@ pub trait AccessTokenProvider {
 
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, IntegrationError> {
-        self.get_access_token().change_context(
-            IntegrationError::MissingConnectorTransactionID {
+        self.get_access_token()
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
-            },
-        )
+            })
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, IntegrationError> {
-        self.get_access_token().change_context(
-            IntegrationError::MissingConnectorTransactionID {
+        self.get_access_token()
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
-            },
-        )
+            })
     }
 }
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use error_stack::ResultExt;
 
 const X_VOLT_API_VERSION: &str = "X-Volt-Api-Version";
@@ -347,9 +345,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

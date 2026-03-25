@@ -22,7 +22,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     mandates::AcceptanceType,
     payment_method_data::{
         self, AchTransfer, BankRedirectData, BankTransferInstructions, BankTransferNextStepsData,
@@ -1147,11 +1147,9 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             BankRedirectData::Przelewy24 { .. } => Ok(Self::Przelewy24),
             BankRedirectData::Eps { .. } => Ok(Self::Eps),
             BankRedirectData::Blik { .. } => Ok(Self::Blik),
-            BankRedirectData::OnlineBankingFpx { .. } => {
-                Err(IntegrationError::not_implemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                ))
-            }
+            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::not_implemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+            )),
             BankRedirectData::Bizum {}
             | BankRedirectData::Interac { .. }
             | BankRedirectData::Eft { .. }
@@ -1486,12 +1484,10 @@ fn create_stripe_payment_method<
         .into()),
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
-            VoucherData::Boleto(_) | VoucherData::Oxxo => {
-                Err(IntegrationError::not_implemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                )
-                .into())
-            }
+            VoucherData::Boleto(_) | VoucherData::Oxxo => Err(IntegrationError::not_implemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+            )
+            .into()),
             VoucherData::Alfamart(_)
             | VoucherData::Efecty
             | VoucherData::PagoEfectivo
@@ -1516,12 +1512,12 @@ fn create_stripe_payment_method<
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
-        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-            Err(IntegrationError::not_implemented(
-                get_unimplemented_payment_method_error_message("stripe"),
-            )
-            .into())
-        }
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
+            IntegrationError::not_implemented(get_unimplemented_payment_method_error_message(
+                "stripe",
+            ))
+            .into(),
+        ),
     }
 }
 
@@ -1754,12 +1750,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     })),
                 ))
             }
-            BankRedirectData::OnlineBankingFpx { .. } => {
-                Err(IntegrationError::not_implemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                )
-                .into())
-            }
+            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::not_implemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+            )
+            .into()),
             BankRedirectData::Bizum {}
             | BankRedirectData::Eft { .. }
             | BankRedirectData::Interac { .. }
@@ -2021,12 +2015,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                         .online
                                         .clone()
                                         .get_required_value("online")
-                                        .change_context(
-                                            IntegrationError::MissingRequiredField {
-                                                field_name: "online",
-                                                context: Default::default(),
-                                            },
-                                        )?;
+                                        .change_context(IntegrationError::MissingRequiredField {
+                                            field_name: "online",
+                                            context: Default::default(),
+                                        })?;
                                     StripeMandateRequest {
                                         mandate_type: StripeMandateType::Online {
                                             ip_address: online_mandate
@@ -2923,9 +2915,9 @@ pub fn get_connector_metadata(
             _ => None,
         })
         .transpose()
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            http_status,
-        ))?;
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(http_status),
+        )?;
     Ok(next_action_response)
 }
 
@@ -3051,14 +3043,16 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
+                )?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )?;
 
         let response_integrity_object = PaymentSynIntegrityObject {
             amount: amount_in_minor_unit,
@@ -3857,19 +3851,15 @@ fn mandatory_parameters_for_sepa_bank_debit_mandates(
         .and_then(|billing_data| billing_data.email.clone());
     match is_customer_initiated_mandate_payment {
         Some(true) => Ok(StripeBillingAddress {
-            name: Some(
-                billing_name.ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "billing_name",
-                    context: Default::default(),
-                })?,
-            ),
+            name: Some(billing_name.ok_or(IntegrationError::MissingRequiredField {
+                field_name: "billing_name",
+                context: Default::default(),
+            })?),
 
-            email: Some(
-                billing_email.ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "billing_email",
-                    context: Default::default(),
-                })?,
-            ),
+            email: Some(billing_email.ok_or(IntegrationError::MissingRequiredField {
+                field_name: "billing_email",
+                context: Default::default(),
+            })?),
             ..StripeBillingAddress::default()
         }),
         Some(false) | None => Ok(StripeBillingAddress {
@@ -4067,15 +4057,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
+                )?;
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )?;
 
         let response_integrity_object = AuthoriseIntegrityObject {
             amount: amount_in_minor_unit,
@@ -4087,9 +4079,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            item.http_code,
-        ));
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+        );
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = Some(response_integrity_object);
@@ -4110,9 +4102,11 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
+                )?;
 
         let capture_amount_in_minor_unit = item
             .response
@@ -4120,9 +4114,9 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             .amount_received
             .map(|amount| StripeAmountConvertor::convert_back(amount, currency_enum))
             .transpose()
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         let response_integrity_object =
             capture_amount_in_minor_unit.map(|amount_to_capture| CaptureIntegrityObject {
@@ -4135,9 +4129,9 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            item.http_code,
-        ));
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+        );
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = response_integrity_object;
@@ -4367,15 +4361,17 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
+                )?;
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )?;
 
         let response_integrity_object = RefundIntegrityObject {
             currency: currency_enum,

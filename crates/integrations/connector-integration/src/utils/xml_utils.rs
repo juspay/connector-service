@@ -20,7 +20,9 @@ pub fn preprocess_xml_response_bytes(
 
     // Convert to UTF-8 string
     let response_str = std::str::from_utf8(&xml_data)
-        .map_err(|_| ConnectorResponseTransformationError::response_deserialization_failed(http_status))?
+        .map_err(|_| {
+            ConnectorResponseTransformationError::response_deserialization_failed(http_status)
+        })?
         .trim();
 
     // Handle XML declarations by removing them if present
@@ -62,9 +64,9 @@ pub fn preprocess_xml_response_bytes(
             tracing::error!(error=?err, "Failed to parse XML to JSON structure");
 
             // Create a basic JSON structure with error information
-            return Err(ConnectorResponseTransformationError::response_deserialization_failed(
-                http_status,
-            ));
+            return Err(
+                ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+            );
         }
     };
 

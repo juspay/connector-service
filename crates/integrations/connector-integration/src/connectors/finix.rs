@@ -34,8 +34,8 @@ use transformers::{
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";

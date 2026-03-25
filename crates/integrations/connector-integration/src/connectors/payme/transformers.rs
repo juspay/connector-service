@@ -1,8 +1,8 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii, types::MinorUnit};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
@@ -497,7 +497,9 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
         } else {
             // Get the first sale item from the items array
             let sale_item = response.items.first().ok_or(
-                ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    item.http_code,
+                ),
             )?;
 
             // Map PayMe sale status to AttemptStatus using SaleStatus enum

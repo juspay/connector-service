@@ -511,7 +511,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("FiservcommercehubErrorResponse")
             .change_context(
-                errors::ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+                errors::ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
             )?;
 
         with_error_response_body!(event_builder, response);

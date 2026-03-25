@@ -5,7 +5,7 @@ use crate::{
 };
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::MultipartData, types::StringMajorUnit};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{

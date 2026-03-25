@@ -54,7 +54,7 @@ use crate::{
     },
     with_error_response_body,
 };
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -329,7 +329,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
         } else {
             res.response.parse_struct("ErrorResponse").change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
             )?
         };
 

@@ -51,8 +51,8 @@ use interfaces::{
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::sync::LazyLock;
@@ -86,8 +86,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError>
-    {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
         match auth_type {
             ConnectorSpecificConfig::Ppro {
                 api_key,
@@ -118,9 +117,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PproErrorResponse = res
             .response
             .parse_struct("Ppro ErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -560,9 +561,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ))
             .attach_printable("Connector webhook secret not configured")?;
 
-        let signature = request.headers.get("Webhook-Signature").ok_or(
-            IntegrationError::not_implemented("webhook signature not found".to_string()),
-        )?;
+        let signature =
+            request
+                .headers
+                .get("Webhook-Signature")
+                .ok_or(IntegrationError::not_implemented(
+                    "webhook signature not found".to_string(),
+                ))?;
 
         let algorithm = crypto::HmacSha256;
         let expected_signature = hex::decode(signature).change_context(

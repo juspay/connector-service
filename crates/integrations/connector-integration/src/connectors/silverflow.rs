@@ -48,8 +48,8 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -700,9 +700,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("SilverflowErrorResponse")
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    res.status_code,
-                ))?
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        res.status_code,
+                    ),
+                )?
         };
 
         crate::with_error_response_body!(event_builder, response);

@@ -14,10 +14,8 @@ pub trait BodyDecoding {
     /// Get the decoding algorithm being used
     fn get_algorithm(
         &self,
-    ) -> CustomResult<
-        Box<dyn crypto::DecodeMessage + Send>,
-        domain_types::errors::IntegrationError,
-    > {
+    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::IntegrationError>
+    {
         Ok(Box::new(crypto::NoAlgorithm))
     }
 

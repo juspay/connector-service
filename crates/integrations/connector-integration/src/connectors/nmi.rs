@@ -51,8 +51,8 @@ pub type NmiRSyncResponse = SyncResponse;
 
 use super::macros;
 use crate::{
-    types::ResponseRouterData, with_error_response_body, IntegrationError,
-    ConnectorResponseTransformationError,
+    types::ResponseRouterData, with_error_response_body, ConnectorResponseTransformationError,
+    IntegrationError,
 };
 
 pub(crate) mod headers {
@@ -332,9 +332,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         // Parse URL-encoded error response
         let response: StandardResponse = serde_urlencoded::from_bytes(&res.response)
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

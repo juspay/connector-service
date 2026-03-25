@@ -19,7 +19,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         ApplePayDecryptedData, BankRedirectData, Card, CardDetailsForNetworkTransactionId,
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
@@ -573,12 +573,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                     RealTimePaymentData::Fps {}
                     | RealTimePaymentData::PromptPay {}
-                    | RealTimePaymentData::VietQr {} => {
-                        Err(IntegrationError::not_implemented(
-                            utils::get_unimplemented_payment_method_error_message("fiuu"),
-                        )
-                        .into())
-                    }
+                    | RealTimePaymentData::VietQr {} => Err(IntegrationError::not_implemented(
+                        utils::get_unimplemented_payment_method_error_message("fiuu"),
+                    )
+                    .into()),
                 }
             }
             PaymentMethodData::BankRedirect(ref bank_redirect_data) => match bank_redirect_data {
@@ -1144,7 +1142,9 @@ where
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
                         other => Err(error_stack::Report::from(
-                            ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+                            ConnectorResponseTransformationError::unexpected_response_error(
+                                item.http_code,
+                            ),
                         )
                         .attach_printable(other.to_owned())),
                     }?;
@@ -1397,7 +1397,9 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     "11" => Ok(common_enums::RefundStatus::Failure),
                     "22" => Ok(common_enums::RefundStatus::Pending),
                     other => Err(error_stack::Report::from(
-                        ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+                        ConnectorResponseTransformationError::unexpected_response_error(
+                            item.http_code,
+                        ),
                     )
                     .attach_printable(other.to_owned())),
                 }?;
@@ -1573,7 +1575,10 @@ impl TryFrom<ErrorInputs> for ErrorDetails {
                 serde_urlencoded::from_str::<FiuuPaymentRedirectResponse>(encoded_data)
             })
             .transpose()
-            .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(
+                ),
+            )
             .attach_printable("Failed to deserialize FiuuPaymentRedirectResponse")?;
         let error_message = value
             .response_error_desc
@@ -1794,7 +1799,8 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
             }
             (StatCode::Failure, _) => Ok(Self::Failure),
             (other, _) => Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(),
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
             )
             .attach_printable(other.to_string())),
         }
@@ -2226,7 +2232,9 @@ pub fn get_qr_metadata(
         response.txn_data.request_data.qr_data.peek().clone(),
         DUIT_NOW_BRAND_COLOR,
     )
-    .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())?;
+    .change_context(
+        ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
+    )?;
 
     let image_data_url = Url::parse(image_data.data.clone().as_str()).ok();
     let display_to_timestamp = None;
@@ -2241,7 +2249,10 @@ pub fn get_qr_metadata(
 
         Some(qr_code_info.encode_to_value())
             .transpose()
-            .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(
+                ),
+            )
     } else {
         Ok(None)
     }

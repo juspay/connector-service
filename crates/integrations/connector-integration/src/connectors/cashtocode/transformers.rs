@@ -4,7 +4,7 @@ use common_utils::{ext_traits::ValueExt, id_type, request::Method, types::FloatM
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -179,13 +179,14 @@ impl TryFrom<(&ConnectorSpecificConfig, &common_enums::Currency)> for Cashtocode
 
         match auth_type {
             ConnectorSpecificConfig::Cashtocode { auth_key_map, .. } => {
-                let identity_auth_key = auth_key_map.get(currency).ok_or(
-                    IntegrationError::CurrencyNotSupported {
-                        message: currency.to_string(),
-                        connector: "CashToCode",
-                        context: Default::default(),
-                    },
-                )?;
+                let identity_auth_key =
+                    auth_key_map
+                        .get(currency)
+                        .ok_or(IntegrationError::CurrencyNotSupported {
+                            message: currency.to_string(),
+                            connector: "CashToCode",
+                            context: Default::default(),
+                        })?;
 
                 identity_auth_key
                     .to_owned()

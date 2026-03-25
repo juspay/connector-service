@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError, WebhookError},
+    errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -58,12 +58,9 @@ fn get_webhook_response(
     (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
     ConnectorResponseTransformationError,
 > {
-    let transaction =
-        response
-            .transaction
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                status_code,
-            ))?;
+    let transaction = response
+        .transaction
+        .ok_or(ConnectorResponseTransformationError::response_handling_failed(status_code))?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -518,12 +515,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     field_name: "amount",
                     context: Default::default(),
                 })?;
-        let currency = item.router_data.request.currency.ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "currency",
-                context: Default::default(),
-            },
-        )?;
+        let currency =
+            item.router_data
+                .request
+                .currency
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "currency",
+                    context: Default::default(),
+                })?;
 
         Ok(Self {
             amount: requests::PeachpaymentsAmount {

@@ -46,8 +46,8 @@ use super::macros;
 use crate::{
     types::ResponseRouterData, utils::preprocess_xml_response_bytes, with_error_response_body,
 };
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -221,8 +221,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match res
             .response
             .parse_struct::<ElavonPaymentsResponse>("ElavonPaymentsResponse")
-            .map_err(|_| ConnectorResponseTransformationError::response_deserialization_failed(res.status_code))
-        {
+            .map_err(|_| {
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                )
+            }) {
             Ok(elavon_response) => {
                 with_error_response_body!(event_builder, elavon_response);
                 match elavon_response.result {

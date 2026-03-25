@@ -12,7 +12,7 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -428,11 +428,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
                     BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
                     _ => {
-                        return Err(error_stack::report!(
-                            IntegrationError::not_implemented(
-                                "Bank redirect payment method not supported".to_string()
-                            )
-                        ))
+                        return Err(error_stack::report!(IntegrationError::not_implemented(
+                            "Bank redirect payment method not supported".to_string()
+                        )))
                     }
                 };
 
@@ -446,11 +444,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "Payment method not supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Payment method not supported".to_string()
+                )))
             }
         };
 
@@ -614,9 +610,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             })
             .filter(|redirect_str| !redirect_str.is_empty())
             .map(|url| {
-                Url::parse(url).change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))
+                Url::parse(url).change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )
             })
             .transpose()?;
 

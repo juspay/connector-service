@@ -46,8 +46,8 @@ use serde::Serialize;
 use transformers as razorpayv2;
 
 use crate::connectors::razorpay::transformers::ForeignTryFrom;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -113,13 +113,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
             .parse_struct("RazorpayV2ErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -251,9 +254,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpayv2::RazorpayV2CreateOrderResponse = res
             .response
             .parse_struct("RazorpayV2CreateOrderResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -274,7 +279,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 
@@ -282,13 +288,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
             .parse_struct("RazorpayV2ErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -438,18 +447,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.status_code,
                     res.response.to_vec(),
                 ))
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    res.status_code,
-                ))
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                )
             }
             Err(_) => {
                 // Fall back to regular payment response
                 let response: razorpayv2::RazorpayV2PaymentsResponse = res
                     .response
                     .parse_struct("RazorpayV2PaymentsResponse")
-                    .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                        res.status_code,
-                    ))?;
+                    .change_context(
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            res.status_code,
+                        ),
+                    )?;
 
                 if let Some(i) = event_builder {
                     i.set_connector_response(&response)
@@ -462,9 +473,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.status_code,
                     res.response.to_vec(),
                 ))
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    res.status_code,
-                ))
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                )
             }
         }
     }
@@ -473,7 +484,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 
@@ -481,7 +493,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 }
@@ -743,9 +756,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let sync_response: razorpayv2::RazorpayV2SyncResponse = res
             .response
             .parse_struct("RazorpayV2SyncResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&sync_response)
@@ -758,16 +773,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 
@@ -775,7 +791,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 }
@@ -847,9 +864,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpayv2::RazorpayV2RefundResponse = res
             .response
             .parse_struct("RazorpayV2RefundResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -861,16 +880,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 
@@ -878,7 +898,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 }
@@ -945,9 +966,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpayv2::RazorpayV2RefundResponse = res
             .response
             .parse_struct("RazorpayV2RefundResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -959,16 +982,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 
@@ -976,7 +1000,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorResponseTransformationError>
+    {
         self.build_error_response(res, event_builder)
     }
 }

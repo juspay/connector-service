@@ -1,7 +1,7 @@
 use crate::{connectors::getnet::GetnetRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{id_type::CustomerId, types::MinorUnit};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{

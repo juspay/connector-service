@@ -47,8 +47,8 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // Local headers module
 mod headers {

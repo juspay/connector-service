@@ -3,7 +3,7 @@ use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -680,12 +680,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Get profile token from auth
         let auth = MollieAuthType::try_from(&item.connector_config)?;
-        let profile_token =
-            auth.profile_token
-                .ok_or(IntegrationError::InvalidConnectorConfig {
-                    config: "profile_token",
-                    context: Default::default(),
-                })?;
+        let profile_token = auth
+            .profile_token
+            .ok_or(IntegrationError::InvalidConnectorConfig {
+                config: "profile_token",
+                context: Default::default(),
+            })?;
 
         // Format expiry date as "MM/YY" (required by Mollie Components API)
         // Using CardData util for consistent formatting
@@ -703,12 +703,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or_else(|| "en-US".to_string());
 
         // test_mode is required - error if not provided (matching Hyperswitch)
-        let testmode = item.resource_common_data.test_mode.ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "test_mode",
-                context: Default::default(),
-            },
-        )?;
+        let testmode =
+            item.resource_common_data
+                .test_mode
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "test_mode",
+                    context: Default::default(),
+                })?;
 
         Ok(Self {
             card_holder: card_data

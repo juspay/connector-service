@@ -222,7 +222,7 @@ pub type FiservemeaRefundSyncResponse = FiservemeaPaymentsResponse;
 
 // The macro creates a FiservemeaRouterData type. We need to provide the use statement.
 use super::FiservemeaRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // Implementations for FiservemeaRouterData - needed for the macro framework
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -375,11 +375,9 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethod { payment_card }
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "Only card payments are supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Only card payments are supported".to_string()
+                )))
             }
         };
 

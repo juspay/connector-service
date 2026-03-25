@@ -16,7 +16,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         WebhookDetailsResponse,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -1329,9 +1329,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .transaction
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .ok_or(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         match item.response.result.status {
             NovalnetAPIStatus::Success => {

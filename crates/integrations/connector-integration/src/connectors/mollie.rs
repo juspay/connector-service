@@ -54,8 +54,8 @@ pub(crate) mod headers {
 }
 
 use super::macros;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 macros::create_all_prerequisites!(
     connector_name: Mollie,
@@ -739,9 +739,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: mollie::MollieErrorResponse = res
             .response
             .parse_struct("MollieErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

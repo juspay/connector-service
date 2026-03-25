@@ -26,7 +26,7 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -438,7 +438,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: transformers::ResponseMessages =
             res.response.parse_struct("ResponseMessages").map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                )
             })?;
 
         with_response_body!(event_builder, response);

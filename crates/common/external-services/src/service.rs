@@ -16,7 +16,7 @@ use domain_types::{
     errors::{
         report_common_api_client_to_flow, report_connector_request_to_flow,
         report_connector_response_to_flow, ApiErrorResponse, ConnectorFlowError,
-        IntegrationError, ConnectorResponseTransformationError,
+        ConnectorResponseTransformationError, IntegrationError,
     },
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -135,7 +135,10 @@ pub fn handle_connector_response<F, ResourceCommonData, Req, Resp>(
     method: Method,
     url: String,
     event_params: Option<&EventProcessingParams<'_>>,
-) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorResponseTransformationError>
+) -> CustomResult<
+    RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    ConnectorResponseTransformationError,
+>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
@@ -538,13 +541,12 @@ where
                         );
 
                         // New injector handles HTTP request internally and returns enhanced response
-                        let injector_response = injector_core(injector_request)
-                            .await
-                            .change_context(ConnectorFlowError::from(
-                                IntegrationError::RequestEncodingFailed {
+                        let injector_response =
+                            injector_core(injector_request).await.change_context(
+                                ConnectorFlowError::from(IntegrationError::RequestEncodingFailed {
                                     context: Default::default(),
-                                },
-                            ))?;
+                                }),
+                            )?;
 
                         // Convert injector response to connector service Response format
                         let response_bytes = serde_json::to_vec(&injector_response.response)

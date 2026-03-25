@@ -38,8 +38,8 @@ use serde::Serialize;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -307,9 +307,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::PeachpaymentsErrorResponse = res
             .response
             .parse_struct("PeachpaymentsErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -722,10 +724,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .into())
                 }
             }
-            _ => Err(IntegrationError::not_implemented(
-                "webhook event type not found".to_string(),
-            )
-            .into()),
+            _ => Err(
+                IntegrationError::not_implemented("webhook event type not found".to_string())
+                    .into(),
+            ),
         }
     }
 
@@ -745,12 +747,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "webhook body decoding failed".to_string(),
             ))?;
 
-        let transaction =
-            webhook_body
-                .transaction
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook resource object not found".to_string(),
-                ))?;
+        let transaction = webhook_body
+            .transaction
+            .ok_or(IntegrationError::not_implemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         let status: common_enums::AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -805,12 +806,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "webhook body decoding failed".to_string(),
             ))?;
 
-        let transaction =
-            webhook_body
-                .transaction
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook resource object not found".to_string(),
-                ))?;
+        let transaction = webhook_body
+            .transaction
+            .ok_or(IntegrationError::not_implemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         let refund_status: common_enums::RefundStatus = match transaction.transaction_result {
             responses::PeachpaymentsPaymentStatus::ApprovedConfirmed

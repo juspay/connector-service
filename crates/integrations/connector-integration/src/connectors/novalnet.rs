@@ -61,8 +61,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use error_stack::ResultExt;
 
 pub(crate) mod headers {
@@ -335,9 +335,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: novalnet::NovalnetErrorResponse = res
             .response
             .parse_struct("NovalnetErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -617,16 +619,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         let notif_item = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ),
+            IntegrationError::not_implemented("webhook source verification failed".to_string()),
         )?;
 
-        hex::decode(notif_item.event.checksum).change_context(
-            IntegrationError::not_implemented(
-                "webhook verification secret invalid".to_string(),
-            ),
-        )
+        hex::decode(notif_item.event.checksum).change_context(IntegrationError::not_implemented(
+            "webhook verification secret invalid".to_string(),
+        ))
     }
 
     fn get_webhook_source_verification_message(
@@ -635,9 +633,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ),
+            IntegrationError::not_implemented("webhook source verification failed".to_string()),
         )?;
 
         let (amount, currency) = match notif.transaction {

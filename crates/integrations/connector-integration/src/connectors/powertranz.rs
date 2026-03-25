@@ -380,8 +380,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 macros::create_amount_converter_wrapper!(connector_name: Powertranz, amount_type: FloatMajorUnit);
 
 use super::macros;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 macros::create_all_prerequisites!(
     connector_name: Powertranz,
     generic_type: T,
@@ -536,9 +536,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             } else {
                 res.response
                     .parse_struct("PowertranzErrorResponse")
-                    .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                        res.status_code,
-                    ))?
+                    .change_context(
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            res.status_code,
+                        ),
+                    )?
             };
 
             with_response_body!(event_builder, response);

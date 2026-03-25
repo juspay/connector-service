@@ -59,8 +59,8 @@ use transformers::{
 use super::macros::{self, ContentTypeSelector};
 use crate::types::ResponseRouterData;
 use crate::utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 macros::create_amount_converter_wrapper!(connector_name: Trustpay, amount_type: StringMajorUnit);
 
@@ -165,9 +165,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
-        hex::decode(webhook_response.signature).change_context(
-            IntegrationError::not_implemented("webhook signature not found".to_string()),
-        )
+        hex::decode(webhook_response.signature).change_context(IntegrationError::not_implemented(
+            "webhook signature not found".to_string(),
+        ))
     }
 
     fn get_webhook_source_verification_message(
@@ -401,8 +401,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, Report<IntegrationError>>
-    {
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, Report<IntegrationError>> {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")

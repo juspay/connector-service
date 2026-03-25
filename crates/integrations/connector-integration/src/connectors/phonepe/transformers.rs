@@ -29,8 +29,8 @@ pub enum NextActionData {
 
 use super::constants;
 use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 type Error = error_stack::Report<IntegrationError>;
 type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
@@ -620,7 +620,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                 }
             } else {
-                Err(ConnectorResponseTransformationError::response_deserialization_failed(item.http_code).into())
+                Err(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    )
+                    .into(),
+                )
             }
         } else {
             // Error response - PhonePe returned success: false
@@ -919,7 +924,12 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                     })
                 }
             } else {
-                Err(ConnectorResponseTransformationError::response_deserialization_failed(item.http_code).into())
+                Err(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    )
+                    .into(),
+                )
             }
         } else {
             // Error response from sync API - handle specific PhonePe error codes

@@ -4,7 +4,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         WebhookDetailsResponse,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
 };
 
@@ -233,7 +233,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(http_code))?,
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(http_code),
+                )?,
             ),
             None => None,
         };
@@ -374,7 +376,9 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(http_code))?,
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(http_code),
+                )?,
             ),
             None => None,
         };

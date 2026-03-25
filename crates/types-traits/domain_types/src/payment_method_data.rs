@@ -194,9 +194,7 @@ impl<T: PaymentMethodDataTypes> Card<T> {
 }
 
 impl Card<DefaultPCIHolder> {
-    pub fn get_card_issuer(
-        &self,
-    ) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
         get_card_issuer(self.card_number.peek())
     }
     pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
@@ -297,9 +295,7 @@ pub struct NetworkTokenData {
 }
 
 impl NetworkTokenData {
-    pub fn get_card_issuer(
-        &self,
-    ) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
         get_card_issuer(self.token_number.peek())
     }
 
@@ -734,9 +730,9 @@ impl WalletData {
                 let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
                 Ok(encoded_token)
             }
-            _ => Err(
-                IntegrationError::not_implemented("SELECTED PAYMENT METHOD".to_owned()).into(),
-            ),
+            _ => {
+                Err(IntegrationError::not_implemented("SELECTED PAYMENT METHOD".to_owned()).into())
+            }
         }
     }
 }
@@ -1340,9 +1336,7 @@ impl CardDetailsForNetworkTransactionId {
                 .to_string(),
         ))
     }
-    pub fn get_card_issuer(
-        &self,
-    ) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
         get_card_issuer(self.card_number.peek())
     }
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(

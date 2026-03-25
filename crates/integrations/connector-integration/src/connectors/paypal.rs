@@ -58,7 +58,7 @@ use crate::{
     utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
     with_error_response_body,
 };
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -170,11 +170,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<bool, error_stack::Report<IntegrationError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
-        Err(error_stack::report!(
-            IntegrationError::not_implemented(
-                "webhook source verification failed".to_string()
-            )
-        ))
+        Err(error_stack::report!(IntegrationError::not_implemented(
+            "webhook source verification failed".to_string()
+        )))
         .attach_printable(
             "PayPal requires external API call for webhook verification, not internal verification",
         )
@@ -322,9 +320,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let dispute = match details.resource {
             paypal::PaypalResource::PaypalDisputeWebhooks(payload) => payload,
-            _ => Err(error_stack::report!(
-                IntegrationError::not_implemented("webhook body decoding failed".to_string())
-            ))
+            _ => Err(error_stack::report!(IntegrationError::not_implemented(
+                "webhook body decoding failed".to_string()
+            )))
             .attach_printable("Expected PayPal dispute webhook resource")?,
         };
 
@@ -819,9 +817,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: PaypalAuthResponse = res
             .response
             .parse_struct("PaypalAuthResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -832,9 +830,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -1431,9 +1429,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: transformers::PaypalPostAuthenticateResponse = res
             .response
             .parse_struct("PaypalPostAuthenticateResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -1444,9 +1442,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -1569,9 +1567,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let verification_response: paypal::PaypalSourceVerificationResponse = res
             .response
             .parse_struct("PaypalSourceVerificationResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&verification_response)
         }
@@ -1581,9 +1579,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -1753,9 +1751,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: paypal::PaypalPaymentErrorResponse = res
             .response
             .parse_struct("Paypal ErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -1768,9 +1766,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     .try_fold(String::new(), |mut acc, error| {
                         if let Some(description) = &error.description {
                             write!(acc, "description - {description} ;")
-                                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                                    res.status_code,
-                                ))
+                                .change_context(
+                                    ConnectorResponseTransformationError::response_handling_failed(
+                                        res.status_code,
+                                    ),
+                                )
                                 .attach_printable("Failed to concatenate error details")
                                 .map(|_| acc)
                         } else {

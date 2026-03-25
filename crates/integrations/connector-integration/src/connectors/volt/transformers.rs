@@ -18,7 +18,7 @@ use interfaces::webhooks::IncomingWebhookEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::volt::VoltRouterData, types::ResponseRouterData};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // Type alias for refunds router data following existing patterns
 pub type RefundsResponseRouterData<F, T> =

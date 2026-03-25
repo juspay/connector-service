@@ -553,11 +553,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(
-                errors::IntegrationError::MissingConnectorTransactionID {
-                    context: Default::default(),
-                },
-            )?;
+            .change_context(errors::IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            })?;
         Ok(Self {
             merchant_details: FiservcommercehubPSyncMerchantDetails {
                 merchant_id: auth.merchant_id.clone(),
@@ -594,7 +592,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let psync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseTransformationError::response_deserialization_failed(item.http_code)
+                errors::ConnectorResponseTransformationError::response_deserialization_failed(
+                    item.http_code
+                )
             )
         })?;
         let status = AttemptStatus::from(&psync_item.gateway_response.transaction_state);
@@ -799,7 +799,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseTransformationError::response_deserialization_failed(item.http_code)
+                errors::ConnectorResponseTransformationError::response_deserialization_failed(
+                    item.http_code
+                )
             )
         })?;
         let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);

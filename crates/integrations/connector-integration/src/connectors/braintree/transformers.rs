@@ -22,7 +22,7 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk, SessionToken,
         ThirdPartySdkSessionResponse,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
@@ -755,20 +755,24 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 {
                     Ok(t) => t,
                     Err(_) => {
-                        return Err(ConnectorResponseTransformationError::response_handling_failed(
-                            item.http_code,
-                        )
-                        .into());
+                        return Err(
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                item.http_code,
+                            )
+                            .into(),
+                        );
                     }
                 };
                 let complete_authorize_url =
                     match item.router_data.request.get_complete_authorize_url() {
                         Ok(u) => u,
                         Err(_) => {
-                            return Err(ConnectorResponseTransformationError::response_handling_failed(
-                                item.http_code,
-                            )
-                            .into());
+                            return Err(
+                                ConnectorResponseTransformationError::response_handling_failed(
+                                    item.http_code,
+                                )
+                                .into(),
+                            );
                         }
                     };
                 Ok(Self {
@@ -1011,20 +1015,24 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 {
                     Ok(t) => t,
                     Err(_) => {
-                        return Err(ConnectorResponseTransformationError::response_handling_failed(
-                            item.http_code,
-                        )
-                        .into());
+                        return Err(
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                item.http_code,
+                            )
+                            .into(),
+                        );
                     }
                 };
                 let complete_authorize_url =
                     match item.router_data.request.get_complete_authorize_url() {
                         Ok(u) => u,
                         Err(_) => {
-                            return Err(ConnectorResponseTransformationError::response_handling_failed(
-                                item.http_code,
-                            )
-                            .into());
+                            return Err(
+                                ConnectorResponseTransformationError::response_handling_failed(
+                                    item.http_code,
+                                )
+                                .into(),
+                            );
                         }
                     };
                 Ok(Self {
@@ -1389,12 +1397,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant_config_currency,
                 }
             } else {
-                let merchant_account_id = auth.merchant_account_id.ok_or(
-                    IntegrationError::InvalidConnectorConfig {
-                        config: "merchant_account_id",
-                        context: Default::default(),
-                    },
-                )?;
+                let merchant_account_id =
+                    auth.merchant_account_id
+                        .ok_or(IntegrationError::InvalidConnectorConfig {
+                            config: "merchant_account_id",
+                            context: Default::default(),
+                        })?;
                 let merchant_config_currency = auth
                     .merchant_config_currency
                     .as_deref()
@@ -2500,12 +2508,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
         );
-        let order_id = reference_id.ok_or(
-            IntegrationError::MissingConnectorRelatedTransactionID {
+        let order_id =
+            reference_id.ok_or(IntegrationError::MissingConnectorRelatedTransactionID {
                 id: "order_id".to_string(),
                 context: Default::default(),
-            },
-        )?;
+            })?;
         let amount = item
             .connector
             .amount_converter

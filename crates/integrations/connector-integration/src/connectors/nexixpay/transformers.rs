@@ -15,7 +15,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -864,21 +864,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // CRITICAL: For void, we need to send the full authorized amount
         // This is extracted from the request data (required for NexiXPay void)
-        let void_amount =
-            item.request
-                .amount
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "amount for void operation",
-                    context: Default::default(),
-                })?;
+        let void_amount = item
+            .request
+            .amount
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "amount for void operation",
+                context: Default::default(),
+            })?;
 
-        let currency =
-            item.request
-                .currency
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "currency for void operation",
-                    context: Default::default(),
-                })?;
+        let currency = item
+            .request
+            .currency
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "currency for void operation",
+                context: Default::default(),
+            })?;
 
         let void_amount_string = StringMinorUnitForConnector
             .convert(void_amount, currency)
@@ -1247,13 +1247,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Build order data
-        let currency =
-            item.request
-                .currency
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "currency",
-                    context: Default::default(),
-                })?;
+        let currency = item
+            .request
+            .currency
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "currency",
+                context: Default::default(),
+            })?;
 
         let order = NexixpayPreAuthOrder {
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,

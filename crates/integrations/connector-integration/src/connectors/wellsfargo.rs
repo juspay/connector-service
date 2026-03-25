@@ -79,8 +79,8 @@ impl FlowDataBase for RefundFlowData {
     }
 }
 
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use error_stack::{Report, ResultExt};
 
 // Trait implementations with generic type parameters

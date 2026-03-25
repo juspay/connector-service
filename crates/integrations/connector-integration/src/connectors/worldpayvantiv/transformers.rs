@@ -9,7 +9,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
@@ -1455,14 +1455,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..item.router_data
                 })
             }
-            (_, _) => Err(
-                Report::from(ConnectorResponseTransformationError::unexpected_response_error(
-                    item.http_code,
-                ))
-                .attach_printable(
-                    "Only one of 'sale_response' or 'authorization_response' is expected",
-                ),
-            ),
+            (_, _) => Err(Report::from(
+                ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+            )
+            .attach_printable(
+                "Only one of 'sale_response' or 'authorization_response' is expected",
+            )),
         }
     }
 }

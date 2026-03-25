@@ -50,8 +50,8 @@ use transformers::{
 use super::macros;
 use super::macros::GetSoapXml;
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";

@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 type Error = error_stack::Report<IntegrationError>;
 type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
@@ -390,10 +390,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "Only ACH Bank Debit is supported".to_string(),
             )
             .into()),
-            _ => Err(IntegrationError::not_implemented(
-                "Payment method not supported".to_string(),
-            )
-            .into()),
+            _ => Err(
+                IntegrationError::not_implemented("Payment method not supported".to_string())
+                    .into(),
+            ),
         }
     }
 }
@@ -467,18 +467,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let merchant = requests::JpmorganMerchantRefund {
             merchant_software: requests::JpmorganMerchantSoftware {
-                company_name: auth.company_name.ok_or(
-                    IntegrationError::MissingRequiredField {
+                company_name: auth
+                    .company_name
+                    .ok_or(IntegrationError::MissingRequiredField {
                         field_name: "company_name",
                         context: Default::default(),
-                    },
-                )?,
-                product_name: auth.product_name.ok_or(
-                    IntegrationError::MissingRequiredField {
+                    })?,
+                product_name: auth
+                    .product_name
+                    .ok_or(IntegrationError::MissingRequiredField {
                         field_name: "product_name",
                         context: Default::default(),
-                    },
-                )?,
+                    })?,
             },
         };
 

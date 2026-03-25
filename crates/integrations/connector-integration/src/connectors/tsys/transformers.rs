@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
 use super::TsysRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // ============================================================================
 // Card Data Source Enum

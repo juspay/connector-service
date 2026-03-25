@@ -100,9 +100,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: StaxErrorResponse = res
             .response
             .parse_struct("StaxErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -115,9 +117,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.get_error_message(),
             reason: Some(
                 std::str::from_utf8(&res.response)
-                    .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                        res.status_code,
-                    ))?
+                    .change_context(
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            res.status_code,
+                        ),
+                    )?
                     .to_owned(),
             ),
             attempt_status: None,
@@ -137,8 +141,8 @@ use domain_types::connector_flow::{Authenticate, PostAuthenticate, PreAuthentica
 use domain_types::connector_types::{
     PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
 };
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

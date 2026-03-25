@@ -8,7 +8,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
@@ -378,7 +378,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
                         let metadata_value = serde_json::to_value(metadata_map).change_context(
-                            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                item.http_code,
+                            ),
                         )?;
                         (Some(metadata_value), None)
                     }

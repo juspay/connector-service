@@ -316,12 +316,14 @@ impl<T: PaymentMethodDataTypes>
                 context: Default::default(),
             })?;
 
-        let billing_address = payment_billing.address.as_ref().ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "billing.address",
-                context: Default::default(),
-            },
-        )?;
+        let billing_address =
+            payment_billing
+                .address
+                .as_ref()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "billing.address",
+                    context: Default::default(),
+                })?;
 
         // Bambora requires province/state for US and CA addresses in 2-letter format
         // Convert full state names (e.g., "California", "New York") to 2-letter codes (e.g., "CA", "NY")
@@ -718,22 +720,22 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 
         // Get the amount from the original transaction
         // For void, we typically void the full amount
-        let minor_amount =
-            item.request
-                .amount
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "amount",
-                    context: Default::default(),
-                })?;
+        let minor_amount = item
+            .request
+            .amount
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "amount",
+                context: Default::default(),
+            })?;
 
         // Get currency from request
-        let currency =
-            item.request
-                .currency
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "currency",
-                    context: Default::default(),
-                })?;
+        let currency = item
+            .request
+            .currency
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "currency",
+                context: Default::default(),
+            })?;
 
         // Convert amount from minor units to major units using FloatMajorUnitForConnector
         let converter = FloatMajorUnitForConnector;
@@ -789,7 +791,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 // Macro Wrapper Type Implementations
 
 use crate::connectors::bambora::BamboraRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // Authorize - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

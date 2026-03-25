@@ -18,7 +18,7 @@ use serde::Serialize;
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // Wallet type constants
 const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";

@@ -49,7 +49,7 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -742,9 +742,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: HipayRSyncResponse = res
             .response
             .parse_struct("HipayRSyncResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response);
@@ -755,9 +755,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(

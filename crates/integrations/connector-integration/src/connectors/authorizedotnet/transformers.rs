@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
@@ -680,9 +680,9 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        pm => Err(error_stack::report!(
-            IntegrationError::not_implemented(format!("Payment method {:?}", pm))
-        )),
+        pm => Err(error_stack::report!(IntegrationError::not_implemented(
+            format!("Payment method {:?}", pm)
+        ))),
     }?;
 
     let transaction_type = match item.router_data.request.capture_method {
@@ -936,11 +936,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Case 3: Network token with NTI - NOT SUPPORTED (same as Hyperswitch)
                 MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    return Err(error_stack::report!(
-                        IntegrationError::not_implemented(
-                            "Network token with NTI not supported for authorizedotnet".to_string(),
-                        )
-                    ))
+                    return Err(error_stack::report!(IntegrationError::not_implemented(
+                        "Network token with NTI not supported for authorizedotnet".to_string(),
+                    )))
                 }
             };
 
@@ -2725,9 +2723,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let ccard = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             pm => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(format!("Payment method {:?}", pm))
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    format!("Payment method {:?}", pm)
+                )))
             }
         };
 
@@ -2866,9 +2864,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
                 .ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseTransformationError::response_handling_failed(
-                        http_code
-                    ))
+                    error_stack::report!(
+                        ConnectorResponseTransformationError::response_handling_failed(http_code)
+                    )
                 })?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
@@ -3059,9 +3057,7 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
     }
 }
 
-pub fn get_trans_id(
-    details: &AuthorizedotnetWebhookObjectId,
-) -> Result<String, IntegrationError> {
+pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, IntegrationError> {
     match details.event_type {
         AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
             // For payment profile creation, use the customer_profile_id as the primary identifier

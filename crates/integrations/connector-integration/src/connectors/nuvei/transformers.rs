@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 // Auth Type
 #[derive(Debug, Clone)]

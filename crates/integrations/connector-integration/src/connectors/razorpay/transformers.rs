@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -474,9 +474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
-            _ => Err(
-                IntegrationError::not_implemented("Only card payments are supported").into(),
-            ),
+            _ => Err(IntegrationError::not_implemented("Only card payments are supported").into()),
         }
     }
 }
@@ -1166,9 +1164,11 @@ pub struct RazorpayWebhookCard {
 pub fn get_webhook_object_from_body(
     body: Vec<u8>,
 ) -> Result<Payload, error_stack::Report<IntegrationError>> {
-    let webhook: RazorpayWebhook = body.parse_struct("RazorpayWebhook").change_context(
-        IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-    )?;
+    let webhook: RazorpayWebhook =
+        body.parse_struct("RazorpayWebhook")
+            .change_context(IntegrationError::not_implemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
     Ok(webhook.payload)
 }
 
@@ -1613,7 +1613,9 @@ impl<F, Req>
                     None => {
                         // Payment ID is null, this is likely an error
                         return Err(error_stack::report!(
-                            ConnectorResponseTransformationError::response_handling_failed(_status_code)
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                _status_code
+                            )
                         ));
                     }
                 }

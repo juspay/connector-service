@@ -14,7 +14,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -282,8 +282,9 @@ fn is_auto_capture_request<
 fn is_auto_capture_psync_response(
     data: &PaymentsSyncData,
 ) -> Result<bool, error_stack::Report<ConnectorResponseTransformationError>> {
-    is_auto_capture_psync(data)
-        .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())
+    is_auto_capture_psync(data).change_context(
+        ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
+    )
 }
 
 fn map_payment_response_to_attempt_status(
@@ -522,9 +523,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )?;
 
         let response_integrity_object = Some(AuthoriseIntegrityObject {
             amount: response_amount,
@@ -794,9 +795,9 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    item.http_code,
-                ))?;
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                )?;
 
         let response_integrity_object = {
             Some(RefundIntegrityObject {

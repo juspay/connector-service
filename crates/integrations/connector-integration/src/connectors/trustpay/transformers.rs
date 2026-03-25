@@ -24,7 +24,7 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
@@ -948,7 +948,10 @@ impl TryFrom<WebhookStatus> for enums::AttemptStatus {
         match item {
             WebhookStatus::Paid => Ok(Self::Charged),
             WebhookStatus::Rejected => Ok(Self::AuthorizationFailed),
-            _ => Err(ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()),
+            _ => Err(
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
+            ),
         }
     }
 }
@@ -960,7 +963,10 @@ impl TryFrom<WebhookStatus> for enums::RefundStatus {
             WebhookStatus::Paid => Ok(Self::Success),
             WebhookStatus::Refunded => Ok(Self::Success),
             WebhookStatus::Rejected => Ok(Self::Failure),
-            _ => Err(ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()),
+            _ => Err(
+                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
+                ),
+            ),
         }
     }
 }
@@ -1865,7 +1871,8 @@ impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
 fn handle_cards_refund_response(
     response: CardsRefundResponse,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError>
+{
     let (refund_status, message) = get_refund_status(&response.payment_status);
     let error = match message {
         Some(message) => Some(ErrorResponse {
@@ -1892,7 +1899,8 @@ fn handle_cards_refund_response(
 pub fn handle_webhooks_refund_response(
     response: WebhookPaymentInformation,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError>
+{
     let refund_status = enums::RefundStatus::try_from(response.status)?;
     let error = match utils::is_refund_failure(refund_status) {
         true => {
@@ -2250,18 +2258,20 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
                 InitResultData::AppleInitResultData(apple_pay_response),
             ) => match get_apple_pay_session(instance_id, &secrets, apple_pay_response, item) {
                 Ok(v) => Ok(v),
-                Err(e) => Err(
-                    report!(ConnectorResponseTransformationError::response_handling_failed(http_code)).attach(e),
-                ),
+                Err(e) => Err(report!(
+                    ConnectorResponseTransformationError::response_handling_failed(http_code)
+                )
+                .attach(e)),
             },
             (
                 enums::PaymentMethodType::GooglePay,
                 InitResultData::GoogleInitResultData(google_pay_response),
             ) => match get_google_pay_session(instance_id, &secrets, google_pay_response, item) {
                 Ok(v) => Ok(v),
-                Err(e) => Err(
-                    report!(ConnectorResponseTransformationError::response_handling_failed(http_code)).attach(e),
-                ),
+                Err(e) => Err(report!(
+                    ConnectorResponseTransformationError::response_handling_failed(http_code)
+                )
+                .attach(e)),
             },
             _ => Err(report!(
                 ConnectorResponseTransformationError::response_handling_failed_with_context(

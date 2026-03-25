@@ -5,7 +5,7 @@ use common_utils::{
 };
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_address::RedirectionResponse,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     types::Connectors,
@@ -25,8 +25,7 @@ pub trait ConnectorCommon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError>
-    {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
         Ok(Vec::new())
     }
 

@@ -13,8 +13,8 @@ use common_utils::{
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -263,7 +263,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: razorpay::RazorpayErrorResponse =
             res.response.parse_struct("ErrorResponse").map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                )
             })?;
 
         with_error_response_body!(event_builder, response);
@@ -438,7 +440,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             res.response.to_vec(),
                         ))
                         .change_context(
-                            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                res.status_code,
+                            ),
                         )
                     }
                     Err(_) => {
@@ -462,7 +466,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             data.request.payment_method_type,
                         ))
                         .change_context(
-                            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                            ConnectorResponseTransformationError::response_handling_failed(
+                                res.status_code,
+                            ),
                         )
                     }
                 }
@@ -473,7 +479,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .response
                     .parse_struct("RazorpayPaymentResponse")
                     .map_err(|_| {
-                        ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            res.status_code,
+                        )
                     })?;
 
                 with_response_body!(event_builder, response);
@@ -486,9 +494,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     false,
                     data.request.payment_method_type,
                 ))
-                .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                    res.status_code,
-                ))
+                .change_context(
+                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                )
             }
         }
     }
@@ -582,9 +590,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let sync_response: RazorpayV2SyncResponse = res
             .response
             .parse_struct("RazorpayV2SyncResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, sync_response);
 
@@ -595,9 +605,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -714,15 +724,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayOrderResponse")
             .map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                )
             })?;
 
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )
     }
 
     fn get_error_response_v2(
@@ -793,9 +805,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundSyncResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, response);
 
@@ -990,9 +1004,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_response_body!(event_builder, response);
 
@@ -1095,9 +1111,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayCaptureResponse")
             .map_err(|err| {
-                report!(ConnectorResponseTransformationError::response_deserialization_failed(
-                    res.status_code
-                ))
+                report!(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        res.status_code
+                    )
+                )
                 .attach_printable(format!("Failed to parse RazorpayCaptureResponse: {err:?}"))
             })?;
 

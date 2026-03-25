@@ -10,7 +10,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -428,12 +428,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name =
-            auth.merchant_name
-                .ok_or(IntegrationError::InvalidConnectorConfig {
-                    config: "connector_config.merchant_name",
-                    context: Default::default(),
-                })?;
+        let merchant_name = auth
+            .merchant_name
+            .ok_or(IntegrationError::InvalidConnectorConfig {
+                config: "connector_config.merchant_name",
+                context: Default::default(),
+            })?;
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
         let three_ds = create_three_ds_request(&item.router_data, is_mandate_payment)?;
@@ -514,12 +514,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract merchant name from connector config
         let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name =
-            auth.merchant_name
-                .ok_or(IntegrationError::InvalidConnectorConfig {
-                    config: "connector_config.merchant_name",
-                    context: Default::default(),
-                })?;
+        let merchant_name = auth
+            .merchant_name
+            .ok_or(IntegrationError::InvalidConnectorConfig {
+                config: "connector_config.merchant_name",
+                context: Default::default(),
+            })?;
 
         // Extract payment instrument from mandate_reference
         let payment_instrument = match &item.router_data.request.mandate_reference {
@@ -1410,7 +1410,10 @@ where
 
 fn extract_redirection_data(
     response: &WorldpayPaymentsResponse,
-) -> Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<
+    (Option<RedirectForm>, Option<String>),
+    error_stack::Report<ConnectorResponseTransformationError>,
+> {
     match &response.other_fields {
         Some(WorldpayPaymentResponseFields::ThreeDsChallenged(challenged)) => {
             let redirect_form = RedirectForm::Form {

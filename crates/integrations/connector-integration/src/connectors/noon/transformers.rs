@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -993,9 +993,9 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .ok_or(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {

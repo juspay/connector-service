@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -1401,11 +1401,9 @@ impl<
                 )?
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "Only ConnectorMandateId is supported for RepeatPayment".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Only ConnectorMandateId is supported for RepeatPayment".to_string()
+                )))
             }
         };
 

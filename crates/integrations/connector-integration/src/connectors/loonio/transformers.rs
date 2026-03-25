@@ -2,7 +2,7 @@ use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{

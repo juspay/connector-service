@@ -24,8 +24,8 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::StaxRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // Empty request structures for GET requests that don't send request bodies
 #[derive(Debug, Serialize, Default)]
@@ -548,24 +548,23 @@ fn get_payment_status(
     response: &StaxPaymentResponse,
     http_status: u16,
 ) -> Result<AttemptStatus, error_stack::Report<ConnectorResponseTransformationError>> {
-    let mut status =
-        if !response.success {
-            AttemptStatus::Failure
-        } else {
-            match response.transaction_type {
-                StaxTransactionType::PreAuth => match response.is_captured {
-                    0 => AttemptStatus::Authorized,
-                    _ => AttemptStatus::Charged,
-                },
-                StaxTransactionType::Charge => AttemptStatus::Charged,
-                _ => {
-                    return Err(error_stack::report!(
-                        ConnectorResponseTransformationError::response_handling_failed(http_status)
-                    )
-                    .attach_printable("Unsupported transaction type"))
-                }
+    let mut status = if !response.success {
+        AttemptStatus::Failure
+    } else {
+        match response.transaction_type {
+            StaxTransactionType::PreAuth => match response.is_captured {
+                0 => AttemptStatus::Authorized,
+                _ => AttemptStatus::Charged,
+            },
+            StaxTransactionType::Charge => AttemptStatus::Charged,
+            _ => {
+                return Err(error_stack::report!(
+                    ConnectorResponseTransformationError::response_handling_failed(http_status)
+                )
+                .attach_printable("Unsupported transaction type"))
             }
-        };
+        }
+    };
 
     if response.is_voided {
         status = AttemptStatus::Voided;
@@ -640,9 +639,9 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         // MUST find and validate child transaction with type="refund"
         // Following HS pattern: filter by amount and find most recent by created_at
@@ -709,9 +708,9 @@ fn get_refund_status(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        error_stack::report!(ConnectorResponseTransformationError::response_handling_failed(
-            http_status
-        ))
+        error_stack::report!(
+            ConnectorResponseTransformationError::response_handling_failed(http_status)
+        )
         .attach_printable("No refund child transaction found with matching amount")
     })?;
 
@@ -749,9 +748,9 @@ fn extract_refund_id(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        error_stack::report!(ConnectorResponseTransformationError::response_handling_failed(
-            http_status
-        ))
+        error_stack::report!(
+            ConnectorResponseTransformationError::response_handling_failed(http_status)
+        )
         .attach_printable("No refund child transaction found with matching amount")
     })?;
 

@@ -47,8 +47,8 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -259,11 +259,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, IntegrationError> {
-        let timestamp = request.headers.get("bls-ipn-timestamp").ok_or(
-            IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ),
-        )?;
+        let timestamp =
+            request
+                .headers
+                .get("bls-ipn-timestamp")
+                .ok_or(IntegrationError::not_implemented(
+                    "webhook source verification failed".to_string(),
+                ))?;
 
         let body_str = String::from_utf8_lossy(&request.body);
 
@@ -311,8 +313,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, IntegrationError>
-    {
+    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, IntegrationError> {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body).change_context(
                 IntegrationError::not_implemented("webhook body decoding failed".to_string()),
@@ -364,10 +365,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<
-        domain_types::connector_types::RefundWebhookDetailsResponse,
-        IntegrationError,
-    > {
+    ) -> CustomResult<domain_types::connector_types::RefundWebhookDetailsResponse, IntegrationError>
+    {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body).change_context(
                 IntegrationError::not_implemented("webhook body decoding failed".to_string()),
@@ -894,9 +893,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: bluesnap::BluesnapErrorResponse = res
             .response
             .parse_struct("BluesnapErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

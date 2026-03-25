@@ -10,7 +10,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -126,12 +126,12 @@ impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
         match secret_value.peek() {
-            Value::String(s) => serde_json::from_str(s).change_context(
-                IntegrationError::InvalidConnectorConfig {
+            Value::String(s) => {
+                serde_json::from_str(s).change_context(IntegrationError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data string",
                     context: Default::default(),
-                },
-            ),
+                })
+            }
             value => serde_json::from_value(value.clone()).change_context(
                 IntegrationError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data value",
@@ -232,19 +232,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     success_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(
-                        IntegrationError::UrlParsingFailed {
-                            context: Default::default(),
-                        },
-                    )?,
+                    .change_context(IntegrationError::UrlParsingFailed {
+                        context: Default::default(),
+                    })?,
                     failure_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(
-                        IntegrationError::UrlParsingFailed {
-                            context: Default::default(),
-                        },
-                    )?,
+                    .change_context(IntegrationError::UrlParsingFailed {
+                        context: Default::default(),
+                    })?,
                 })
             }
             _ => Err(IntegrationError::not_implemented("Payment method".to_string()).into()),
@@ -415,7 +411,6 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, IntegrationError> {
     }
 
     let sorted_value = sort_value(value);
-    serde_json::to_string(&sorted_value).map_err(|_| {
-        IntegrationError::not_implemented("webhook body decoding failed".to_string())
-    })
+    serde_json::to_string(&sorted_value)
+        .map_err(|_| IntegrationError::not_implemented("webhook body decoding failed".to_string()))
 }

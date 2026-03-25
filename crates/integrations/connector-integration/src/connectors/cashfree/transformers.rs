@@ -5,7 +5,7 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -411,12 +411,14 @@ impl
         )?;
 
         // Get webhook URL from request - required for Cashfree V3
-        let notify_url = item.request.webhook_url.clone().ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "webhook_url",
-                context: Default::default(),
-            },
-        )?;
+        let notify_url =
+            item.request
+                .webhook_url
+                .clone()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "webhook_url",
+                    context: Default::default(),
+                })?;
 
         let order_meta = CashfreeOrderMeta {
             return_url,
@@ -565,11 +567,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let (status, redirection_data) =
-            match response.channel.as_str() {
-                "link" => {
-                    // Intent flow - extract deep link from payload._default
-                    let deep_link = response.data.payload.map(|p| p.default_link).ok_or_else(
+        let (status, redirection_data) = match response.channel.as_str() {
+            "link" => {
+                // Intent flow - extract deep link from payload._default
+                let deep_link = response.data.payload.map(|p| p.default_link).ok_or_else(
                         || {
                             Report::new(
                                 ConnectorResponseTransformationError::response_handling_failed_with_context(
@@ -583,31 +584,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         },
                     )?;
 
-                    // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
-                    let trimmed_link = if let Some(pos) = deep_link.find('?') {
-                        &deep_link[(pos + 1)..]
-                    } else {
-                        &deep_link
-                    };
+                // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
+                let trimmed_link = if let Some(pos) = deep_link.find('?') {
+                    &deep_link[(pos + 1)..]
+                } else {
+                    &deep_link
+                };
 
-                    // Create UPI intent redirection
-                    let redirection_data = Some(Box::new(Some(
-                        domain_types::router_response_types::RedirectForm::Uri {
-                            uri: trimmed_link.to_string(),
-                        },
-                    )));
+                // Create UPI intent redirection
+                let redirection_data = Some(Box::new(Some(
+                    domain_types::router_response_types::RedirectForm::Uri {
+                        uri: trimmed_link.to_string(),
+                    },
+                )));
 
-                    (
-                        common_enums::AttemptStatus::AuthenticationPending,
-                        redirection_data,
-                    )
-                }
-                "collect" => {
-                    // Collect flow - return without redirection, status Pending
-                    (common_enums::AttemptStatus::Pending, None)
-                }
-                _ => (common_enums::AttemptStatus::Failure, None),
-            };
+                (
+                    common_enums::AttemptStatus::AuthenticationPending,
+                    redirection_data,
+                )
+            }
+            "collect" => {
+                // Collect flow - return without redirection, status Pending
+                (common_enums::AttemptStatus::Pending, None)
+            }
+            _ => (common_enums::AttemptStatus::Failure, None),
+        };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {

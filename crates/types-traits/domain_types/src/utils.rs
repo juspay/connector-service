@@ -14,8 +14,8 @@ use time::PrimitiveDateTime;
 
 use crate::{
     errors::{
-        self, ApiError, ApplicationErrorResponse, IntegrationError, ConnectorResponseTransformationError,
-        ParsingError,
+        self, ApiError, ApplicationErrorResponse, ConnectorResponseTransformationError,
+        IntegrationError, ParsingError,
     },
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
@@ -174,7 +174,9 @@ pub fn base64_decode(
 ) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorResponseTransformationError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
-        .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
+        )
 }
 
 pub fn to_currency_base_unit(
@@ -221,12 +223,10 @@ fn get_header_field(
                     context: Default::default(),
                 })
         })
-        .ok_or(report!(
-            errors::IntegrationError::MissingRequiredField {
-                field_name: "header",
-                context: Default::default()
-            }
-        ))?
+        .ok_or(report!(errors::IntegrationError::MissingRequiredField {
+            field_name: "header",
+            context: Default::default()
+        }))?
 }
 
 pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
@@ -355,18 +355,18 @@ pub fn get_card_issuer(
     card_number: &str,
 ) -> core::result::Result<CardIssuer, error_stack::Report<IntegrationError>> {
     for (k, v) in CARD_REGEX.iter() {
-        let regex: Regex =
-            v.clone()
-                .change_context(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
-                })?;
+        let regex: Regex = v
+            .clone()
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         if regex.is_match(card_number) {
             return Ok(*k);
         }
     }
-    Err(error_stack::Report::new(
-        IntegrationError::not_implemented("Card Type"),
-    ))
+    Err(error_stack::Report::new(IntegrationError::not_implemented(
+        "Card Type",
+    )))
 }
 
 static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, regex::Error>>> =
@@ -524,9 +524,7 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
 /// # Returns
 /// * `Ok(String)` - The 2-letter state code
 /// * `Err(IntegrationError)` - If the state cannot be mapped
-pub fn convert_spain_state_to_code(
-    state: &str,
-) -> Result<String, crate::errors::IntegrationError> {
+pub fn convert_spain_state_to_code(state: &str) -> Result<String, crate::errors::IntegrationError> {
     // If already 2 characters, assume it's already an abbreviation
     if state.len() == 2 {
         return Ok(state.to_uppercase());

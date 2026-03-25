@@ -61,7 +61,7 @@ use self::transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -74,18 +74,16 @@ fn unwrap_json_wrapped_xml(
     status_code: u16,
 ) -> CustomResult<String, ConnectorResponseTransformationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            status_code,
-        ))
+        .change_context(ConnectorResponseTransformationError::response_handling_failed(status_code))
         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
     // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                status_code,
-            ))
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(status_code),
+            )
             .attach_printable("Failed to parse JSON-wrapped XML response")?
     } else {
         response_str.to_string()
@@ -235,9 +233,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(
-            IntegrationError::not_implemented("webhooks not implemented".to_string())
-        ))
+        Err(error_stack::report!(IntegrationError::not_implemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 
     fn process_payment_webhook(
@@ -246,9 +244,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(
-            IntegrationError::not_implemented("webhooks not implemented".to_string())
-        ))
+        Err(error_stack::report!(IntegrationError::not_implemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 
     fn process_refund_webhook(
@@ -257,9 +255,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(
-            IntegrationError::not_implemented("webhooks not implemented".to_string())
-        ))
+        Err(error_stack::report!(IntegrationError::not_implemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 }
 
@@ -905,9 +903,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }

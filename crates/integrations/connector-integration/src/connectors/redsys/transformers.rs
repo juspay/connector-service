@@ -31,8 +31,8 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
 pub const DS_VERSION: &str = "0.0";
@@ -336,11 +336,10 @@ pub trait SignatureCalculationData {
 
 impl SignatureCalculationData for requests::RedsysPaymentRequest {
     fn get_merchant_parameters(&self) -> Result<String, Error> {
-        self.encode_to_string_of_json().change_context(
-            IntegrationError::RequestEncodingFailed {
+        self.encode_to_string_of_json()
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
-            },
-        )
+            })
     }
 
     fn get_order_id(&self) -> String {
@@ -350,11 +349,10 @@ impl SignatureCalculationData for requests::RedsysPaymentRequest {
 
 impl SignatureCalculationData for requests::RedsysOperationRequest {
     fn get_merchant_parameters(&self) -> Result<String, Error> {
-        self.encode_to_string_of_json().change_context(
-            IntegrationError::RequestEncodingFailed {
+        self.encode_to_string_of_json()
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
-            },
-        )
+            })
     }
 
     fn get_order_id(&self) -> String {
@@ -422,12 +420,10 @@ fn get_redsys_attempt_status(
             | "9093" | "9094" | "9104" | "9218" | "9253" | "9261" | "9997" | "0002" => {
                 Ok(common_enums::AttemptStatus::Failure)
             }
-            error => Err(
-                Report::from(ConnectorResponseTransformationError::response_handling_failed(
-                    http_status,
-                ))
-                .attach_printable(format!("Received Unknown Status:{error}")),
-            ),
+            error => Err(Report::from(
+                ConnectorResponseTransformationError::response_handling_failed(http_status),
+            )
+            .attach_printable(format!("Received Unknown Status:{error}"))),
         }
     }
 }
@@ -440,12 +436,10 @@ fn refund_status_from_ds_response(
         "0900" => Ok(common_enums::RefundStatus::Success),
         "9999" => Ok(common_enums::RefundStatus::Pending),
         "0950" | "0172" | "174" => Ok(common_enums::RefundStatus::Failure),
-        unknown_status => Err(
-            Report::from(ConnectorResponseTransformationError::response_handling_failed(
-                http_status,
-            ))
-            .attach_printable(format!("Received unknown refund status:{unknown_status}")),
-        ),
+        unknown_status => Err(Report::from(
+            ConnectorResponseTransformationError::response_handling_failed(http_status),
+        )
+        .attach_printable(format!("Received unknown refund status:{unknown_status}"))),
     }
 }
 
@@ -457,9 +451,9 @@ where
     T: serde::de::DeserializeOwned,
 {
     let decoded_bytes = utils::safe_base64_decode(connector_response.to_string())
-        .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-            http_status,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+        )
         .attach_printable("Failed to decode Base64")?;
 
     let response_data: T = serde_json::from_slice(&decoded_bytes).change_context(
@@ -473,13 +467,9 @@ fn build_threeds_form(
     ds_emv3ds: &responses::RedsysEmv3DSResponseData,
     http_status: u16,
 ) -> Result<router_response_types::RedirectForm, ResponseError> {
-    let creq =
-        ds_emv3ds
-            .creq
-            .clone()
-            .ok_or(ConnectorResponseTransformationError::response_deserialization_failed(
-                http_status,
-            ))?;
+    let creq = ds_emv3ds.creq.clone().ok_or(
+        ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+    )?;
 
     let endpoint = ds_emv3ds.acs_u_r_l.clone().ok_or(
         ConnectorResponseTransformationError::response_deserialization_failed(http_status),
@@ -519,9 +509,9 @@ fn get_preauthenticate_response(
 
     let message_version = &emv3ds.protocol_version;
     let semantic_version = common_utils::types::SemanticVersion::from_str(message_version)
-        .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-            http_status,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+        )
         .attach_printable("Failed to parse message_version as SemanticVersion")?;
 
     let authentication_data = Some(domain_types::router_request_types::AuthenticationData {
@@ -577,9 +567,9 @@ fn build_threeds_invoke_response(
 
     let three_ds_data_string = threeds_invoke_request
         .encode_to_string_of_json()
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            http_status,
-        ))?;
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(http_status),
+        )?;
 
     let three_ds_method_data = BASE64_ENGINE.encode(&three_ds_data_string);
 
@@ -596,9 +586,9 @@ fn build_threeds_invoke_response(
         ConnectorResponseTransformationError::response_handling_failed(http_status),
     )?;
     let form_fields: std::collections::HashMap<String, String> = serde_json::from_value(json)
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            http_status,
-        ))?;
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(http_status),
+        )?;
 
     let redirect_form = Some(Box::new(router_response_types::RedirectForm::Form {
         endpoint: three_ds_method_url.to_string(),
@@ -1011,12 +1001,13 @@ where
         let payment_request = requests::RedsysPaymentRequest {
             ds_merchant_amount: RedsysAmountConvertor::convert(
                 router_data.request.amount,
-                router_data.request.currency.ok_or(
-                    IntegrationError::MissingRequiredField {
+                router_data
+                    .request
+                    .currency
+                    .ok_or(IntegrationError::MissingRequiredField {
                         field_name: "currency",
                         context: Default::default(),
-                    },
-                )?,
+                    })?,
             )?,
             ds_merchant_currency: router_data
                 .request
@@ -1510,14 +1501,13 @@ where
                     field_name: "currency",
                     context: Default::default(),
                 })?;
-        let amount =
-            router_data
-                .request
-                .amount
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "amount",
-                    context: Default::default(),
-                })?;
+        let amount = router_data
+            .request
+            .amount
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "amount",
+                context: Default::default(),
+            })?;
 
         let void_request = requests::RedsysOperationRequest {
             ds_merchant_amount: RedsysAmountConvertor::convert(amount, currency)?,
@@ -1799,9 +1789,9 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                 });
                 (item.router_data.resource_common_data.status, response)
             }
-            (Some(_), Some(_)) | (None, None) => Err(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
-            )?,
+            (Some(_), Some(_)) | (None, None) => {
+                Err(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?
+            }
         };
 
         Ok(Self {
@@ -1971,9 +1961,9 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                     network_error_message: None,
                 })
             }
-            (Some(_), Some(_)) | (None, None) => Err(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
-            )?,
+            (Some(_), Some(_)) | (None, None) => {
+                Err(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?
+            }
         };
 
         Ok(Self {

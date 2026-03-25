@@ -12,7 +12,7 @@ use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::*,
     connector_types::*,
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -738,14 +738,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map(|meta| meta.connector_request_id)
             .unwrap_or_else(|| numappel.clone());
 
-        let amount =
-            router_data
-                .request
-                .amount
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "amount",
-                    context: Default::default(),
-                })?;
+        let amount = router_data
+            .request
+            .amount
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "amount",
+                context: Default::default(),
+            })?;
 
         let currency =
             router_data

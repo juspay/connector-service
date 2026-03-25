@@ -58,28 +58,26 @@ pub trait AccessTokenProvider {
 
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, IntegrationError> {
-        self.get_access_token().change_context(
-            IntegrationError::MissingConnectorTransactionID {
+        self.get_access_token()
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
-            },
-        )
+            })
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, IntegrationError> {
-        self.get_access_token().change_context(
-            IntegrationError::MissingConnectorTransactionID {
+        self.get_access_token()
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
-            },
-        )
+            })
     }
 }
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 use error_stack::ResultExt;
 
 const TL_SIGNATURE: &str = "Tl-Signature";
@@ -442,9 +440,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: truelayer::TruelayerErrorResponse = res
             .response
             .parse_struct("TruelayerErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                res.status_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -896,12 +896,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let tl_signature = tl_signature_header.as_str();
         let parts: Vec<&str> = tl_signature.splitn(3, '.').collect();
-        let header_b64 = parts
-            .first()
-            .ok_or(IntegrationError::InvalidDataFormat {
-                field_name: "tl-signature",
-                context: Default::default(),
-            })?;
+        let header_b64 = parts.first().ok_or(IntegrationError::InvalidDataFormat {
+            field_name: "tl-signature",
+            context: Default::default(),
+        })?;
         let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(header_b64)
             .change_context(IntegrationError::InvalidDataFormat {
@@ -953,7 +951,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > {
         let response: truelayer::Jwks =
             res.response.parse_struct("truelayer Jwks").change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+                ConnectorResponseTransformationError::response_deserialization_failed(
+                    res.status_code,
+                ),
             )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -964,9 +964,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(
-            res.status_code,
-        ))
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(

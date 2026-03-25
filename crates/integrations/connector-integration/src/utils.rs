@@ -1,6 +1,6 @@
 pub mod qr_code;
 pub mod xml_utils;
-use crate::{IntegrationError, ConnectorResponseTransformationError};
+use crate::{ConnectorResponseTransformationError, IntegrationError};
 use base64::Engine;
 use common_utils::{
     consts::{
@@ -145,9 +145,9 @@ pub(crate) fn handle_json_response_deserialization_failure(
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseTransformationError::response_deserialization_failed(
-            res.status_code,
-        ))?,
+        Ok(_) => Err(
+            ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+        )?,
         // in case of unexpected response but in html or string format
         Err(_error_msg) => Ok(ErrorResponse {
             status_code: res.status_code,

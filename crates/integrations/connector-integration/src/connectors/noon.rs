@@ -58,8 +58,8 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // Local headers module
 mod headers {
@@ -300,8 +300,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, IntegrationError>
-    {
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, IntegrationError> {
         let resource: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
@@ -491,7 +490,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             res.response
                 .parse_struct("NoonErrorResponse")
                 .map_err(|_| {
-                    ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        res.status_code,
+                    )
                 })?;
 
         with_error_response_body!(event_builder, response);

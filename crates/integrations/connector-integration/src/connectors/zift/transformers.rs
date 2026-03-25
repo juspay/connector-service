@@ -13,7 +13,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -529,9 +529,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     }
                 }
             }
-            _ => Err(error_stack::report!(
-                IntegrationError::not_implemented("Payment method".to_string()),
-            )),
+            _ => Err(error_stack::report!(IntegrationError::not_implemented(
+                "Payment method".to_string()
+            ),)),
         }
     }
 }
@@ -700,9 +700,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 };
                 Ok(Self::Mandate(mandate_request))
             }
-            _ => Err(error_stack::report!(
-                IntegrationError::not_implemented("Payment method".to_string()),
-            )),
+            _ => Err(error_stack::report!(IntegrationError::not_implemented(
+                "Payment method".to_string()
+            ),)),
         }
     }
 }

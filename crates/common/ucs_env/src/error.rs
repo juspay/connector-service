@@ -1,8 +1,8 @@
 use common_utils::errors::ErrorSwitch as CommonErrorSwitch;
 use domain_types::errors::{
     combine_error_message_with_context, doc_url_for_error_code, ApiClientError,
-    ApplicationErrorResponse, ConnectorFlowError, IntegrationError, ConnectorResponseTransformationError,
-    IntegrationErrorContext, WebhookError,
+    ApplicationErrorResponse, ConnectorFlowError, ConnectorResponseTransformationError,
+    IntegrationError, IntegrationErrorContext, WebhookError,
 };
 use grpc_api_types::payments::PaymentServiceAuthorizeResponse;
 use tonic::Status;

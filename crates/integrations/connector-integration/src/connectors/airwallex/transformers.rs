@@ -4,7 +4,7 @@ use common_utils::{
     request::Method,
     types::{FloatMajorUnit, StringMajorUnit},
 };
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{

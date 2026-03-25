@@ -16,7 +16,7 @@ use domain_types::{
 };
 
 // Note: Refund and RefundsData are used for the Refund flow implementation
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -321,14 +321,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
-            ) => Err(error_stack::report!(
-                IntegrationError::not_implemented(
-                    "Bank Debit type not supported for NMI".to_string()
-                )
-            )),
-            _ => Err(error_stack::report!(
-                IntegrationError::not_implemented("Payment method not supported".to_string())
-            )),
+            ) => Err(error_stack::report!(IntegrationError::not_implemented(
+                "Bank Debit type not supported for NMI".to_string()
+            ))),
+            _ => Err(error_stack::report!(IntegrationError::not_implemented(
+                "Payment method not supported".to_string()
+            ))),
         }
     }
 }
@@ -379,11 +377,9 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             };
             Ok(ach_data)
         }
-        _ => Err(error_stack::report!(
-            IntegrationError::not_implemented(
-                "Only ACH Bank Debit is supported for NMI".to_string()
-            )
-        )),
+        _ => Err(error_stack::report!(IntegrationError::not_implemented(
+            "Only ACH Bank Debit is supported for NMI".to_string()
+        ))),
     }
 }
 
@@ -528,9 +524,9 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .change_context(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)

@@ -9,7 +9,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -257,11 +257,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 })
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "Payment method not supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Payment method not supported".to_string()
+                )))
             }
         };
 
@@ -575,9 +573,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .ok_or(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -1164,9 +1162,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .ok_or(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {

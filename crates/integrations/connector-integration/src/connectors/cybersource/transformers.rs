@@ -23,7 +23,7 @@ use domain_types::{
         PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
@@ -2426,18 +2426,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             value.router_data.request.merchant_order_id.clone(),
         );
 
-        let currency = value.router_data.request.currency.ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "currency",
-                context: Default::default(),
-            },
-        )?;
-        let amount = value.router_data.request.amount.ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "amount",
-                context: Default::default(),
-            },
-        )?;
+        let currency =
+            value
+                .router_data
+                .request
+                .currency
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "currency",
+                    context: Default::default(),
+                })?;
+        let amount =
+            value
+                .router_data
+                .request
+                .amount
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "amount",
+                    context: Default::default(),
+                })?;
         let total_amount = value
             .connector
             .amount_converter
@@ -3330,13 +3336,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )?,
         };
 
-        let param =
-            redirect_response
-                .params
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "request.redirect_response.params",
-                    context: Default::default(),
-                })?;
+        let param = redirect_response
+            .params
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "request.redirect_response.params",
+                context: Default::default(),
+            })?;
 
         let reference_id = param
             .clone()

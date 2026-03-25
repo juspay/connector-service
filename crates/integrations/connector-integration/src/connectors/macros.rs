@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use common_enums::DynamicContentType;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -134,9 +134,11 @@ pub trait BridgeRequestResponse: Send + Sync {
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
-                    status_code,
-                ))
+                .change_context(
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        status_code,
+                    ),
+                )
         }
     }
 
@@ -326,7 +328,9 @@ macro_rules! expand_fn_handle_response {
             let response_bytes = self
                 .preprocess_response_bytes(data, res.response, res.status_code)
                 .change_context(
-                    macro_types::ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                    macro_types::ConnectorResponseTransformationError::response_handling_failed(
+                        res.status_code,
+                    ),
                 )?;
 
             let response_body = bridge.response(response_bytes, res.status_code)?;
@@ -1172,7 +1176,7 @@ macro_rules! expand_imports {
             // };
             pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
             pub(super) use domain_types::{
-                errors::{IntegrationError, ConnectorResponseTransformationError},
+                errors::{ConnectorResponseTransformationError, IntegrationError},
                 router_data::ErrorResponse,
                 router_data_v2::RouterDataV2,
                 router_response_types::Response,

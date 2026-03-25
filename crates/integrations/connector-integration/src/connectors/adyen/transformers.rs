@@ -52,8 +52,8 @@ use crate::{
         to_connector_meta_from_secret,
     },
 };
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -3625,9 +3625,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => {
-                Err(IntegrationError::not_implemented("payment_method").into())
-            }
+            Some(_mandate_ref) => Err(IntegrationError::not_implemented("payment_method").into()),
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
                     err.change_context(IntegrationError::RequestEncodingFailed {
@@ -4667,8 +4665,9 @@ fn get_qr_metadata(
     response: &QrCodeResponseResponse,
 ) -> CustomResult<Option<serde_json::Value>, ConnectorResponseTransformationError> {
     // Generate QR code image from qr_code_data
-    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
-        .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())?;
+    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone()).change_context(
+        ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
+    )?;
 
     let image_data_url = Url::parse(image_data.data.as_str()).ok();
     let qr_code_url = response.action.qr_code_url.clone();
@@ -4703,7 +4702,9 @@ fn get_qr_metadata(
     qr_code_info
         .map(|info| info.encode_to_value())
         .transpose()
-        .change_context(ConnectorResponseTransformationError::response_handling_failed_http_status_unknown())
+        .change_context(
+            ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
+        )
 }
 
 pub fn get_webhook_response(
@@ -5205,9 +5206,14 @@ pub fn get_webhook_object_from_body(
             IntegrationError::not_implemented("webhook body decoding failed".to_string()),
         )?;
 
-    let item_object = webhook.notification_items.drain(..).next().ok_or(
-        IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-    )?;
+    let item_object =
+        webhook
+            .notification_items
+            .drain(..)
+            .next()
+            .ok_or(IntegrationError::not_implemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
     Ok(item_object.notification_request_item)
 }
@@ -5910,9 +5916,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => {
-                Err(IntegrationError::not_implemented("payment_method").into())
-            }
+            Some(_mandate_ref) => Err(IntegrationError::not_implemented("payment_method").into()),
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
                     err.change_context(IntegrationError::RequestEncodingFailed {
@@ -6069,11 +6073,9 @@ fn get_recurring_processing_model_for_setup_mandate<
         .request
         .customer_id
         .clone()
-        .ok_or_else(Box::new(move || {
-            IntegrationError::MissingRequiredField {
-                field_name: "customer_id",
-                context: Default::default(),
-            }
+        .ok_or_else(Box::new(move || IntegrationError::MissingRequiredField {
+            field_name: "customer_id",
+            context: Default::default(),
         }))?;
 
     match (item.request.setup_future_usage, item.request.off_session) {
@@ -6256,11 +6258,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None => CardBrand::try_from(
                                 &card_details_for_network_transaction_id
                                     .get_card_issuer()
-                                    .change_context(
-                                        IntegrationError::RequestEncodingFailed {
-                                            context: Default::default(),
-                                        },
-                                    )?,
+                                    .change_context(IntegrationError::RequestEncodingFailed {
+                                        context: Default::default(),
+                                    })?,
                             )
                             .change_context(
                                 IntegrationError::RequestEncodingFailed {
@@ -7121,8 +7121,9 @@ pub fn get_present_to_shopper_metadata(
             Some(voucher_data.encode_to_value())
                 .transpose()
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
-                )
+                ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(
+                ),
+            )
         }
         // NOTE: Support for other payment methods will be added in future iterations
         // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)

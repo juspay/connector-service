@@ -21,7 +21,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankDebitData, BankRedirectData, BankTransferData, CardRedirectData, GiftCardData,
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
@@ -731,9 +731,9 @@ impl<
                 })
             }
             PaypalAuthResponse::PaypalRedirectResponse(_)
-            | PaypalAuthResponse::PaypalThreeDsResponse(_) => Err(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
-            )?,
+            | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
+                Err(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?
+            }
         }
     }
 }
@@ -1229,12 +1229,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {}
             | BankTransferData::IndonesianBankTransfer { .. }
-            | BankTransferData::LocalBankTransfer { .. } => {
-                Err(IntegrationError::not_implemented(
-                    utils::get_unimplemented_payment_method_error_message("Paypal"),
-                )
-                .into())
-            }
+            | BankTransferData::LocalBankTransfer { .. } => Err(IntegrationError::not_implemented(
+                utils::get_unimplemented_payment_method_error_message("Paypal"),
+            )
+            .into()),
         }
     }
 }
@@ -1459,9 +1457,7 @@ pub struct PartnerFlowCredentials {
 }
 
 impl PaypalAuthType {
-    pub fn get_credentials(
-        &self,
-    ) -> CustomResult<&PaypalConnectorCredentials, IntegrationError> {
+    pub fn get_credentials(&self) -> CustomResult<&PaypalConnectorCredentials, IntegrationError> {
         match self {
             Self::TemporaryAuth => Err(IntegrationError::InvalidConnectorConfig {
                 config: "TemporaryAuth found in connector_account_details",
@@ -1841,18 +1837,16 @@ where
                 ResponseId::ConnectorTransactionId(item.response.id.clone()),
             ),
 
-            PaypalPaymentIntent::Authenticate => Err(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
-            )?,
+            PaypalPaymentIntent::Authenticate => {
+                Err(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?
+            }
         };
         //payment collection will always have only one element as we only make one transaction per order.
         let payment_collection = &item
             .response
             .purchase_units
             .first()
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?
             .payments;
         //payment collection item will either have "authorizations" field or "capture" field, not both at a time.
         let payment_collection_item = match (
@@ -1864,9 +1858,7 @@ where
             (Some(_), Some(captures)) => captures.first(),
             _ => None,
         }
-        .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-            item.http_code,
-        ))?;
+        .ok_or(ConnectorResponseTransformationError::response_handling_failed(item.http_code))?;
         let status = payment_collection_item.status.clone();
         let status = common_enums::AttemptStatus::from(status);
 
@@ -2031,9 +2023,11 @@ impl TryFrom<ResponseRouterData<PaypalRedirectResponse, Self>>
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                        item.http_code,
-                    ))?,
+                    link.ok_or(
+                        ConnectorResponseTransformationError::response_handling_failed(
+                            item.http_code,
+                        ),
+                    )?,
                     Method::Get,
                 )))),
                 mandate_reference: None,

@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -548,11 +548,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
-                error_stack::report!(IntegrationError::not_implemented(
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(error_stack::report!(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("fiserv"),
-                )),
-            ),
+                )))
+            }
         }?;
 
         Ok(Self {
@@ -1007,9 +1007,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(item.http_code))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;
@@ -1140,9 +1138,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(item.http_code))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;

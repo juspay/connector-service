@@ -22,8 +22,8 @@ use super::{
     WorldpayxmlRouterData,
 };
 use crate::types::ResponseRouterData;
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 const API_VERSION: &str = "1.4";
 
@@ -848,7 +848,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
                 )?;
 
                 // Special handling: If error exists but payment is None, return current status (don't fail)
@@ -901,7 +903,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
                 )?;
 
                 // Determine if auto-capture from request data
@@ -953,9 +957,11 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseTransformationError::response_deserialization_failed(
-                        item.http_code,
-                    ))?;
+                    .ok_or(
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            item.http_code,
+                        ),
+                    )?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str, item.http_code)?;
@@ -1088,7 +1094,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
                 )?;
 
                 // Special handling: If error exists but payment is None, return Pending (don't fail)
@@ -1110,7 +1118,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(
+                        item.http_code,
+                    ),
                 )?;
 
                 // Map status from lastEvent using refund status mapping
@@ -1159,9 +1169,11 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseTransformationError::response_deserialization_failed(
-                        item.http_code,
-                    ))?;
+                    .ok_or(
+                        ConnectorResponseTransformationError::response_deserialization_failed(
+                            item.http_code,
+                        ),
+                    )?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str, item.http_code)?;

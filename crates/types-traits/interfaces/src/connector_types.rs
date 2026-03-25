@@ -397,10 +397,8 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::IntegrationError>> {
         Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "get_event_type".to_string(),
-            )
-            .into(),
+            domain_types::errors::IntegrationError::not_implemented("get_event_type".to_string())
+                .into(),
         )
     }
 
@@ -409,16 +407,12 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<
-        WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::IntegrationError>,
-    > {
-        Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "process_payment_webhook".to_string(),
-            )
-            .into(),
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::IntegrationError>>
+    {
+        Err(domain_types::errors::IntegrationError::not_implemented(
+            "process_payment_webhook".to_string(),
         )
+        .into())
     }
 
     fn process_refund_webhook(
@@ -430,12 +424,10 @@ pub trait IncomingWebhook {
         RefundWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::IntegrationError>,
     > {
-        Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "process_refund_webhook".to_string(),
-            )
-            .into(),
+        Err(domain_types::errors::IntegrationError::not_implemented(
+            "process_refund_webhook".to_string(),
         )
+        .into())
     }
     fn process_dispute_webhook(
         &self,
@@ -446,12 +438,10 @@ pub trait IncomingWebhook {
         DisputeWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::IntegrationError>,
     > {
-        Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "process_dispute_webhook".to_string(),
-            )
-            .into(),
+        Err(domain_types::errors::IntegrationError::not_implemented(
+            "process_dispute_webhook".to_string(),
         )
+        .into())
     }
 
     /// fn get_webhook_resource_object
@@ -462,12 +452,10 @@ pub trait IncomingWebhook {
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<domain_types::errors::IntegrationError>,
     > {
-        Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "get_webhook_resource_object".to_string(),
-            )
-            .into(),
+        Err(domain_types::errors::IntegrationError::not_implemented(
+            "get_webhook_resource_object".to_string(),
         )
+        .into())
     }
 }
 
@@ -500,12 +488,10 @@ pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
         &self,
         _request: &RequestDetails,
     ) -> CustomResult<RedirectDetailsResponse, domain_types::errors::IntegrationError> {
-        Err(
-            domain_types::errors::IntegrationError::not_implemented(
-                "process_redirect_response".to_string(),
-            )
-            .into(),
+        Err(domain_types::errors::IntegrationError::not_implemented(
+            "process_redirect_response".to_string(),
         )
+        .into())
     }
 }
 
@@ -608,13 +594,11 @@ fn get_connector_payment_method_type_info(
     let payment_method_details =
         supported_payment_method
             .get(&payment_method)
-            .ok_or_else(
-                || domain_types::errors::IntegrationError::NotSupported {
-                    message: payment_method.to_string(),
-                    connector,
-                    context: Default::default(),
-                },
-            )?;
+            .ok_or_else(|| domain_types::errors::IntegrationError::NotSupported {
+                message: payment_method.to_string(),
+                connector,
+                context: Default::default(),
+            })?;
 
     payment_method_type
         .map(|pmt| {

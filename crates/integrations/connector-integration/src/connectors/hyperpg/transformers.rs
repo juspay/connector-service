@@ -1,7 +1,7 @@
 use crate::{connectors::hyperpg::HyperpgRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::Method, AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
-use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 use domain_types::router_response_types::RedirectForm;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -231,11 +231,9 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 }));
             }
             _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::not_implemented(
-                        "This payment method is not implemented".to_string(),
-                    )
-                ));
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "This payment method is not implemented".to_string(),
+                )));
             }
         };
 

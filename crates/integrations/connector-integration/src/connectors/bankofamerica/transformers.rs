@@ -20,7 +20,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -2359,12 +2359,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     context: Default::default(),
                 })?;
 
-        let currency = item.router_data.request.currency.ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "Currency",
-                context: Default::default(),
-            },
-        )?;
+        let currency =
+            item.router_data
+                .request
+                .currency
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "Currency",
+                    context: Default::default(),
+                })?;
 
         Ok(Self {
             client_reference_information: ClientReferenceInformation {

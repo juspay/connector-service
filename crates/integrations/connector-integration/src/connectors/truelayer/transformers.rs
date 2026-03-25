@@ -30,8 +30,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{connectors::truelayer::TruelayerRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 const GRANT_TYPE: &str = "client_credentials";
 const SCOPE: &str = "payments";
 const SIG_BYTES_EXPECTED_LENGTH: usize = 132;
@@ -476,9 +476,11 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                 .as_ref()
                 .map(|hosted_page| hosted_page.uri.clone())
                 .ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseTransformationError::unexpected_response_error(
-                        item.http_code
-                    ))
+                    error_stack::report!(
+                        ConnectorResponseTransformationError::unexpected_response_error(
+                            item.http_code
+                        )
+                    )
                 })?;
 
             let redirection_data = Some(RedirectForm::Form {
@@ -608,7 +610,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
             TruelayerPSyncResponseData::WebhookResponse(response) => {
                 let status =
                     get_truelayer_payment_webhook_status(response._type).map_err(|_| {
-                        ConnectorResponseTransformationError::response_handling_failed(item.http_code)
+                        ConnectorResponseTransformationError::response_handling_failed(
+                            item.http_code,
+                        )
                     })?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
@@ -819,7 +823,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
                 let status =
                     get_truelayer_refund_webhook_status(webhook_response._type).map_err(|_| {
-                        ConnectorResponseTransformationError::response_handling_failed(item.http_code)
+                        ConnectorResponseTransformationError::response_handling_failed(
+                            item.http_code,
+                        )
                     })?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {
@@ -842,9 +848,11 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                 } else {
                     Ok(RefundsResponseData {
                         connector_refund_id: webhook_response.refund_id.ok_or_else(|| {
-                            error_stack::report!(ConnectorResponseTransformationError::unexpected_response_error(
-                                item.http_code
-                            ))
+                            error_stack::report!(
+                                ConnectorResponseTransformationError::unexpected_response_error(
+                                    item.http_code
+                                )
+                            )
                         })?,
                         refund_status: status,
                         status_code: item.http_code,
@@ -1092,24 +1100,35 @@ pub const ALLOWED_JKUS: &[&str] = &[
 fn convert_p163_signature_to_der(
     signature_b64: &str,
 ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
-    let sig_bytes = URL_SAFE_NO_PAD.decode(signature_b64).change_context(
-        IntegrationError::not_implemented("webhook decoding failed".to_string()),
-    )?;
+    let sig_bytes =
+        URL_SAFE_NO_PAD
+            .decode(signature_b64)
+            .change_context(IntegrationError::not_implemented(
+                "webhook decoding failed".to_string(),
+            ))?;
     if sig_bytes.len() != SIG_BYTES_EXPECTED_LENGTH {
         return Err(
             IntegrationError::not_implemented("webhook decoding failed".to_string()).into(),
         );
     }
 
-    let r = BigNum::from_slice(sig_bytes.get(0..66).ok_or(
-        IntegrationError::not_implemented("webhook decoding failed".to_string()),
-    )?)
+    let r = BigNum::from_slice(
+        sig_bytes
+            .get(0..66)
+            .ok_or(IntegrationError::not_implemented(
+                "webhook decoding failed".to_string(),
+            ))?,
+    )
     .change_context(IntegrationError::not_implemented(
         "webhook decoding failed".to_string(),
     ))?;
-    let s = BigNum::from_slice(sig_bytes.get(66..).ok_or(
-        IntegrationError::not_implemented("webhook decoding failed".to_string()),
-    )?)
+    let s = BigNum::from_slice(
+        sig_bytes
+            .get(66..)
+            .ok_or(IntegrationError::not_implemented(
+                "webhook decoding failed".to_string(),
+            ))?,
+    )
     .change_context(IntegrationError::not_implemented(
         "webhook decoding failed".to_string(),
     ))?;
@@ -1137,9 +1156,12 @@ fn verify_ecdsa_signature_and_digest(
         IntegrationError::not_implemented("webhook decoding failed".to_string()),
     )?;
 
-    let valid = ecdsa_sig.verify(&digest, &ec_key).change_context(
-        IntegrationError::not_implemented("webhook decoding failed".to_string()),
-    )?;
+    let valid =
+        ecdsa_sig
+            .verify(&digest, &ec_key)
+            .change_context(IntegrationError::not_implemented(
+                "webhook decoding failed".to_string(),
+            ))?;
 
     Ok(valid)
 }

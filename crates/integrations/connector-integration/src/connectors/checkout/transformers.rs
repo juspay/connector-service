@@ -12,7 +12,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
@@ -1878,7 +1878,8 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             },
             Some(common_enums::CaptureMethod::Scheduled) => {
                 return Err(
-                    ConnectorResponseTransformationError::unexpected_response_error(item.http_code).into(),
+                    ConnectorResponseTransformationError::unexpected_response_error(item.http_code)
+                        .into(),
                 );
             }
             None => {
@@ -2136,7 +2137,10 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 Ok(id) => id.to_owned(),
                 Err(_) => {
                     return Err(
-                        ConnectorResponseTransformationError::response_handling_failed(item.http_code).into(),
+                        ConnectorResponseTransformationError::response_handling_failed(
+                            item.http_code,
+                        )
+                        .into(),
                     );
                 }
             }
@@ -2333,9 +2337,9 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .response
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
-            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
-                item.http_code,
-            ))?;
+            .ok_or(
+                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            )?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {
             response: Ok(RefundsResponseData {

@@ -46,8 +46,8 @@ use self::{
     response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
-use domain_types::errors::IntegrationError;
 use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(
