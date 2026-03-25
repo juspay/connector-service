@@ -686,8 +686,8 @@ pub async fn call_connector_api(
         should_bypass_proxy,
         request.certificate,
         request.certificate_key,
-        request.ca_certificate,
         test_mode,
+        request.ca_certificate,
     )?;
 
     let headers = request.headers.construct_header_map()?;
@@ -848,86 +848,30 @@ pub fn create_client(
     test_mode: bool,
     ca_certificate: Option<Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
-    get_base_client(proxy_config, should_bypass_proxy, test_mode)
-    // match (client_certificate, client_certificate_key) {
-    //     (Some(encoded_certificate), Some(encoded_certificate_key)) => {
-    //         let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?;
+    // If CA certificate is provided, create client with CA cert for server verification
+    if let Some(ca_pem) = ca_certificate {
+        tracing::debug!("Creating HTTP client with CA certificate for server verification");
+        let pem = ca_pem.expose().replace("\\r\\n", "\n");
+        let cert = reqwest::Certificate::from_pem(pem.as_bytes())
+            .change_context(ApiClientError::ClientConstructionFailed)
+            .attach_printable("Failed to parse CA certificate PEM block")?;
 
-            // Normalize line endings in PEM format
-            let cert_pem = client_cert.expose().replace("\\r\\n", "\n");
-            let key_pem = client_key.expose().replace("\\r\\n", "\n");
-
-            // Combine key and cert into a single PEM (key must come first)
-            let identity_pem = format!("{}{}", key_pem, cert_pem);
-
-            // Create the identity from the combined PEM
-            let identity = reqwest::Identity::from_pem(identity_pem.as_bytes())
-                .change_context(ApiClientError::ClientConstructionFailed)
-                .attach_printable("Failed to create client identity from certificate and key")?;
-
-            let mut client_builder = get_client_builder(proxy_config, should_bypass_proxy)?
-                .identity(identity)
-                .use_rustls_tls();
-
-            // Optionally add CA certificate for server verification
-            if let Some(ca_pem) = ca_cert {
-                tracing::debug!("Adding CA certificate to mutual TLS client for server verification");
-                let ca_cert_pem = ca_pem.expose().replace("\\r\\n", "\n");
-                let cert = reqwest::Certificate::from_pem(ca_cert_pem.as_bytes())
-                    .change_context(ApiClientError::ClientConstructionFailed)
-                    .attach_printable("Failed to parse CA certificate PEM block")?;
-                client_builder = client_builder.add_root_certificate(cert);
-            }
-
-            client_builder
-                .build()
-                .change_context(ApiClientError::ClientConstructionFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "ERROR",
-                        &json!(format!(
-                            "Failed to construct client with mutual TLS. Error: {:?}",
-                            err
-                        )),
-                    );
-                })
-        }
-
-        // Case 2: One-way TLS (only CA certificate provided for server authentication)
-        (None, None, Some(ca_pem)) => {
-            tracing::debug!("Creating HTTP client with one-way TLS (CA certificate)");
-            let pem = ca_pem.expose().replace("\\r\\n", "\n");
-            let cert = reqwest::Certificate::from_pem(pem.as_bytes())
-                .change_context(ApiClientError::ClientConstructionFailed)
-                .attach_printable("Failed to parse CA certificate PEM block")?;
-
-            get_client_builder(proxy_config, should_bypass_proxy)?
-                .add_root_certificate(cert)
-                .use_rustls_tls()
-                .build()
-                .change_context(ApiClientError::ClientConstructionFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "ERROR",
-                        &json!(format!(
-                            "Failed to construct client with CA certificate. Error: {:?}",
-                            err
-                        )),
-                    );
-                })
-        }
-
-        // Case 3: Invalid configuration - partial client cert setup
-        (Some(_), None, _) | (None, Some(_), _) => {
-            tracing::warn!("Incomplete client certificate configuration: both cert and key are required for mutual TLS");
-            get_base_client(proxy_config, should_bypass_proxy)
-        }
-
-        // Case 4: Default client (no certificates)
-        (None, None, None) => {
-            tracing::debug!("Creating default HTTP client (no client or CA certificates)");
-            get_base_client(proxy_config, should_bypass_proxy)
-        }
+        get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
+            .add_root_certificate(cert)
+            .use_rustls_tls()
+            .build()
+            .change_context(ApiClientError::ClientConstructionFailed)
+            .inspect_err(|err| {
+                info_log(
+                    "ERROR",
+                    &json!(format!(
+                        "Failed to construct client with CA certificate. Error: {:?}",
+                        err
+                    )),
+                );
+            })
+    } else {
+        get_base_client(proxy_config, should_bypass_proxy, test_mode)
     }
 }
 

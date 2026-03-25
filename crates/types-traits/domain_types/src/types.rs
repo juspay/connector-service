@@ -4639,24 +4639,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
             .transpose()?;
 
-        // Convert connector_metadata map to JSON value
-        let connector_meta = (!value.connector_metadata.is_empty()).then(|| {
-            serde_json::Value::Object(
-                value
-                    .connector_metadata
-                    .into_iter()
-                    .map(|(k, v)| (k, serde_json::Value::String(v)))
-                    .collect(),
-            )
-        });
-
         Ok(Self {
             connector_transaction_id,
             encoded_data: value.encoded_data,
             capture_method,
             connector_feature_data,
             sync_type,
-            connector_meta,
             mandate_id: None,
             payment_method_type: None,
             currency,
