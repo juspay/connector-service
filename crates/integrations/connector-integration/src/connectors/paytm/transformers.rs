@@ -17,12 +17,12 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -35,7 +35,6 @@ use url::Url;
 
 use crate::{
     connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
-    ConnectorResponseError,
 };
 use serde::{Deserialize, Serialize};
 
@@ -131,7 +130,10 @@ impl TryFrom<&ConnectorSpecificConfig> for PaytmAuthType {
                 website: website.to_owned(),
                 client_id: client_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -191,7 +193,9 @@ impl<
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         let paytm_amount = PaytmAmount {
             value: amount,
@@ -230,7 +234,9 @@ impl<
                     .connector
                     .amount_converter
                     .convert(details.amount, item.router_data.request.currency)
-                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                        context: Default::default(),
+                    })?;
 
                 Some(PaytmGoodsInfo {
                     merchant_goods_id: details.product_id.clone(),
@@ -453,7 +459,7 @@ impl<
                     .duration_since(UNIX_EPOCH)
                     .map_err(|_| ConnectorRequestError::InvalidDataFormat {
                         field_name: "timestamp",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .as_secs()
                     .to_string();
@@ -487,7 +493,7 @@ impl<
                     None => {
                         return Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
-                context: Default::default()
+                            context: Default::default(),
                         }
                         .into())
                     }
@@ -807,7 +813,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                     } else {
                         Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
-                context: Default::default()
+                            context: Default::default(),
                         }
                         .into())
                     }
@@ -818,7 +824,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Only UPI payment methods are supported".to_string(),
             connector: "Paytm",
-                context: Default::default()
+            context: Default::default(),
         }
         .into()),
     }
@@ -835,12 +841,15 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
                 if vpa.contains('@') && vpa.len() > 3 {
                     Ok(Some(vpa))
                 } else {
-                    Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }.into())
+                    Err(ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    }
+                    .into())
                 }
             } else {
                 Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "vpa_id",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -859,7 +868,9 @@ pub fn generate_paytm_signature(
     let rng = SystemRandom::new();
     let mut salt_bytes = [0u8; constants::SALT_LENGTH];
     rng.fill(&mut salt_bytes)
-        .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?;
 
     // Step 2: Convert salt to Base64 (same logic)
     let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
@@ -909,7 +920,9 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -929,7 +942,9 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -956,7 +971,9 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .len();
 
             buffer.truncate(encrypted_len);
@@ -995,14 +1012,17 @@ pub fn create_paytm_header(
     auth: &PaytmAuthType,
     channel_id: Option<&str>,
 ) -> CustomResult<PaytmRequestHeader, ConnectorRequestError> {
-    let _payload = serde_json::to_string(request_body)
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+    let _payload = serde_json::to_string(request_body).change_context(
+        ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        },
+    )?;
     let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| ConnectorRequestError::InvalidDataFormat {
             field_name: "timestamp",
-                context: Default::default()
+            context: Default::default(),
         })?
         .as_secs()
         .to_string();

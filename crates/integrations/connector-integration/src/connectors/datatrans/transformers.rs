@@ -50,7 +50,9 @@ impl TryFrom<&ConnectorSpecificConfig> for DatatransAuthType {
                 password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }

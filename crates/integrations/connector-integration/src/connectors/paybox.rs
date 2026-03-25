@@ -46,7 +46,6 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::report_response_as_request;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
 
@@ -93,7 +92,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PayboxErrorResponse = res
             .response
             .parse_struct("PayboxErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -171,7 +172,7 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
             status_code: u16,
-        ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
+        ) -> CustomResult<bytes::Bytes, ConnectorResponseError> {
             // Paybox can return responses in two formats:
             // 1. JSON-wrapped: {"response": "URLENCODED_DATA"}
             // 2. Direct URL-encoded: URLENCODED_DATA
@@ -208,10 +209,8 @@ macros::create_all_prerequisites!(
                     parsed
                 }
                 Err(e) => {
-                    return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(status_code))
-                            .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e)),
-                    ));
+                    return Err(error_stack::report!(ConnectorResponseError::response_deserialization_failed(status_code))
+                        .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e)));
                 }
             };
 
@@ -220,10 +219,8 @@ macros::create_all_prerequisites!(
                     bytes
                 }
                 Err(e) => {
-                    return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(status_code))
-                            .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e)),
-                    ));
+                    return Err(error_stack::report!(ConnectorResponseError::response_deserialization_failed(status_code))
+                        .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e)));
                 }
             };
 

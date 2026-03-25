@@ -9,12 +9,8 @@ use common_utils::{
     types::{SemanticVersion, StringMajorUnit},
 };
 
-use crate::{
-    connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils,
-    ConnectorResponseError,
-};
+use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils};
 use cards;
-use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, RepeatPayment,
@@ -27,6 +23,7 @@ use domain_types::{
         PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
@@ -41,7 +38,6 @@ use domain_types::{
     router_request_types,
     router_response_types::RedirectForm,
     utils::{to_currency_base_unit, CardIssuer},
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -224,7 +220,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .get_encrypted_apple_pay_payment_data_mandatory()
                                 .change_context(ConnectorRequestError::MissingRequiredField {
                                     field_name: "Apple pay encrypted data",
-                context: Default::default()
+                                    context: Default::default(),
                                 })?;
                             (
                                 PaymentInformation::ApplePayToken(Box::new(
@@ -254,7 +250,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                                 .change_context(
                                                     ConnectorRequestError::MissingRequiredField {
                                                         field_name: "gpay wallet_token",
-                context: Default::default()
+                                                        context: Default::default(),
                                                     },
                                                 )?,
                                         ),
@@ -1180,7 +1176,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount.to_owned(),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             amount_details: Amount {
                 total_amount,
@@ -1459,7 +1457,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map(|(first, last)| (first.to_string(), last.to_string()))
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 (Secret::from(first_name), Secret::from(last_name))
             }
@@ -1485,7 +1483,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .state
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "billing_address.state",
-                context: Default::default()
+                            context: Default::default(),
                         })?
                         .peek(),
                 ),
@@ -1700,7 +1698,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .get_encrypted_google_pay_token()
                                 .change_context(ConnectorRequestError::MissingRequiredField {
                                     field_name: "gpay wallet_token",
-                context: Default::default()
+                                    context: Default::default(),
                                 })?,
                         ),
                     ),
@@ -1784,13 +1782,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_expiry_month()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "google_pay_decrypted_data.card_exp_month",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let expiration_year = google_pay_decrypted_data
             .get_four_digit_expiry_year()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "google_pay_decrypted_data.card_exp_year",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
@@ -1933,7 +1931,9 @@ fn get_samsung_pay_payment_information<
         get_samsung_pay_fluid_data_value(&samsung_pay_data.payment_credential.token_data)?;
 
     let samsung_pay_fluid_data_str = serde_json::to_string(&samsung_pay_fluid_data_value)
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })
         .attach_printable("Failed to serialize samsung pay fluid data")?;
 
     let payment_information =
@@ -1954,14 +1954,18 @@ fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
 ) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorRequestError>> {
     let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.peek())
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })
         .attach_printable("Failed to decode samsung pay header")?;
 
     let samsung_pay_kid_optional = samsung_pay_header.claim("kid").and_then(|kid| kid.as_str());
 
     let public_key_hash = samsung_pay_kid_optional
         .get_required_value("samsung pay public_key_hash")
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?;
 
     let samsung_pay_fluid_data_value = SamsungPayFluidDataValue {
         public_key_hash: Secret::new(public_key_hash.to_string()),
@@ -2036,7 +2040,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .get_encrypted_apple_pay_payment_data_mandatory()
                             .change_context(ConnectorRequestError::MissingRequiredField {
                                 field_name: "Apple pay encrypted data",
-                context: Default::default()
+                                context: Default::default(),
                             })?;
                         let payment_information = PaymentInformation::ApplePayToken(Box::new(
                             ApplePayTokenPaymentInformation {
@@ -2121,7 +2125,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             serde_json::from_str::<PazeDecryptedData>(complete_response.peek())
                                 .change_context(ConnectorRequestError::InvalidWalletToken {
                                     wallet_name: "Paze".to_string(),
-                context: Default::default()
+                                    context: Default::default(),
                                 })
                         }
                     }?;
@@ -2228,7 +2232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_data",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         match payment_method_data.clone() {
@@ -2343,7 +2347,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             processing_information: ProcessingInformation {
                 capture_options: Some(CaptureOptions {
@@ -2423,20 +2429,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = value.router_data.request.currency.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "currency",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let amount = value.router_data.request.amount.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "amount",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let total_amount = value
             .connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
                 code: Some(
@@ -2459,7 +2467,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .clone()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "Cancellation Reason",
-                context: Default::default()
+                        context: Default::default(),
                     })?,
             },
             merchant_defined_information,
@@ -2495,7 +2503,9 @@ impl TryFrom<&ConnectorSpecificConfig> for CybersourceAuthType {
                 disable_cvn: *disable_cvn,
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?
         }
     }
 }
@@ -2779,10 +2789,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            item.router_data
-                .request
-                .is_auto_capture()
-                .into_response_err()?,
+            item.router_data.request.is_auto_capture(),
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
@@ -2961,7 +2968,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method_data = item.router_data.request.payment_method_data.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_data",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let payment_information = match payment_method_data {
@@ -3019,7 +3026,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirect_response = item.router_data.request.redirect_response.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "redirect_response",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let total_amount = item
@@ -3030,17 +3037,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.currency.ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "currency",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
         };
@@ -3049,12 +3058,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .payload
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "request.redirect_response.payload",
-                context: Default::default()
+                context: Default::default(),
             })?
             .expose()
             .parse_value("CybersourceRedirectionAuthResponse")
-            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::InvalidDataFormat {
+                field_name: "CybersourceRedirectionAuthResponse",
+                context: Default::default(),
+            })?;
         let order_information = OrderInformation { amount_details };
 
         Ok(Self {
@@ -3233,7 +3244,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method_data = item.router_data.request.payment_method_data.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_data",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let payment_information = match payment_method_data {
@@ -3291,7 +3302,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirect_response = item.router_data.request.redirect_response.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "redirect_response",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let total_amount = item
@@ -3302,17 +3313,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.currency.ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "currency",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
         };
@@ -3322,7 +3335,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .params
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "request.redirect_response.params",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let reference_id = param
@@ -3332,7 +3345,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .next_back()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "request.redirect_response.params.reference_id",
-                context: Default::default()
+                context: Default::default(),
             })?
             .to_string();
         let email = item
@@ -3365,7 +3378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .clone()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "continue_redirection_url",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .to_string(),
                 reference_id,
@@ -3629,10 +3642,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            item.router_data
-                .request
-                .is_auto_capture()
-                .into_response_err()?,
+            item.router_data.request.is_auto_capture(),
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
@@ -3761,10 +3771,7 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
             Some(status) => {
                 let status = map_cybersource_attempt_status(
                     status,
-                    item.router_data
-                        .request
-                        .is_auto_capture()
-                        .into_response_err()?,
+                    item.router_data.request.is_auto_capture(),
                 );
                 let incremental_authorization_allowed =
                     Some(status == common_enums::AttemptStatus::Authorized);
@@ -3858,7 +3865,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 item.router_data.request.minor_refund_amount.to_owned(),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             order_information: OrderInformation {
                 amount_details: Amount {
@@ -4278,7 +4287,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.connector_mandate_id().ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "connector_mandate_id",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?;
                     Self::try_from((&item, connector_mandate_id))
@@ -4613,7 +4622,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount.to_owned(),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             amount_details: Amount {
                 total_amount,

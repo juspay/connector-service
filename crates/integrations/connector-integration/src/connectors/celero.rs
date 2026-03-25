@@ -483,8 +483,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = celero::CeleroAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = celero::CeleroAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.api_key.into_masked(),
@@ -499,7 +502,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: celero::CeleroErrorResponse = res
             .response
             .parse_struct("CeleroErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -649,8 +654,8 @@ macros::macro_connector_implementation!(
             use domain_types::connector_types::ResponseId;
             let transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
-            };
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into())
+};
             Ok(format!("{}/api/transaction/{}/capture", self.connector_base_url_payments(req), transaction_id))
         }
     }

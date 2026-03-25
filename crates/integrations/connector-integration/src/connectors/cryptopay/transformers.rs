@@ -4,6 +4,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         WebhookDetailsResponse,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::PaymentMethodDataTypes,
 };
 
@@ -23,11 +24,9 @@ use domain_types::{
 
 use common_utils::consts;
 
+use error_stack::ResultExt;
 use serde::{Deserialize, Serialize};
 
-use domain_types::errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-};
 use hyperswitch_masking::Secret;
 
 #[derive(Default, Debug, Serialize)]
@@ -140,7 +139,10 @@ impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into())
         }
     }
 }
@@ -231,7 +233,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .into_response_err()?,
+                .change_context(ConnectorResponseError::response_handling_failed(http_code))?,
             ),
             None => None,
         };
@@ -372,7 +374,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .into_response_err()?,
+                .change_context(ConnectorResponseError::response_handling_failed(http_code))?,
             ),
             None => None,
         };
@@ -439,9 +441,13 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
         } else {
             let amount_captured_in_minor_units =
                 match (notif.data.price_amount, notif.data.price_currency) {
-                    (Some(amount), Some(currency)) => {
-                        Some(CryptopayAmountConvertor::convert_back(amount, currency)?)
-                    }
+                    (Some(amount), Some(currency)) => Some(
+                        CryptopayAmountConvertor::convert_back(amount, currency).change_context(
+                            ConnectorRequestError::AmountConversionFailed {
+                                context: Default::default(),
+                            },
+                        )?,
+                    ),
                     _ => None,
                 };
             match (amount_captured_in_minor_units, status) {

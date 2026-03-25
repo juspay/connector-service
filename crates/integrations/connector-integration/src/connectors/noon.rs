@@ -487,10 +487,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        let response: NoonErrorResponse = res
-            .response
-            .parse_struct("NoonErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+        let response: NoonErrorResponse =
+            res.response
+                .parse_struct("NoonErrorResponse")
+                .map_err(|_| {
+                    ConnectorResponseError::response_deserialization_failed(res.status_code)
+                })?;
 
         with_error_response_body!(event_builder, response);
 

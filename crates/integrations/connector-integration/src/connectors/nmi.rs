@@ -50,10 +50,9 @@ pub type NmiPSyncResponse = SyncResponse;
 pub type NmiRSyncResponse = SyncResponse;
 
 use super::macros;
-use crate::types::ResponseRouterData;
-use crate::with_error_response_body;
-use domain_types::errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt,
+use crate::{
+    types::ResponseRouterData, with_error_response_body, ConnectorRequestError,
+    ConnectorResponseError,
 };
 
 pub(crate) mod headers {
@@ -244,40 +243,46 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
-            status_code: u16,
+            _status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             // NMI returns different response formats:
             // - XML for query endpoints (PSync/RSync)
             // - URL-encoded for transact endpoints (Authorize/Capture/Refund/Void)
             let response_str = std::str::from_utf8(&bytes)
-                .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
-                .into_request_err()?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })
+                .attach_printable("Failed to decode NMI response as UTF-8")?;
 
             // Check if response is XML (PSync/RSync return XML)
             if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
                 // Parse XML to struct, then serialize back to JSON
                 let xml_response: SyncResponse = quick_xml::de::from_str(response_str)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
-                    .attach_printable("Failed to parse XML response from NMI query endpoint")
-                    .into_request_err()?;
+                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                        context: Default::default(),
+                    })
+                    .attach_printable("Failed to parse XML response from NMI query endpoint")?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
-                    .attach_printable("Failed to convert XML response to JSON")
-                    .into_request_err()?;
+                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                        context: Default::default(),
+                    })
+                    .attach_printable("Failed to convert XML response to JSON")?;
 
                 Ok(bytes::Bytes::from(json_bytes))
             } else {
                 // URL-encoded response - parse and convert to JSON
                 let url_encoded_response: StandardResponse = serde_urlencoded::from_bytes(&bytes)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
-                    .attach_printable("Failed to parse URL-encoded response from NMI transact endpoint")
-                    .into_request_err()?;
+                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                        context: Default::default(),
+                    })
+                    .attach_printable("Failed to parse URL-encoded response from NMI transact endpoint")?;
 
                 let json_bytes = serde_json::to_vec(&url_encoded_response)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
-                    .attach_printable("Failed to convert URL-encoded response to JSON")
-                    .into_request_err()?;
+                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                        context: Default::default(),
+                    })
+                    .attach_printable("Failed to convert URL-encoded response to JSON")?;
 
                 Ok(bytes::Bytes::from(json_bytes))
             }
@@ -327,7 +332,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         // Parse URL-encoded error response
         let response: StandardResponse = serde_urlencoded::from_bytes(&res.response)
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

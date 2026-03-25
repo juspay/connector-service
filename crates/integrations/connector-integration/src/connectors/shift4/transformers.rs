@@ -38,7 +38,9 @@ impl TryFrom<&ConnectorSpecificConfig> for Shift4AuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -157,7 +159,7 @@ impl<T: PaymentMethodDataTypes>
                             bank_redirect_data
                         ),
                         connector: "Shift4",
-                context: Default::default()
+                        context: Default::default()
                     }))
                 }
             },
@@ -165,7 +167,7 @@ impl<T: PaymentMethodDataTypes>
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Non-bank redirect payment method".to_string(),
                     connector: "Shift4",
-                context: Default::default()
+                    context: Default::default()
                 }))
             }
         };
@@ -225,10 +227,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let captured = item
-            .request
-            .is_auto_capture()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let captured = item.request.is_auto_capture();
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -247,7 +246,7 @@ impl<T: PaymentMethodDataTypes>
                     .ok_or_else(|| {
                         error_stack::report!(ConnectorRequestError::MissingRequiredField {
                             field_name: "billing_address.first_name",
-                context: Default::default()
+                            context: Default::default()
                         })
                     })?;
 
@@ -265,7 +264,7 @@ impl<T: PaymentMethodDataTypes>
                 let return_url = item.request.get_router_return_url().change_context(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "return_url",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
 
@@ -278,7 +277,7 @@ impl<T: PaymentMethodDataTypes>
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Payment method".to_string(),
                     connector: "Shift4",
-                context: Default::default()
+                    context: Default::default()
                 }))
             }
         };

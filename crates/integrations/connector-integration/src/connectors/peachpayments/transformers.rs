@@ -4,7 +4,6 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::ext_traits::StringExt;
 use common_utils::{consts, errors::CustomResult, types::MinorUnit, SecretSerdeValue};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, WebhookError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -12,6 +11,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError, WebhookError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -58,9 +58,12 @@ fn get_webhook_response(
     (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
     ConnectorResponseError,
 > {
-    let transaction = response
-        .transaction
-        .ok_or(ConnectorResponseError::response_handling_failed(status_code))?;
+    let transaction =
+        response
+            .transaction
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                status_code,
+            ))?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -117,7 +120,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let metadata_obj =
@@ -126,7 +129,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
                 .as_object()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_meta_data",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let client_merchant_reference_id = metadata_obj
@@ -134,7 +137,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
             .and_then(|v: &serde_json::Value| v.as_str())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data.client_merchant_reference_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let merchant_payment_method_route_id = metadata_obj
@@ -142,7 +145,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
             .and_then(|v: &serde_json::Value| v.as_str())
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data.merchant_payment_method_route_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         Ok(Self {
@@ -172,7 +175,9 @@ impl TryFrom<&ConnectorSpecificConfig> for PeachpaymentsAuthType {
                 merchant_payment_method_route_id: merchant_payment_method_route_id.clone(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -208,7 +213,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             return Err(ConnectorRequestError::NotSupported {
                 message: "3DS payments".to_string(),
                 connector: "peachpayments",
-                context: Default::default()
+                context: Default::default(),
             }
             .into());
         }
@@ -244,9 +249,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         pan: card_info.card_number.clone(),
                         cardholder_name: card_info.card_holder_name.clone(),
                         expiry_year: Some(
-                            card_info
-                                .get_card_expiry_year_2_digit()
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            card_info.get_card_expiry_year_2_digit().change_context(
+                                ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            )?,
                         ),
                         expiry_month: Some(card_info.card_exp_month),
                         cvv: Some(card_info.card_cvc),
@@ -294,7 +301,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             token: Secret::new(token_data.token_number.peek().clone()),
                             expiry_year: token_data
                                 .get_token_expiry_year_2_digit()
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                })?,
                             expiry_month: token_data.token_exp_month,
                             cryptogram: token_data.token_cryptogram,
                             eci: token_data.eci,
@@ -302,7 +311,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 .card_network
                                 .map(requests::CardNetworkLowercase::try_from)
                                 .transpose()
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                })?,
                         },
                         amount: requests::PeachpaymentsAmount {
                             amount: item.router_data.request.minor_amount,
@@ -319,7 +330,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "peachpayments",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into());
             }
@@ -336,7 +347,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             pos_data: None,
             send_date_time: OffsetDateTime::now_utc()
                 .format(&Iso8601::DEFAULT)
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?,
         })
     }
 }
@@ -503,12 +516,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
         let currency = item.router_data.request.currency.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "currency",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 

@@ -86,7 +86,7 @@ pub struct PproAuthSettingsDetails {
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub scan_by: Option<String>,
     // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub mobile_intent_uri: Option<String>,
+    // pub mobile_intent_uri: Option<String>
 }
 
 #[derive(Debug, Serialize)]
@@ -139,14 +139,14 @@ where
                 return Err(ConnectorRequestError::NotSupported {
                     message: format!("payment method {pm} is not supported by PPRO"),
                     connector: "ppro",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
             None => {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -389,7 +389,7 @@ pub struct PproAuthDetailsResponse {
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub scan_by: Option<String>,
     // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub mobile_intent_uri: Option<String>,
+    // pub mobile_intent_uri: Option<String>
 }
 
 #[derive(Debug, Serialize)]
@@ -454,7 +454,7 @@ where
                 .minor_amount_authorized)
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "amount or minor_amount_authorized",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         Ok(Self { amount })
@@ -901,14 +901,14 @@ where
                 return Err(ConnectorRequestError::NotSupported {
                     message: format!("payment method {pm} is not supported for PPRO mandates"),
                     connector: "ppro",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
             None => {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }

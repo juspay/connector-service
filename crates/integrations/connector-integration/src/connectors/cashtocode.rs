@@ -410,7 +410,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cashtocode::CashtocodeErrorResponse = res
             .response
             .parse_struct("CashtocodeErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -601,8 +603,12 @@ fn get_b64_auth_cashtocode(
         username: Option<Secret<String>>,
         password: Option<Secret<String>>,
     ) -> Result<Maskable<String>, ConnectorRequestError> {
-        let username = username.ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
-        let password = password.ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let username = username.ok_or(ConnectorRequestError::FailedToObtainAuthType {
+            context: Default::default(),
+        })?;
+        let password = password.ok_or(ConnectorRequestError::FailedToObtainAuthType {
+            context: Default::default(),
+        })?;
         Ok(format!(
             "Basic {}",
             base64::engine::general_purpose::STANDARD.encode(format!(
@@ -623,7 +629,11 @@ fn get_b64_auth_cashtocode(
             auth_type.username_evoucher.to_owned(),
             auth_type.password_evoucher.to_owned(),
         ),
-        _ => return Err(ConnectorRequestError::MissingPaymentMethodType { context: Default::default() })?,
+        _ => {
+            return Err(ConnectorRequestError::MissingPaymentMethodType {
+                context: Default::default(),
+            })?
+        }
     }?;
 
     Ok(vec![(headers::AUTHORIZATION.to_string(), auth_header)])

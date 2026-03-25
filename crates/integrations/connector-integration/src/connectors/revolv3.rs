@@ -60,8 +60,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = revolv3::Revolv3AuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = revolv3::Revolv3AuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::REVOLV3_TOKEN.to_string(),
             auth.api_key.expose().into(),
@@ -76,7 +79,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: revolv3::Revolv3ErrorResponse = res
             .response
             .parse_struct("Revolv3ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -493,7 +498,7 @@ macros::macro_connector_implementation!(
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<String, ConnectorRequestError> {
         let base_url = self.connector_base_url(req);
-        if req.request.is_auto_capture()? {
+        if req.request.is_auto_capture() {
             Ok(format!(
                 "{base_url}/api/payments/sale"
             ))
@@ -691,7 +696,7 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             match req.request.get_mandate_reference() {
                 MandateReferenceId::NetworkMandateId(_) => {
-                      if req.request.is_auto_capture()? {
+                      if req.request.is_auto_capture() {
                         Ok(format!("{base_url}/api/payments/sale"))
                     } else {
                         Ok(format!("{base_url}/api/payments/authorization"))
@@ -700,7 +705,7 @@ macros::macro_connector_implementation!(
                 MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
                     let payment_method_id = connector_mandate_data.get_connector_mandate_id()
                         .ok_or(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
-                    if req.request.is_auto_capture()? {
+                    if req.request.is_auto_capture() {
                         Ok(format!("{base_url}/api/payments/sale/{payment_method_id}"))
                     } else {
                         Ok(format!("{base_url}/api/payments/authorization/{payment_method_id}"))

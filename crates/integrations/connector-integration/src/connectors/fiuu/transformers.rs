@@ -19,10 +19,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId,
     },
-    errors::{
-        self, ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-        ResultResponseToRequestExt,
-    },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         ApplePayDecryptedData, BankRedirectData, Card, CardDetailsForNetworkTransactionId,
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
@@ -73,7 +70,10 @@ impl TryFrom<&ConnectorSpecificConfig> for FiuuAuthType {
                 verify_key: verify_key.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -93,7 +93,10 @@ impl TryFrom<Option<CaptureMethod>> for TxnType {
                 Ok(Self::Sals)
             }
             Some(CaptureMethod::Manual) => Ok(Self::Auts),
-            _ => Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::CaptureMethodNotSupported {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -181,7 +184,7 @@ impl TryFrom<BankNames> for BankCode {
             bank => Err(ConnectorRequestError::NotSupported {
                 message: format!("Invalid BankName for FPX Refund: {bank:?}"),
                 connector: "Fiuu",
-                context: Default::default()
+                context: Default::default(),
             })?,
         }
     }
@@ -282,7 +285,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let billing_name = item
             .router_data
             .resource_common_data
@@ -292,7 +297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let token = Secret::new(item.router_data.request.connector_mandate_id().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_mandate_id",
-                context: Default::default()
+                context: Default::default(),
             },
         )?);
         let verify_key = auth.verify_key;
@@ -342,7 +347,9 @@ pub fn calculate_check_sum(
     Ok(Secret::new(hex::encode(
         crypto::Md5
             .generate_digest(formatted_string.as_bytes())
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
     )))
 }
 
@@ -479,11 +486,11 @@ pub fn calculate_signature(
     signature_data: String,
 ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
     let message = signature_data.as_bytes();
-    let encoded_data = hex::encode(
-        crypto::Md5
-            .generate_digest(message)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-    );
+    let encoded_data = hex::encode(crypto::Md5.generate_digest(message).change_context(
+        ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        },
+    )?);
     Ok(Secret::new(encoded_data))
 }
 
@@ -522,7 +529,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let txn_amount = amount;
         let reference_no = item
             .router_data
@@ -534,7 +543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             "{}{merchant_id}{reference_no}{verify_key}",
             txn_amount.get_amount_as_string()
         ))?;
-        let txn_type = match item.router_data.request.is_auto_capture()? {
+        let txn_type = match item.router_data.request.is_auto_capture() {
             true => TxnType::Sals,
             false => TxnType::Auts,
         };
@@ -544,8 +553,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             true => 0,
         };
         let notification_url = Some(
-            Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+            Url::parse(&item.router_data.request.get_webhook_url()?).change_context(
+                ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                },
+            )?,
         );
 
         let payment_method_data = match item.router_data.request.payment_method_data {
@@ -561,10 +573,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                     RealTimePaymentData::Fps {}
                     | RealTimePaymentData::PromptPay {}
-                    | RealTimePaymentData::VietQr {} => Err(ConnectorRequestError::not_implemented(
-                        utils::get_unimplemented_payment_method_error_message("fiuu"),
-                    )
-                    .into()),
+                    | RealTimePaymentData::VietQr {} => {
+                        Err(ConnectorRequestError::not_implemented(
+                            utils::get_unimplemented_payment_method_error_message("fiuu"),
+                        )
+                        .into())
+                    }
                 }
             }
             PaymentMethodData::BankRedirect(ref bank_redirect_data) => match bank_redirect_data {
@@ -717,7 +731,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let txn_amount = amount;
         let reference_no = item
             .router_data
@@ -729,14 +745,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             "{}{merchant_id}{reference_no}{verify_key}",
             txn_amount.get_amount_as_string()
         ))?;
-        let txn_type = match item.router_data.request.is_auto_capture()? {
+        let txn_type = match item.router_data.request.is_auto_capture() {
             true => TxnType::Sals,
             false => TxnType::Auts,
         };
         let return_url = item.router_data.request.router_return_url.clone();
         let notification_url = Some(
-            Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+            Url::parse(&item.router_data.request.get_webhook_url()?).change_context(
+                ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                },
+            )?,
         );
         let payment_method_data = match &item.router_data.request.mandate_reference {
             MandateReferenceId::NetworkMandateId(network_transaction_id) => {
@@ -860,7 +879,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_encrypted_google_pay_token()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "gpay wallet_token",
-                context: Default::default()
+                    context: Default::default(),
                 })?
                 .clone()
                 .into(),
@@ -869,7 +888,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_encrypted_token_type()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "gpay wallet token type",
-                context: Default::default()
+                    context: Default::default(),
                 })?
                 .clone()
                 .into(),
@@ -1012,18 +1031,18 @@ pub struct ExtraParameters {
 }
 
 trait GetRequestIsAutoCapture {
-    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorRequestError>>;
+    fn is_auto_capture(&self) -> bool;
 }
 
 impl<T: PaymentMethodDataTypes> GetRequestIsAutoCapture for PaymentsAuthorizeData<T> {
-    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
-        self.is_auto_capture()
+    fn is_auto_capture(&self) -> bool {
+        Self::is_auto_capture(self)
     }
 }
 
 impl<T: PaymentMethodDataTypes> GetRequestIsAutoCapture for RepeatPaymentData<T> {
-    fn is_auto_capture(&self) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
-        self.is_auto_capture()
+    fn is_auto_capture(&self) -> bool {
+        Self::is_auto_capture(self)
     }
 }
 
@@ -1117,13 +1136,11 @@ where
                                 })
                             });
                     let status = match non_threeds_data.status.as_str() {
-                        "00" => {
-                            if router_data.request.is_auto_capture().into_response_err()? {
-                                Ok(common_enums::AttemptStatus::Charged)
-                            } else {
-                                Ok(common_enums::AttemptStatus::Authorized)
-                            }
-                        }
+                        "00" => Ok(if router_data.request.is_auto_capture() {
+                            common_enums::AttemptStatus::Charged
+                        } else {
+                            common_enums::AttemptStatus::Authorized
+                        }),
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
                         other => Err(error_stack::Report::from(
@@ -1298,14 +1315,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let txn_amount = amount;
         let reference_no = item
             .router_data
             .resource_common_data
             .refund_id
             .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() })?;
+            .ok_or(ConnectorRequestError::MissingConnectorRefundID {
+                context: Default::default(),
+            })?;
         let txn_id = item.router_data.request.connector_transaction_id.clone();
         let secret_key = auth.secret_key.peek().to_string();
         Ok(Self {
@@ -1320,9 +1341,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 txn_amount.get_amount_as_string()
             ))?,
             notify_url: Some(
-                Url::parse(&item.router_data.request.get_webhook_url()?)
-                    .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-                    .into_request_err()?,
+                Url::parse(&item.router_data.request.get_webhook_url()?).change_context(
+                    ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    },
+                )?,
             ),
         })
     }
@@ -1501,7 +1524,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            })?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let verify_key = auth.verify_key.peek().to_string();
         let amount = item
@@ -1511,7 +1536,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             amount: amount.clone(),
             tx_id: txn_id.clone(),
@@ -1798,11 +1825,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let txn_id = match item.router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(tid) => tid,
             _ => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into());
             }
         };
         let verify_key = auth.verify_key.peek().to_string();
@@ -2142,7 +2174,17 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                         Some(refund.refund_id.clone())
                             == Some(router_data.request.connector_refund_id.clone())
                     })
-                    .ok_or(ConnectorRequestError::MissingConnectorRefundID { context: Default::default() })?;
+                    .ok_or_else(|| {
+                        error_stack::Report::new(
+                            ConnectorResponseError::response_handling_failed_with_context(
+                                item.http_code,
+                                Some(
+                                    "refund sync: no row for request connector_refund_id"
+                                        .to_string(),
+                                ),
+                            ),
+                        )
+                    })?;
                 Ok(Self {
                     response: Ok(RefundsResponseData {
                         connector_refund_id: refund.refund_id.clone(),
@@ -2446,13 +2488,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[macro_export]
 macro_rules! unimplemented_payment_method {
     ($payment_method:expr, $connector:expr) => {
-        errors::ConnectorRequestError::not_implemented(format!(
+        domain_types::errors::ConnectorRequestError::not_implemented(format!(
             "{} through {}",
             $payment_method, $connector
         ))
     };
     ($payment_method:expr, $flow:expr, $connector:expr) => {
-        errors::ConnectorRequestError::not_implemented(format!(
+        domain_types::errors::ConnectorRequestError::not_implemented(format!(
             "{} {} through {}",
             $payment_method, $flow, $connector
         ))

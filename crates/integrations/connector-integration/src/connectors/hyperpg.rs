@@ -302,7 +302,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: hyperpg::HyperpgErrorResponse = res
             .response
             .parse_struct("HyperpgErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))
             .attach_printable("Failed to deserialize Hyperpg error response")?;
 
         with_error_response_body!(event_builder, response);
@@ -438,8 +440,8 @@ macros::macro_connector_implementation!(
             let order_id = hyperpg_meta.order_id.ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "order_id",
-                    context: Default::default(),
-                },
+                    context: Default::default()
+},
             )?;
 
             Ok(format!(
@@ -524,8 +526,8 @@ static HYPERPG_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = {
 static HYPERPG_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
         display_name: "Hyperpg",
         description: "Hyperpg is your trusted payment gateway solution. Seamlessly manage transactions, enhance security, and empower your business to thrive in the digital age.",
-        connector_type: PaymentConnectorCategory::PaymentGateway,
-    };
+        connector_type: PaymentConnectorCategory::PaymentGateway
+};
 
 static HYPERPG_SUPPORTED_WEBHOOK_FLOWS: Vec<enums::EventClass> = Vec::new();
 

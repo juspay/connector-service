@@ -6,10 +6,7 @@ use common_utils::{
     types::MinorUnit,
 };
 
-use crate::{
-    connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils,
-    ConnectorResponseError,
-};
+use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils};
 
 use domain_types::{
     connector_flow::{Authorize, Capture, PaymentMethodToken, RSync},
@@ -18,12 +15,12 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
     },
     router_data_v2::RouterDataV2,
-    ConnectorRequestError,
 };
 
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -290,7 +287,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_optional_billing_last_name(),
             },
             metadata: item.router_data.request.metadata.clone(),
-            settle: item.router_data.request.is_auto_capture()?,
+            settle: item.router_data.request.is_auto_capture(),
         })
     }
 }
@@ -395,7 +392,10 @@ impl TryFrom<&ConnectorSpecificConfig> for BillwerkAuthType {
                 api_key: api_key.to_owned(),
                 public_api_key: public_api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }

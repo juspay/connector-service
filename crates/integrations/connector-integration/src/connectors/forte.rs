@@ -635,8 +635,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = forte::ForteAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = forte::ForteAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         let raw_basic_token = format!(
             "{}:{}",
             auth.api_access_id.peek(),
@@ -662,7 +665,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: forte::ForteErrorResponse = res
             .response
             .parse_struct("Forte ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

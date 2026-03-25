@@ -27,7 +27,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -788,7 +787,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: globalpay::GlobalpayAccessTokenResponse = res
             .response
             .parse_struct("GlobalpayAccessTokenResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_response_body!(event_builder, response);
 
@@ -886,7 +887,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         // Note: This method should not be used for OAuth-based connectors
         // Use build_payment_headers or build_refund_headers instead
-        Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
+        Err(ConnectorRequestError::FailedToObtainAuthType {
+            context: Default::default(),
+        }
+        .into())
     }
 
     fn build_error_response(
@@ -897,7 +901,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: globalpay::GlobalpayErrorResponse = res
             .response
             .parse_struct("GlobalpayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

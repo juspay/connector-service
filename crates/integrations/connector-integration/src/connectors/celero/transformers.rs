@@ -78,7 +78,9 @@ impl TryFrom<&ConnectorSpecificConfig> for CeleroAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -304,17 +306,14 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        let is_auto_capture = item
-            .request
-            .is_auto_capture()
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let is_auto_capture = item.request.is_auto_capture();
 
         // Validate reference ID is not empty
         let reference_id = &item.resource_common_data.connector_request_reference_id;
         if reference_id.is_empty() {
             return Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_request_reference_id",
-                context: Default::default()
+                context: Default::default(),
             }
             .into());
         }

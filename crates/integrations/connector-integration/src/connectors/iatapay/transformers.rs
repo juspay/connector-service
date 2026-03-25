@@ -8,20 +8,20 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{types::ResponseRouterData, ConnectorResponseError};
+use crate::types::ResponseRouterData;
 
 // ===== AUTHENTICATION =====
 #[derive(Debug, Clone)]
@@ -46,7 +46,9 @@ impl TryFrom<&ConnectorSpecificConfig> for IatapayAuthType {
                 merchant_id: merchant_id.to_owned(),
                 client_secret: client_secret.to_owned(),
             }),
-            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
+            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })),
         }
     }
 }
@@ -280,14 +282,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "router_return_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
         let webhook_url = item.router_data.request.webhook_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "webhook_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -604,7 +606,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             notification_url: router_data.request.webhook_url.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "webhook_url",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
         })

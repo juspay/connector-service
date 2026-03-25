@@ -29,7 +29,6 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
-    errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -537,7 +536,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             } else {
                 res.response
                     .parse_struct("PowertranzErrorResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        res.status_code,
+                    ))?
             };
 
             with_response_body!(event_builder, response);
@@ -591,7 +592,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            let endpoint = if req.request.is_auto_capture()? {
+            let endpoint = if req.request.is_auto_capture() {
                 "sale"
             } else {
                 "auth"

@@ -17,9 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 type Error = error_stack::Report<ConnectorRequestError>;
 type ResponseError = error_stack::Report<ConnectorResponseError>;
@@ -55,7 +53,10 @@ impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
                 merchant_purchase_description: merchant_purchase_description.clone(),
                 statement_descriptor: statement_descriptor.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -75,7 +76,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
             .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
-                context: Default::default()
+                context: Default::default(),
             })?;
         Ok(metadata)
     }
@@ -205,7 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             return Err(ConnectorRequestError::NotSupported {
                 message: "3DS payments".to_string(),
                 connector: "JPMorgan",
-                context: Default::default()
+                context: Default::default(),
             }
             .into());
         }
@@ -222,13 +223,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             company_name: auth.company_name.clone().ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "company_name",
-                context: Default::default()
+                                    context: Default::default(),
                                 },
                             )?,
                             product_name: auth.product_name.clone().ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "product_name",
-                context: Default::default()
+                                    context: Default::default(),
                                 },
                             )?,
                         },
@@ -238,7 +239,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .clone()
                                 .ok_or(ConnectorRequestError::MissingRequiredField {
                                     field_name: "merchant_purchase_description",
-                context: Default::default()
+                                    context: Default::default(),
                                 })?,
                         },
                     };
@@ -249,14 +250,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .card_exp_month
                             .peek()
                             .parse::<i32>()
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            })?,
                     ),
                     year: Secret::new(
                         card_data
                             .get_expiry_year_4_digit()
                             .peek()
                             .parse::<i32>()
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            })?,
                     ),
                 };
 
@@ -310,13 +315,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             company_name: auth.company_name.clone().ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "company_name",
-                context: Default::default()
+                                    context: Default::default(),
                                 },
                             )?,
                             product_name: auth.product_name.clone().ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "product_name",
-                context: Default::default()
+                                    context: Default::default(),
                                 },
                             )?,
                         },
@@ -326,7 +331,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .clone()
                                 .ok_or(ConnectorRequestError::MissingRequiredField {
                                     field_name: "merchant_purchase_description",
-                context: Default::default()
+                                    context: Default::default(),
                                 })?,
                         },
                     };
@@ -367,7 +372,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let statement_descriptor = auth.statement_descriptor.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "statement_descriptor",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
 
@@ -465,13 +470,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 company_name: auth.company_name.ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "company_name",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
                 product_name: auth.product_name.ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "product_name",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
             },
@@ -508,7 +513,7 @@ fn map_transaction_state_to_attempt_status(
 }
 
 impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
-    type Error = Error;
+    type Error = ResponseError;
     fn try_from(item: &responses::JpmorganPaymentsResponse) -> Result<Self, Self::Error> {
         Ok(Self::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.transaction_id.clone()),
@@ -524,7 +529,7 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
 }
 
 impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
-    type Error = Error;
+    type Error = ResponseError;
     fn try_from(item: &responses::JpmorganPaymentsResponse) -> Result<Self, Self::Error> {
         Ok(map_transaction_state_to_attempt_status(
             &item.transaction_state,
@@ -534,7 +539,7 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
 }
 
 impl TryFrom<&responses::JpmorganRefundResponse> for RefundsResponseData {
-    type Error = Error;
+    type Error = ResponseError;
     fn try_from(item: &responses::JpmorganRefundResponse) -> Result<Self, Self::Error> {
         let refund_status = responses::RefundStatus::from((
             item.response_status.clone(),
@@ -560,8 +565,8 @@ impl<T: PaymentMethodDataTypes, F>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response).into_response_err()?;
-        let response_data = PaymentsResponseData::try_from(&item.response).into_response_err()?;
+        let status = AttemptStatus::try_from(&item.response)?;
+        let response_data = PaymentsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),
@@ -581,8 +586,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response).into_response_err()?;
-        let response_data = PaymentsResponseData::try_from(&item.response).into_response_err()?;
+        let status = AttemptStatus::try_from(&item.response)?;
+        let response_data = PaymentsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),
@@ -602,8 +607,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response).into_response_err()?;
-        let response_data = PaymentsResponseData::try_from(&item.response).into_response_err()?;
+        let status = AttemptStatus::try_from(&item.response)?;
+        let response_data = PaymentsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),
@@ -623,8 +628,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response).into_response_err()?;
-        let response_data = PaymentsResponseData::try_from(&item.response).into_response_err()?;
+        let status = AttemptStatus::try_from(&item.response)?;
+        let response_data = PaymentsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),
@@ -649,7 +654,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
             item.response.transaction_state.clone(),
         ))
         .into();
-        let response_data = RefundsResponseData::try_from(&item.response).into_response_err()?;
+        let response_data = RefundsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),
@@ -674,7 +679,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
             item.response.transaction_state.clone(),
         ))
         .into();
-        let response_data = RefundsResponseData::try_from(&item.response).into_response_err()?;
+        let response_data = RefundsResponseData::try_from(&item.response)?;
 
         Ok(Self {
             response: Ok(response_data),

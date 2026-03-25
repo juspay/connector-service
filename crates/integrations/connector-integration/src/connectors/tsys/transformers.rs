@@ -183,7 +183,9 @@ impl TryFrom<&ConnectorSpecificConfig> for TsysAuthType {
                 developer_id: developer_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -266,7 +268,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(item.request.minor_amount, item.request.currency)
-                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
                     expiration_date: card_data
@@ -284,7 +288,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
 
                 // Check if auto-capture or manual capture
-                if item.request.is_auto_capture()? {
+                if item.request.is_auto_capture() {
                     Ok(Self::Sale(auth_data))
                 } else {
                     Ok(Self::Auth(auth_data))
@@ -634,7 +638,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?,
             developer_id: auth.developer_id,
         };
 
@@ -798,13 +804,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_transaction_id
                 .clone()
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?,
             developer_id: auth.developer_id,
             transaction_amount: item_data
                 .connector
                 .amount_converter
                 .convert(item.request.minor_amount_to_capture, item.request.currency)
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
         };
 
         Ok(Self { capture })
@@ -909,7 +919,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(MinorUnit(item.request.refund_amount), item.request.currency)
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
             transaction_id: item.request.connector_transaction_id.clone(),
         };
 

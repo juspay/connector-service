@@ -348,8 +348,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = transformers::IatapayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = transformers::IatapayAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.client_id.into_masked(),
@@ -364,7 +367,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: IatapayErrorResponse = res
             .response
             .parse_struct("IatapayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response);

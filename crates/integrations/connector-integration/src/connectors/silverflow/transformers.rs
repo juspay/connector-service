@@ -40,7 +40,9 @@ impl TryFrom<&ConnectorSpecificConfig> for SilverflowAuthType {
                 merchant_acceptor_key: merchant_acceptor_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -228,14 +230,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .expose()
             .parse::<u16>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let expiry_month = card_data
             .card_exp_month
             .clone()
             .expose()
             .parse::<u8>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             merchant_acceptor_resolver: SilverflowMerchantAcceptorResolver {
@@ -561,7 +567,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?,
         );
 
         Ok(Self {

@@ -32,7 +32,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
@@ -50,7 +49,7 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -285,8 +284,8 @@ macros::create_all_prerequisites!(
                 .cloned()
                 .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
                     config: "secondary_base_url",
-                    context: Default::default(),
-                }))
+                    context: Default::default()
+}))
         }
 
         pub fn get_sync_base_url<F, Req, Res>(
@@ -302,8 +301,8 @@ macros::create_all_prerequisites!(
                 .cloned()
                 .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
                     config: "third_base_url",
-                    context: Default::default(),
-                }))
+                    context: Default::default()
+}))
         }
 
         pub fn get_refund_sync_base_url<Req, Res>(
@@ -319,8 +318,8 @@ macros::create_all_prerequisites!(
                 .cloned()
                 .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig {
                     config: "third_base_url",
-                    context: Default::default(),
-                }))
+                    context: Default::default()
+}))
         }
 
         pub fn build_headers<F, FCD, Req, Res>(
@@ -380,8 +379,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = hipay::HipayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = hipay::HipayAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         // Use HTTP Basic Auth for HiPay
         use base64::Engine;
@@ -740,7 +742,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: HipayRSyncResponse = res
             .response
             .parse_struct("HipayRSyncResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_handling_failed(
+                res.status_code,
+            ))?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response);
@@ -751,7 +755,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        .change_context(ConnectorResponseError::response_handling_failed(
+            res.status_code,
+        ))
     }
 
     fn get_error_response_v2(

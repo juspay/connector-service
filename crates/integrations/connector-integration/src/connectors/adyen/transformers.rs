@@ -518,42 +518,42 @@ impl TryFrom<&common_enums::BankNames> for AdyenTestBankNames {
             common_enums::BankNames::TriodosBank => Ok(Self("1159".to_string())),
             common_enums::BankNames::VanLanschot => Ok(Self("1159".to_string())),
             common_enums::BankNames::Yoursafe => Ok(Self("1159".to_string())),
-            common_enums::BankNames::BankAustria => Ok(Self(
-                "e6819e7a-f663-414b-92ec-cf7c82d2f4e5".to_string(),
-            )),
-            common_enums::BankNames::BawagPskAg => Ok(Self(
-                "ba7199cc-f057-42f2-9856-2378abf21638".to_string(),
-            )),
-            common_enums::BankNames::Dolomitenbank => Ok(Self(
-                "d5d5b133-1c0d-4c08-b2be-3c9b116dc326".to_string(),
-            )),
-            common_enums::BankNames::EasybankAg => Ok(Self(
-                "eff103e6-843d-48b7-a6e6-fbd88f511b11".to_string(),
-            )),
-            common_enums::BankNames::ErsteBankUndSparkassen => Ok(Self(
-                "3fdc41fc-3d3d-4ee3-a1fe-cd79cfd58ea3".to_string(),
-            )),
-            common_enums::BankNames::HypoTirolBankAg => Ok(Self(
-                "6765e225-a0dc-4481-9666-e26303d4f221".to_string(),
-            )),
-            common_enums::BankNames::PosojilnicaBankEGen => Ok(Self(
-                "65ef4682-4944-499f-828f-5d74ad288376".to_string(),
-            )),
-            common_enums::BankNames::RaiffeisenBankengruppeOsterreich => Ok(Self(
-                "ee9fc487-ebe0-486c-8101-17dce5141a67".to_string(),
-            )),
-            common_enums::BankNames::SchoellerbankAg => Ok(Self(
-                "1190c4d1-b37a-487e-9355-e0a067f54a9f".to_string(),
-            )),
-            common_enums::BankNames::SpardaBankWien => Ok(Self(
-                "8b0bfeea-fbb0-4337-b3a1-0e25c0f060fc".to_string(),
-            )),
-            common_enums::BankNames::VolksbankGruppe => Ok(Self(
-                "e2e97aaa-de4c-4e18-9431-d99790773433".to_string(),
-            )),
-            common_enums::BankNames::VolkskreditbankAg => Ok(Self(
-                "4a0a975b-0594-4b40-9068-39f77b3a91f9".to_string(),
-            )),
+            common_enums::BankNames::BankAustria => {
+                Ok(Self("e6819e7a-f663-414b-92ec-cf7c82d2f4e5".to_string()))
+            }
+            common_enums::BankNames::BawagPskAg => {
+                Ok(Self("ba7199cc-f057-42f2-9856-2378abf21638".to_string()))
+            }
+            common_enums::BankNames::Dolomitenbank => {
+                Ok(Self("d5d5b133-1c0d-4c08-b2be-3c9b116dc326".to_string()))
+            }
+            common_enums::BankNames::EasybankAg => {
+                Ok(Self("eff103e6-843d-48b7-a6e6-fbd88f511b11".to_string()))
+            }
+            common_enums::BankNames::ErsteBankUndSparkassen => {
+                Ok(Self("3fdc41fc-3d3d-4ee3-a1fe-cd79cfd58ea3".to_string()))
+            }
+            common_enums::BankNames::HypoTirolBankAg => {
+                Ok(Self("6765e225-a0dc-4481-9666-e26303d4f221".to_string()))
+            }
+            common_enums::BankNames::PosojilnicaBankEGen => {
+                Ok(Self("65ef4682-4944-499f-828f-5d74ad288376".to_string()))
+            }
+            common_enums::BankNames::RaiffeisenBankengruppeOsterreich => {
+                Ok(Self("ee9fc487-ebe0-486c-8101-17dce5141a67".to_string()))
+            }
+            common_enums::BankNames::SchoellerbankAg => {
+                Ok(Self("1190c4d1-b37a-487e-9355-e0a067f54a9f".to_string()))
+            }
+            common_enums::BankNames::SpardaBankWien => {
+                Ok(Self("8b0bfeea-fbb0-4337-b3a1-0e25c0f060fc".to_string()))
+            }
+            common_enums::BankNames::VolksbankGruppe => {
+                Ok(Self("e2e97aaa-de4c-4e18-9431-d99790773433".to_string()))
+            }
+            common_enums::BankNames::VolkskreditbankAg => {
+                Ok(Self("4a0a975b-0594-4b40-9068-39f77b3a91f9".to_string()))
+            }
             _ => Err(ConnectorRequestError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Adyen"),
             )
@@ -1304,7 +1304,9 @@ impl TryFrom<&ConnectorSpecificConfig> for AdyenAuthType {
                 review_key: review_key.to_owned(),
                 endpoint_prefix: endpoint_prefix.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }),
         }
     }
 }
@@ -1337,11 +1339,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
         // Only set brand for cobadged cards
-        let brand = if card
-            .card_number
-            .is_cobadged_card()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
-        {
+        let brand = if card.card_number.is_cobadged_card().change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )? {
             // Use the detected card network from the card data
             card.card_network.clone().and_then(get_adyen_card_network)
         } else {
@@ -1407,13 +1409,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .get_four_digit_expiry_year()
                             .change_context(ConnectorRequestError::InvalidDataFormat {
                                 field_name: "expiry_year",
-                context: Default::default()
+                                context: Default::default(),
                             })?;
 
                         let expiry_month = decrypt_data.get_expiry_month().change_context(
                             ConnectorRequestError::InvalidDataFormat {
                                 field_name: "expiry_month",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?;
 
@@ -1433,7 +1435,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_encrypted_google_pay_token()
                                     .change_context(ConnectorRequestError::InvalidDataFormat {
                                         field_name: "google_pay_token",
-                context: Default::default()
+                                        context: Default::default(),
                                     })?,
                             ),
                         };
@@ -1502,7 +1504,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | WalletData::BluecodeRedirect { .. }
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented("payment_method").into()),
+            | WalletData::Wero(_) => {
+                Err(ConnectorRequestError::not_implemented("payment_method").into())
+            }
         }
     }
 }
@@ -1629,7 +1633,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .as_ref()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "bancontact_card.card_number",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .clone();
                 let raw_card_number = RawCardNumber(card_num);
@@ -1639,14 +1643,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .as_ref()
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "bancontact_card.card_exp_month",
-                context: Default::default()
+                            context: Default::default(),
                         })?
                         .clone(),
                     expiry_year: card_exp_year
                         .as_ref()
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "bancontact_card.card_exp_year",
-                context: Default::default()
+                            context: Default::default(),
                         })?
                         .clone(),
                     holder_name: card_holder_name,
@@ -1660,7 +1664,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 blik_code: Secret::new(blik_code.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "blik_code",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?),
             }))),
@@ -1670,7 +1674,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         AdyenTestBankNames::try_from(&bank_name.ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "eps.bank_name",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?)?
                         .0,
@@ -1824,9 +1828,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             CardRedirectData::Knet {} => Ok(Self::Knet),
             CardRedirectData::Benefit {} => Ok(Self::Benefit),
             CardRedirectData::MomoAtm {} => Ok(Self::MomoAtm),
-            CardRedirectData::CardRedirect {} => Err(
-                ConnectorRequestError::not_implemented("payment_method").into(),
-            ),
+            CardRedirectData::CardRedirect {} => {
+                Err(ConnectorRequestError::not_implemented("payment_method").into())
+            }
         }
     }
 }
@@ -1876,7 +1880,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map(AdyenTestingData::try_from)
                     .transpose()
                     .map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })?;
                 let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
                 Ok(Self::BacsDirectDebit(Box::new(BacsDirectDebitData {
@@ -1922,12 +1928,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data.resource_common_data.customer_id.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "customer_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
                 router_data
@@ -1935,7 +1941,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_country()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.country",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 Ok(Self::Klarna)
             }
@@ -1943,7 +1949,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 if token.is_empty() {
                     return Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "token",
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into());
                 }
@@ -1955,28 +1961,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_full_name()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.full_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_phone_number()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 Ok(Self::AdyenAffirm)
             }
@@ -1986,35 +1992,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_full_name()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.full_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_shipping_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "shipping.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 let country = router_data
                     .resource_common_data
                     .get_billing_country()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.country",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 match country {
                     common_enums::CountryAlpha2::IT
@@ -2030,42 +2036,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_full_name()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.full_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_phone_number()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_shipping_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "shipping.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_country()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.country",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 Ok(Self::PayBright)
             }
@@ -2075,14 +2081,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_phone_number()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 Ok(Self::Walley)
             }
@@ -2092,28 +2098,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_phone_number()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_shipping_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "shipping.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 Ok(Self::AlmaPayLater)
             }
@@ -2123,28 +2129,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing_email()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_full_name()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.full_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_phone_number()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 router_data
                     .resource_common_data
                     .get_billing_address()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 Ok(Self::Atome)
@@ -2249,13 +2255,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     directory_response: auth_data.trans_status.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "three_ds_data.trans_status",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?,
                     authentication_response: auth_data.trans_status.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "three_ds_data.trans_status",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?,
                     cavv: auth_data.cavv.clone(),
@@ -2841,7 +2847,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         if expiry > max_expiry_primitive {
                             Err(ConnectorRequestError::InvalidDataFormat {
                                 field_name: "expiry_date cannot be more than 5 days from now",
-                context: Default::default()
+                                context: Default::default(),
                             }
                             .into())
                         } else {
@@ -3196,7 +3202,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_cryptogram()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "network_token_data.token_cryptogram",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let mpi_data = Some(AdyenMpiData {
@@ -3619,52 +3625,74 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => Err(ConnectorRequestError::not_implemented("payment_method").into()),
+            Some(_mandate_ref) => {
+                Err(ConnectorRequestError::not_implemented("payment_method").into())
+            }
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
-                    err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                    err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    })
                 }),
                 PaymentMethodData::CardRedirect(ref card_redirect_data) => {
                     Self::try_from((item, card_redirect_data)).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data))
                     .map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     }),
                 PaymentMethodData::BankRedirect(ref bank_redirect) => {
                     Self::try_from((item, bank_redirect)).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::BankTransfer(ref bank_transfer) => {
                     Self::try_from((item, bank_transfer.as_ref())).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit))
                     .map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     }),
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref())).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::Voucher(ref voucher_data) => {
                     Self::try_from((item, voucher_data)).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
                     Self::try_from((item, pay_later_data)).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::NetworkToken(ref token_data) => {
                     Self::try_from((item, token_data)).map_err(|err| {
-                        err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                     })
                 }
                 PaymentMethodData::Crypto(_)
@@ -3675,9 +3703,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::CardToken(_) => Err(
-                    ConnectorRequestError::not_implemented("payment method").into(),
-                ),
+                | PaymentMethodData::CardToken(_) => {
+                    Err(ConnectorRequestError::not_implemented("payment method").into())
+                }
             },
         }
     }
@@ -3706,11 +3734,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_required_value("encoded_data")
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "encoded_data: AdyenRedirectRequestTypes",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let adyen_redirection_type =
             serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
         let adyen_redirect_request = match adyen_redirection_type {
             AdyenRedirectRequestTypes::AdyenRedirection(req) => Self {
@@ -4026,9 +4056,11 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             AdyenWebhookStatus::Expired => Ok(Self::Expired),
             //If Unexpected Event is received, need to understand how it reached this point
             //Webhooks with Payment Events only should try to consume this resource object.
-            AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => Err(
-                error_stack::report!(ConnectorResponseError::response_handling_failed_http_status_unknown()),
-            ),
+            AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => {
+                Err(error_stack::report!(
+                    ConnectorResponseError::response_handling_failed_http_status_unknown()
+                ))
+            }
         }
     }
 }
@@ -4428,7 +4460,7 @@ impl TryFrom<SecretSerdeValue> for AdyenTestingData {
             .parse_value::<Self>("AdyenTestingData")
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "connector_metadata.adyen.testing",
-                context: Default::default()
+                context: Default::default(),
             })?;
         Ok(testing_data)
     }
@@ -4722,8 +4754,9 @@ pub fn get_webhook_response(
 
     if is_multiple_capture_psync_flow {
         let capture_sync_response_list =
-            utils::construct_captures_response_hashmap(vec![response.clone()])
-                .change_context(ConnectorResponseError::response_handling_failed(status_code))?;
+            utils::construct_captures_response_hashmap(vec![response.clone()]).change_context(
+                ConnectorResponseError::response_handling_failed(status_code),
+            )?;
         Ok(AdyenPaymentsResponseData {
             status,
             error,
@@ -5103,7 +5136,9 @@ pub(crate) fn get_adyen_payment_webhook_event(
             }
         }
         WebhookEventCode::CaptureFailed => Ok(AttemptStatus::Failure),
-        _ => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }),
+        _ => Err(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        }),
     }
 }
 
@@ -5122,7 +5157,9 @@ pub(crate) fn get_adyen_refund_webhook_event(
         WebhookEventCode::RefundFailed | WebhookEventCode::RefundReversed => {
             Ok(RefundStatus::Failure)
         }
-        _ => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }),
+        _ => Err(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        }),
     }
 }
 
@@ -5258,7 +5295,7 @@ fn get_recurring_processing_model_for_repeat_payment<
             let shopper_reference =
                 shopper_reference.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_customer_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
@@ -5285,7 +5322,7 @@ fn get_recurring_processing_model<
             let shopper_reference =
                 shopper_reference.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_customer_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
@@ -5298,7 +5335,7 @@ fn get_recurring_processing_model<
             let shopper_reference =
                 shopper_reference.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_customer_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
@@ -5742,7 +5779,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -5873,10 +5910,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => Err(ConnectorRequestError::not_implemented("payment_method").into()),
+            Some(_mandate_ref) => {
+                Err(ConnectorRequestError::not_implemented("payment_method").into())
+            }
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
-                    err.change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                    err.change_context(ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    })
                 }),
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
@@ -5895,9 +5936,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::CardToken(_) => Err(
-                    ConnectorRequestError::not_implemented("payment method").into(),
-                ),
+                | PaymentMethodData::CardToken(_) => {
+                    Err(ConnectorRequestError::not_implemented("payment method").into())
+                }
             },
         }
     }
@@ -6031,7 +6072,7 @@ fn get_recurring_processing_model_for_setup_mandate<
         .ok_or_else(Box::new(move || {
             ConnectorRequestError::MissingRequiredField {
                 field_name: "customer_id",
-                context: Default::default()
+                context: Default::default(),
             }
         }))?;
 
@@ -6167,7 +6208,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         let payment_method_type = item.router_data.request.payment_method_type;
@@ -6182,15 +6223,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
                 let adyen_mandate = AdyenMandate {
                     payment_type: match payment_method_type {
-                        Some(pm_type) => PaymentType::try_from(&pm_type)
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                        Some(pm_type) => PaymentType::try_from(&pm_type).change_context(
+                            ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            },
+                        )?,
                         None => PaymentType::Scheme,
                     },
                     stored_payment_method_id: Secret::new(
                         connector_mandate_ids.get_connector_mandate_id().ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "connector_mandate_id",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?,
                     ),
@@ -6212,9 +6256,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None => CardBrand::try_from(
                                 &card_details_for_network_transaction_id
                                     .get_card_issuer()
-                                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                                    .change_context(
+                                        ConnectorRequestError::RequestEncodingFailed {
+                                            context: Default::default(),
+                                        },
+                                    )?,
                             )
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            .change_context(
+                                ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            )?,
                         };
                         let card_holder_name = item
                             .router_data
@@ -6244,7 +6296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Adyen",
-                context: Default::default()
+                            context: Default::default()
                         }))
                     }
                 }
@@ -6252,11 +6304,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::NetworkTokenWithNTI(network_mandate_id) => {
                 match &item.router_data.request.payment_method_data {
                     PaymentMethodData::NetworkToken(ref token_data) => {
-                        let card_issuer = token_data
-                            .get_card_issuer()
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
-                        let brand = CardBrand::try_from(&card_issuer)
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                        let card_issuer = token_data.get_card_issuer().change_context(
+                            ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            },
+                        )?;
+                        let brand = CardBrand::try_from(&card_issuer).change_context(
+                            ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            },
+                        )?;
                         let card_holder_name = item
                             .router_data
                             .resource_common_data
@@ -6279,7 +6336,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Adyen",
-                context: Default::default()
+                            context: Default::default()
                         }))
                     }
                 }
@@ -6588,7 +6645,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             defense_documents: get_defence_documents(item.router_data.request.clone()).ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "Missing Defence Documents",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
             merchant_account_code: auth.merchant_account.peek().to_string().into(),
@@ -6876,7 +6933,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for AdyenConnectorMetadataObject {
             Some(metadata) => to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
                 .change_context(ConnectorRequestError::InvalidConnectorConfig {
                     config: "metadata",
-                context: Default::default()
+                    context: Default::default(),
                 }),
             None => Ok(Self::default()),
         }
@@ -7063,7 +7120,9 @@ pub fn get_present_to_shopper_metadata(
 
             Some(voucher_data.encode_to_value())
                 .transpose()
-                .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
+                .change_context(
+                    ConnectorResponseError::response_handling_failed_http_status_unknown(),
+                )
         }
         // NOTE: Support for other payment methods will be added in future iterations
         // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)

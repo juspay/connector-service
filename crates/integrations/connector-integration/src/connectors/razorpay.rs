@@ -242,8 +242,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = razorpay::RazorpayAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = razorpay::RazorpayAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.generate_authorization_header().into_masked(),
@@ -258,10 +261,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        let response: razorpay::RazorpayErrorResponse = res
-            .response
-            .parse_struct("ErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+        let response: razorpay::RazorpayErrorResponse =
+            res.response.parse_struct("ErrorResponse").map_err(|_| {
+                ConnectorResponseError::response_deserialization_failed(res.status_code)
+            })?;
 
         with_error_response_body!(event_builder, response);
 
@@ -338,9 +341,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "application/json".to_string().into(),
             ),
         ];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -375,7 +380,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converted_amount = self
             .amount_converter
             .convert(req.request.minor_amount, req.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let connector_router_data =
             razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
 
@@ -430,7 +437,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             res.status_code,
                             res.response.to_vec(),
                         ))
-                        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+                        .change_context(
+                            ConnectorResponseError::response_handling_failed(res.status_code),
+                        )
                     }
                     Err(_) => {
                         // Fall back to regular payment response
@@ -438,7 +447,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .response
                             .parse_struct("RazorpayPaymentResponse")
                             .change_context(
-                                ConnectorResponseError::response_deserialization_failed(res.status_code),
+                                ConnectorResponseError::response_deserialization_failed(
+                                    res.status_code,
+                                ),
                             )?;
 
                         with_response_body!(event_builder, response);
@@ -450,7 +461,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             false,
                             data.request.payment_method_type,
                         ))
-                        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+                        .change_context(
+                            ConnectorResponseError::response_handling_failed(res.status_code),
+                        )
                     }
                 }
             }
@@ -459,7 +472,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let response: razorpay::RazorpayResponse = res
                     .response
                     .parse_struct("RazorpayPaymentResponse")
-                    .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+                    .map_err(|_| {
+                        ConnectorResponseError::response_deserialization_failed(res.status_code)
+                    })?;
 
                 with_response_body!(event_builder, response);
 
@@ -471,7 +486,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     false,
                     data.request.payment_method_type,
                 ))
-                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    res.status_code,
+                ))
             }
         }
     }
@@ -516,9 +533,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -541,7 +560,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                    .change_context(ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    })?;
 
                 Ok(format!("{base_url}v1/payments/{payment_id}"))
             }
@@ -561,7 +582,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let sync_response: RazorpayV2SyncResponse = res
             .response
             .parse_struct("RazorpayV2SyncResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_response_body!(event_builder, sync_response);
 
@@ -572,7 +595,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        .change_context(ConnectorResponseError::response_handling_failed(
+            res.status_code,
+        ))
     }
 
     fn get_error_response_v2(
@@ -619,9 +644,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "application/json".to_string().into(),
             ),
         ];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -653,7 +680,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converted_amount = self
             .amount_converter
             .convert(req.request.amount, req.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let connector_router_data =
             razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayOrderRequest::try_from(&connector_router_data)?;
@@ -684,12 +713,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayOrderResponse = res
             .response
             .parse_struct("RazorpayOrderResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .map_err(|_| {
+                ConnectorResponseError::response_deserialization_failed(res.status_code)
+            })?;
 
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+            .change_context(ConnectorResponseError::response_handling_failed(
+                res.status_code,
+            ))
     }
 
     fn get_error_response_v2(
@@ -728,9 +761,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -758,12 +793,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundSyncResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -821,7 +859,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })?;
 
         let notif = payload.payment.ok_or_else(|| {
-            error_stack::Report::new(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            error_stack::Report::new(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
         })?;
 
         Ok(WebhookDetailsResponse {
@@ -860,7 +900,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })?;
 
         let notif = payload.refund.ok_or_else(|| {
-            error_stack::Report::new(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            error_stack::Report::new(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
         })?;
 
         Ok(RefundWebhookDetailsResponse {
@@ -900,9 +942,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -925,7 +969,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converted_amount = self
             .amount_converter
             .convert(req.request.minor_refund_amount, req.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let refund_router_data = razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayRefundRequest::try_from(&refund_router_data)?;
 
@@ -944,12 +990,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -989,9 +1038,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut api_key = self
-            .get_auth_header(&req.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let mut api_key = self.get_auth_header(&req.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         header.append(&mut api_key);
         Ok(header)
     }
@@ -1003,7 +1054,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let id = match &req.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id,
             _ => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into());
             }
         };
         Ok(format!(
@@ -1019,7 +1073,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converted_amount = self
             .amount_converter
             .convert(req.request.minor_amount_to_capture, req.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let connector_router_data =
             razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayCaptureRequest::try_from(&connector_router_data)?;
@@ -1039,14 +1095,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayCaptureResponse")
             .map_err(|err| {
-                report!(ConnectorResponseError::response_deserialization_failed(res.status_code))
+                report!(ConnectorResponseError::response_deserialization_failed(
+                    res.status_code
+                ))
                 .attach_printable(format!("Failed to parse RazorpayCaptureResponse: {err:?}"))
             })?;
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseError::response_handling_failed(res.status_code),
+        )
     }
 
     fn get_error_response_v2(
@@ -1167,7 +1226,7 @@ impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
         }
         Err(ConnectorRequestError::MissingRequiredField {
             field_name: "encoded_data",
-                context: Default::default()
+            context: Default::default(),
         }
         .into())
     }

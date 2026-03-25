@@ -29,7 +29,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
-    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
@@ -48,7 +47,7 @@ use crate::{
     types::ResponseRouterData,
     utils,
 };
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -496,8 +495,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = MifinityAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = MifinityAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::KEY.to_string(),
             auth.key.expose().into_masked(),

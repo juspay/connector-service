@@ -22,10 +22,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{
-        ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-        ResultResponseToRequestExt,
-    },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     mandates::AcceptanceType,
     payment_method_data::{
         self, AchTransfer, BankRedirectData, BankTransferInstructions, BankTransferNextStepsData,
@@ -107,7 +104,10 @@ impl TryFrom<&ConnectorSpecificConfig> for StripeAuthType {
             ConnectorSpecificConfig::Stripe { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -1101,7 +1101,7 @@ fn validate_shipping_address_against_payment_method(
                 if !missing_fields.is_empty() {
                     return Err(ConnectorRequestError::MissingRequiredFields {
                         field_names: missing_fields,
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into());
                 }
@@ -1109,7 +1109,7 @@ fn validate_shipping_address_against_payment_method(
             }
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "shipping.address",
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         },
@@ -1394,7 +1394,7 @@ fn create_stripe_payment_method<
                             email: payment_request_details.billing_address.email.ok_or(
                                 ConnectorRequestError::MissingRequiredField {
                                     field_name: "billing_address.email",
-                context: Default::default()
+                                    context: Default::default(),
                                 },
                             )?,
                         },
@@ -1413,7 +1413,7 @@ fn create_stripe_payment_method<
                         country: payment_request_details.billing_address.country.ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "billing_address.country",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?,
                     }),
@@ -1714,7 +1714,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     code: Secret::new(blik_code.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "blik_code",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?),
                 })),
@@ -1792,13 +1792,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .get_encrypted_google_pay_token()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "gpay wallet_token",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .as_bytes()
                     .parse_struct::<StripeGpayToken>("StripeGpayToken")
                     .change_context(ConnectorRequestError::InvalidWalletToken {
                         wallet_name: "Google Pay".to_string(),
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .id,
             ),
@@ -1941,7 +1941,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         billing_address: billing_address.ok_or(
                             ConnectorRequestError::MissingRequiredField {
                                 field_name: "billing_address",
-                context: Default::default()
+                                context: Default::default(),
                             },
                         )?,
                         request_incremental_authorization: item
@@ -1987,7 +1987,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .get_required_value("payment_token")
                         .change_context(ConnectorRequestError::InvalidWalletToken {
                             wallet_name: "Apple Pay".to_string(),
-                context: Default::default()
+                            context: Default::default(),
                         })?;
 
                     let domain_types::router_data::PaymentMethodToken::Token(payment_method_token) =
@@ -2024,7 +2024,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                         .change_context(
                                             ConnectorRequestError::MissingRequiredField {
                                                 field_name: "online",
-                context: Default::default()
+                                                context: Default::default(),
                                             },
                                         )?;
                                     StripeMandateRequest {
@@ -2035,7 +2035,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                                 .change_context(
                                                     ConnectorRequestError::MissingRequiredField {
                                                         field_name: "ip_address",
-                context: Default::default()
+                                                        context: Default::default(),
                                                     },
                                                 )?,
                                             user_agent: online_mandate.user_agent,
@@ -2709,16 +2709,16 @@ where
                     ) => Some(Secret::new(serde_json::json!({
                         "transfer_account_id": stripe_split_data.transfer_account_id,
                         "charge_type": stripe_split_data.charge_type,
-                        "application_fees": stripe_split_data.application_fees,
-                    }))),
-                    _ => None,
-                };
+                        "application_fees": stripe_split_data.application_fees
+}))),
+                    _ => None
+};
 
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
-                connector_mandate_request_reference_id: None,
-            }
+                connector_mandate_request_reference_id: None
+}
         });
 
         //Note: we might have to call retrieve_setup_intent to get the network_transaction_id in case its not sent in PaymentIntentResponse
@@ -2736,9 +2736,11 @@ where
             _ => None,
         };
 
-        let connector_metadata =
-            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount, item.http_code)
-                .into_response_err()?;
+        let connector_metadata = get_connector_metadata(
+            item.response.next_action.as_ref(),
+            item.response.amount,
+            item.http_code,
+        )?;
 
         let status = common_enums::AttemptStatus::from(item.response.status);
 
@@ -2820,7 +2822,7 @@ pub fn get_connector_metadata(
     next_action: Option<&StripeNextActionResponse>,
     amount: MinorUnit,
     http_status: u16,
-) -> CustomResult<Option<Value>, ConnectorRequestError> {
+) -> CustomResult<Option<Value>, ConnectorResponseError> {
     let next_action_response = next_action
         .and_then(|next_action_response| match next_action_response {
             StripeNextActionResponse::DisplayBankTransferInstructions(response) => {
@@ -2921,8 +2923,9 @@ pub fn get_connector_metadata(
             _ => None,
         })
         .transpose()
-        .change_context(ConnectorResponseError::response_handling_failed(http_status))
-        .into_request_err()?;
+        .change_context(ConnectorResponseError::response_handling_failed(
+            http_status,
+        ))?;
     Ok(next_action_response)
 }
 
@@ -2996,9 +2999,11 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 }
             });
 
-        let connector_metadata =
-            get_connector_metadata(item.response.next_action.as_ref(), item.response.amount, item.http_code)
-                .into_response_err()?;
+        let connector_metadata = get_connector_metadata(
+            item.response.next_action.as_ref(),
+            item.response.amount,
+            item.http_code,
+        )?;
 
         let status = common_enums::AttemptStatus::from(item.response.status.to_owned());
 
@@ -3051,7 +3056,9 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 ))?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .into_response_err()?;
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    item.http_code,
+                ))?;
 
         let response_integrity_object = PaymentSynIntegrityObject {
             amount: amount_in_minor_unit,
@@ -3853,14 +3860,14 @@ fn mandatory_parameters_for_sepa_bank_debit_mandates(
             name: Some(
                 billing_name.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             ),
 
             email: Some(
                 billing_email.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing_email",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             ),
             ..StripeBillingAddress::default()
@@ -4066,7 +4073,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)
-                .into_response_err()?;
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    item.http_code,
+                ))?;
 
         let response_integrity_object = AuthoriseIntegrityObject {
             amount: amount_in_minor_unit,
@@ -4078,7 +4087,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(item.http_code));
+        .change_context(ConnectorResponseError::response_handling_failed(
+            item.http_code,
+        ));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = Some(response_integrity_object);
@@ -4109,7 +4120,9 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             .amount_received
             .map(|amount| StripeAmountConvertor::convert_back(amount, currency_enum))
             .transpose()
-            .into_response_err()?;
+            .change_context(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         let response_integrity_object =
             capture_amount_in_minor_unit.map(|amount_to_capture| CaptureIntegrityObject {
@@ -4122,7 +4135,9 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(item.http_code));
+        .change_context(ConnectorResponseError::response_handling_failed(
+            item.http_code,
+        ));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = response_integrity_object;
@@ -4282,7 +4297,7 @@ impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseDat
         match item.request.split_refunds.as_ref() {
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "split_refunds",
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
 
@@ -4358,7 +4373,9 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .into_response_err()?;
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    item.http_code,
+                ))?;
 
         let response_integrity_object = RefundIntegrityObject {
             currency: currency_enum,
@@ -4744,8 +4761,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
                 MandateReferenceId::ConnectorMandateId(mandate_data) => {
                     mandate_data.get_mandate_metadata()
                 }
-                _ => None,
-            }
+                _ => None
+}
             .and_then(|secret_value| {
                 let json_value = secret_value.clone().expose();
                 match serde_json::from_value::<Self>(json_value.clone()) {
@@ -5014,7 +5031,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::Card(_) => Err(ConnectorRequestError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Stripe",
-                context: Default::default()
+                            context: Default::default(),
                         })?,
                     };
 
@@ -5040,7 +5057,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 billing_address: billing_address.ok_or(
                                     ConnectorRequestError::MissingRequiredField {
                                         field_name: "billing_address",
-                context: Default::default()
+                                        context: Default::default(),
                                     },
                                 )?,
                                 request_incremental_authorization: false,
@@ -5183,14 +5200,14 @@ fn get_payment_method_type_for_saved_payment_method_payment<
                     }
                     None => Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "payment_method_type",
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into()),
                 }
             }
             None => Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "recurring_mandate_payment_data",
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         }?;

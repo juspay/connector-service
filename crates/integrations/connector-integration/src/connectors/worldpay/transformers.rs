@@ -10,6 +10,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -17,15 +18,13 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils, ConnectorRequestError,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    connectors::worldpay::WorldpayRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
+use crate::{connectors::worldpay::WorldpayRouterData, types::ResponseRouterData};
 
 // Define ForeignTryFrom trait locally
 pub trait ForeignTryFrom<T>: Sized {
@@ -35,7 +34,6 @@ pub trait ForeignTryFrom<T>: Sized {
 
 use super::requests::*;
 use super::response::*;
-use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
 
 // Form field keys
 const FORM_FIELD_JWT: &str = "JWT";
@@ -67,7 +65,7 @@ impl TryFrom<Option<&pii::SecretSerdeValue>> for WorldpayConnectorMetadataObject
             crate::utils::to_connector_meta_from_secret::<Self>(meta_data.cloned())
                 .change_context(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_feature_data",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
         Ok(metadata)
     }
@@ -87,18 +85,19 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-                .into_request_err()?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
             Ok(PaymentInstrument::Card(CardPayment {
                 raw_card_details: RawCardDetails {
                     payment_type: PaymentType::Plain,
                     expiry_date: ExpiryDate {
                         month: expiry_month_i8,
-                        year: Secret::new(expiry_year),
-                    },
-                    card_number: card.card_number,
-                },
+                        year: Secret::new(expiry_year)
+},
+                    card_number: card.card_number
+},
                 cvc: card.card_cvc,
                 card_holder_name: billing_address
                     .and_then(|address| address.get_optional_full_name()),
@@ -114,13 +113,13 @@ fn fetch_payment_instrument<
                                     city,
                                     state: address.state,
                                     postal_code,
-                                    country_code,
-                                })
+                                    country_code
+})
                             }
-                            _ => None,
-                        }
-                    }),
-            }))
+                            _ => None
+}
+                    })
+}))
         }
         PaymentMethodData::CardDetailsForNetworkTransactionId(raw_card_details) => {
             // Extract expiry month and year using helper functions
@@ -129,17 +128,18 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-                .into_request_err()?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
             Ok(PaymentInstrument::RawCardForNTI(RawCardDetails {
                 payment_type: PaymentType::Plain,
                 expiry_date: ExpiryDate {
                     month: expiry_month_i8,
-                    year: Secret::new(expiry_year),
-                },
-                card_number: RawCardNumber(raw_card_details.card_number),
-            }))
+                    year: Secret::new(expiry_year)
+},
+                card_number: RawCardNumber(raw_card_details.card_number)
+}))
         }
         PaymentMethodData::MandatePayment => {
             Err(ConnectorRequestError::not_implemented(
@@ -223,8 +223,8 @@ fn fetch_payment_instrument<
         | PaymentMethodData::NetworkToken(_) => Err(ConnectorRequestError::not_implemented(
             utils::get_unimplemented_payment_method_error_message("worldpay"),
         )
-        .into()),
-    }
+        .into())
+}
 }
 
 impl TryFrom<(enums::PaymentMethod, Option<enums::PaymentMethodType>)> for PaymentMethod {
@@ -237,7 +237,7 @@ impl TryFrom<(enums::PaymentMethod, Option<enums::PaymentMethodType>)> for Payme
             (enums::PaymentMethod::Wallet, pmt) => {
                 let pm = pmt.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_type",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
                 match pm {
                     enums::PaymentMethodType::ApplePay => Ok(Self::ApplePay),
@@ -279,7 +279,7 @@ fn create_three_ds_request<
             let browser_info = router_data.request.browser_info.as_ref().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "browser_info",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?;
 
@@ -289,7 +289,7 @@ fn create_three_ds_request<
                 .get_required_value("accept_header")
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "accept_header",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
             let user_agent_header = browser_info
@@ -298,7 +298,7 @@ fn create_three_ds_request<
                 .get_required_value("user_agent")
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "user_agent",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
             let channel = Some(ThreeDSRequestChannel::Browser);
@@ -432,7 +432,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             auth.merchant_name
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_config.merchant_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
@@ -518,7 +518,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             auth.merchant_name
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "connector_config.merchant_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         // Extract payment instrument from mandate_reference
@@ -527,7 +527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let href = connector_mandate_ref.get_connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
 
@@ -626,7 +626,9 @@ impl TryFrom<&ConnectorSpecificConfig> for WorldpayAuthType {
                     merchant_name: merchant_name.clone(),
                 })
             }
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?,
         }
     }
 }
@@ -899,8 +901,7 @@ impl<F, T>
                     router_data.response,
                     optional_correlation_id.clone(),
                     router_data.http_code,
-                ))
-                .into_response_err()?,
+                ))?,
                 redirection_data: redirection_data.map(Box::new),
                 mandate_reference: mandate_reference.map(Box::new),
                 connector_metadata,
@@ -990,8 +991,11 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None, item.http_code))
-                .into_response_err()?,
+            resource_id: ResponseId::foreign_try_from((
+                item.response.clone(),
+                None,
+                item.http_code,
+            ))?,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
@@ -1188,8 +1192,11 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None, item.http_code))
-                .into_response_err()?,
+            resource_id: ResponseId::foreign_try_from((
+                item.response.clone(),
+                None,
+                item.http_code,
+            ))?,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
@@ -1211,7 +1218,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
 }
 
 impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>, u16)> for ResponseIdStr {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn foreign_try_from(
         item: (WorldpayPaymentsResponse, Option<String>, u16),
     ) -> Result<Self, Self::Error> {
@@ -1220,7 +1227,7 @@ impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>, u16)> for Respons
 }
 
 impl ForeignTryFrom<(WorldpayPaymentsResponse, Option<String>, u16)> for ResponseId {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn foreign_try_from(
         item: (WorldpayPaymentsResponse, Option<String>, u16),
     ) -> Result<Self, Self::Error> {
@@ -1262,12 +1269,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::response_handling_failed_http_status_unknown())
-            .into_request_err()?;
+            .ok_or(ConnectorRequestError::MissingRequiredField {
+                field_name: "redirect_response.params",
+                context: Default::default(),
+            })?;
 
-        let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-            .into_request_err()?;
+        let parsed_request = serde_urlencoded::from_str::<Self>(params.peek()).change_context(
+            ConnectorRequestError::BodySerializationFailed {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(parsed_request)
     }
@@ -1305,12 +1316,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::response_handling_failed_http_status_unknown())
-            .into_request_err()?;
+            .ok_or(ConnectorRequestError::MissingRequiredField {
+                field_name: "redirect_response.params",
+                context: Default::default(),
+            })?;
 
-        let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-            .into_request_err()?;
+        let parsed_request = serde_urlencoded::from_str::<Self>(params.peek()).change_context(
+            ConnectorRequestError::BodySerializationFailed {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(parsed_request)
     }
@@ -1335,7 +1350,7 @@ where
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let (redirection_data, connector_response_reference_id) =
-            extract_redirection_data(&item.response).into_response_err()?;
+            extract_redirection_data(&item.response)?;
         let _connector_metadata = extract_three_ds_metadata(&item.response);
 
         let response = Ok(PaymentsResponseData::PreAuthenticateResponse {
@@ -1373,7 +1388,7 @@ where
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let (_redirection_data, connector_response_reference_id) =
-            extract_redirection_data(&item.response).into_response_err()?;
+            extract_redirection_data(&item.response)?;
         let _connector_metadata = extract_three_ds_metadata(&item.response);
 
         let response = Ok(PaymentsResponseData::PostAuthenticateResponse {
@@ -1395,7 +1410,7 @@ where
 
 fn extract_redirection_data(
     response: &WorldpayPaymentsResponse,
-) -> Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorRequestError>> {
+) -> Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorResponseError>> {
     match &response.other_fields {
         Some(WorldpayPaymentResponseFields::ThreeDsChallenged(challenged)) => {
             let redirect_form = RedirectForm::Form {

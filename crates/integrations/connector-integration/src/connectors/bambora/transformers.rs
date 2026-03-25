@@ -51,7 +51,9 @@ impl TryFrom<&ConnectorSpecificConfig> for BamboraAuthType {
                 })
             }
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -259,7 +261,7 @@ impl<T: PaymentMethodDataTypes>
                     .or_else(|| item.request.customer_name.clone().map(Secret::new))
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.first_name or customer_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 // Determine if this should be auto-capture or authorization
@@ -298,7 +300,7 @@ impl<T: PaymentMethodDataTypes>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Selected payment method".to_string(),
                     connector: "bambora",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into());
             }
@@ -311,13 +313,13 @@ impl<T: PaymentMethodDataTypes>
             .get_payment_billing()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let billing_address = payment_billing.address.as_ref().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "billing.address",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -349,7 +351,9 @@ impl<T: PaymentMethodDataTypes>
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount, item.request.currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to convert amount from minor to major units")?;
 
         Ok(Self {
@@ -447,7 +451,10 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let _transaction_id = match &item.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id,
             ResponseId::EncodedData(_) | ResponseId::NoResponseId => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into());
             }
         };
 
@@ -455,7 +462,9 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to convert capture amount from minor to major units")?;
 
         Ok(Self {
@@ -608,7 +617,9 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self { amount })
     }
@@ -699,7 +710,10 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         if item.request.connector_transaction_id.is_empty() {
-            return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+            return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            }
+            .into());
         }
 
         // Get the amount from the original transaction
@@ -709,7 +723,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         // Get currency from request
@@ -718,14 +732,16 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         // Convert amount from minor units to major units using FloatMajorUnitForConnector
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(minor_amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to convert void amount from minor to major units")?;
 
         Ok(Self { amount })

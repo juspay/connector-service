@@ -54,7 +54,9 @@ impl TryFrom<&ConnectorSpecificConfig> for ElavonAuthType {
                 ssl_user_id: ssl_user_id.clone(),
                 ssl_pin: ssl_pin.clone(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
+            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default()
+            })),
         }
     }
 }
@@ -182,7 +184,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         Err(report!(ConnectorRequestError::FlowNotSupported {
                             flow: format!("Capture method: {other_capture_method:?}"),
                             connector: "Elavon".to_string(),
-                context: Default::default()
+                            context: Default::default()
                         }))?
                     }
                 };
@@ -231,8 +233,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = amount_converter
                     .convert(request_data.minor_amount, request_data.currency)
                     .map_err(|e| {
-                        report!(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
-                            .attach_printable(format!("Failed to convert amount: {e}"))
+                        report!(ConnectorRequestError::AmountConversionFailed {
+                            context: Default::default()
+                        })
+                        .attach_printable(format!("Failed to convert amount: {e}"))
                     })?;
                 let card_req = CardPaymentRequest {
                     ssl_transaction_type: transaction_type,
@@ -320,7 +324,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Generate XML content directly
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|err| {
             tracing::info!(error=?err, "XML serialization error");
-            error_stack::report!(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            error_stack::report!(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default()
+            })
         })?;
 
         // Log generated XML for debugging
@@ -360,7 +366,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Direct implementation to avoid recursive calls
         let request = SyncRequest::try_from(&data.router_data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to create SyncRequest from RouterData")?;
 
         // Log that we're creating the XML request for PSync
@@ -369,7 +377,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Generate XML content directly
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|err| {
             tracing::info!(error=?err, "XML serialization error");
-            error_stack::report!(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            error_stack::report!(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default()
+            })
         })?;
 
         // Log generated XML for debugging
@@ -876,7 +886,9 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
             _ => {
                 return Err(report!(
-                    ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }
+                    ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default()
+                    }
                 ))
                 .attach_printable("Missing connector_transaction_id for Elavon PSync")
             }
@@ -926,7 +938,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
                 return Err(report!(
-                    ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }
+                    ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default()
+                    }
                 ))
             }
         };
@@ -938,7 +952,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             ssl_transaction_type: TransactionType::CcComplete,
@@ -970,12 +986,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the ElavonCaptureRequest
         let request = ElavonCaptureRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to create ElavonCaptureRequest")?;
 
         // Generate XML content
-        let xml_content = quick_xml::se::to_string_with_root("txn", &request)
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            }
+        })?;
 
         // Create the form data HashMap
         let mut result = HashMap::new();
@@ -1100,7 +1121,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_converter = StringMajorUnitForConnector;
         let amount = amount_converter
             .convert(request_data.minor_refund_amount, request_data.currency)
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             ssl_transaction_type: TransactionType::CcReturn,
@@ -1129,12 +1152,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the ElavonRefundRequest
         let request = ElavonRefundRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to create ElavonRefundRequest")?;
 
         // Generate XML content
-        let xml_content = quick_xml::se::to_string_with_root("txn", &request)
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            }
+        })?;
 
         // Create the form data HashMap
         let mut result = HashMap::new();
@@ -1276,12 +1304,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the SyncRequest
         let request = SyncRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to create SyncRequest for RSync")?;
 
         // Generate XML content
-        let xml_content = quick_xml::se::to_string_with_root("txn", &request)
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            }
+        })?;
 
         // Create the form data HashMap
         let mut result = HashMap::new();

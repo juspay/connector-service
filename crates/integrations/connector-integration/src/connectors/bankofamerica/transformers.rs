@@ -10,13 +10,9 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 pub const FLUID_DATA_DESCRIPTOR_FOR_SAMSUNG_PAY: &str = "FID=COMMON.SAMSUNG.INAPP.PAYMENT";
 const MAX_STATE_LENGTH: usize = 20;
 
-use crate::{
-    connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils,
-    ConnectorResponseError,
-};
+use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils};
 use cards;
 use common_enums;
-use domain_types::errors::ResultRequestToResponseExt;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
@@ -24,6 +20,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -31,7 +28,6 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
@@ -736,7 +732,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_refund_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -1438,7 +1436,9 @@ impl TryFrom<&ConnectorSpecificConfig> for BankOfAmericaAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?
         }
     }
 }
@@ -1819,7 +1819,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Err(ConnectorRequestError::NotSupported {
                 message: "Card 3DS".to_string(),
                 connector: "BankOfAmerica",
-                context: Default::default()
+                context: Default::default(),
             })?
         };
 
@@ -1888,7 +1888,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             amount_details: Amount {
                 total_amount: amount,
@@ -2079,19 +2081,19 @@ fn convert_to_additional_payment_method_connector_response(
     consumer_authentication_information: &ConsumerAuthenticationInformation,
 ) -> domain_types::router_data::AdditionalPaymentMethodConnectorResponse {
     let payment_checks = Some(serde_json::json!({
-        "avs_response": processor_information.avs,
-        "card_verification": processor_information.card_verification,
-        "approval_code": processor_information.approval_code,
-        "consumer_authentication_response": processor_information.consumer_authentication_response,
-        "cavv": consumer_authentication_information.cavv,
-        "eci": consumer_authentication_information.eci,
-        "eci_raw": consumer_authentication_information.eci_raw,
+            "avs_response": processor_information.avs,
+            "card_verification": processor_information.card_verification,
+            "approval_code": processor_information.approval_code,
+            "consumer_authentication_response": processor_information.consumer_authentication_response,
+            "cavv": consumer_authentication_information.cavv,
+            "eci": consumer_authentication_information.eci,
+            "eci_raw": consumer_authentication_information.eci_raw
     }));
 
     let authentication_data = Some(serde_json::json!({
-        "retrieval_reference_number": processor_information.retrieval_reference_number,
-        "acs_transaction_id": consumer_authentication_information.acs_transaction_id,
-        "system_trace_audit_number": processor_information.system_trace_audit_number,
+            "retrieval_reference_number": processor_information.retrieval_reference_number,
+            "acs_transaction_id": consumer_authentication_information.acs_transaction_id,
+            "system_trace_audit_number": processor_information.system_trace_audit_number
     }));
 
     domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
@@ -2120,7 +2122,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
                 let status = map_boa_attempt_status((
                     info_response.status.clone(),
-                    router_data.request.is_auto_capture().into_response_err()?,
+                    router_data.request.is_auto_capture(),
                 ));
                 let response =
                     get_payment_response((&info_response, status, http_code)).map_err(|err| *err);
@@ -2154,8 +2156,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     | common_enums::PaymentMethod::Voucher
                     | common_enums::PaymentMethod::OpenBanking
                     | common_enums::PaymentMethod::NetworkToken
-                    | common_enums::PaymentMethod::GiftCard => None,
-                };
+                    | common_enums::PaymentMethod::GiftCard => None
+};
 
                 Ok(Self {
                     response,
@@ -2219,10 +2221,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
             Some(app_status) => {
                 let status = map_boa_attempt_status((
                     app_status,
-                    item.router_data
-                        .request
-                        .is_auto_capture()
-                        .into_response_err()?,
+                    item.router_data.request.is_auto_capture(),
                 ));
 
                 let risk_info: Option<ClientRiskInformation> = None;
@@ -2309,7 +2308,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_amount_to_capture,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -2355,13 +2356,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "Amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let currency = item.router_data.request.currency.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "Currency",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -2381,13 +2382,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(amount, currency)
-                        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
                     currency,
                 },
                 reason: item.router_data.request.cancellation_reason.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "Cancellation Reason",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
             },

@@ -97,7 +97,10 @@ impl TryFrom<&ConnectorSpecificConfig> for TruelayerAuthType {
                 private_key: private_key.clone(),
                 kid: kid.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -200,10 +203,13 @@ impl TryFrom<&TruelayerAuthType> for TruelayerMetadata {
                     context: Default::default(),
                 },
             )?,
-            kid: auth.kid.clone().ok_or(ConnectorRequestError::MissingRequiredField {
-                field_name: "kid",
-                context: Default::default(),
-            })?,
+            kid: auth
+                .kid
+                .clone()
+                .ok_or(ConnectorRequestError::MissingRequiredField {
+                    field_name: "kid",
+                    context: Default::default(),
+                })?,
         })
     }
 }
@@ -331,7 +337,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     return_uri: item.router_data.request.router_return_url.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "return_url",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?,
                 };
@@ -365,14 +371,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .transpose()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 // Ensure at least one is present
                 if email.is_none() && phone.is_none() {
                     return Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "either billing.email/customer_email or billing.phone",
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into());
                 }
@@ -402,7 +408,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "billing.first_name or customer_name",
-                context: Default::default()
+                            context: Default::default(),
                         })?,
                     email,
                     phone,
@@ -470,7 +476,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                 .as_ref()
                 .map(|hosted_page| hosted_page.uri.clone())
                 .ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseError::unexpected_response_error(item.http_code))
+                    error_stack::report!(ConnectorResponseError::unexpected_response_error(
+                        item.http_code
+                    ))
                 })?;
 
             let redirection_data = Some(RedirectForm::Form {
@@ -598,8 +606,10 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
                 }
             }
             TruelayerPSyncResponseData::WebhookResponse(response) => {
-                let status = get_truelayer_payment_webhook_status(response._type)
-                    .map_err(|_| ConnectorResponseError::response_handling_failed(item.http_code))?;
+                let status =
+                    get_truelayer_payment_webhook_status(response._type).map_err(|_| {
+                        ConnectorResponseError::response_handling_failed(item.http_code)
+                    })?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
                 {
@@ -807,8 +817,10 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                 })
             }
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
-                let status = get_truelayer_refund_webhook_status(webhook_response._type)
-                    .map_err(|_| ConnectorResponseError::response_handling_failed(item.http_code))?;
+                let status =
+                    get_truelayer_refund_webhook_status(webhook_response._type).map_err(|_| {
+                        ConnectorResponseError::response_handling_failed(item.http_code)
+                    })?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {
                         code: webhook_response
@@ -830,7 +842,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                 } else {
                     Ok(RefundsResponseData {
                         connector_refund_id: webhook_response.refund_id.ok_or_else(|| {
-                            error_stack::report!(ConnectorResponseError::unexpected_response_error(item.http_code))
+                            error_stack::report!(ConnectorResponseError::unexpected_response_error(
+                                item.http_code
+                            ))
                         })?,
                         refund_status: status,
                         status_code: item.http_code,
@@ -1261,7 +1275,7 @@ impl TryFrom<ResponseRouterData<Jwks, Self>>
         let webhook_uri = item.router_data.request.webhook_uri.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "webhook_uri",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 

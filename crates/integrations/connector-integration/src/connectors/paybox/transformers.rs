@@ -12,12 +12,12 @@ use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::*,
     connector_types::*,
-    errors::{ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt},
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +47,7 @@ pub struct PayboxAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PayboxAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -63,7 +63,10 @@ impl TryFrom<&ConnectorSpecificConfig> for PayboxAuthType {
                 key: key.to_owned(),
                 merchant_id: merchant_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -130,30 +133,39 @@ impl From<PayboxStatus> for RefundStatus {
 
 fn get_transaction_type(
     capture_method: Option<common_enums::CaptureMethod>,
-) -> Result<&'static str, error_stack::Report<ConnectorRequestError>> {
+) -> Result<&'static str, Report<ConnectorRequestError>> {
     match capture_method {
         Some(common_enums::CaptureMethod::Automatic) => Ok(AUTH_AND_CAPTURE_REQUEST),
         Some(common_enums::CaptureMethod::Manual) | None => Ok(AUTH_REQUEST),
-        _ => Err(ConnectorRequestError::CaptureMethodNotSupported { context: Default::default() })?,
+        _ => Err(ConnectorRequestError::CaptureMethodNotSupported {
+            context: Default::default(),
+        })?,
     }
 }
 
 fn generate_request_id() -> CustomResult<String, ConnectorRequestError> {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?
         .as_millis()
         .to_string();
 
-    timestamp
-        .get(4..)
-        .map(|s| s.to_string())
-        .ok_or(ConnectorResponseError::response_deserialization_failed_http_status_unknown().into())
+    timestamp.get(4..).map(|s| s.to_string()).ok_or_else(|| {
+        Report::new(ConnectorRequestError::InvalidDataFormat {
+            field_name: "request_id",
+            context: Default::default(),
+        })
+    })
 }
 
 fn generate_date_time() -> CustomResult<String, ConnectorRequestError> {
-    format_date(now(), DateFormat::DDMMYYYYHHmmss)
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+    format_date(now(), DateFormat::DDMMYYYYHHmmss).change_context(
+        ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        },
+    )
 }
 
 // ============================================================================
@@ -202,7 +214,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PayboxPaymentRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -218,8 +230,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = item.router_data;
         let connector = item.connector;
 
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let amount = connector
             .amount_converter
@@ -227,8 +242,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(req_card) => req_card,
@@ -236,7 +252,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Only card payments are supported".to_string(),
                     connector: "Paybox",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -299,7 +315,7 @@ pub struct PayboxPaymentResponse {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PayboxAuthorizeResponse, Self>,
@@ -394,7 +410,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PayboxSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -403,12 +419,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let numappel = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
-            _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
+            _ => {
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into())
+            }
         };
 
         // Try reading from multiple sources in order of preference
@@ -420,7 +444,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map(|meta: PayboxMeta| meta.connector_request_id)
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_request_id (NUMTRANS)",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         Ok(Self {
@@ -461,7 +485,7 @@ pub struct PayboxPSyncResponse {
 impl TryFrom<ResponseRouterData<PayboxPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PayboxPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let connector_payment_status = item.response.status;
@@ -529,7 +553,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PayboxCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -539,12 +563,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let numappel = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
-            _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
+            _ => {
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into())
+            }
         };
 
         // Try reading from multiple sources in order of preference
@@ -556,7 +588,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map(|meta| meta.connector_request_id)
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_request_id (NUMTRANS)",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let amount = connector
@@ -565,8 +597,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         let capture_request = Self {
             version: VERSION_PAYBOX.to_string(),
@@ -593,7 +626,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PayboxCaptureResponse, Self>,
@@ -677,7 +710,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PayboxVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -687,8 +720,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let numappel = router_data.request.connector_transaction_id.clone();
 
@@ -708,7 +744,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let currency =
@@ -717,14 +753,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         let amount = connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             version: VERSION_PAYBOX.to_string(),
@@ -749,7 +786,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<PayboxVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PayboxVoidResponse, Self>) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
@@ -834,7 +871,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PayboxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for PayboxRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -844,8 +881,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let numappel = router_data.request.connector_transaction_id.clone();
 
@@ -864,8 +904,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             version: VERSION_PAYBOX.to_string(),
@@ -911,7 +952,7 @@ pub struct PayboxRefundResponse {
 impl TryFrom<ResponseRouterData<PayboxRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PayboxRefundResponse, Self>) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
@@ -958,7 +999,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PayboxSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: PayboxRouterData<
@@ -967,8 +1008,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PayboxAuthType::try_from(&router_data.connector_config)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = PayboxAuthType::try_from(&router_data.connector_config).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         let connector_refund_id = router_data.request.connector_refund_id.clone();
 
@@ -1011,7 +1055,7 @@ pub struct PayboxRSyncResponse {
 impl TryFrom<ResponseRouterData<PayboxRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PayboxRSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Determine refund status from either STATUS field or CODEREPONSE

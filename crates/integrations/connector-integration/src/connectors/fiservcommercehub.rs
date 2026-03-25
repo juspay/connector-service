@@ -145,8 +145,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             let authorization = auth.generate_hmac_signature(
                 &api_key,
@@ -271,8 +271,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             let authorization = auth.generate_hmac_signature(
                 &api_key,
@@ -326,8 +326,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             let authorization = auth.generate_hmac_signature(
                 &api_key,
@@ -382,8 +382,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             let authorization = auth.generate_hmac_signature(
                 &api_key,
@@ -438,8 +438,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             let authorization = auth.generate_hmac_signature(
                 &api_key,
@@ -848,8 +848,8 @@ macros::macro_connector_implementation!(
 
             let input_data = FiservcommercehubRouterData {
                 connector: self.to_owned(),
-                router_data: req.clone(),
-            };
+                router_data: req.clone()
+};
             let request_body: FiservcommercehubAuthorizeRequest =
                 FiservcommercehubAuthorizeRequest::try_from(input_data)?;
             let request_body_str = serde_json::to_string(&request_body)

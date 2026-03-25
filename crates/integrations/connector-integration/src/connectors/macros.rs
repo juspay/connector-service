@@ -151,8 +151,9 @@ pub trait BridgeRequestResponse: Send + Sync {
             Error = error_stack::Report<ConnectorResponseError>,
         >,
     {
-        RouterDataType::<Self::ConnectorInputData>::try_from(response)
-            .change_context(ConnectorResponseError::response_handling_failed(status_code))
+        RouterDataType::<Self::ConnectorInputData>::try_from(response).change_context(
+            ConnectorResponseError::response_handling_failed(status_code),
+        )
     }
 }
 
@@ -191,8 +192,8 @@ macro_rules! expand_fn_get_request_body {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
                     connector: self.to_owned(),
-                    router_data: req.clone(),
-                };
+                    router_data: req.clone()
+};
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
                 Ok(Some(macro_types::RequestContent::FormData(form_data)))
@@ -218,8 +219,8 @@ macro_rules! expand_fn_get_request_body {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
                     connector: self.to_owned(),
-                    router_data: req.clone(),
-                };
+                    router_data: req.clone()
+};
                 let request = bridge.request_body(input_data)?;
                 let soap_xml = <$curl_req as GetSoapXml>::to_soap_xml(&request);
 
@@ -255,8 +256,8 @@ macro_rules! expand_fn_get_request_body {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [< $connector RouterData >] {
                     connector: self.to_owned(),
-                    router_data: req.clone(),
-                };
+                    router_data: req.clone()
+};
                 let request = bridge.request_body(input_data)?;
 
                 // Get dynamic content type based on runtime conditions
@@ -296,8 +297,8 @@ macro_rules! expand_fn_get_request_body {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [< $connector RouterData >] {
                     connector: self.to_owned(),
-                    router_data: req.clone(),
-                };
+                    router_data: req.clone()
+};
                 let request = bridge.request_body(input_data)?;
                 Ok(Some(macro_types::RequestContent::$content_type(Box::new(request))))
             }
@@ -973,8 +974,8 @@ macro_rules! expand_connector_input_data {
         paste::paste! {
             pub struct [<$connector RouterData>]<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
                 pub connector: $connector<$generics>,
-                pub router_data: RD,
-            }
+                pub router_data: RD
+}
             impl<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> FlowTypes for [<$connector RouterData>]<RD, $generics> { //here too
                 type Flow = RD::Flow;
                 type FlowCommonData = RD::FlowCommonData;
@@ -1187,45 +1188,49 @@ pub(crate) use expand_imports;
 macro_rules! create_amount_converter_wrapper {
     (connector_name: $connector_name:ident, amount_type: $amount_type:ty) => {
         paste::paste! {
-            #[derive(Default, Debug, Clone, Copy, PartialEq)]
-            pub struct [<$connector_name AmountConvertor>];
+                    #[derive(Default, Debug, Clone, Copy, PartialEq)]
+                    pub struct [<$connector_name AmountConvertor>];
 
-            impl [<$connector_name AmountConvertor>] {
-                pub fn convert(
-                    amount: common_utils::types::MinorUnit,
-                    currency: common_enums::Currency,
-                ) -> Result<
-                    common_utils::types::$amount_type,
-                    error_stack::Report<domain_types::errors::ConnectorRequestError>,
-                > {
-                    domain_types::utils::convert_amount(
-                        &common_utils::types::[<$amount_type ForConnector>],
-                        amount,
-                        currency,
-                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat {
-                        field_name: "amount",
-                        context: Default::default(),
-                    })
-                }
+                    impl [<$connector_name AmountConvertor>] {
+                        pub fn convert(
+                            amount: common_utils::types::MinorUnit,
+                            currency: common_enums::Currency,
+                        ) -> Result<
+                            common_utils::types::$amount_type,
+                            error_stack::Report<domain_types::errors::ConnectorRequestError>,
+                        > {
+                            domain_types::utils::convert_amount(
+                                &common_utils::types::[<$amount_type ForConnector>],
+                                amount,
+                                currency,
+                            ).change_context(domain_types::errors::ConnectorRequestError::InvalidDataFormat {
+                                field_name: "amount",
+                                context: Default::default()
+        })
+                        }
 
-                pub fn convert_back(
-                    amount: common_utils::types::$amount_type,
-                    currency: common_enums::Currency,
-                ) -> Result<
-                    common_utils::types::MinorUnit,
-                    error_stack::Report<domain_types::errors::ConnectorRequestError>,
-                > {
-                    domain_types::utils::convert_back_amount_to_minor_units(
-                        &common_utils::types::[<$amount_type ForConnector>],
-                        amount,
-                        currency,
-                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat {
-                        field_name: "amount",
-                        context: Default::default(),
-                    })
+                        /// Convert connector amount back to MinorUnit.
+                        ///
+                        /// Returns generic ParsingError - caller should change_context appropriately:
+                        /// ```
+                        /// // In response transformation:
+                        /// let amount = Convertor::convert_back(response.amount, currency)
+                        ///     .change_context(ConnectorResponseError::response_handling_failed(http_code))?;
+                        pub fn convert_back(
+                            amount: common_utils::types::$amount_type,
+                            currency: common_enums::Currency,
+                        ) -> Result<
+                            common_utils::types::MinorUnit,
+                            error_stack::Report<common_utils::errors::ParsingError>,
+                        > {
+                            domain_types::utils::convert_back_amount_to_minor_units(
+                                &common_utils::types::[<$amount_type ForConnector>],
+                                amount,
+                                currency,
+                            )
+                        }
+                    }
                 }
-            }
-        }
     };
 }
 pub(crate) use create_amount_converter_wrapper;

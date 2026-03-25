@@ -716,7 +716,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             use common_utils::ext_traits::ByteSliceExt;
             res.response
                 .parse_struct("PaymeErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    res.status_code,
+                ))?
         };
 
         with_error_response_body!(event_builder, response);

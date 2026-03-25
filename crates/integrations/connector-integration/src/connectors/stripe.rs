@@ -30,7 +30,7 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self, ConnectorRequestError, ConnectorResponseError},
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -340,8 +340,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = stripe::StripeAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = stripe::StripeAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![
             (
                 headers::AUTHORIZATION.to_string(),
@@ -359,10 +362,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        let response: stripe::ErrorResponse = res
-            .response
-            .parse_struct("ErrorResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+        let response: stripe::ErrorResponse =
+            res.response.parse_struct("ErrorResponse").change_context(
+                ConnectorResponseError::response_handling_failed(res.status_code),
+            )?;
 
         with_error_response_body!(event_builder, response);
 
@@ -755,8 +758,8 @@ macros::macro_connector_implementation!(
                     x,
                     "?expand[0]=latest_charge" //updated payment_id(if present) reside inside latest_charge field
                 )),
-                x => x.change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
-            }
+                x => x.change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+}
         }
     }
 );

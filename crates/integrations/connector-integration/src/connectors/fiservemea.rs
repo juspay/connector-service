@@ -125,8 +125,8 @@ macros::create_all_prerequisites!(
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(), // For GET requests
-                _ => return Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
-            };
+                _ => return Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+};
 
             // Generate HMAC signature
             let api_key_value = auth.api_key.clone().expose();
@@ -711,8 +711,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let _auth = fiservemea::FiservemeaAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let _auth = fiservemea::FiservemeaAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         // For fiservemea, auth headers are handled in get_headers method with HMAC
         // This method is kept for compatibility but returns empty vector
         Ok(vec![])
@@ -728,7 +731,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("FiservemeaErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    res.status_code,
+                ))?
         };
 
         with_error_response_body!(event_builder, response);

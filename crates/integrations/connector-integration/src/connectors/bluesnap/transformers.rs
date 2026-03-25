@@ -138,7 +138,9 @@ impl TryFrom<&ConnectorSpecificConfig> for BluesnapAuthType {
                 password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -234,7 +236,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // Convert card number to Secret<String>
                 let card_number = Secret::new(
                     serde_json::to_string(&card_data.card_number.clone().0)
-                        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                        .change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })?
                         .trim_matches('"')
                         .to_string(),
                 );
@@ -304,8 +308,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let payment_method_details = match wallet_data {
                     domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
                         let encoded_payment_token = Secret::new(
-                            serde_json::to_string(&apple_pay_data.payment_data)
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            serde_json::to_string(&apple_pay_data.payment_data).change_context(
+                                ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            )?,
                         );
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
@@ -320,7 +327,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
                         let encoded_payment_token = Secret::new(
                             serde_json::to_string(&google_pay_data.tokenization_data)
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                })?,
                         );
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
@@ -388,7 +397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "billing_address",
-                context: Default::default()
+                                context: Default::default()
                             })
                         })?;
 
@@ -458,7 +467,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let connector_transaction_id = match router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(ref id) => id.clone(),
-            _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
+            _ => {
+                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into())
+            }
         };
 
         let amount = super::BluesnapAmountConvertor::convert(

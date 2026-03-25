@@ -1,9 +1,6 @@
 use crate::{types::ResponseRouterData, utils::is_refund_failure};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, types::FloatMajorUnit};
-use domain_types::errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -12,6 +9,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
@@ -38,7 +36,9 @@ impl TryFrom<&ConnectorSpecificConfig> for Revolv3AuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -220,7 +220,7 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
                 .or(card.card_holder_name.clone())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_data.billing.address.first_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             credit_card: Revolv3CreditCardData {
                 payment_account_number: card.card_number.clone(),
@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Err(ConnectorRequestError::NotSupported {
                         message: "Cards No3DS".to_string(),
                         connector: "revolv3",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                 };
                 PaymentMethodSpecificRequest::set_credit_card_data(
@@ -317,7 +317,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
             currency: item.router_data.request.currency,
         };
 
@@ -335,7 +337,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .map(OrderProcessingChannelType::from);
 
-        if item.router_data.request.is_auto_capture()? {
+        if item.router_data.request.is_auto_capture() {
             let invoice = Revolv3InvoiceData {
                 merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
                 amount,
@@ -405,7 +407,7 @@ impl Revolv3SaleResponse {
     pub fn get_transaction_response(
         &self,
         status_code: u16,
-    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorResponseError>> {
         let status = AttemptStatus::from(&self.invoice_status);
         let response = if domain_types::utils::is_payment_failure(status) {
             Err(domain_types::router_data::ErrorResponse {
@@ -455,7 +457,7 @@ impl Revolv3AuthorizeResponse {
         &self,
         status_code: u16,
         is_setup_mandate: bool,
-    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorResponseError>> {
         let mandate_reference = self.payment_method.as_ref().and_then(|pm| {
             pm.payment_method_id.map(|connector_mandate_id| {
                 domain_types::connector_types::MandateReference {
@@ -549,8 +551,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Revolv3PaymentsResponse::Sale(ref sale_response) => {
                 sale_response.get_transaction_response(item.http_code)
             }
-        }
-        .into_response_err()?;
+        }?;
 
         Ok(Self {
             response: derived_response.response,
@@ -699,7 +700,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_refund_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
         })
     }
 }
@@ -874,7 +877,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount_to_capture,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                        context: Default::default(),
+                    })?,
                 currency: item.router_data.request.currency,
             },
             order_processing_channel: None,
@@ -890,10 +895,7 @@ impl<F> TryFrom<ResponseRouterData<Revolv3SaleResponse, Self>>
     type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(value: ResponseRouterData<Revolv3SaleResponse, Self>) -> Result<Self, Self::Error> {
-        let derived_response = value
-            .response
-            .get_transaction_response(value.http_code)
-            .into_response_err()?;
+        let derived_response = value.response.get_transaction_response(value.http_code)?;
         Ok(Self {
             response: derived_response.response,
             resource_common_data: PaymentFlowData {
@@ -944,7 +946,9 @@ where
                     .convert(minor_amount, currency)
             })
             .transpose()
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             payment_method_authorization_id,
@@ -1028,7 +1032,7 @@ impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
                 .or(card.card_holder_name.clone())
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method_data.billing.address.first_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             credit_card: Revolv3NtidCreditCardData {
                 payment_account_number: card.card_number.clone(),
@@ -1079,7 +1083,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Err(ConnectorRequestError::NotSupported {
                         message: "Cards No3DS".to_string(),
                         connector: "revolv3",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                 };
                 Revolv3PaymentMethodData::set_credit_card_data_for_ntid(
@@ -1101,11 +1105,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
             currency: item.router_data.request.currency,
         };
 
-        if item.router_data.request.is_auto_capture()? {
+        if item.router_data.request.is_auto_capture() {
             Ok(Self::RepeatSale(Revolv3RepeatSaleRequest {
                 payment_method,
                 network_processing,
@@ -1148,8 +1154,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Revolv3RepeatPaymentResponse::Sale(ref sale_response) => {
                 sale_response.get_transaction_response(item.http_code)
             }
-        }
-        .into_response_err()?;
+        }?;
 
         Ok(Self {
             response: derived_response.response,
@@ -1204,7 +1209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Err(ConnectorRequestError::NotSupported {
                         message: "Cards No3DS".to_string(),
                         connector: "revolv3",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                 };
                 let common_data = &item.router_data.resource_common_data;
@@ -1218,7 +1223,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .or(card_data.card_holder_name.clone())
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "payment_method_data.billing.address.first_name",
-                context: Default::default()
+                            context: Default::default(),
                         })?,
                     credit_card: Revolv3CreditCardData {
                         payment_account_number: card_data.card_number.clone(),
@@ -1281,8 +1286,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let derived_response = item
             .response
-            .get_transaction_response(item.http_code, true)
-            .into_response_err()?;
+            .get_transaction_response(item.http_code, true)?;
 
         Ok(Self {
             response: derived_response.response,
@@ -1319,14 +1323,14 @@ pub fn validate_psync(
         .ok_or_else(|| ConnectorRequestError::NotSupported {
             message: "PSync for authorization/void operations".to_string(),
             connector: "revolv3",
-                context: Default::default()
+            context: Default::default(),
         })?;
 
     let operation_metadata: Revolv3OperationMetadata = serde_json::from_value(metadata.clone())
         .map_err(|_| ConnectorRequestError::NotSupported {
             message: "Invalid connector metadata for PSync validation".to_string(),
             connector: "revolv3",
-                context: Default::default()
+            context: Default::default(),
         })?;
 
     match operation_metadata {

@@ -1013,7 +1013,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         } else {
             // If http_code != 204 || http_code != 4xx, we dont know any other response scenario yet.
             let response_value: serde_json::Value = serde_json::from_slice(&res.response)
-                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    res.status_code,
+                ))?;
             let response_string = response_value.to_string();
 
             event_builder.map(|i| {

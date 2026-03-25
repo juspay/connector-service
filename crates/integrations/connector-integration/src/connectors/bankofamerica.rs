@@ -533,8 +533,8 @@ macros::create_all_prerequisites!(
             return Err(
                 ConnectorRequestError::InvalidDataFormat {
                     field_name: "url",
-                    context: Default::default(),
-                }
+                    context: Default::default()
+}
                 .into(),
             );
         }
@@ -612,8 +612,8 @@ macros::create_all_prerequisites!(
         let BankOfAmericaAuthType {
             api_key,
             merchant_account,
-            api_secret,
-        } = auth;
+            api_secret
+} = auth;
         let is_post_method = matches!(http_method, Method::Post);
         let digest_str = if is_post_method { "digest " } else { "" };
         let headers = format!("host date (request-target) {digest_str}v-c-merchant-id");

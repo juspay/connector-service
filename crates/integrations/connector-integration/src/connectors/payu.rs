@@ -329,8 +329,8 @@ macros::macro_connector_implementation!(
                     connector_transaction_id: None,
                     network_error_message: None,
                     network_advice_code: None,
-                    network_decline_code: None,
-                })
+                    network_decline_code: None
+})
             } else {
                 // Generic error response
                 Ok(ErrorResponse {
@@ -342,8 +342,8 @@ macros::macro_connector_implementation!(
                     connector_transaction_id: None,
                     network_error_message: None,
                     network_advice_code: None,
-                    network_decline_code: None,
-                })
+                    network_decline_code: None
+})
             }
         }
     }
@@ -407,8 +407,8 @@ macros::macro_connector_implementation!(
                     connector_transaction_id: response.reference_id,
                     network_error_message: None,
                     network_advice_code: None,
-                    network_decline_code: None,
-                })
+                    network_decline_code: None
+})
             } else {
                 // This shouldn't happen as successful responses go through normal flow
                 // But fallback to generic error
@@ -421,8 +421,8 @@ macros::macro_connector_implementation!(
                     connector_transaction_id: None,
                     network_error_message: None,
                     network_advice_code: None,
-                    network_decline_code: None,
-                })
+                    network_decline_code: None
+})
             }
         }
     }

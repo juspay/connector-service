@@ -58,15 +58,21 @@ pub trait AccessTokenProvider {
 
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
-        self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+        self.get_access_token().change_context(
+            ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
-        self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+        self.get_access_token().change_context(
+            ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
@@ -339,8 +345,8 @@ macros::create_all_prerequisites!(
 
             match (parts.first(), parts.get(2)) {
                 (Some(first), Some(third)) => Ok(format!("{}..{}", first, third)),
-                _ => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }.into()),
-            }
+                _ => Err(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }.into())
+}
         }
 
         pub fn build_headers<F, FlowData, Req, Res>(
@@ -436,7 +442,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: truelayer::TruelayerErrorResponse = res
             .response
             .parse_struct("TruelayerErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -553,8 +561,8 @@ macros::macro_connector_implementation!(
                 connector_transaction_id: None,
                 network_advice_code: None,
                 network_decline_code: None,
-                network_error_message: None,
-            })
+                network_error_message: None
+})
         }
     }
 );
@@ -882,7 +890,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let tl_signature_header = req.request.webhook_headers.get("tl-signature").ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "tl-signature",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -892,18 +900,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .first()
             .ok_or(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(header_b64)
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let jws_header: truelayer::JwsHeaderWebhooks = serde_json::from_slice(&header_json)
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "tl-signature",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let jku = jws_header
@@ -956,7 +964,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+        .change_context(ConnectorResponseError::response_handling_failed(
+            res.status_code,
+        ))
     }
 
     fn get_error_response_v2(

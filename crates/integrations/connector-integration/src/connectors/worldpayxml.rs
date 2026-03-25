@@ -14,7 +14,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -711,7 +710,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::WorldpayxmlErrorResponse = res
             .response
             .parse_struct("WorldpayxmlErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         match response {
             responses::WorldpayxmlErrorResponse::Standard(error_response) => {

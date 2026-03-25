@@ -385,8 +385,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let payment_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
-            };
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into())
+};
             Ok(format!("{}/pa/payment_intents/{}/capture", &req.resource_common_data.connectors.airwallex.base_url, payment_id))
         }
     }
@@ -753,8 +753,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // Note: This method should not be used for OAuth-based connectors like Airwallex
         // Use build_payment_headers or build_refund_headers instead for OAuth flows
         // This method is only used for CreateAccessToken flow
-        let auth = airwallex::AirwallexAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = airwallex::AirwallexAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![
             (
                 "x-api-key".to_string(),
@@ -775,7 +778,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: airwallex::AirwallexErrorResponse = res
             .response
             .parse_struct("AirwallexErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

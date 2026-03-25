@@ -29,7 +29,6 @@ use domain_types::{
     router_request_types::SyncRequestType,
     router_response_types::Response,
     types::Connectors,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -55,7 +54,7 @@ use crate::{
     },
     with_error_response_body,
 };
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -294,8 +293,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = transformers::CheckoutAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = transformers::CheckoutAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("Bearer {}", auth.api_secret.peek()).into_masked(),
@@ -443,8 +445,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let suffix = match req.request.sync_type {
                 SyncRequestType::MultipleCaptureSync => "/actions",
-                SyncRequestType::SinglePaymentSync => "",
-            };
+                SyncRequestType::SinglePaymentSync => ""
+};
             Ok(format!(
                 "{}{}{}{}",
                 self.connector_base_url_payments(req),
@@ -484,8 +486,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
-            };
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into())
+};
             Ok(format!("{}payments/{}/captures", self.connector_base_url_payments(req), connector_tx_id))
         }
     }

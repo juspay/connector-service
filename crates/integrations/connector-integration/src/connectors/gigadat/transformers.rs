@@ -6,19 +6,17 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    connectors::gigadat::GigadatRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
+use crate::{connectors::gigadat::GigadatRouterData, types::ResponseRouterData};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -40,7 +38,7 @@ impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for GigadatConnectorM
                 serde_json::from_value::<Self>(data.expose()).change_context(
                     ConnectorRequestError::InvalidConnectorConfig {
                         config: "merchant_connector_account.metadata",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )
             })
@@ -76,7 +74,9 @@ impl TryFrom<&ConnectorSpecificConfig> for GigadatAuthType {
                 campaign_id: campaign_id.to_owned(),
                 site: site.clone(),
             }),
-            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
+            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })),
         }
     }
 }
@@ -249,23 +249,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = GigadatAuthType::try_from(&item.router_data.connector_config)?;
         let metadata = match auth.site {
             Some(site) => GigadatConnectorMetadataObject { site },
-            None => {
-                item.router_data
-                    .request
-                    .metadata
-                    .as_ref()
-                    .and_then(|m| m.peek().get("site"))
-                    .and_then(|v| v.as_str())
-                    .map(|site| GigadatConnectorMetadataObject {
-                        site: site.to_string(),
+            None => item
+                .router_data
+                .request
+                .metadata
+                .as_ref()
+                .and_then(|m| m.peek().get("site"))
+                .and_then(|v| v.as_str())
+                .map(|site| GigadatConnectorMetadataObject {
+                    site: site.to_string(),
+                })
+                .ok_or_else(|| {
+                    Report::from(ConnectorRequestError::InvalidConnectorConfig {
+                        config: "missing 'site' in connector config or metadata",
+                        context: Default::default(),
                     })
-                    .ok_or_else(|| {
-                        Report::from(ConnectorRequestError::InvalidConnectorConfig {
-                            config: "missing 'site' in connector config or metadata",
-                            context: Default::default(),
-                        })
-                    })?
-            }
+                })?,
         };
 
         // Validate payment method is Interac bank redirect
@@ -279,7 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_payment_billing()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 let billing_address =
@@ -288,13 +287,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .address
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "billing_address.address",
-                context: Default::default()
+                            context: Default::default(),
                         })?;
 
                 let name = billing_address.get_optional_full_name().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.first_name or billing_address.last_name",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
 
@@ -304,13 +303,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or(item.router_data.request.email.clone())
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.email or email",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 let mobile = billing.get_phone_with_country_code().map_err(|_| {
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "billing_address.phone",
-                context: Default::default()
+                        context: Default::default(),
                     }
                 })?;
 
@@ -322,14 +321,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .clone()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "customer_id",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 // Get browser IP
                 let browser_info = item.router_data.request.browser_info.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "browser_info",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
                 let user_ip = Secret::new(
@@ -337,7 +336,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ip_address
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "browser_info.ip_address",
-                context: Default::default()
+                            context: Default::default(),
                         })?
                         .to_string(),
                 );
@@ -356,7 +355,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                        context: Default::default(),
+                    })?;
 
                 Ok(Self {
                     user_id: customer_id,
@@ -453,13 +454,13 @@ impl TryFrom<ResponseRouterData<GigadatSyncResponse, Self>>
         // Build customer metadata if data is present
         let connector_metadata = response.data.as_ref().map(|data| {
             serde_json::json!({
-                "interac_customer_info": {
-                    "customer_name": data.name,
-                    "customer_email": data.email,
-                    "customer_phone_number": data.mobile,
-                    "customer_bank_name": response.interac_bank_name,
-                }
-            })
+                            "interac_customer_info": {
+                                "customer_name": data.name,
+                                "customer_email": data.email,
+                                "customer_phone_number": data.mobile,
+                                "customer_bank_name": response.interac_bank_name
+            }
+                        })
         });
 
         Ok(Self {
@@ -508,7 +509,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             amount,

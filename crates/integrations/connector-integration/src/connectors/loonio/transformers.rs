@@ -45,7 +45,9 @@ impl TryFrom<&ConnectorSpecificConfig> for LoonioAuthType {
                 merchant_token: merchant_token.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -148,7 +150,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_billing()
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing",
-                context: Default::default()
+                        context: Default::default(),
                     })
                     .attach_printable("Failed to get billing details")?;
 
@@ -207,7 +209,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                        context: Default::default(),
+                    })?;
                 Ok(Self {
                     currency_code: item.router_data.request.currency,
                     customer_profile,

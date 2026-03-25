@@ -272,8 +272,8 @@ macros::macro_connector_implementation!(
             // Build the request to get the checksum for X-VERIFY header
             let connector_router_data = PhonepeRouterData {
                 connector: self.clone(),
-                router_data: req,
-            };
+                router_data: req
+};
             let connector_req = PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
 
@@ -316,8 +316,8 @@ macros::macro_connector_implementation!(
                     browser_info.and_then(|bi| bi.user_agent.as_ref()).map(|user_agent| {
                         let version = match is_android {
                             true => phonepe::get_android_version_from_ua(user_agent),
-                            false => user_agent.clone(),
-                        };
+                            false => user_agent.clone()
+};
                         headers.push((headers::X_SOURCE_CHANNEL_VERSION.to_string(), version.into()));
                     });
 
@@ -328,8 +328,8 @@ macros::macro_connector_implementation!(
                                     match is_android {
                                         true => vpa_id.peek().to_string(),
                                         false => phonepe::map_ios_payment_source_to_target_app(Some(vpa_id.peek()))
-                                            .unwrap_or_else(|| vpa_id.peek().to_string()),
-                                    }
+                                            .unwrap_or_else(|| vpa_id.peek().to_string())
+}
                                 })
                             }
                             UpiData::UpiIntent(intent_data) => {
@@ -337,12 +337,12 @@ macros::macro_connector_implementation!(
                                     match is_android {
                                         true => app_name.clone(),
                                         false => phonepe::map_ios_payment_source_to_target_app(Some(app_name))
-                                            .unwrap_or_else(|| app_name.clone()),
-                                    }
+                                            .unwrap_or_else(|| app_name.clone())
+}
                                 })
                             }
-                            _ => None,
-                        };
+                            _ => None
+};
 
                         if let Some(app_id) = app_id_opt {
                             headers.push((headers::X_MERCHANT_APP_ID.to_string(), app_id.into()));
@@ -407,8 +407,8 @@ macros::macro_connector_implementation!(
             // Build the request to get the checksum for X-VERIFY header
             let connector_router_data = PhonepeRouterData {
                 connector: self.clone(),
-                router_data: req,
-            };
+                router_data: req
+};
             let connector_req = PhonepeSyncRequest::try_from(&connector_router_data)?;
 
             // Get merchant ID for X-MERCHANT-ID header
@@ -464,8 +464,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let _auth = phonepe::PhonepeAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let _auth = phonepe::PhonepeAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             "Content-Type".to_string(),
             "application/json".to_string().into(),

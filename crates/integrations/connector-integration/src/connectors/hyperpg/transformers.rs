@@ -44,7 +44,9 @@ impl TryFrom<&ConnectorSpecificConfig> for HyperpgAuthType {
                 merchant_id: merchant_id.to_owned(),
             }),
             _other => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -211,27 +213,29 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Wallet payment method is not supported".to_string(),
                     connector: "hyperpg",
-                context: Default::default()
+                    context: Default::default()
                 }));
             }
             PaymentMethodData::PayLater(_paylater) => {
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "PayLater payment method is not supported".to_string(),
                     connector: "hyperpg",
-                context: Default::default()
+                    context: Default::default()
                 }));
             }
             PaymentMethodData::Voucher(_voucher) => {
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Voucher payment method is not supported".to_string(),
                     connector: "hyperpg",
-                context: Default::default()
+                    context: Default::default()
                 }));
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                    "This payment method is not implemented".to_string(),
-                )));
+                return Err(error_stack::report!(
+                    ConnectorRequestError::not_implemented(
+                        "This payment method is not implemented".to_string(),
+                    )
+                ));
             }
         };
 
@@ -303,7 +307,9 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             unique_request_id: router_data.request.connector_transaction_id.clone(),
@@ -384,7 +390,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         let status = AttemptStatus::from(&response.status);
 
         let connector_metadata = serde_json::json!(HyperpgMeta {
-            order_id: Some(response.order_id.clone()),
+            order_id: Some(response.order_id.clone())
         });
 
         let redirection_data = response.payment.as_ref().and_then(|links| {

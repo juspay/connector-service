@@ -47,7 +47,9 @@ impl FiservcommercehubAuthType {
         let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
         let signature = crypto::HmacSha256
             .sign_message(self.api_secret.peek().as_bytes(), raw_signature.as_bytes())
-            .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(errors::ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         Ok(general_purpose::STANDARD.encode(signature))
     }
 
@@ -82,7 +84,9 @@ impl TryFrom<&ConnectorSpecificConfig> for FiservcommercehubAuthType {
                 terminal_id: terminal_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                errors::ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -255,7 +259,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .ok_or_else(|| {
                 error_stack::report!(errors::ConnectorRequestError::MissingRequiredField {
                     field_name: "key_id",
-                context: Default::default()
+                    context: Default::default()
                 })
             })?
             .to_string();
@@ -269,7 +273,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let public_key_der = general_purpose::STANDARD
             .decode(encoded_public_key)
-            .map_err(|_| error_stack::report!(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() }))
+            .map_err(|_| {
+                error_stack::report!(errors::ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default()
+                })
+            })
             .attach_printable("Failed to decode Base64 RSA public key")?;
 
         let auth_type = &router_data.connector_config;
@@ -284,7 +292,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map(|n| n.peek().clone())
                     .ok_or(errors::ConnectorRequestError::MissingRequiredField {
                         field_name: "card_holder_name",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
                 let expiration_month = card.card_exp_month.peek().to_string();
                 let expiration_year = card.card_exp_year.peek().to_string();
@@ -302,7 +310,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let encrypted_bytes =
                     RsaOaepSha256::encrypt(&public_key_der, plain_block.as_bytes())
-                        .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+                        .change_context(errors::ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })
                         .attach_printable("RSA OAEP-SHA256 encryption of card data failed")?;
 
                 let encryption_block =
@@ -543,7 +553,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+            .change_context(
+                errors::ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                },
+            )?;
         Ok(Self {
             merchant_details: FiservcommercehubPSyncMerchantDetails {
                 merchant_id: auth.merchant_id.clone(),

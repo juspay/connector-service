@@ -6,19 +6,18 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
-    utils, ConnectorRequestError,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::{
-    connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
+use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,7 +36,9 @@ impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuthType {
                 login: login.to_owned(),
                 tran_key: tran_key.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }),
         }
     }
 }
@@ -57,8 +58,11 @@ impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuth {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
 
         let nonce_bytes = utils::generate_random_bytes(16);
-        let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz().change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
         let nonce_b64 = base64::Engine::encode(
@@ -236,7 +240,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let action = PlacetopayNextAction::Void;
         Ok(Self {
             auth,
@@ -352,7 +358,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             auth,
@@ -400,7 +408,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         let action = PlacetopayNextAction::Checkout;
         Ok(Self {
             auth,
@@ -442,7 +452,9 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .request
                 .connector_transaction_id
                 .parse::<u64>()
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
             let action = PlacetopayNextAction::Reverse;
             let authorization = match item.router_data.request.connector_feature_data.clone() {
                 Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
@@ -458,7 +470,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Err(ConnectorRequestError::NotSupported {
                 message: "Partial Refund".to_string(),
                 connector: "placetopay",
-                context: Default::default()
+                context: Default::default(),
             }
             .into())
         }
@@ -554,7 +566,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             auth,
             internal_reference,

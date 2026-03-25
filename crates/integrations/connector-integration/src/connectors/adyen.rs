@@ -335,7 +335,9 @@ fn build_env_specific_endpoint(
         Ok(base_url.to_string())
     } else {
         let endpoint_prefix = match connector_config {
-            ConnectorSpecificConfig::Adyen { endpoint_prefix, .. } => endpoint_prefix.as_deref(),
+            ConnectorSpecificConfig::Adyen {
+                endpoint_prefix, ..
+            } => endpoint_prefix.as_deref(),
             _ => None,
         }
         .ok_or(ConnectorRequestError::InvalidConnectorConfig {
@@ -359,8 +361,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = adyen::AdyenAuthType::try_from(auth_type)
-            .map_err(|_| ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = adyen::AdyenAuthType::try_from(auth_type).map_err(|_| {
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+        })?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
@@ -375,10 +380,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        let response: adyen::AdyenErrorResponse = res
-            .response
-            .parse_struct("ErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+        let response: adyen::AdyenErrorResponse =
+            res.response.parse_struct("ErrorResponse").map_err(|_| {
+                ConnectorResponseError::response_deserialization_failed(res.status_code)
+            })?;
 
         with_error_response_body!(event_builder, response);
 
@@ -1090,7 +1095,7 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
 static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Adyen", 
     description: "Adyen is a Dutch payment company with the status of an acquiring bank that allows businesses to accept e-commerce, mobile, and point-of-sale payments. It is listed on the stock exchange Euronext Amsterdam.",
-    connector_type: types::PaymentConnectorCategory::PaymentGateway,
+    connector_type: types::PaymentConnectorCategory::PaymentGateway
 };
 
 static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
@@ -1136,7 +1141,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         }
         Err(ConnectorRequestError::MissingRequiredField {
             field_name: "encoded_data",
-                context: Default::default()
+            context: Default::default(),
         }
         .into())
     }

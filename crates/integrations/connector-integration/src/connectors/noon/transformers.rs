@@ -10,6 +10,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -17,15 +18,14 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+use crate::{types::ResponseRouterData, utils};
+
 use super::NoonRouterData;
-use crate::{types::ResponseRouterData, utils, ConnectorResponseError};
-use domain_types::errors::ResultResponseToRequestExt;
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
@@ -278,8 +278,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.minor_amount,
                 data.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let payment_data = match item.request.payment_method_data.clone() {
             PaymentMethodData::Card(req_card) => Ok(NoonPaymentData::Card(NoonCard {
@@ -314,7 +315,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     };
                     let payment_token = payment_token_data
                         .encode_to_string_of_json()
-                        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                        .change_context(ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })?;
 
                     Ok(NoonPaymentData::ApplePay(NoonApplePay {
                         payment_info: Secret::new(payment_token),
@@ -384,7 +387,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let category = Some(item.request.order_category.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "order_category",
-                context: Default::default()
+                context: Default::default(),
             },
         )?);
 
@@ -435,7 +438,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|m| NoonOrderNvp::new(m.peek())),
             ip_address,
         };
-        let payment_action = if item.request.is_auto_capture()? {
+        let payment_action = if item.request.is_auto_capture() {
             NoonPaymentActions::Sale
         } else {
             NoonPaymentActions::Authorize
@@ -465,8 +468,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
@@ -506,7 +510,10 @@ impl TryFrom<&ConnectorSpecificConfig> for NoonAuthType {
                 application_identifier: application_identifier.to_owned(),
                 business_identifier: business_identifier.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -705,13 +712,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_connector_transaction_id()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_transaction_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
         };
         let transaction = NoonActionTransaction {
-            amount: amount
-                .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-                .into_request_err()?,
+            amount: amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
             currency: item.request.currency,
             transaction_reference: None,
         };
@@ -817,9 +824,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             id: item.request.connector_transaction_id.clone(),
         };
         let transaction = NoonActionTransaction {
-            amount: refund_amount
-                .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-                .into_request_err()?,
+            amount: refund_amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
             currency: item.request.currency,
             transaction_reference: Some(item.request.refund_id.clone()),
         };
@@ -986,7 +993,9 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {
@@ -1142,7 +1151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     } else {
                         return Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "connector_mandate_id",
-                context: Default::default()
+                            context: Default::default(),
                         }
                         .into());
                     }
@@ -1150,7 +1159,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 _ => {
                     return Err(ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into());
                 }
@@ -1189,7 +1198,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             };
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
-                                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                })?;
 
                             Ok(NoonPaymentData::ApplePay(NoonApplePay {
                                 payment_info: Secret::new(payment_token),
@@ -1265,7 +1276,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .map(|s| s.to_string())
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "order_category in metadata",
-                context: Default::default()
+                            context: Default::default(),
                         })?,
                 ),
             ),
@@ -1325,15 +1336,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
-            amount: amount
-                .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-                .into_request_err()?,
+            amount: amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
             currency,
             channel,
             category,
@@ -1487,8 +1499,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         // For repeat payments, use the subscription payment method with the mandate ID
         let payment_data = match &router_data.request.mandate_reference {
@@ -1496,7 +1509,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let connector_mandate_id = mandate_ids.get_connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
                 NoonPaymentData::Subscription(NoonSubscription {
@@ -1562,7 +1575,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Determine payment action based on capture method
-        let payment_action = if router_data.request.is_auto_capture()? {
+        let payment_action = if router_data.request.is_auto_capture() {
             NoonPaymentActions::Sale
         } else {
             NoonPaymentActions::Authorize

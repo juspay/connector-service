@@ -172,29 +172,17 @@ impl ResponseTransformationErrorContext {
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ConnectorRequestError {
     #[error("Error while obtaining URL for the integration")]
-    FailedToObtainIntegrationUrl {
-        context: IntegrationErrorContext,
-    },
+    FailedToObtainIntegrationUrl { context: IntegrationErrorContext },
     #[error("Failed to encode connector request")]
-    RequestEncodingFailed {
-        context: IntegrationErrorContext,
-    },
+    RequestEncodingFailed { context: IntegrationErrorContext },
     #[error("Header map construction failed")]
-    HeaderMapConstructionFailed {
-        context: IntegrationErrorContext,
-    },
+    HeaderMapConstructionFailed { context: IntegrationErrorContext },
     #[error("Request body serialization failed")]
-    BodySerializationFailed {
-        context: IntegrationErrorContext,
-    },
+    BodySerializationFailed { context: IntegrationErrorContext },
     #[error("Url parsing failed")]
-    UrlParsingFailed {
-        context: IntegrationErrorContext,
-    },
+    UrlParsingFailed { context: IntegrationErrorContext },
     #[error("URL encoding of request payload failed")]
-    UrlEncodingFailed {
-        context: IntegrationErrorContext,
-    },
+    UrlEncodingFailed { context: IntegrationErrorContext },
     #[error("Missing required field: {field_name}")]
     MissingRequiredField {
         field_name: &'static str,
@@ -206,49 +194,37 @@ pub enum ConnectorRequestError {
         context: IntegrationErrorContext,
     },
     #[error("Failed to obtain authentication type")]
-    FailedToObtainAuthType {
-        context: IntegrationErrorContext,
-    },
+    FailedToObtainAuthType { context: IntegrationErrorContext },
     #[error("Invalid connector configuration: {config}")]
     InvalidConnectorConfig {
         config: &'static str,
         context: IntegrationErrorContext,
     },
     #[error("Connector metadata not found")]
-    NoConnectorMetaData {
-        context: IntegrationErrorContext,
-    },
+    NoConnectorMetaData { context: IntegrationErrorContext },
     #[error("Invalid data format: {field_name}")]
     InvalidDataFormat {
         field_name: &'static str,
         context: IntegrationErrorContext,
     },
     #[error("An invalid wallet was used")]
-    InvalidWallet {
-        context: IntegrationErrorContext,
-    },
+    InvalidWallet { context: IntegrationErrorContext },
     #[error("Failed to parse {wallet_name} wallet token")]
     InvalidWalletToken {
         wallet_name: String,
         context: IntegrationErrorContext,
     },
     #[error("Payment Method Type not found")]
-    MissingPaymentMethodType {
-        context: IntegrationErrorContext,
-    },
+    MissingPaymentMethodType { context: IntegrationErrorContext },
     #[error("Payment method data / type / experience mismatch")]
-    MismatchedPaymentData {
-        context: IntegrationErrorContext,
-    },
+    MismatchedPaymentData { context: IntegrationErrorContext },
     #[error("Field {fields} doesn't match with the ones used during mandate creation")]
     MandatePaymentDataMismatch {
         fields: String,
         context: IntegrationErrorContext,
     },
     #[error("Missing apple pay tokenization data")]
-    MissingApplePayTokenData {
-        context: IntegrationErrorContext,
-    },
+    MissingApplePayTokenData { context: IntegrationErrorContext },
     #[error("This feature is not implemented: {0}")]
     NotImplemented(String, IntegrationErrorContext),
     #[error("{message} is not supported by {connector}")]
@@ -264,9 +240,7 @@ pub enum ConnectorRequestError {
         context: IntegrationErrorContext,
     },
     #[error("Capture method not supported")]
-    CaptureMethodNotSupported {
-        context: IntegrationErrorContext,
-    },
+    CaptureMethodNotSupported { context: IntegrationErrorContext },
     #[error("The given currency is not configured with the given connector")]
     CurrencyNotSupported {
         message: String,
@@ -274,25 +248,15 @@ pub enum ConnectorRequestError {
         context: IntegrationErrorContext,
     },
     #[error("Failed to convert amount to required type")]
-    AmountConversionFailed {
-        context: IntegrationErrorContext,
-    },
+    AmountConversionFailed { context: IntegrationErrorContext },
     #[error("Missing connector transaction ID")]
-    MissingConnectorTransactionID {
-        context: IntegrationErrorContext,
-    },
+    MissingConnectorTransactionID { context: IntegrationErrorContext },
     #[error("Missing connector refund ID")]
-    MissingConnectorRefundID {
-        context: IntegrationErrorContext,
-    },
+    MissingConnectorRefundID { context: IntegrationErrorContext },
     #[error("Missing connector mandate ID")]
-    MissingConnectorMandateID {
-        context: IntegrationErrorContext,
-    },
+    MissingConnectorMandateID { context: IntegrationErrorContext },
     #[error("Missing connector mandate metadata")]
-    MissingConnectorMandateMetadata {
-        context: IntegrationErrorContext,
-    },
+    MissingConnectorMandateMetadata { context: IntegrationErrorContext },
     #[error("Missing connector related transaction ID: {id}")]
     MissingConnectorRelatedTransactionID {
         id: String,
@@ -307,9 +271,7 @@ pub enum ConnectorRequestError {
         context: IntegrationErrorContext,
     },
     #[error("Failed to verify request source (signature, webhook, etc.)")]
-    SourceVerificationFailed {
-        context: IntegrationErrorContext,
-    },
+    SourceVerificationFailed { context: IntegrationErrorContext },
     /// Config/auth/metadata validation failures (e.g. invalid config override, missing header).
     #[error("{message}")]
     ConfigurationError {
@@ -1531,72 +1493,6 @@ impl From<ApiErrorResponse> for crate::router_data::ErrorResponse {
             network_decline_code: None,
             network_error_message: None,
         }
-    }
-}
-
-impl From<ConnectorResponseError> for Report<ConnectorRequestError> {
-    fn from(err: ConnectorResponseError) -> Self {
-        report_response_as_request(error_stack::report!(err))
-    }
-}
-
-impl From<ConnectorRequestError> for Report<ConnectorResponseError> {
-    fn from(err: ConnectorRequestError) -> Self {
-        report_request_as_response(error_stack::report!(err))
-    }
-}
-
-/// Convert a response-phase report to request-phase (use when request context receives response errors).
-pub fn report_response_as_request(
-    report: Report<ConnectorResponseError>,
-) -> Report<ConnectorRequestError> {
-    let msg = format!("response error: {}", report.current_context());
-    report.change_context(ConnectorRequestError::not_implemented(msg))
-}
-
-/// Convert a request-phase report to response-phase (use when response context receives request errors).
-///
-/// Uses [`ConnectorResponseError::response_handling_failed_http_status_unknown`] because a
-/// [`Report<ConnectorRequestError>`] carries **no** connector HTTP status. When you have the
-/// connector HTTP status (e.g. from `router_response_types::Response::status_code` or the
-/// response-router `http_code` field), call [`report_request_as_response_with_http_status`].
-pub fn report_request_as_response(
-    report: Report<ConnectorRequestError>,
-) -> Report<ConnectorResponseError> {
-    report.change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-}
-
-/// Like [`report_request_as_response`], but attaches the connector HTTP status when known.
-pub fn report_request_as_response_with_http_status(
-    report: Report<ConnectorRequestError>,
-    http_status: u16,
-) -> Report<ConnectorResponseError> {
-    report.change_context(ConnectorResponseError::response_handling_failed(http_status))
-}
-
-/// Extension trait to convert `Result<T, Report<ConnectorRequestError>>` to `Result<T, Report<ConnectorResponseError>>`.
-pub trait ResultRequestToResponseExt<T> {
-    fn into_response_err(self) -> Result<T, Report<ConnectorResponseError>>;
-}
-impl<T, E> ResultRequestToResponseExt<T> for Result<T, E>
-where
-    E: Into<Report<ConnectorRequestError>>,
-{
-    fn into_response_err(self) -> Result<T, Report<ConnectorResponseError>> {
-        self.map_err(|e| report_request_as_response(e.into()))
-    }
-}
-
-/// Extension trait to convert `Result<T, Report<ConnectorResponseError>>` to `Result<T, Report<ConnectorRequestError>>`.
-pub trait ResultResponseToRequestExt<T> {
-    fn into_request_err(self) -> Result<T, Report<ConnectorRequestError>>;
-}
-impl<T, E> ResultResponseToRequestExt<T> for Result<T, E>
-where
-    E: Into<Report<ConnectorResponseError>>,
-{
-    fn into_request_err(self) -> Result<T, Report<ConnectorRequestError>> {
-        self.map_err(|e| report_response_as_request(e.into()))
     }
 }
 

@@ -26,7 +26,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -261,7 +260,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
         let timestamp = request.headers.get("bls-ipn-timestamp").ok_or(
-            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented(
+                "webhook source verification failed".to_string(),
+            ),
         )?;
 
         let body_str = String::from_utf8_lossy(&request.body);
@@ -515,8 +516,8 @@ macros::macro_connector_implementation!(
                 _ => {
                     // Cards and wallets use standard transactions endpoint
                     Ok(format!("{}/services/2/transactions", base_url))
-                },
-            }
+                }
+}
         }
     }
 );
@@ -546,8 +547,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into()),
-            };
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into())
+};
             Ok(format!("{}/services/2/transactions/{}", self.connector_base_url_payments(req), connector_tx_id))
         }
     }
@@ -874,8 +875,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = bluesnap::BluesnapAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = bluesnap::BluesnapAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.generate_basic_auth().into(),
@@ -890,7 +894,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: bluesnap::BluesnapErrorResponse = res
             .response
             .parse_struct("BluesnapErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

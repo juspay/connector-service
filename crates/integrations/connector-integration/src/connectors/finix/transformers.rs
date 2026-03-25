@@ -46,7 +46,9 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
                 merchant_identity_id: key1.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -70,7 +72,9 @@ impl TryFrom<&ConnectorSpecificConfig> for FinixAuthType {
                 merchant_identity_id: merchant_identity_id.clone(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -899,7 +903,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         match &token_data.payment_method_data {
@@ -912,7 +916,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card.card_exp_month.peek().parse::<i8>().map_err(|_| {
                         ConnectorRequestError::InvalidDataFormat {
                             field_name: "card_exp_month",
-                context: Default::default()
+                            context: Default::default(),
                         }
                     })?,
                 )),
@@ -920,7 +924,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card.card_exp_year.peek().parse::<i32>().map_err(|_| {
                         ConnectorRequestError::InvalidDataFormat {
                             field_name: "card_exp_year",
-                context: Default::default()
+                            context: Default::default(),
                         }
                     })?,
                 )),

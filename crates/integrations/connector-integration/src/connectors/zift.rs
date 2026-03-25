@@ -34,7 +34,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
     },
-    errors::{self, ResultResponseToRequestExt},
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -412,16 +411,16 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
             status_code: u16,
-        ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
+        ) -> CustomResult<bytes::Bytes, ConnectorResponseError> {
             let url_encoded_response: Value = serde_urlencoded::from_bytes(&bytes)
                     .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
                     .attach_printable("Failed to parse URL-encoded response from Zift")
-                    .into_request_err()?;
+                    ?;
 
             let json_bytes = serde_json::to_vec(&url_encoded_response)
                     .change_context(ConnectorResponseError::response_deserialization_failed(status_code))
                     .attach_printable("Failed to convert URL-encoded response to JSON")
-                    .into_request_err()?;
+                    ?;
 
                 Ok(bytes::Bytes::from(json_bytes))
         }
@@ -483,7 +482,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: ZiftErrorResponse = serde_urlencoded::from_bytes(&res.response)
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -573,7 +574,7 @@ impl ConnectorValidation for Zift<DefaultPCIHolder> {
             _ => Err(ConnectorRequestError::NotSupported {
                 message: " mandate payment".to_string(),
                 connector,
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         }

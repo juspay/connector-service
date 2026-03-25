@@ -13,7 +13,6 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId,
     },
-    errors::{self, ResultRequestToResponseExt},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -130,7 +129,9 @@ impl TryFrom<&ConnectorSpecificConfig> for StaxAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -269,7 +270,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let payment_method_id = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(_) | PaymentMethodData::BankDebit(_) => {
@@ -299,11 +302,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        let is_auto_capture = item
-            .router_data
-            .request
-            .is_auto_capture()
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let is_auto_capture = item.router_data.request.is_auto_capture();
 
         Ok(Self {
             total,
@@ -390,7 +389,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxPaymentResponse, 
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(response).into_response_err()?;
+        let status = get_payment_status(response, item.http_code)?;
 
         // Store capture_id in metadata when pre-auth is captured (following HS pattern)
         let connector_metadata = if response.transaction_type == StaxTransactionType::PreAuth
@@ -434,7 +433,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(response).into_response_err()?;
+        let status = get_payment_status(response, item.http_code)?;
 
         // Store capture_id in metadata when pre-auth is captured (following HS pattern)
         let connector_metadata = if response.transaction_type == StaxTransactionType::PreAuth
@@ -503,7 +502,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self { total })
     }
@@ -521,7 +522,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 
         // CRITICAL: Follow reviewer feedback - check transaction type and status
         // After capture, transaction type should be "charge" with pre_auth: false
-        let status = get_capture_status(response).into_response_err()?;
+        let status = get_capture_status(response, item.http_code)?;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -545,23 +546,26 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 
 fn get_payment_status(
     response: &StaxPaymentResponse,
-) -> Result<AttemptStatus, error_stack::Report<ConnectorRequestError>> {
-    let mut status = if !response.success {
-        AttemptStatus::Failure
-    } else {
-        match response.transaction_type {
-            StaxTransactionType::PreAuth => match response.is_captured {
-                0 => AttemptStatus::Authorized,
-                _ => AttemptStatus::Charged,
-            },
-            StaxTransactionType::Charge => AttemptStatus::Charged,
-            _ => {
-                return Err(errors::report_response_as_request(
-                    error_stack::Report::from(ConnectorResponseError::response_handling_failed_http_status_unknown()),
-                ))
+    http_status: u16,
+) -> Result<AttemptStatus, error_stack::Report<ConnectorResponseError>> {
+    let mut status =
+        if !response.success {
+            AttemptStatus::Failure
+        } else {
+            match response.transaction_type {
+                StaxTransactionType::PreAuth => match response.is_captured {
+                    0 => AttemptStatus::Authorized,
+                    _ => AttemptStatus::Charged,
+                },
+                StaxTransactionType::Charge => AttemptStatus::Charged,
+                _ => {
+                    return Err(error_stack::report!(
+                        ConnectorResponseError::response_handling_failed(http_status)
+                    )
+                    .attach_printable("Unsupported transaction type"))
+                }
             }
-        }
-    };
+        };
 
     if response.is_voided {
         status = AttemptStatus::Voided;
@@ -572,8 +576,9 @@ fn get_payment_status(
 
 fn get_capture_status(
     response: &StaxPaymentResponse,
-) -> Result<AttemptStatus, error_stack::Report<ConnectorRequestError>> {
-    get_payment_status(response)
+    http_status: u16,
+) -> Result<AttemptStatus, error_stack::Report<ConnectorResponseError>> {
+    get_payment_status(response, http_status)
 }
 
 // ===== REFUND REQUEST =====
@@ -607,7 +612,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self { total })
     }
@@ -633,16 +640,16 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+            .change_context(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         // MUST find and validate child transaction with type="refund"
         // Following HS pattern: filter by amount and find most recent by created_at
-        let refund_status =
-            get_refund_status(response, refund_amount, item.http_code).into_response_err()?;
+        let refund_status = get_refund_status(response, refund_amount, item.http_code)?;
 
         // Extract refund ID from the child transaction
-        let connector_refund_id =
-            extract_refund_id(response, refund_amount, item.http_code).into_response_err()?;
+        let connector_refund_id = extract_refund_id(response, refund_amount, item.http_code)?;
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -690,7 +697,7 @@ fn get_refund_status(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
     http_status: u16,
-) -> Result<RefundStatus, error_stack::Report<ConnectorRequestError>> {
+) -> Result<RefundStatus, error_stack::Report<ConnectorResponseError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
@@ -702,9 +709,10 @@ fn get_refund_status(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        errors::report_response_as_request(error_stack::Report::from(
-            ConnectorResponseError::response_handling_failed(http_status),
+        error_stack::report!(ConnectorResponseError::response_handling_failed(
+            http_status
         ))
+        .attach_printable("No refund child transaction found with matching amount")
     })?;
 
     // Find most recent refund by comparing created_at timestamps
@@ -729,7 +737,7 @@ fn extract_refund_id(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
     http_status: u16,
-) -> Result<String, error_stack::Report<ConnectorRequestError>> {
+) -> Result<String, error_stack::Report<ConnectorResponseError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
@@ -741,9 +749,10 @@ fn extract_refund_id(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        errors::report_response_as_request(error_stack::Report::from(
-            ConnectorResponseError::response_handling_failed(http_status),
+        error_stack::report!(ConnectorResponseError::response_handling_failed(
+            http_status
         ))
+        .attach_printable("No refund child transaction found with matching amount")
     })?;
 
     // Find most recent refund by comparing created_at timestamps
@@ -833,7 +842,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         if item.router_data.request.email.is_none() {
             Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
-                context: Default::default()
+                context: Default::default(),
             })?
         } else if item.router_data.request.name.is_none() {
             Err(ConnectorRequestError::MissingRequiredField {
@@ -955,7 +964,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         // Extract card data from payment_method_data
@@ -1038,8 +1047,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         let last = billing.get_optional_last_name();
                         match last {
                             Some(last) => Some(Secret::new(format!("{} {}", first.peek(), last.peek()))),
-                            None => Some(first),
-                        }
+                            None => Some(first)
+}
                     })
                     .or_else(|| bank_account_holder_name.clone())
                     .or_else(|| card_holder_name.clone())
@@ -1051,12 +1060,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // bank_name is already None if Unspecified was sent in gRPC request
                 let bank_type = bank_type.ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "bank_type",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
                 let bank_holder_type =
                     bank_holder_type.ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "bank_holder_type",
-                context: Default::default()
+                        context: Default::default(),
                     })?;
 
                 Ok(Self::Bank(StaxBankTokenizeData {

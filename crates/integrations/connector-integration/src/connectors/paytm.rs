@@ -113,8 +113,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Try to parse as callback error response format
@@ -143,8 +143,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: callback_response.body.txn_info.order_id,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Try to parse as original JSON error response format
@@ -165,8 +165,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: response.transaction_id,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Final fallback for non-JSON responses (HTML errors, etc.)
@@ -177,8 +177,8 @@ macros::create_all_prerequisites!(
                 500 => "Internal server error".to_string(),
                 404 => "Not found".to_string(),
                 400 => "Bad request".to_string(),
-                _ => format!("HTTP {} error", res.status_code),
-            };
+                _ => format!("HTTP {} error", res.status_code)
+};
 
             Ok(ErrorResponse {
                 code: res.status_code.to_string(),
@@ -192,8 +192,8 @@ macros::create_all_prerequisites!(
                 connector_transaction_id: None,
                 network_decline_code: None,
                 network_advice_code: None,
-                network_error_message: None,
-            })
+                network_error_message: None
+})
         }
     }
 );

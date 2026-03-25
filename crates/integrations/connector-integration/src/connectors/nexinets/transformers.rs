@@ -8,6 +8,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
@@ -15,16 +16,14 @@ use domain_types::{
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils, ConnectorRequestError,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{
-    connectors::nexinets::NexinetsRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
+use crate::{connectors::nexinets::NexinetsRouterData, types::ResponseRouterData};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 #[derive(Debug, Serialize)]
@@ -256,7 +255,9 @@ impl TryFrom<&ConnectorSpecificConfig> for NexinetsAuthType {
                     api_key: Secret::new(auth_header),
                 })
             }
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?,
         }
     }
 }
@@ -319,7 +320,7 @@ impl TryFrom<&enums::BankNames> for NexinetsBIC {
             _ => Err(ConnectorRequestError::FlowNotSupported {
                 flow: bank.to_string(),
                 connector: "Nexinets".to_string(),
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         }
@@ -372,15 +373,18 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     ) -> Result<Self, Self::Error> {
         let transaction = match item.response.transactions.first() {
             Some(order) => order,
-            _ => Err(ConnectorResponseError::response_handling_failed(item.http_code))?,
+            _ => Err(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?,
         };
         let nexinets_metadata = NexinetsPaymentsMetadata {
             transaction_id: Some(transaction.transaction_id.clone()),
             order_id: Some(item.response.order_id.clone()),
             psync_flow: item.response.transaction_type.clone(),
         };
-        let connector_metadata = serde_json::to_value(&nexinets_metadata)
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let connector_metadata = serde_json::to_value(&nexinets_metadata).change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         let redirection_data = item
             .response
@@ -392,7 +396,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             | NexinetsTransactionType::Capture => {
                 ResponseId::ConnectorTransactionId(transaction.transaction_id.clone())
             }
-            _ => Err(ConnectorResponseError::response_handling_failed(item.http_code))?,
+            _ => Err(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?,
         };
         let mandate_reference = item
             .response
@@ -479,12 +485,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
         let currency = item.router_data.request.currency.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "currency",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
         Ok(Self {
@@ -518,7 +524,9 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
             order_id: Some(item.response.order.order_id.clone()),
             psync_flow: item.response.transaction_type.clone(),
         })
-        .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        .change_context(ConnectorResponseError::response_handling_failed(
+            item.http_code,
+        ))?;
         let resource_id = match item.response.transaction_type.clone() {
             NexinetsTransactionType::Preauth
             | NexinetsTransactionType::Debit
@@ -855,7 +863,7 @@ pub fn get_order_id(
     let order_id = meta.order_id.clone().ok_or(
         ConnectorRequestError::MissingConnectorRelatedTransactionID {
             id: "order_id".to_string(),
-                context: Default::default()
+            context: Default::default(),
         },
     )?;
     Ok(order_id)
@@ -867,7 +875,7 @@ pub fn get_transaction_id(
     let transaction_id = meta.transaction_id.clone().ok_or(
         ConnectorRequestError::MissingConnectorRelatedTransactionID {
             id: "transaction_id".to_string(),
-                context: Default::default()
+            context: Default::default(),
         },
     )?;
     Ok(transaction_id)

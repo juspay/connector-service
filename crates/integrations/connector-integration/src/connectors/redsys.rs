@@ -31,7 +31,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -315,7 +314,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::RedsysErrorResponse = res
             .response
             .parse_struct("RedsysErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -479,7 +480,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         let router_data: RouterDataV2<
             PSync,
@@ -496,7 +499,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+        .change_context(ConnectorResponseError::response_handling_failed(
+            res.status_code,
+        ))?;
 
         Ok(router_data)
     }
@@ -658,7 +663,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         let router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> =
             <ResponseRouterData<
@@ -671,7 +678,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data: data.clone(),
                 http_code: res.status_code,
             })
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_handling_failed(
+                res.status_code,
+            ))?;
 
         Ok(router_data)
     }

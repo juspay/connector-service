@@ -44,7 +44,9 @@ impl TryFrom<&ConnectorSpecificConfig> for PaymeAuthType {
                 payme_client_key: payme_client_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -182,7 +184,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "reference_id (payme_sale_id from CreateOrder)",
-                context: Default::default()
+            context: Default::default(),
         })?
         .clone();
 
@@ -193,7 +195,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
             return Err(ConnectorRequestError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "payme",
-                context: Default::default()
+                context: Default::default(),
             }
             .into())
         }
@@ -207,7 +209,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
             .clone()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
     let buyer_name = router_data
@@ -216,7 +218,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "customer.name",
-                context: Default::default()
+            context: Default::default(),
         })?
         .clone();
 
@@ -425,10 +427,11 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract connector transaction ID (payme_sale_id)
-        let sale_payme_id = item
-            .request
-            .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+        let sale_payme_id = item.request.get_connector_transaction_id().change_context(
+            ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
@@ -557,7 +560,9 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
@@ -929,7 +934,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         Ok(Self {

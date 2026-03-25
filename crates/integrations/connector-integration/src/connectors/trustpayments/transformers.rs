@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use crate::{types::ResponseRouterData, ConnectorRequestError, ConnectorResponseError};
 use common_enums::{AttemptStatus, CaptureMethod, Currency};
 use common_utils::types::StringMinorUnit;
 use domain_types::{
@@ -10,12 +9,15 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+
+use crate::types::ResponseRouterData;
 
 // ===== CONSTANTS =====
 const TRUSTPAYMENTS_API_VERSION: &str = "1.00";
@@ -101,7 +103,9 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustpaymentsAuthType {
                 password: password.to_owned(),
                 site_reference: site_reference.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?,
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?,
         }
     }
 }
@@ -230,11 +234,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Serialize to get the string representation (needed due to generic type constraints)
-                let card_number_json = serde_json::to_value(&card_data.card_number.0)
-                    .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                let card_number_json =
+                    serde_json::to_value(&card_data.card_number.0).map_err(|_| {
+                        ConnectorRequestError::RequestEncodingFailed {
+                            context: Default::default(),
+                        }
+                    })?;
                 let card_number_string = card_number_json
                     .as_str()
-                    .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                    .ok_or(ConnectorRequestError::RequestEncodingFailed {
+                        context: Default::default(),
+                    })?
                     .to_string();
 
                 // Format expiry date as MM/YY (Trust Payments requires 2-digit year)
@@ -247,9 +257,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 })
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                    "Payment method not supported".to_string()
-                )))
+                return Err(error_stack::report!(
+                    ConnectorRequestError::not_implemented(
+                        "Payment method not supported".to_string()
+                    )
+                ))
             }
         };
 
@@ -270,7 +282,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         // Determine settlestatus based on capture method
         let settlestatus = match router_data.request.capture_method {
@@ -320,11 +334,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response = item
-            .response
-            .responses
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response = item.response.responses.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check for errors
         if response.errorcode != "0" {
@@ -461,10 +473,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction reference from connector_transaction_id
-        let transaction_reference = router_data
-            .request
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+        let transaction_reference =
+            router_data
+                .request
+                .get_connector_transaction_id()
+                .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?;
 
         let filter = TrustpaymentsFilter {
             sitereference: vec![TrustpaymentsFilterValue {
@@ -529,11 +544,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response_item = item
-            .response
-            .response
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response_item = item.response.response.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -562,7 +575,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -676,10 +691,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction reference from connector_transaction_id
-        let transaction_reference = router_data
-            .request
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+        let transaction_reference =
+            router_data
+                .request
+                .get_connector_transaction_id()
+                .map_err(|_| ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?;
 
         let filter = TrustpaymentsFilter {
             sitereference: vec![TrustpaymentsFilterValue {
@@ -728,11 +746,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response_item = item
-            .response
-            .response
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response_item = item.response.response.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -879,11 +895,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response_item = item
-            .response
-            .response
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response_item = item.response.response.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -1011,7 +1025,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data.request.minor_refund_amount,
                     router_data.request.currency,
                 )
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
             Some(amount)
         } else {
             // Full refund - no amount needed
@@ -1121,11 +1137,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response_item = item
-            .response
-            .response
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response_item = item.response.response.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -1150,7 +1164,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -1199,11 +1215,9 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRefundResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first response from the array
-        let response = item
-            .response
-            .responses
-            .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response = item.response.responses.first().ok_or(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Map refund status
         let refund_status = get_refund_status_from_settlestatus(

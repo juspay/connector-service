@@ -29,7 +29,6 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
-    errors::{self, ResultResponseToRequestExt},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -259,8 +258,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ))?;
 
         let (status, error, _payment_response_data) =
-            trustpay::handle_webhook_response(webhook_response.payment_information.clone(), 200)
-                .into_request_err()?;
+            trustpay::handle_webhook_response_incoming_webhook(
+                webhook_response.payment_information.clone(),
+                200,
+            )?;
 
         let (error_code, error_message, error_reason) =
             if status == common_enums::AttemptStatus::Failure {
@@ -312,7 +313,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ))?;
 
         let (error, refund_response_data) =
-            trustpay::handle_webhooks_refund_response(webhook_response.payment_information, 200)?;
+            trustpay::handle_webhooks_refund_response_incoming_webhook(
+                webhook_response.payment_information,
+                200,
+            )?;
 
         let (error_code, error_message) =
             if refund_response_data.refund_status == common_enums::RefundStatus::Failure {
@@ -367,7 +371,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             &FloatMajorUnitForConnector,
             payment_info.amount.amount,
             payment_info.amount.currency,
-        )?;
+        )
+        .change_context(ConnectorRequestError::AmountConversionFailed {
+            context: Default::default(),
+        })?;
         let amount = domain_types::utils::convert_amount(
             &StringMinorUnitForConnector,
             minor_units,
@@ -683,8 +690,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ("1112009" | "1122006" | "1132001" | "1132002" | "1132003" | "1132004" | "1132005" | "1132006" | "1132008" | "1132009" | "1132010" | "1132011" | "1132012" | "1132013" | "1133000" | "1133001" | "1133002" | "1133003" | "1133004", _) => ConnectorErrorType::BusinessError,
             ("1132014", _) => ConnectorErrorType::TechnicalError,
             ("1132007", _) => ConnectorErrorType::UnknownError,
-            _ => ConnectorErrorType::UnknownError,
-        }
+            _ => ConnectorErrorType::UnknownError
+}
     }
 }
 
@@ -822,8 +829,8 @@ macros::macro_connector_implementation!(
                 self.connector_base_url_payments(req),
                 "api/v1/instance",
                 transaction_id,
-            )),
-        }
+            ))
+}
         }
     }
 );
@@ -945,8 +952,8 @@ macros::macro_connector_implementation!(
                     "{}{}",
                     self.connector_base_url_payments(req),
                     "api/v1/purchase"
-                )),
-            }
+                ))
+}
         }
     }
 );
@@ -1000,8 +1007,8 @@ macros::macro_connector_implementation!(
                 req.request.connector_transaction_id,
                 "/Refund"
             )),
-            _ => Ok(format!("{}{}", self.connector_base_url_refunds(req), "api/v1/Refund")),
-        }
+            _ => Ok(format!("{}{}", self.connector_base_url_refunds(req), "api/v1/Refund"))
+}
         }
     }
 );
@@ -1043,8 +1050,8 @@ macros::macro_connector_implementation!(
                 self.connector_base_url_refunds(req),
                 "api/v1/instance",
                 id
-            )),
-        }
+            ))
+}
         }
     }
 );

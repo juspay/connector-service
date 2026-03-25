@@ -14,7 +14,6 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -429,8 +428,8 @@ macros::create_all_prerequisites!(
             let barclaycard::BarclaycardAuthType {
                 api_key,
                 merchant_account,
-                api_secret,
-            } = auth;
+                api_secret
+} = auth;
             let is_post_or_put_method = matches!(http_method, Method::Post | Method::Put);
             let digest_str = if is_post_or_put_method { "digest " } else { "" };
             let headers = format!("host date (request-target) {digest_str}{V_C_MERCHANT_ID}");
@@ -593,8 +592,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => Ok(id),
-                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
-            }?;
+                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+}?;
             Ok(format!(
                 "{}/pts/v2/payments/{}/captures",
                 self.connector_base_url_payments(req),
@@ -662,8 +661,8 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => Ok(id),
-                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }),
-            }?;
+                _ => Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+}?;
             Ok(format!(
                 "{}/tss/v2/transactions/{}",
                 self.connector_base_url_payments(req),
@@ -775,7 +774,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::BarclaycardErrorResponse = res
             .response
             .parse_struct("BarclaycardErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         match response {
             responses::BarclaycardErrorResponse::Standard(error_response) => {

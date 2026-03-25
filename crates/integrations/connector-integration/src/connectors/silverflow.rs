@@ -673,8 +673,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = silverflow::SilverflowAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = silverflow::SilverflowAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         // Create HTTP Basic authentication header
         // Format: "Basic " + base64(api_key:api_secret)
@@ -697,7 +700,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("SilverflowErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    res.status_code,
+                ))?
         };
 
         crate::with_error_response_body!(event_builder, response);

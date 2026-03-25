@@ -62,7 +62,9 @@ pub fn preprocess_xml_response_bytes(
             tracing::error!(error=?err, "Failed to parse XML to JSON structure");
 
             // Create a basic JSON structure with error information
-            return Err(ConnectorResponseError::response_deserialization_failed(http_status));
+            return Err(ConnectorResponseError::response_deserialization_failed(
+                http_status,
+            ));
         }
     };
 

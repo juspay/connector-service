@@ -385,8 +385,8 @@ macros::create_all_prerequisites!(
                 Method::Patch => format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n"),
                 Method::Delete => format!("(request-target): delete {resource}\n"),
                 Method::Get => format!("(request-target): get {resource}\n"),
-                _ => format!("(request-target): {http_method} {resource}\n"),
-            };
+                _ => format!("(request-target): {http_method} {resource}\n")
+};
 
             let signature_string = format!(
                 "host: {host}\ndate: {date}\n{request_target}v-c-merchant-id: {merchant_id}"

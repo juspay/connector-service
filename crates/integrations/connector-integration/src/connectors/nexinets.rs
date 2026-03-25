@@ -80,8 +80,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = nexinets::NexinetsAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = nexinets::NexinetsAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -101,7 +104,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: NexinetsErrorResponse = res
             .response
             .parse_struct("NexinetsErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -408,8 +413,8 @@ macros::macro_connector_implementation!(
             | transformers::NexinetsTransactionType::Capture => {
                 req.request.get_connector_transaction_id()?
             }
-            _ => nexinets::get_transaction_id(&meta)?,
-        };
+            _ => nexinets::get_transaction_id(&meta)?
+};
             Ok(format!(
                 "{}/orders/{order_id}/transactions/{transaction_id}",
                 self.connector_base_url_payments(req),

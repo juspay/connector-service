@@ -303,8 +303,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = helcim::HelcimAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = helcim::HelcimAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(vec![(
             headers::API_TOKEN.to_string(),
@@ -324,7 +327,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: helcim::HelcimErrorResponse = res
             .response
             .parse_struct("HelcimErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -374,7 +379,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            if req.request.is_auto_capture()? {
+            if req.request.is_auto_capture() {
                 return Ok(format!("{}v2/payment/purchase", self.connector_base_url_payments(req)));
             }
             Ok(format!("{}v2/payment/preauth", self.connector_base_url_payments(req)))

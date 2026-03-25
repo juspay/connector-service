@@ -16,6 +16,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         WebhookDetailsResponse,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -24,17 +25,13 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{self, ForeignTryFrom},
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-use crate::{
-    connectors::novalnet::NovalnetRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
-use domain_types::errors::ResultResponseToRequestExt;
+use crate::{connectors::novalnet::NovalnetRouterData, types::ResponseRouterData};
 
 /// Default locale
 const DEFAULT_LOCALE: &str = "en";
@@ -313,7 +310,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref req_card) => {
@@ -363,7 +362,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_encrypted_google_pay_token()
                                     .change_context(ConnectorRequestError::MissingRequiredField {
                                         field_name: "gpay wallet_token",
-                context: Default::default()
+                                        context: Default::default(),
                                     })?
                                     .clone(),
                             ),
@@ -484,11 +483,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             PaymentMethodData::BankDebit(ref bank_debit_data) => {
                 let payment_type = NovalNetPaymentTypes::try_from(
-                    &item
-                        .router_data
-                        .request
-                        .payment_method_type
-                        .ok_or(ConnectorRequestError::MissingPaymentMethodType { context: Default::default() })?,
+                    &item.router_data.request.payment_method_type.ok_or(
+                        ConnectorRequestError::MissingPaymentMethodType {
+                            context: Default::default(),
+                        },
+                    )?,
                 )?;
 
                 let transaction = match bank_debit_data {
@@ -605,7 +604,10 @@ impl TryFrom<&ConnectorSpecificConfig> for NovalnetAuthType {
                 payment_access_key: payment_access_key.to_owned(),
                 tariff_id: tariff_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -1178,14 +1180,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         let transaction = NovalnetTransaction {
             tid: item
                 .router_data
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                })?,
             capture,
             amount: Some(amount.to_owned()),
         };
@@ -1236,7 +1242,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         let transaction = NovalnetRefundTransaction {
             tid: item.router_data.request.connector_transaction_id.clone(),
@@ -1321,7 +1329,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .transaction
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))?;
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))?;
 
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
@@ -1390,17 +1400,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .encoded_data
                 .clone()
                 .get_required_value("encoded_data")
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
-            let novalnet_redirection_response =
-                serde_urlencoded::from_str::<NovalnetRedirectionResponse>(encoded_data.as_str())
-                    .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown())
-                    .into_request_err()?;
-            let tid = novalnet_redirection_response
-                .tid
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "tid",
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
                     context: Default::default(),
                 })?;
+            let novalnet_redirection_response =
+                serde_urlencoded::from_str::<NovalnetRedirectionResponse>(encoded_data.as_str())
+                    .change_context(ConnectorRequestError::InvalidDataFormat {
+                        field_name: "encoded_data",
+                        context: Default::default(),
+                    })?;
+            let tid = novalnet_redirection_response.tid.ok_or(
+                ConnectorRequestError::MissingRequiredField {
+                    field_name: "tid",
+                    context: Default::default(),
+                },
+            )?;
             NovalnetSyncTransaction { tid }
         } else {
             NovalnetSyncTransaction {
@@ -1408,7 +1422,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .router_data
                     .request
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default(),
+                    })?,
             }
         };
 
@@ -2057,7 +2073,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .get_encrypted_google_pay_token()
                                     .change_context(ConnectorRequestError::MissingRequiredField {
                                         field_name: "gpay wallet_token",
-                context: Default::default()
+                                        context: Default::default(),
                                     })?
                                     .clone(),
                             ),
@@ -2289,14 +2305,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         match item.router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(mandate_data) => {
                 let connector_mandate_id = mandate_data.get_connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
 

@@ -26,7 +26,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::ResultResponseToRequestExt,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -308,15 +307,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
         &self,
         _data: &RouterDataV2<F, FCD, Req, Res>,
         response_bytes: bytes::Bytes,
-        status_code: u16,
+        _status_code: u16,
     ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
         use error_stack::ResultExt;
 
-        let response_str = String::from_utf8(response_bytes.to_vec())
-            .change_context(ConnectorResponseError::response_deserialization_failed(
-                status_code,
-            ))
-            .into_request_err()?;
+        let response_str = String::from_utf8(response_bytes.to_vec()).change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         // Only remove namespace prefixes for easier deserialization
         // Keep the full structure including Envelope

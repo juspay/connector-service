@@ -13,7 +13,10 @@ use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{self, ApiError, ApplicationErrorResponse, ConnectorRequestError, ConnectorResponseError, ParsingError},
+    errors::{
+        self, ApiError, ApplicationErrorResponse, ConnectorRequestError, ConnectorResponseError,
+        ParsingError,
+    },
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
@@ -324,12 +327,8 @@ pub fn convert_back_amount_to_minor_units<T>(
     amount_convertor: &dyn AmountConvertor<Output = T>,
     amount: T,
     currency: common_enums::Currency,
-) -> core::result::Result<MinorUnit, error_stack::Report<errors::ConnectorRequestError>> {
-    amount_convertor
-        .convert_back(amount, currency)
-        .change_context(errors::ConnectorRequestError::AmountConversionFailed {
-            context: Default::default(),
-        })
+) -> core::result::Result<MinorUnit, error_stack::Report<common_utils::errors::ParsingError>> {
+    amount_convertor.convert_back(amount, currency)
 }
 
 #[derive(Debug, Copy, Clone, strum::Display, Eq, Hash, PartialEq)]

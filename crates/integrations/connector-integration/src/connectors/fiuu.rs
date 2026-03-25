@@ -341,8 +341,8 @@ macros::create_all_prerequisites!(
                 .as_deref()
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "secondary_base_url",
-                    context: Default::default(),
-                })?;
+                    context: Default::default()
+})?;
 
             Ok(base_url)
         }
@@ -359,8 +359,8 @@ macros::create_all_prerequisites!(
                 .as_deref()
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "secondary_base_url",
-                    context: Default::default(),
-                })?;
+                    context: Default::default()
+})?;
 
             Ok(base_url)
         }
@@ -394,7 +394,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: fiuu::FiuuErrorResponse = res
             .response
             .parse_struct("fiuu::FiuuErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -666,7 +668,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Some(headers) => {
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
-                    .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+                    .change_context(ConnectorResponseError::response_handling_failed(
+                        res.status_code,
+                    ))?;
                 let response: FiuuPaymentResponse = if content_header
                     .to_lowercase()
                     .replace(' ', "")
@@ -684,14 +688,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data: data.clone(),
                     http_code: res.status_code,
                 })
-                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    res.status_code,
+                ))
             }
             None => {
                 // We don't get headers for payment webhook response handling
                 let response: FiuuPaymentResponse = res
                     .response
                     .parse_struct("fiuu::FiuuPaymentResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        res.status_code,
+                    ))?;
                 with_response_body!(event_builder, response);
 
                 RouterDataV2::try_from(ResponseRouterData {
@@ -699,7 +707,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data: data.clone(),
                     http_code: res.status_code,
                 })
-                .change_context(ConnectorResponseError::response_handling_failed(res.status_code))
+                .change_context(ConnectorResponseError::response_handling_failed(
+                    res.status_code,
+                ))
             }
         }
     }

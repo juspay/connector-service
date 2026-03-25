@@ -8,7 +8,6 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    errors::ResultRequestToResponseExt,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
@@ -48,7 +47,9 @@ impl TryFrom<&ConnectorSpecificConfig> for PaysafeAuthType {
                 password: password.clone(),
                 account_id: account_id.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }),
         }
     }
 }
@@ -115,7 +116,7 @@ pub fn get_paysafe_payment_status(
 }
 
 impl TryFrom<PaysafePaymentHandleStatus> for enums::AttemptStatus {
-    type Error = ConnectorRequestError;
+    type Error = ConnectorResponseError;
     fn try_from(item: PaysafePaymentHandleStatus) -> Result<Self, Self::Error> {
         match item {
             PaysafePaymentHandleStatus::Completed => Ok(Self::Authorized),
@@ -206,7 +207,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .account_id
             .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                 config: "account_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let currency = router_data.request.currency;
@@ -255,12 +256,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
-                context: Default::default()
+                            context: Default::default(),
                         })?;
                     let account_type = bank_type.as_ref().map(PaysafeAchAccountType::from).ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "bank_type (ach.accountType)",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?;
                     let ach = PaysafeAch {
@@ -282,7 +283,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             "Only card and ACH payment methods are supported for PaymentMethodToken"
                                 .to_string(),
                         connector: "Paysafe",
-                context: Default::default()
+                        context: Default::default(),
                     }
                     .into())
                 }
@@ -303,7 +304,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -365,7 +366,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaysafePaymentMethodT
     fn try_from(
         item: ResponseRouterData<PaysafePaymentMethodTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = enums::AttemptStatus::try_from(item.response.status).into_response_err()?;
+        let status = enums::AttemptStatus::try_from(item.response.status)?;
 
         let mut router_data = item.router_data;
         router_data.resource_common_data.status = status;
@@ -414,7 +415,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .account_id
             .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                 config: "account_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let payment_handle_token: Secret<String> = router_data
@@ -439,7 +440,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_token",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let customer_ip = router_data
@@ -573,7 +574,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_connector_mandate_id()
                     .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     })?
                     .into();
                 (token, mandate_data)
@@ -582,7 +583,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_mandate_id",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into());
             }
@@ -592,10 +593,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_mandate_metadata()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "mandate_metadata",
-                context: Default::default()
+                context: Default::default(),
             })?
             .parse_value("PaysafeMandateMetadata")
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let customer_ip = router_data
             .request
@@ -702,8 +705,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 (status, Some(payment_response.id.clone()))
             }
             PaysafeSyncResponse::SinglePaymentHandle(payment_handle_response) => {
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status)
-                    .into_response_err()?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
                 (status, Some(payment_handle_response.id.clone()))
             }
             PaysafeSyncResponse::PaymentHandle(sync_response) => {
@@ -713,8 +715,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                             ConnectorResponseError::response_deserialization_failed(item.http_code),
                         )
                     })?;
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status)
-                    .into_response_err()?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
                 (status, Some(payment_handle_response.id.clone()))
             }
         };
@@ -824,7 +825,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
         Ok(Self {
             merchant_ref_num: item

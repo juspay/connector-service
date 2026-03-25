@@ -6,19 +6,18 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils, ConnectorRequestError,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    connectors::dlocal::DlocalRouterData, types::ResponseRouterData, ConnectorResponseError,
-};
+use crate::{connectors::dlocal::DlocalRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
 pub struct Payer {
@@ -225,7 +224,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default(),
+                    })?,
             ),
             amount,
             currency: item.router_data.request.currency.to_string(),
@@ -260,7 +261,10 @@ impl TryFrom<&ConnectorSpecificConfig> for DlocalAuthType {
                 secret: secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into())
         }
     }
 }

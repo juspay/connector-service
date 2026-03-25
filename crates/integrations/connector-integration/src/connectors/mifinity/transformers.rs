@@ -5,19 +5,20 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
+use crate::{types::ResponseRouterData, utils};
+
 use super::MifinityRouterData;
-use crate::{types::ResponseRouterData, utils, ConnectorResponseError};
 pub mod auth_headers {
     pub const API_VERSION: &str = "api-version";
 }
@@ -98,10 +99,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = MifinityAuthType::try_from(&item.router_data.connector_config)?;
         let metadata = MifinityConnectorMetadataObject {
-            brand_id: auth.brand_id.ok_or(ConnectorRequestError::InvalidConnectorConfig {
-                config: "brand_id",
-                context: Default::default(),
-            })?,
+            brand_id: auth
+                .brand_id
+                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "brand_id",
+                    context: Default::default(),
+                })?,
             destination_account_number: auth.destination_account_number.ok_or(
                 ConnectorRequestError::InvalidConnectorConfig {
                     config: "destination_account_number",
@@ -120,7 +123,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 item.router_data.request.minor_amount,
                                 item.router_data.request.currency,
                             )
-                            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                context: Default::default(),
+                            })?,
                         currency: item.router_data.request.currency,
                     };
                     let phone_details =
@@ -163,7 +168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let client_reference = item.router_data.request.customer_id.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "client_reference",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?;
                     let destination_account_number = metadata.destination_account_number;
@@ -273,7 +278,10 @@ impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
                 brand_id: brand_id.clone(),
                 destination_account_number: destination_account_number.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }

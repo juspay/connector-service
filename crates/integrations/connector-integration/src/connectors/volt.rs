@@ -51,15 +51,21 @@ pub trait AccessTokenProvider {
 
 impl AccessTokenProvider for PaymentFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
-        self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+        self.get_access_token().change_context(
+            ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
     fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
-        self.get_access_token()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })
+        self.get_access_token().change_context(
+            ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
@@ -341,7 +347,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -448,8 +456,8 @@ macros::macro_connector_implementation!(
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
-            network_error_message: None,
-        })
+            network_error_message: None
+})
     }
     }
 );

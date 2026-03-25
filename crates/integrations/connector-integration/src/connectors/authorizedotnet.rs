@@ -436,10 +436,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        let response: transformers::ResponseMessages = res
-            .response
-            .parse_struct("ResponseMessages")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+        let response: transformers::ResponseMessages =
+            res.response.parse_struct("ResponseMessages").map_err(|_| {
+                ConnectorResponseError::response_deserialization_failed(res.status_code)
+            })?;
 
         with_response_body!(event_builder, response);
 

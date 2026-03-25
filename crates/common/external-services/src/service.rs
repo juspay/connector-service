@@ -488,7 +488,9 @@ where
                             .body
                             .as_ref()
                             .ok_or(ConnectorFlowError::from(
-                                ConnectorRequestError::RequestEncodingFailed { context: Default::default() },
+                                ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
                             ))?
                             .get_inner_value()
                             .expose()
@@ -539,7 +541,9 @@ where
                         let injector_response = injector_core(injector_request)
                             .await
                             .change_context(ConnectorFlowError::from(
-                                ConnectorRequestError::RequestEncodingFailed { context: Default::default() },
+                                ConnectorRequestError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
                             ))?;
 
                         // Convert injector response to connector service Response format
@@ -634,8 +638,9 @@ where
                     event.add_service_name(event_params.service_name);
 
                     let result = handle_connector_response(
-                        response
-                            .change_context(ConnectorResponseError::response_handling_failed_http_status_unknown()),
+                        response.change_context(
+                            ConnectorResponseError::response_handling_failed_http_status_unknown(),
+                        ),
                         updated_router_data,
                         &connector,
                         Some(&mut event),

@@ -1,6 +1,4 @@
-use crate::{
-    connectors::revolut::RevolutRouterData, ConnectorRequestError, ConnectorResponseError,
-};
+use crate::connectors::revolut::RevolutRouterData;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund},
     connector_types::{
@@ -8,6 +6,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, WebhookDetailsResponse,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -465,7 +464,10 @@ impl TryFrom<&ConnectorSpecificConfig> for RevolutAuthType {
                 secret_api_key: secret_api_key.to_owned(),
                 signing_secret: signing_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }

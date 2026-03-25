@@ -67,8 +67,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = finix::FinixAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = finix::FinixAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         let encoded_auth = auth.generate_basic_auth();
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -597,8 +600,8 @@ macros::macro_connector_implementation!(
             let endpoint = match req.request.capture_method {
                 Some(common_enums::CaptureMethod::Automatic) |
                 Some(common_enums::CaptureMethod::SequentialAutomatic) => "transfers",
-                _ => "authorizations",
-            };
+                _ => "authorizations"
+};
             Ok(format!("{}/{}", self.connector_base_url_payments(req), endpoint))
         }
     }
@@ -632,8 +635,8 @@ macros::macro_connector_implementation!(
             let finix_id = transformers::FinixId::from(connector_transaction_id);
             let endpoint = match finix_id {
                 transformers::FinixId::Auth(_) => "authorizations",
-                transformers::FinixId::Transfer(_) => "transfers",
-            };
+                transformers::FinixId::Transfer(_) => "transfers"
+};
             Ok(format!("{}/{}/{}", self.connector_base_url_payments(req), endpoint, finix_id))
         }
     }

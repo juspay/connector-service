@@ -404,7 +404,10 @@ impl TryFrom<&ConnectorSpecificConfig> for VoltAuthType {
                 client_id: client_id.to_owned(),
                 client_secret: client_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }

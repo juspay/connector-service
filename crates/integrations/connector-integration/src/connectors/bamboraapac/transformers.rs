@@ -6,16 +6,16 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::ResponseRouterData, ConnectorResponseError};
+use crate::types::ResponseRouterData;
 
 // ============================================================================
 // XML SERIALIZATION STRUCTURES (for quick-xml)
@@ -138,7 +138,9 @@ impl TryFrom<&ConnectorSpecificConfig> for BamboraapacAuthType {
                 password: password.clone(),
                 account_number: account_number.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }),
         }
     }
 }
@@ -479,7 +481,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method.card.card_holder_name",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
             username: auth.username,
@@ -513,10 +515,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .replace("&gt;", ">");
 
         // Parse the inner Response XML
-        let response: PaymentResponse = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response: PaymentResponse = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Map Bambora response code to standard status
         // 0 = Approved, 1 = Not Approved
@@ -608,7 +609,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
                 return Err(error_stack::report!(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id",
-                context: Default::default()
+                        context: Default::default()
                     }
                 ))
             }
@@ -646,10 +647,9 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
             .replace("&gt;", ">");
 
         // Parse the inner Response XML
-        let response: CaptureResponse = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response: CaptureResponse = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Map Bambora response code to standard status (0 = Approved)
         let status = if response.response_code == 0 {
@@ -730,7 +730,9 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             .connector_transaction_id
             .clone()
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             account_number: auth.account_number,
@@ -764,10 +766,9 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             .replace("&gt;", ">");
 
         // Parse the inner QueryResponse XML
-        let query_response: QueryResponse = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let query_response: QueryResponse = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check if response element exists
         let response = match &query_response.response {
@@ -928,10 +929,9 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
             .replace("&gt;", ">");
 
         // Parse the inner RefundResponse XML
-        let response: RefundResponseInner = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response: RefundResponseInner = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Map Bambora response code to standard refund status (0 = Approved)
         let refund_status = if response.response_code == 0 {
@@ -1036,10 +1036,9 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             .replace("&gt;", ">");
 
         // Parse the inner QueryResponse XML
-        let query_response: QueryResponse = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let query_response: QueryResponse = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Check if response element exists
         let response = match &query_response.response {
@@ -1230,7 +1229,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "payment_method.card.card_holder_name",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
             username: auth.username,
@@ -1268,10 +1267,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .replace("&gt;", ">");
 
         // Parse the inner RegisterSingleCustomerResponse XML
-        let response: RegisterSingleCustomerResponseInner = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response: RegisterSingleCustomerResponseInner =
+            inner_xml.as_str().parse_xml().change_context(
+                ConnectorResponseError::response_handling_failed(item.http_code),
+            )?;
 
         // Map Bambora return_value to status
         // 0 = Successful, 1 = Invalid username/password, 2 = User does not belong to API User Group, etc.
@@ -1397,14 +1396,16 @@ impl<
                 mandate_ref.get_connector_mandate_id().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                    "Only ConnectorMandateId is supported for RepeatPayment".to_string()
-                )))
+                return Err(error_stack::report!(
+                    ConnectorRequestError::not_implemented(
+                        "Only ConnectorMandateId is supported for RepeatPayment".to_string()
+                    )
+                ))
             }
         };
 
@@ -1454,10 +1455,9 @@ impl<
             .replace("&gt;", ">");
 
         // Parse the inner Response XML
-        let response: PaymentResponse = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(ConnectorResponseError::response_handling_failed(item.http_code))?;
+        let response: PaymentResponse = inner_xml.as_str().parse_xml().change_context(
+            ConnectorResponseError::response_handling_failed(item.http_code),
+        )?;
 
         // Map Bambora response code to standard status
         // 0 = Approved, 1 = Not Approved

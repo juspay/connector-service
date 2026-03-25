@@ -69,7 +69,10 @@ impl TryFrom<&ConnectorSpecificConfig> for RazorpayV2AuthType {
                     api_secret: secret.to_owned(),
                 }),
             },
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -324,7 +327,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .as_ref()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_request_reference_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?
                 .clone(),
             payment_capture: Some(true),
@@ -367,7 +370,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .as_ref()
                         .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
-                context: Default::default()
+                            context: Default::default(),
                         })?
                         .peek()
                         .to_string();
@@ -399,7 +402,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .as_ref()
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "order_id",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         Ok(Self {
@@ -414,7 +417,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Email::from_str("customer@example.com").map_err(|_| {
                         error_stack::Report::new(ConnectorRequestError::InvalidDataFormat {
                             field_name: "billing.email",
-                context: Default::default()
+                            context: Default::default(),
                         })
                     })
                 })?,
@@ -434,7 +437,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_router_return_url()
                 .map_err(|_| ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             upi: upi_details,
             customer_id: None,
@@ -589,11 +592,9 @@ impl
             RazorpayV2SyncResponse::PaymentResponse(payment) => *payment,
             RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
                 // Get the first (and typically only) payment from the collection
-                collection
-                    .items
-                    .into_iter()
-                    .next()
-                    .ok_or(ConnectorResponseError::response_handling_failed(_status_code))?
+                collection.items.into_iter().next().ok_or(
+                    ConnectorResponseError::response_handling_failed(_status_code),
+                )?
             }
         };
 
@@ -683,7 +684,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(ConnectorResponseError::response_handling_failed(_status_code));
+                return Err(ConnectorResponseError::response_handling_failed(
+                    _status_code,
+                ));
             }
         };
 

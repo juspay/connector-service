@@ -5,19 +5,18 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthoriseIntegrityObject,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorResponseError;
 
 pub mod constants {
     // Payu API versions
@@ -89,7 +88,10 @@ impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -298,7 +300,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         // Extract authentication
         let auth = PayuAuthType::try_from(&router_data.connector_config)?;
@@ -333,7 +337,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_billing_first_name()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.first_name",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             lastname: router_data
                 .resource_common_data
@@ -343,27 +347,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_billing_email()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.email",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             phone: router_data
                 .resource_common_data
                 .get_billing_phone_number()
                 .change_context(ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.phone_number",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
 
             // URLs - use router return URL if available
             surl: router_data.request.get_router_return_url().map_err(|_| {
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
-                context: Default::default()
+                    context: Default::default(),
                 }
             })?,
             furl: router_data.request.get_router_return_url().map_err(|_| {
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
-                context: Default::default()
+                    context: Default::default(),
                 }
             })?,
 
@@ -380,7 +384,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .ok_or_else(|| {
                     report!(ConnectorRequestError::MissingRequiredField {
                         field_name: "IP address",
-                context: Default::default()
+                        context: Default::default()
                     })
                 })?,
             s2s_device_info: constants::DEVICE_INFO.to_string(),
@@ -501,7 +505,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_connector_transaction_id()
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_transaction_id",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let command = constants::COMMAND;
@@ -676,7 +680,7 @@ fn determine_upi_flow<
                         // Missing VPA for UPI Collect - this should be an error
                         Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id",
-                context: Default::default()
+                            context: Default::default(),
                         })
                     }
                 }
@@ -696,7 +700,7 @@ fn determine_upi_flow<
             message: "Payment method not supported by PayU. Only UPI payments are supported"
                 .to_string(),
             connector: "PayU",
-                context: Default::default()
+            context: Default::default(),
         }),
     }
 }

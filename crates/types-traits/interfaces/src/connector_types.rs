@@ -396,10 +396,12 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorRequestError>> {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "get_event_type".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "get_event_type".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
 
     fn process_payment_webhook(
@@ -411,10 +413,12 @@ pub trait IncomingWebhook {
         WebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorRequestError>,
     > {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "process_payment_webhook".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "process_payment_webhook".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
 
     fn process_refund_webhook(
@@ -426,10 +430,12 @@ pub trait IncomingWebhook {
         RefundWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorRequestError>,
     > {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "process_refund_webhook".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "process_refund_webhook".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
     fn process_dispute_webhook(
         &self,
@@ -440,10 +446,12 @@ pub trait IncomingWebhook {
         DisputeWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorRequestError>,
     > {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "process_dispute_webhook".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "process_dispute_webhook".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
 
     /// fn get_webhook_resource_object
@@ -454,10 +462,12 @@ pub trait IncomingWebhook {
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<domain_types::errors::ConnectorRequestError>,
     > {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "get_webhook_resource_object".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "get_webhook_resource_object".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
 }
 
@@ -479,7 +489,7 @@ pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
         let connector_source_verifacation_secrets = secrets.ok_or(
             domain_types::errors::ConnectorRequestError::MissingRequiredField {
                 field_name: "redirect response secrets",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -490,10 +500,12 @@ pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
         &self,
         _request: &RequestDetails,
     ) -> CustomResult<RedirectDetailsResponse, domain_types::errors::ConnectorRequestError> {
-        Err(domain_types::errors::ConnectorRequestError::not_implemented(
-            "process_redirect_response".to_string(),
+        Err(
+            domain_types::errors::ConnectorRequestError::not_implemented(
+                "process_redirect_response".to_string(),
+            )
+            .into(),
         )
-        .into())
     }
 }
 
@@ -534,7 +546,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
             Err(domain_types::errors::ConnectorRequestError::NotSupported {
                 message: capture_method.to_string(),
                 connector: self.id(),
-                context: Default::default()
+                context: Default::default(),
             }
             .into())
         }
@@ -551,13 +563,13 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
             Some(pm_type) => Err(domain_types::errors::ConnectorRequestError::NotSupported {
                 message: format!("{pm_type} mandate payment"),
                 connector,
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
             None => Err(domain_types::errors::ConnectorRequestError::NotSupported {
                 message: " mandate payment".to_string(),
                 connector,
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         }
@@ -574,7 +586,9 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         data.connector_transaction_id
             .get_connector_transaction_id()
             .change_context(
-                domain_types::errors::ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() },
+                domain_types::errors::ConnectorRequestError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                },
             )
             .map(|_| ())
     }
@@ -598,7 +612,7 @@ fn get_connector_payment_method_type_info(
                 || domain_types::errors::ConnectorRequestError::NotSupported {
                     message: payment_method.to_string(),
                     connector,
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?;
 
@@ -608,7 +622,7 @@ fn get_connector_payment_method_type_info(
                 domain_types::errors::ConnectorRequestError::NotSupported {
                     message: format!("{payment_method} {pmt}"),
                     connector,
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into()
             })
@@ -629,13 +643,13 @@ pub fn is_mandate_supported<T: PaymentMethodDataTypes>(
             Some(pm_type) => Err(domain_types::errors::ConnectorRequestError::NotSupported {
                 message: format!("{pm_type} mandate payment"),
                 connector,
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
             None => Err(domain_types::errors::ConnectorRequestError::NotSupported {
                 message: "mandate payment".to_string(),
                 connector,
-                context: Default::default()
+                context: Default::default(),
             }
             .into()),
         }

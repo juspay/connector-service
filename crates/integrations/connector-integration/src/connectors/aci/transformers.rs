@@ -6,6 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -13,7 +14,6 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    ConnectorRequestError,
 };
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -22,10 +22,10 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use url::Url;
 
+use crate::{types::ResponseRouterData, utils};
+
 use super::aci_result_codes::{FAILURE_CODES, PENDING_CODES, SUCCESSFUL_CODES};
 use super::AciRouterData;
-use crate::{types::ResponseRouterData, utils, ConnectorResponseError};
-use domain_types::errors::ResultRequestToResponseExt;
 
 type Error = error_stack::Report<ConnectorRequestError>;
 
@@ -77,7 +77,9 @@ impl TryFrom<&ConnectorSpecificConfig> for AciAuthType {
                 entity_id: entity_id.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?
         }
     }
 }
@@ -314,7 +316,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     bank_account_bank_name: Some(bank_name.ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "ideal.bank_name",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?),
                     bank_account_bic: None,
@@ -435,7 +437,7 @@ fn get_aci_payment_brand(
         Some(unsupported_network) => Err(ConnectorRequestError::NotSupported {
             message: format!("Card network {unsupported_network} is not supported by ACI"),
             connector: "ACI",
-                context: Default::default()
+            context: Default::default(),
         })?,
         None => {
             if is_network_token_flow {
@@ -443,7 +445,7 @@ fn get_aci_payment_brand(
             } else {
                 Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "card.card_network",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -466,7 +468,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             card_number: card_data.card_number,
             card_holder: card_holder_name.ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing_address.first_name",
-                context: Default::default()
+                context: Default::default(),
             })?,
             card_expiry_month: card_data.card_exp_month.clone(),
             card_expiry_year,
@@ -728,7 +730,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let mandate_id = item.router_data.request.mandate_id.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "mandate_id",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?;
                 Self::try_from((&item, mandate_id))
@@ -1048,8 +1050,10 @@ fn get_transaction_details<
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         )
-        .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
-    let payment_type = if item.router_data.request.is_auto_capture()? {
+        .change_context(ConnectorRequestError::AmountConversionFailed {
+            context: Default::default(),
+        })?;
+    let payment_type = if item.router_data.request.is_auto_capture() {
         AciPaymentType::Debit
     } else {
         AciPaymentType::Preauthorization
@@ -1169,7 +1173,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         return Err(ConnectorRequestError::NotSupported {
                             message: "Payment method not supported for mandate setup".to_string(),
                             connector: "ACI",
-                context: Default::default()
+                            context: Default::default(),
                         }
                         .into());
                     }
@@ -1184,7 +1188,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     card_holder: card_data.card_holder_name.clone().ok_or(
                         ConnectorRequestError::MissingRequiredField {
                             field_name: "payment_method.card.card_holder_name",
-                context: Default::default()
+                            context: Default::default(),
                         },
                     )?,
                     payment_brand: brand.clone(),
@@ -1196,7 +1200,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported for mandate setup".to_string(),
                     connector: "ACI",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into());
             }
@@ -1239,7 +1243,7 @@ fn map_aci_attempt_status(
 }
 
 impl FromStr for AciPaymentStatus {
-    type Err = error_stack::Report<ConnectorRequestError>;
+    type Err = error_stack::Report<ConnectorResponseError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1248,10 +1252,10 @@ impl FromStr for AciPaymentStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error_http_status_unknown())
-                    .attach_printable(s.to_owned()),
+            Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error_http_status_unknown(),
             )
+            .attach_printable(s.to_owned()))
         }
     }
 }
@@ -1367,7 +1371,7 @@ where
             map_aci_attempt_status(AciPaymentStatus::RedirectShopper, auto_capture)
         } else {
             map_aci_attempt_status(
-                AciPaymentStatus::from_str(&item.response.result.code).into_response_err()?,
+                AciPaymentStatus::from_str(&item.response.result.code)?,
                 auto_capture,
             )
         };
@@ -1438,7 +1442,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         Ok(Self {
             txn_details: TransactionDetails {
                 entity_id: auth.entity_id,
@@ -1497,7 +1503,7 @@ pub enum AciStatus {
 }
 
 impl FromStr for AciStatus {
-    type Err = error_stack::Report<ConnectorRequestError>;
+    type Err = error_stack::Report<ConnectorResponseError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1506,10 +1512,10 @@ impl FromStr for AciStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error_http_status_unknown())
-                    .attach_printable(s.to_owned()),
+            Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error_http_status_unknown(),
             )
+            .attach_printable(s.to_owned()))
         }
     }
 }
@@ -1527,9 +1533,7 @@ impl<F, T> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<AciCaptureResponse, Self>) -> Result<Self, Self::Error> {
-        let status = map_aci_capture_status(
-            AciStatus::from_str(&item.response.result.code).into_response_err()?,
-        );
+        let status = map_aci_capture_status(AciStatus::from_str(&item.response.result.code)?);
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),
@@ -1594,9 +1598,7 @@ impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<AciVoidResponse, Self>) -> Result<Self, Self::Error> {
-        let status = map_aci_void_status(
-            AciStatus::from_str(&item.response.result.code).into_response_err()?,
-        );
+        let status = map_aci_void_status(AciStatus::from_str(&item.response.result.code)?);
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),
@@ -1658,7 +1660,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         let currency = item.router_data.request.currency;
         let payment_type = AciPaymentType::Refund;
         let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
@@ -1681,7 +1685,7 @@ pub enum AciRefundStatus {
 }
 
 impl FromStr for AciRefundStatus {
-    type Err = error_stack::Report<ConnectorRequestError>;
+    type Err = error_stack::Report<ConnectorResponseError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1690,10 +1694,10 @@ impl FromStr for AciRefundStatus {
         } else if SUCCESSFUL_CODES.contains(&s) {
             Ok(Self::Succeeded)
         } else {
-            Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error_http_status_unknown())
-                    .attach_printable(s.to_owned()),
+            Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error_http_status_unknown(),
             )
+            .attach_printable(s.to_owned()))
         }
     }
 }
@@ -1725,9 +1729,9 @@ impl<F> TryFrom<ResponseRouterData<AciRefundResponse, Self>>
     type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<AciRefundResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(
-            AciRefundStatus::from_str(&item.response.result.code).into_response_err()?,
-        );
+        let refund_status = common_enums::RefundStatus::from(AciRefundStatus::from_str(
+            &item.response.result.code,
+        )?);
         let response = if refund_status == common_enums::RefundStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),
@@ -1946,8 +1950,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
-        let payment_type = if item.router_data.request.is_auto_capture()? {
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
+        let payment_type = if item.router_data.request.is_auto_capture() {
             AciPaymentType::Debit
         } else {
             AciPaymentType::Preauthorization

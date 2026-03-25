@@ -531,9 +531,11 @@ pub fn handle_event_transformer(
         Some(connector_config),
         source_verified,
     )
-    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
-        let app_error: domain_types::errors::ApplicationErrorResponse =
-            ucs_env::error::ErrorSwitch::switch(e.current_context());
-        ucs_env::error::ErrorSwitch::switch(&app_error)
-    })
+    .map_err(
+        |e: error_stack::Report<domain_types::errors::WebhookError>| {
+            let app_error: domain_types::errors::ApplicationErrorResponse =
+                ucs_env::error::ErrorSwitch::switch(e.current_context());
+            ucs_env::error::ErrorSwitch::switch(&app_error)
+        },
+    )
 }

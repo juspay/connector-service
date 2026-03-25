@@ -45,7 +45,6 @@ use domain_types::{
         self, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDetails,
         SupportedPaymentMethods,
     },
-    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
@@ -61,8 +60,7 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorResponseError;
-use domain_types::errors::ResultResponseToRequestExt;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -112,9 +110,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ConnectorRequestError::not_implemented("webhook signature not found".to_string()),
         )?;
 
-        let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .change_context(ConnectorResponseError::response_deserialization_failed_http_status_unknown())
-            .into_request_err()?;
+        let parsed: serde_json::Value = serde_json::from_slice(&request.body).change_context(
+            ConnectorRequestError::InvalidDataFormat {
+                field_name: "webhook_body",
+                context: Default::default(),
+            },
+        )?;
 
         let sorted_payload = sort_and_minify_json(&parsed)?;
 
@@ -550,8 +551,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = CalidaAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = CalidaAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("token {}", auth.api_key.expose()).into_masked(),
@@ -566,7 +570,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: CalidaErrorResponse = res
             .response
             .parse_struct("CalidaErrorResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_handling_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -706,7 +712,7 @@ static CALIDA_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Laz
 static CALIDA_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Calida",
     description: "Calida Financial is a licensed e-money institution based in Malta and they provide customized financial infrastructure and payment solutions across the EU and EEA. As part of The Payments Group, it focuses on embedded finance, prepaid services, and next-generation digital payment products.",
-    connector_type: types::PaymentConnectorCategory::AlternativePaymentMethod,
+    connector_type: types::PaymentConnectorCategory::AlternativePaymentMethod
 };
 
 static CALIDA_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 1] = [enums::EventClass::Payments];

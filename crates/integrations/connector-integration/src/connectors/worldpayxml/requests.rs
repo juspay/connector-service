@@ -16,8 +16,11 @@ pub enum WorldpayxmlAction {
 fn generate_soap_xml<T: Serialize>(
     request: &T,
 ) -> Result<String, error_stack::Report<ConnectorRequestError>> {
-    let xml_body = quick_xml::se::to_string(request)
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+    let xml_body = quick_xml::se::to_string(request).change_context(
+        ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        },
+    )?;
 
     Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}", xml_body))
 }

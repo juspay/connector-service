@@ -52,7 +52,9 @@ impl AuthipayAuthType {
                 self.api_secret.clone().expose().as_bytes(),
                 raw_signature.as_bytes(),
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         // Base64 encode the result
         Ok(general_purpose::STANDARD.encode(signature))
@@ -87,7 +89,9 @@ impl TryFrom<&ConnectorSpecificConfig> for AuthipayAuthType {
                 api_secret: api_secret.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -202,7 +206,9 @@ impl<T: PaymentMethodDataTypes>
         let converter = FloatMajorUnitForConnector;
         let amount_major = converter
             .convert(item.request.minor_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let transaction_amount = TransactionAmount {
             total: amount_major,
@@ -227,9 +233,11 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethod { payment_card }
             }
             _ => {
-                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                    "Only card payments are supported".to_string()
-                )))
+                return Err(error_stack::report!(
+                    ConnectorRequestError::not_implemented(
+                        "Only card payments are supported".to_string()
+                    )
+                ))
             }
         };
 
@@ -301,7 +309,9 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let converter = FloatMajorUnitForConnector;
         let amount_major = converter
             .convert(capture_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let transaction_amount = TransactionAmount {
             total: amount_major,
@@ -751,7 +761,9 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         let converter = FloatMajorUnitForConnector;
         let amount_major = converter
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let transaction_amount = TransactionAmount {
             total: amount_major,

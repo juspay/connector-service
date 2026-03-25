@@ -11,10 +11,11 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    utils, ConnectorRequestError, ConnectorResponseError,
+    utils,
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -260,7 +261,9 @@ impl TryFrom<&ConnectorSpecificConfig> for FiservAuthType {
                 api_secret: api_secret.to_owned(),
                 terminal_id: terminal_id.clone(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
+            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default()
+            })),
         }
     }
 }
@@ -464,7 +467,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Err(ConnectorRequestError::NotSupported {
                 message: "Cards 3DS".to_string(),
                 connector: "Fiserv",
-                context: Default::default()
+                context: Default::default(),
             })?
         }
 
@@ -476,7 +479,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         let amount = Amount {
             total,
             currency: item.router_data.request.currency.to_string(),
@@ -543,11 +548,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(error_stack::report!(ConnectorRequestError::not_implemented(
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
+                error_stack::report!(ConnectorRequestError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("fiserv"),
-                )))
-            }
+                )),
+            ),
         }?;
 
         Ok(Self {
@@ -588,7 +593,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
         let order_id = router_data.request.metadata.as_ref().and_then(|v| {
             let exposed = v.clone().expose();
             exposed
@@ -620,7 +627,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default(),
+                    })?,
             },
         })
     }
@@ -653,7 +662,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?,
+                    .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                        context: Default::default(),
+                    })?,
             },
         })
     }
@@ -724,7 +735,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             amount: Amount {
@@ -994,7 +1007,9 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;
@@ -1125,7 +1140,9 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseError::response_handling_failed(item.http_code))
+            .ok_or(ConnectorResponseError::response_handling_failed(
+                item.http_code,
+            ))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;

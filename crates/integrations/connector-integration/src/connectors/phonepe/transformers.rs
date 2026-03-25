@@ -244,7 +244,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         // Get customer mobile number from billing address
         let mobile_number = router_data
@@ -282,7 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "Phonepe",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -340,8 +342,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Convert to JSON and encode
-        let json_payload = Encode::encode_to_string_of_json(&payload)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let json_payload = Encode::encode_to_string_of_json(&payload).change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
@@ -401,7 +406,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         // Get customer mobile number from billing address
         let mobile_number = router_data
@@ -439,7 +446,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "Phonepe",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -497,8 +504,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Convert to JSON and encode
-        let json_payload = Encode::encode_to_string_of_json(&payload)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let json_payload = Encode::encode_to_string_of_json(&payload).change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
@@ -691,7 +701,10 @@ impl TryFrom<&ConnectorSpecificConfig> for PhonepeAuthType {
                 salt_key: salt_key.clone(),
                 key_index: salt_index.peek().clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -716,7 +729,9 @@ fn generate_phonepe_checksum(
     let sha256 = crypto::Sha256;
     let hash_bytes = sha256
         .generate_digest(checksum_input.as_bytes())
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
         let _ = write!(&mut acc, "{byte:02x}");
@@ -946,7 +961,9 @@ fn generate_phonepe_sync_checksum(
     let sha256 = crypto::Sha256;
     let hash_bytes = sha256
         .generate_digest(checksum_input.as_bytes())
-        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        .change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
         let _ = write!(&mut acc, "{byte:02x}");

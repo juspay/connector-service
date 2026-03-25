@@ -269,8 +269,8 @@ macros::create_all_prerequisites!(
                     date,
                     dlocal_req.get_inner_value().peek().to_owned()
                 ),
-                None => format!("{}{}", auth.x_login.peek(), date),
-            };
+                None => format!("{}{}", auth.x_login.peek(), date)
+};
 
             let authz = crypto::HmacSha256::sign_message(
                 &crypto::HmacSha256,
@@ -343,7 +343,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: dlocal::DlocalErrorResponse = res
             .response
             .parse_struct("Dlocal ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

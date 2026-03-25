@@ -7,6 +7,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -16,9 +17,6 @@ use serde::Serialize;
 
 use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
 use crate::{types::ResponseRouterData, utils};
-use domain_types::errors::{
-    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
-};
 
 /// CAVV (Cardholder Authentication Verification Value) Algorithm
 ///
@@ -53,7 +51,10 @@ impl TryFrom<&ConnectorSpecificConfig> for BarclaycardAuthType {
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -98,7 +99,7 @@ fn build_bill_to(
         .as_ref()
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing.address",
-                context: Default::default()
+            context: Default::default(),
         })?;
 
     let administrative_area = address
@@ -111,7 +112,7 @@ fn build_bill_to(
         })
         .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing_address.state",
-                context: Default::default()
+            context: Default::default(),
         })?;
 
     Ok(requests::BillTo {
@@ -221,10 +222,7 @@ fn transform_payment_response<F, Req>(
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
     >,
     auto_capture: bool,
-) -> Result<
-    RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-    error_stack::Report<ConnectorRequestError>,
-> {
+) -> RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData> {
     match item.response {
         responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
             let status = map_barclaycard_attempt_status((
@@ -262,14 +260,14 @@ fn transform_payment_response<F, Req>(
                 })
             };
 
-            Ok(RouterDataV2 {
+            RouterDataV2 {
                 response,
                 resource_common_data: PaymentFlowData {
                     status,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
-            })
+            }
         }
         responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
             let detailed_error_info =
@@ -291,7 +289,7 @@ fn transform_payment_response<F, Req>(
                 None,
             );
 
-            Ok(RouterDataV2 {
+            RouterDataV2 {
                 response: Err(ErrorResponse {
                     code: error_response
                         .error_information
@@ -315,7 +313,7 @@ fn transform_payment_response<F, Req>(
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
-            })
+            }
         }
     }
 }
@@ -457,7 +455,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get_payment_method_billing()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         let bill_to = build_bill_to(billing, email)?;
@@ -576,7 +574,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .currency
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
         let amount = BarclaycardAmountConvertor::convert(
             router_data
@@ -584,7 +582,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .amount
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
-                context: Default::default()
+                    context: Default::default(),
                 })?,
             currency,
         )?;
@@ -611,7 +609,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 reason: router_data.request.cancellation_reason.clone().ok_or(
                     ConnectorRequestError::MissingRequiredField {
                         field_name: "cancellation_reason",
-                context: Default::default()
+                        context: Default::default(),
                     },
                 )?,
             },
@@ -669,7 +667,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic) | None
         );
-        transform_payment_response(item, auto_capture).into_response_err()
+        Ok(transform_payment_response(item, auto_capture))
     }
 }
 
@@ -681,7 +679,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        transform_payment_response(item, true).into_response_err()
+        Ok(transform_payment_response(item, true))
     }
 }
 
@@ -693,7 +691,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        transform_payment_response(item, false).into_response_err()
+        Ok(transform_payment_response(item, false))
     }
 }
 

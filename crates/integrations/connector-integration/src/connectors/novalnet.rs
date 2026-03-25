@@ -314,8 +314,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = novalnet::NovalnetAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = novalnet::NovalnetAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         let api_key: String = auth.payment_access_key.expose();
         let encoded_api_key = BASE64_ENGINE.encode(api_key);
         Ok(vec![(
@@ -332,7 +335,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: novalnet::NovalnetErrorResponse = res
             .response
             .parse_struct("NovalnetErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(res.status_code))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                res.status_code,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -373,7 +378,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            let url = if req.request.is_auto_capture()? {
+            let url = if req.request.is_auto_capture() {
                 format!("{}/payment",self.connector_base_url_payments(req))
             }
             else {
@@ -591,7 +596,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorRequestError> {
-            let url = if req.request.is_auto_capture()? {
+            let url = if req.request.is_auto_capture() {
                 format!("{}/payment",self.connector_base_url_payments(req))
             }
             else {
@@ -612,7 +617,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let notif_item = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented(
+                "webhook source verification failed".to_string(),
+            ),
         )?;
 
         hex::decode(notif_item.event.checksum).change_context(
@@ -628,7 +635,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented("webhook source verification failed".to_string()),
+            ConnectorRequestError::not_implemented(
+                "webhook source verification failed".to_string(),
+            ),
         )?;
 
         let (amount, currency) = match notif.transaction {
@@ -760,7 +769,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let transaction_status =
             optional_transaction_status.ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "transaction_status",
-                context: Default::default()
+                context: Default::default(),
             })?;
         // NOTE: transaction_status will always be present for Webhooks
         // But we are handling optional type here, since we are reusing TransactionData Struct from NovalnetPaymentsResponseTransactionData for Webhooks response too
@@ -848,7 +857,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(DisputeWebhookDetailsResponse {
             amount: utils::convert_amount(
                 self.amount_converter,
-                amount.ok_or(ConnectorRequestError::AmountConversionFailed { context: Default::default() })?,
+                amount.ok_or(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
                 novalnet::option_to_result(currency)?,
             )?,
             currency: novalnet::option_to_result(currency)?,

@@ -41,7 +41,9 @@ impl TryFrom<&ConnectorSpecificConfig> for MollieAuthType {
                 profile_token: profile_token.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -168,7 +170,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
             .attach_printable("Failed to convert amount to string major unit")?;
 
         // Extract payment method data based on payment method type
@@ -215,7 +219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method ".to_string(),
                     connector: "mollie",
-                context: Default::default()
+                    context: Default::default(),
                 }
                 .into());
             }
@@ -253,7 +257,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             description: item.resource_common_data.description.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "description",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
             redirect_url: item.request.router_return_url.clone().unwrap_or_default(),
@@ -502,7 +506,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             amount: MollieAmount {
@@ -678,7 +684,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             auth.profile_token
                 .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "profile_token",
-                context: Default::default()
+                    context: Default::default(),
                 })?;
 
         // Format expiry date as "MM/YY" (required by Mollie Components API)
@@ -700,7 +706,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let testmode = item.resource_common_data.test_mode.ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "test_mode",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -779,7 +785,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             amount: Some(MollieAmount {
@@ -789,7 +797,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             description: item.resource_common_data.description.clone().ok_or(
                 ConnectorRequestError::MissingRequiredField {
                     field_name: "description",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?,
         })

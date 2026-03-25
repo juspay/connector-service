@@ -5,17 +5,16 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsResponseData, ResponseId,
     },
-    errors::ResultRequestToResponseExt,
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
-    ConnectorRequestError,
 };
-use error_stack::report;
+use error_stack::{report, Report};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::ResponseRouterData, ConnectorResponseError};
+use crate::types::ResponseRouterData;
 
 // ============================================================================
 // Authentication
@@ -28,7 +27,7 @@ pub struct CashfreeAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -38,7 +37,9 @@ impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
                 app_id: app_id.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
+            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default()
+            })),
         }
     }
 }
@@ -235,7 +236,7 @@ fn get_cashfree_payment_method_data<
                     if vpa.is_empty() {
                         return Err(ConnectorRequestError::MissingRequiredField {
                             field_name: "vpa_id for UPI collect",
-                context: Default::default()
+                            context: Default::default(),
                         });
                     }
 
@@ -275,7 +276,7 @@ fn get_cashfree_payment_method_data<
         _ => Err(ConnectorRequestError::NotSupported {
             message: "Only UPI payment methods are supported for Cashfree V3".to_string(),
             connector: "Cashfree",
-                context: Default::default()
+            context: Default::default(),
         }),
     }
 }
@@ -298,7 +299,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CashfreeOrderCreateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         wrapper: crate::connectors::cashfree::CashfreeRouterData<
@@ -330,7 +331,7 @@ impl
         >,
     > for CashfreeOrderCreateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -359,7 +360,7 @@ impl
         >,
     )> for CashfreeOrderCreateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         (converted_amount, item): (
@@ -378,7 +379,7 @@ impl
             .get_payment_method_billing()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing_address",
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         // Build customer details
@@ -405,7 +406,7 @@ impl
         let return_url = item.resource_common_data.return_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -413,7 +414,7 @@ impl
         let notify_url = item.request.webhook_url.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "webhook_url",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -452,7 +453,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CashfreePaymentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         wrapper: crate::connectors::cashfree::CashfreeRouterData<
@@ -475,7 +476,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for CashfreePaymentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -489,7 +490,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
             ConnectorRequestError::MissingRequiredField {
                 field_name: "merchant_order_id",
-                context: Default::default()
+                context: Default::default(),
             },
         )?;
 
@@ -509,7 +510,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // ============================================================================
 
 impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -528,13 +529,13 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<CashfreeOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
-        let order_response = PaymentCreateOrderResponse::try_from(response).into_response_err()?;
+        let order_response = PaymentCreateOrderResponse::try_from(response)?;
 
         // Extract order_id before moving order_response
         let order_id = order_response.order_id.clone();
@@ -557,48 +558,56 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<CashfreePaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<CashfreePaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let (status, redirection_data) = match response.channel.as_str() {
-            "link" => {
-                // Intent flow - extract deep link from payload._default
-                let deep_link = response.data.payload.map(|p| p.default_link).ok_or(
-                    ConnectorRequestError::MissingRequiredField {
-                        field_name: "intent_link",
-                context: Default::default()
-                    },
-                )?;
+        let (status, redirection_data) =
+            match response.channel.as_str() {
+                "link" => {
+                    // Intent flow - extract deep link from payload._default
+                    let deep_link = response.data.payload.map(|p| p.default_link).ok_or_else(
+                        || {
+                            Report::new(
+                                ConnectorResponseError::response_handling_failed_with_context(
+                                    item.http_code,
+                                    Some(
+                                        "link channel: missing payload.default_link (UPI intent)"
+                                            .to_string(),
+                                    ),
+                                ),
+                            )
+                        },
+                    )?;
 
-                // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
-                let trimmed_link = if let Some(pos) = deep_link.find('?') {
-                    &deep_link[(pos + 1)..]
-                } else {
-                    &deep_link
-                };
+                    // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
+                    let trimmed_link = if let Some(pos) = deep_link.find('?') {
+                        &deep_link[(pos + 1)..]
+                    } else {
+                        &deep_link
+                    };
 
-                // Create UPI intent redirection
-                let redirection_data = Some(Box::new(Some(
-                    domain_types::router_response_types::RedirectForm::Uri {
-                        uri: trimmed_link.to_string(),
-                    },
-                )));
+                    // Create UPI intent redirection
+                    let redirection_data = Some(Box::new(Some(
+                        domain_types::router_response_types::RedirectForm::Uri {
+                            uri: trimmed_link.to_string(),
+                        },
+                    )));
 
-                (
-                    common_enums::AttemptStatus::AuthenticationPending,
-                    redirection_data,
-                )
-            }
-            "collect" => {
-                // Collect flow - return without redirection, status Pending
-                (common_enums::AttemptStatus::Pending, None)
-            }
-            _ => (common_enums::AttemptStatus::Failure, None),
-        };
+                    (
+                        common_enums::AttemptStatus::AuthenticationPending,
+                        redirection_data,
+                    )
+                }
+                "collect" => {
+                    // Collect flow - return without redirection, status Pending
+                    (common_enums::AttemptStatus::Pending, None)
+                }
+                _ => (common_enums::AttemptStatus::Failure, None),
+            };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {

@@ -203,8 +203,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
-        let auth = RapydAuthType::try_from(auth_type)
-            .change_context(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = RapydAuthType::try_from(auth_type).change_context(
+            ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
         // Return basic auth headers - signature will be added in get_headers method
         Ok(vec![(
@@ -386,8 +389,8 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<String, ConnectorRequestError> {
             let RapydAuthType {
             access_key,
-            secret_key,
-        } = auth;
+            secret_key
+} = auth;
         let to_sign = format!(
             "{http_method}{url_path}{salt}{timestamp}{}{}{body}",
             access_key.peek(),

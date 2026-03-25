@@ -10,19 +10,18 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    ConnectorRequestError,
 };
 
 use crate::types::ResponseRouterData;
-// Aliases to make the transition easier
+// Alias to make the transition easier
 type HsInterfacesConnectorRequestError = ConnectorRequestError;
-type HsInterfacesConnectorResponseError = ConnectorResponseError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
@@ -32,7 +31,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 use super::AuthorizedotnetRouterData;
-use domain_types::errors::{ConnectorResponseError, ResultRequestToResponseExt};
 
 type Error = error_stack::Report<ConnectorRequestError>;
 type ResponseError = error_stack::Report<ConnectorResponseError>;
@@ -83,7 +81,7 @@ fn get_refund_credit_card_payment(
     let credit_card_value = metadata.get("creditCard").ok_or_else(|| {
         error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
             field_name: "creditCard",
-                context: Default::default()
+            context: Default::default()
         })
     })?;
 
@@ -96,13 +94,15 @@ fn get_refund_credit_card_payment(
                     "Failed to parse credit card JSON"
                 );
             })
-            .change_context(HsInterfacesConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+            .change_context(HsInterfacesConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
         serde_json::Value::Object(_) => credit_card_value.clone(),
         _ => {
             return Err(error_stack::report!(
                 HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "creditCard",
-                context: Default::default()
+                    context: Default::default()
                 }
             ))
         }
@@ -161,7 +161,9 @@ fn metadata_to_user_fields(
     };
 
     let value = if needs_serialization {
-        serde_json::to_value(meta).change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+        serde_json::to_value(meta).change_context(ConnectorRequestError::RequestEncodingFailed {
+            context: Default::default(),
+        })?
     } else {
         meta
     };
@@ -220,8 +222,11 @@ pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNu
 
 impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
     pub fn from_card_number_string(card_number: String) -> Result<Self, Error> {
-        let card_number = cards::CardNumber::from_str(&card_number)
-            .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+        let card_number = cards::CardNumber::from_str(&card_number).change_context(
+            ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
         Ok(Self(RawCardNumber(card_number)))
     }
 }
@@ -271,7 +276,9 @@ impl TryFrom<&ConnectorSpecificConfig> for MerchantAuthentication {
                 transaction_key: transaction_key.clone(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
+                ConnectorRequestError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -317,7 +324,7 @@ impl TryFrom<enums::CaptureMethod> for AuthorizationType {
                 Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Capture method not supported".to_string(),
                     connector: "authorizedotnet",
-                context: Default::default()
+                    context: Default::default()
                 }))?
             }
         }
@@ -558,8 +565,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let currency_str = item.router_data.request.currency.to_string();
-        let currency = api_enums::Currency::from_str(&currency_str)
-            .map_err(|_| error_stack::report!(ConnectorRequestError::RequestEncodingFailed { context: Default::default() }))?;
+        let currency = api_enums::Currency::from_str(&currency_str).map_err(|_| {
+            error_stack::report!(ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default()
+            })
+        })?;
 
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
@@ -647,15 +657,15 @@ fn create_regular_transaction_request<
                         (_, Some(common_enums::BankHolderType::Business)) => {
                             AccountType::BusinessChecking
                         }
-                        _ => AccountType::Checking,
-                    };
+                        _ => AccountType::Checking
+};
 
                     let bank_account_details = BankAccountDetails {
                         account_type,
                         routing_number: routing_number.clone(),
                         account_number: account_number.clone(),
-                        name_on_account,
-                    };
+                        name_on_account
+};
 
                     Ok(PaymentDetails::BankAccount(bank_account_details))
                 }
@@ -670,9 +680,9 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        pm => Err(error_stack::report!(ConnectorRequestError::not_implemented(
-            format!("Payment method {:?}", pm)
-        ))),
+        pm => Err(error_stack::report!(
+            ConnectorRequestError::not_implemented(format!("Payment method {:?}", pm))
+        )),
     }?;
 
     let transaction_type = match item.router_data.request.capture_method {
@@ -790,7 +800,9 @@ fn create_regular_transaction_request<
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })
                 .attach_printable("Failed to convert payment amount for authorize transaction")?,
         ),
         currency_code: Some(currency),
@@ -877,7 +889,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "connector_mandate_id",
-                context: Default::default()
+                                context: Default::default()
                             })
                         })?;
 
@@ -897,7 +909,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "valid mandate_id format (should contain '-')",
-                context: Default::default()
+                                context: Default::default()
                             })
                         })?;
 
@@ -924,9 +936,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Case 3: Network token with NTI - NOT SUPPORTED (same as Hyperswitch)
                 MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                        "Network token with NTI not supported for authorizedotnet".to_string(),
-                    )))
+                    return Err(error_stack::report!(
+                        ConnectorRequestError::not_implemented(
+                            "Network token with NTI not supported for authorizedotnet".to_string(),
+                        )
+                    ))
                 }
             };
 
@@ -954,7 +968,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .map(serde_json::to_value)
                 .transpose()
-                .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?,
             false, // Already serialized above
         )?;
 
@@ -991,7 +1007,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Capture method not supported".to_string(),
                     connector: "authorizedotnet",
-                context: Default::default()
+                    context: Default::default()
                 }))
             }
         };
@@ -1005,7 +1021,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })
                 .attach_printable(
                     "Failed to convert payment amount for repeat payment transaction",
                 )?,
@@ -1088,7 +1106,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(error_stack::report!(
                     HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id",
-                context: Default::default()
+                        context: Default::default()
                     }
                 ));
             }
@@ -1103,7 +1121,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount_to_capture,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })
                 .attach_printable("Failed to convert capture amount for capture transaction")?,
             ref_trans_id: original_connector_txn_id,
         };
@@ -1171,7 +1191,9 @@ impl TryFrom<&ConnectorSpecificConfig> for AuthorizedotnetAuthType {
                 transaction_key: transaction_key.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?
+            Err(ConnectorRequestError::FailedToObtainAuthType {
+                context: Default::default(),
+            })?
         }
     }
 }
@@ -1210,7 +1232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(error_stack::report!(
                     HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id",
-                context: Default::default()
+                        context: Default::default()
                     }
                 ));
             }
@@ -1289,7 +1311,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(error_stack::report!(
                     HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id",
-                context: Default::default()
+                        context: Default::default()
                     }
                 ))
             }
@@ -1332,7 +1354,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             return Err(error_stack::report!(
                 HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "connector_refund_id",
-                context: Default::default()
+                    context: Default::default()
                 }
             ));
         };
@@ -1436,7 +1458,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .ok_or_else(|| {
                 error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data",
-                context: Default::default()
+                    context: Default::default()
                 })
             })?;
         let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
@@ -1451,7 +1473,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_refund_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorRequestError::AmountConversionFailed { context: Default::default() })
+                .change_context(ConnectorRequestError::AmountConversionFailed {
+                    context: Default::default(),
+                })
                 .attach_printable("Failed to convert refund amount for refund transaction")?,
             currency_code: item.router_data.request.currency,
             payment,
@@ -1761,8 +1785,7 @@ impl<
                     .resource_common_data
                     .raw_connector_response
                     .clone(),
-            )
-            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(http_code))?;
+            );
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1804,8 +1827,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
                     .resource_common_data
                     .raw_connector_response
                     .clone(),
-            )
-            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(http_code))?;
+            );
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1846,8 +1868,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
                     .resource_common_data
                     .raw_connector_response
                     .clone(),
-            )
-            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(http_code))?;
+            );
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1895,8 +1916,8 @@ impl<
                 convert_to_additional_payment_method_connector_response(trans_res)
                     .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data)
             }
-            _ => None,
-        };
+            _ => None
+};
 
         let response_result = match &response.0.transaction_response {
             Some(TransactionResponse::AuthorizedotnetTransactionResponse(transaction_response)) => {
@@ -2380,14 +2401,11 @@ fn build_connector_metadata(
         .ok()
 }
 
-type PaymentConversionResult = Result<
-    (
-        AttemptStatus,
-        Result<PaymentsResponseData, ErrorResponse>,
-        Option<domain_types::router_data::ConnectorResponseData>,
-    ),
-    ConnectorResponseError,
->;
+type PaymentConversionResult = (
+    AttemptStatus,
+    Result<PaymentsResponseData, ErrorResponse>,
+    Option<domain_types::router_data::ConnectorResponseData>,
+);
 
 pub fn convert_to_payments_response_data_or_error(
     response: &AuthorizedotnetPaymentsResponse,
@@ -2413,8 +2431,8 @@ pub fn convert_to_payments_response_data_or_error(
             convert_to_additional_payment_method_connector_response(trans_res)
                 .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data)
         }
-        _ => None,
-    };
+        _ => None
+};
 
     let response_payload_result = match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res))
@@ -2504,7 +2522,7 @@ pub fn convert_to_payments_response_data_or_error(
         }
     };
 
-    Ok((status, response_payload_result, connector_response_data))
+    (status, response_payload_result, connector_response_data)
 }
 
 // Transaction details for sync response used in PSync implementation
@@ -2707,9 +2725,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let ccard = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             pm => {
-                return Err(error_stack::report!(ConnectorRequestError::not_implemented(
-                    format!("Payment method {:?}", pm)
-                )))
+                return Err(error_stack::report!(
+                    ConnectorRequestError::not_implemented(format!("Payment method {:?}", pm))
+                ))
             }
         };
 
@@ -2727,7 +2745,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id is missing",
-                context: Default::default()
+                context: Default::default(),
             })?
             .clone();
 
@@ -2810,11 +2828,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_customer
             .as_ref()
-            .ok_or(ConnectorRequestError::MissingRequiredField {
-                field_name: "connector_customer_id",
-                context: Default::default()
-            })
-            .into_response_err()?
+            .ok_or_else(|| {
+                error_stack::report!(ConnectorResponseError::ResponseHandlingFailed {
+                    context: domain_types::errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(http_code),
+                        additional_context: Some("connector_customer_id required to build mandate reference for authorizedotnet".to_string()),
+                    },
+                })
+            })?
             .clone();
 
         // Check if we have a successful response:
@@ -2845,7 +2866,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
                 .ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseError::response_handling_failed(http_code))
+                    error_stack::report!(ConnectorResponseError::response_handling_failed(
+                        http_code
+                    ))
                 })?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
