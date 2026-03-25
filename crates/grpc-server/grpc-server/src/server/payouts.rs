@@ -2,10 +2,11 @@ use common_utils::events::FlowName;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        PayoutCreate, PayoutCreateLink, PayoutCreateRecipient, PayoutEnrollDisburseAccount,
-        PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid,
+        CreditToWallet, PayoutCreate, PayoutCreateLink, PayoutCreateRecipient,
+        PayoutEnrollDisburseAccount, PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid,
     },
     payouts::payouts_types::{
+        CreditToWalletData, CreditToWalletFlowData, CreditToWalletResponseData,
         PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
         PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,
         PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,
@@ -13,10 +14,11 @@ use domain_types::{
         PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
     },
     payouts::types::{
-        generate_payout_create_link_response, generate_payout_create_recipient_response,
-        generate_payout_create_response, generate_payout_enroll_disburse_account_response,
-        generate_payout_get_response, generate_payout_stage_response,
-        generate_payout_transfer_response, generate_payout_void_response,
+        generate_credit_to_wallet_response, generate_payout_create_link_response,
+        generate_payout_create_recipient_response, generate_payout_create_response,
+        generate_payout_enroll_disburse_account_response, generate_payout_get_response,
+        generate_payout_stage_response, generate_payout_transfer_response,
+        generate_payout_void_response,
     },
     utils::ForeignTryFrom,
 };
@@ -24,6 +26,7 @@ use grpc_api_types::payouts::{
     payout_service_server::PayoutService, PayoutServiceCreateLinkRequest,
     PayoutServiceCreateLinkResponse, PayoutServiceCreateRecipientRequest,
     PayoutServiceCreateRecipientResponse, PayoutServiceCreateRequest, PayoutServiceCreateResponse,
+    PayoutServiceCreditToWalletRequest, PayoutServiceCreditToWalletResponse,
     PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse,
     PayoutServiceGetRequest, PayoutServiceGetResponse, PayoutServiceStageRequest,
     PayoutServiceStageResponse, PayoutServiceTransferRequest, PayoutServiceTransferResponse,
@@ -200,6 +203,26 @@ impl PayoutService for Payouts {
         )
         .await
     }
+
+    async fn credit_to_wallet(
+        &self,
+        request: tonic::Request<PayoutServiceCreditToWalletRequest>,
+    ) -> Result<tonic::Response<PayoutServiceCreditToWalletResponse>, tonic::Status> {
+        let config = get_config_from_request(&request)?;
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PayoutService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config,
+            FlowName::CreditToWallet,
+            |request_data| self.internal_credit_to_wallet(request_data),
+        )
+        .await
+    }
 }
 
 pub(crate) trait PayoutOperationsInternal {
@@ -257,6 +280,13 @@ pub(crate) trait PayoutOperationsInternal {
         request: RequestData<PayoutServiceEnrollDisburseAccountRequest>,
     ) -> impl std::future::Future<
         Output = Result<tonic::Response<PayoutServiceEnrollDisburseAccountResponse>, tonic::Status>,
+    > + Send;
+
+    fn internal_credit_to_wallet(
+        &self,
+        request: RequestData<PayoutServiceCreditToWalletRequest>,
+    ) -> impl std::future::Future<
+        Output = Result<tonic::Response<PayoutServiceCreditToWalletResponse>, tonic::Status>,
     > + Send;
 }
 
@@ -378,6 +408,21 @@ impl PayoutOperationsInternal for Payouts {
         request_data_constructor: PayoutEnrollDisburseAccountRequest::foreign_try_from,
         common_flow_data_constructor: PayoutFlowData::foreign_try_from,
         generate_response_fn: generate_payout_enroll_disburse_account_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_credit_to_wallet,
+        log_prefix: "CREDIT_TO_WALLET",
+        request_type: PayoutServiceCreditToWalletRequest,
+        response_type: PayoutServiceCreditToWalletResponse,
+        flow_marker: CreditToWallet,
+        resource_common_data_type: CreditToWalletFlowData,
+        request_data_type: CreditToWalletData,
+        response_data_type: CreditToWalletResponseData,
+        request_data_constructor: CreditToWalletData::foreign_try_from,
+        common_flow_data_constructor: CreditToWalletFlowData::foreign_try_from,
+        generate_response_fn: generate_credit_to_wallet_response,
         all_keys_required: None
     );
 }
