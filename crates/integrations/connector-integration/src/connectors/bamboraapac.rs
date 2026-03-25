@@ -5,6 +5,8 @@ use std::{
     marker::{Send, Sync},
 };
 
+use base64::Engine;
+
 use common_utils::{errors::CustomResult, events, ext_traits::XmlExt};
 use domain_types::{
     connector_flow::{
@@ -27,13 +29,13 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, decode::BodyDecoding,
     verification::SourceVerification,
@@ -49,7 +51,7 @@ use transformers::{
 };
 
 use super::macros;
-use super::macros::GetSoapXml;
+use super::macros::{ContentTypeSelector, GetSoapXml};
 use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
@@ -219,7 +221,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BamboraapacPaymentRequest<T>,
+            request_body: BamboraapacAuthorizeRequest<T>,
             response_body: BamboraapacAuthorizeResponse,
             response_format: xml,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -389,7 +391,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// Implement Authorize flow using macros
+// Implement Authorize flow using macros (SOAP for all payment methods)
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
     connector: Bamboraapac,
