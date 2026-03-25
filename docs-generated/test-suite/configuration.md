@@ -70,7 +70,7 @@ The framework searches for credentials in this order:
 
 1. `CONNECTOR_AUTH_FILE_PATH` environment variable
 2. `UCS_CREDS_PATH` environment variable
-3. Default: `backend/.github/test/creds.json`
+3. Default: `creds.json` in the repo root
 
 ### Credentials File Format
 

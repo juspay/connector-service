@@ -410,8 +410,7 @@ $RECYCLE.BIN/
 **/*.swo
 **/.env.local
 
-# Credentials files
-.github/test/creds.json
+# Credentials file
 creds.json
 
 # DrawIO files

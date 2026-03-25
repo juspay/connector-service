@@ -51,7 +51,7 @@ const STRIP_FIELDS: &[&str] = &["metadata"];
 
 /// Default local credentials path used when env overrides are not set.
 fn default_creds_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/test/creds.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../creds.json")
 }
 
 /// Resolves credentials path from env, then falls back to repo default.

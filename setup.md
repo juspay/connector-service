@@ -411,18 +411,18 @@ UCS includes comprehensive integration tests for payment processors with central
 
 ### Test Credential Configuration
 
-UCS tests require actual payment processor credentials to run successfully. These credentials are loaded from `.github/test/creds.json`.
+UCS tests require actual payment processor credentials to run successfully. At runtime, tests load credentials from `creds.json` in the repo root. A starter template is kept at `.github/test/template_creds.json`.
 
 #### Setting Up Your Credentials
 
-1. **Copy the template file**:
+1. **Copy the template into the runtime location**:
    ```bash
-   cp .github/test/template_creds.json .github/test/creds.json
+   cp .github/test/template_creds.json creds.json
    ```
 
 2. **Replace placeholder values with real credentials**:
    
-   Edit `.github/test/creds.json` and replace the `test_*` placeholder values with your actual sandbox/test credentials from each payment processor.
+   Edit `creds.json` and replace the `test_*` placeholder values with your actual sandbox/test credentials from each payment processor.
 
    **Example for Authorize.Net**:
    ```json

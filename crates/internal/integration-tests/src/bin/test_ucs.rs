@@ -889,7 +889,7 @@ Credential resolution order:
   1. CONNECTOR_AUTH_FILE_PATH environment variable
   2. UCS_CREDS_PATH environment variable
   3. ~/.config/integration-tests/run_test_defaults.json
-  4. .github/test/creds.json (repo default)
+  4. creds.json (repo default)
 
 Examples:
   test-prism                                   # full batch run

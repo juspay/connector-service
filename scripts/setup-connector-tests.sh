@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BAE_DIR="${REPO_ROOT}/browser-automation-engine"
 ENV_FILE="${REPO_ROOT}/.env.connector-tests"
-DEFAULT_CREDS="${REPO_ROOT}/.github/test/creds.json"
+DEFAULT_CREDS="${REPO_ROOT}/creds.json"
 UCS_CONFIG_DIR="${HOME}/.config/integration-tests"
 SETUP_SENTINEL="${UCS_CONFIG_DIR}/setup.done"
 
@@ -475,7 +475,7 @@ if [[ -f "${CREDS_PATH}" ]]; then
 else
   warn "Credentials file not found at: ${CREDS_PATH}"
   warn ""
-  warn "Create it at .github/test/creds.json, or set one of:"
+  warn "Create it at creds.json in the repo root, or set one of:"
   warn "  export CONNECTOR_AUTH_FILE_PATH=/path/to/creds.json"
   warn "  export UCS_CREDS_PATH=/path/to/creds.json"
   warn ""

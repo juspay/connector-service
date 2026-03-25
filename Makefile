@@ -415,7 +415,7 @@ help:
 	@echo "Credential resolution order (for connector tests):"
 	@echo "  1. CONNECTOR_AUTH_FILE_PATH env var"
 	@echo "  2. UCS_CREDS_PATH env var"
-	@echo "  3. .github/test/creds.json (repo default)"
+	@echo "  3. creds.json (repo default)"
 	@echo ""
 	@echo "Google Pay tests require GPAY_HOSTED_URL to be set."
 	@echo "Run 'make setup-connector-tests' to configure it automatically via Netlify."

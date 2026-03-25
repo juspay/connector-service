@@ -141,7 +141,7 @@ The setup script creates `.env.connector-tests` with auto-configured values. You
 
 ```bash
 # Credentials (required)
-export CONNECTOR_AUTH_FILE_PATH="$PWD/.github/test/creds.json"
+export CONNECTOR_AUTH_FILE_PATH="$PWD/creds.json"
 
 # Connector list for --all-connectors
 export UCS_ALL_CONNECTORS="stripe,paypal,authorizedotnet"
@@ -155,7 +155,15 @@ export UCS_DEBUG_EFFECTIVE_REQ=1    # Print request payloads
 
 ### Credentials File
 
-Create credentials at `.github/test/creds.json`:
+At runtime, integration tests load credentials from `creds.json` in the repo root. A starter template is available at `.github/test/template_creds.json`.
+
+Create `creds.json` in the repo root, for example by copying the template:
+
+```bash
+cp .github/test/template_creds.json creds.json
+```
+
+Then update it with your real connector credentials:
 
 ```json
 {
@@ -265,10 +273,10 @@ SKIP_NETLIFY_DEPLOY=1 make setup-connector-tests
 ### Tests fail with "credentials not found"
 ```bash
 # Check credentials file exists
-ls -la .github/test/creds.json
+ls -la creds.json
 
 # Set path explicitly
-export CONNECTOR_AUTH_FILE_PATH="$PWD/.github/test/creds.json"
+export CONNECTOR_AUTH_FILE_PATH="$PWD/creds.json"
 ```
 
 ### Google Pay tests are skipped
