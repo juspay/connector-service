@@ -14,7 +14,7 @@ use domain_types::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, ResendOtpForWallet,
-        SdkSessionToken, SetupMandate, VerifyWebhookSource, Void, VoidPC,
+        SdkSessionToken, SetupMandate, VerifyOtpForWallet, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -27,7 +27,8 @@ use domain_types::{
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResendOtpForWalletData,
         ResendOtpForWalletResponseData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        SetupMandateRequestData, VerifyOtpForWalletData, VerifyOtpForWalletResponseData,
+        VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -44,6 +45,7 @@ use domain_types::{
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
         generate_resend_otp_for_wallet_response, generate_setup_mandate_response,
+        generate_verify_otp_for_wallet_response,
     },
     utils::ForeignTryFrom,
 };
@@ -74,6 +76,7 @@ use grpc_api_types::payments::{
     PaymentServiceResendOtpForWalletRequest, PaymentServiceResendOtpForWalletResponse,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceVerifyOtpForWalletRequest, PaymentServiceVerifyOtpForWalletResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
     PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
@@ -194,6 +197,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServiceResendOtpForWalletRequest>,
     ) -> Result<tonic::Response<PaymentServiceResendOtpForWalletResponse>, tonic::Status>;
+
+    async fn internal_verify_otp_for_wallet(
+        &self,
+        request: RequestData<PaymentServiceVerifyOtpForWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyOtpForWalletResponse>, tonic::Status>;
 }
 
 trait PaymentMethodAuthOperational {
@@ -1397,6 +1405,21 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_resend_otp_for_wallet_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_verify_otp_for_wallet,
+        log_prefix: "VERIFY_OTP_FOR_WALLET",
+        request_type: PaymentServiceVerifyOtpForWalletRequest,
+        response_type: PaymentServiceVerifyOtpForWalletResponse,
+        flow_marker: VerifyOtpForWallet,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: VerifyOtpForWalletData,
+        response_data_type: VerifyOtpForWalletResponseData,
+        request_data_constructor: VerifyOtpForWalletData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_verify_otp_for_wallet_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -2573,6 +2596,49 @@ impl PaymentService for Payments {
             FlowName::ResendOtpForWallet,
             |request_data: RequestData<PaymentServiceResendOtpForWalletRequest>| async move {
                 self.internal_resend_otp_for_wallet(request_data).await
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "verify_otp_for_wallet",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = FlowName::VerifyOtpForWallet.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VerifyOtpForWallet.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn verify_otp_for_wallet(
+        &self,
+        request: tonic::Request<PaymentServiceVerifyOtpForWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyOtpForWalletResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::VerifyOtpForWallet,
+            |request_data: RequestData<PaymentServiceVerifyOtpForWalletRequest>| async move {
+                self.internal_verify_otp_for_wallet(request_data).await
             },
         )
         .await

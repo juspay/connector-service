@@ -34,8 +34,9 @@ use grpc_api_types::payments::{
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceResendOtpForWalletRequest, PaymentServiceResendOtpForWalletResponse,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceRevokeRequest, RefundResponse,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVerifyOtpForWalletRequest,
+    PaymentServiceVerifyOtpForWalletResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RecurringPaymentServiceRevokeRequest, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -237,7 +238,8 @@ use crate::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, PSync,
         PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        ResendOtpForWallet, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        ResendOtpForWallet, SdkSessionToken, SetupMandate, SubmitEvidence, VerifyOtpForWallet,
+        Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
@@ -257,7 +259,7 @@ use crate::{
         RefundsData, RefundsResponseData, RepeatPaymentData, ResendOtpForWalletData,
         ResendOtpForWalletResponseData, ResponseId, SessionToken, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, TaxInfo,
-        WebhookDetailsResponse,
+        VerifyOtpForWalletData, VerifyOtpForWalletResponseData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -11567,6 +11569,148 @@ pub fn generate_resend_otp_for_wallet_response(
             is_submit_enabled: None,
             next_action: Vec::new(),
             connector_transaction_id: e.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    code: Some(e.code),
+                    message: Some(e.message.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: e.status_code as u32,
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
+}
+
+// ============================================================================
+// VERIFY OTP FOR WALLET FLOW CONVERSIONS
+// ============================================================================
+
+// Proto -> Domain: VerifyOtpForWalletData
+impl ForeignTryFrom<PaymentServiceVerifyOtpForWalletRequest> for VerifyOtpForWalletData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceVerifyOtpForWalletRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            otp: value.otp,
+            otp_token: value.otp_token,
+            payment_id: value.payment_id,
+            connector_transaction_id: value.connector_transaction_id,
+        })
+    }
+}
+
+// Proto -> Domain: PaymentFlowData from VerifyOtpForWalletRequest
+impl
+    ForeignTryFrom<(
+        PaymentServiceVerifyOtpForWalletRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            PaymentServiceVerifyOtpForWalletRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: value
+                .payment_id
+                .clone()
+                .unwrap_or_else(|| "VERIFY_OTP_PAYMENT_ID".to_string()),
+            attempt_id: "VERIFY_OTP_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Wallet,
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.payment_id,
+            ),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("Verify OTP for wallet operation".to_string()),
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            amount: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
+}
+
+// Domain -> Proto: generate response
+pub fn generate_verify_otp_for_wallet_response(
+    router_data_v2: RouterDataV2<
+        VerifyOtpForWallet,
+        PaymentFlowData,
+        VerifyOtpForWalletData,
+        VerifyOtpForWalletResponseData,
+    >,
+) -> Result<PaymentServiceVerifyOtpForWalletResponse, error_stack::Report<ApplicationErrorResponse>>
+{
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+
+    match router_data_v2.response {
+        Ok(response) => Ok(PaymentServiceVerifyOtpForWalletResponse {
+            is_successful: response.is_successful,
+            connector_transaction_id: response.connector_transaction_id,
+            redirect_url: response.redirect_url,
+            next_action: response.next_action.unwrap_or_default(),
+            error: None,
+            status_code: router_data_v2
+                .resource_common_data
+                .connector_http_status_code
+                .unwrap_or(200) as u32,
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(PaymentServiceVerifyOtpForWalletResponse {
+            is_successful: false,
+            connector_transaction_id: e.connector_transaction_id.clone(),
+            redirect_url: None,
+            next_action: Vec::new(),
             error: Some(grpc_api_types::payments::ErrorInfo {
                 unified_details: None,
                 connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
