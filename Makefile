@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method review-pr
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -209,6 +209,11 @@ add-payment-method:
 	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,add-payment-method)
 
+## Review a PR using the pr-reviewer skill
+review-pr:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,pr-reviewer)
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -249,6 +254,7 @@ help:
 	@echo "  new-connector      Implement a new connector from scratch"
 	@echo "  add-flow           Add payment flow(s) to an existing connector"
 	@echo "  add-payment-method Add payment method support to an existing connector"
+	@echo "  review-pr          Review a PR using the pr-reviewer skill"
 	@echo
 	@echo "Other Targets:"
 	@echo "  test-ucs Run interactive UCS connector tests"
