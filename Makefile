@@ -444,7 +444,7 @@ help:
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"
 	@echo ""
 	@echo "Other:"
-  @echo
+	@echo
 	@echo "AI Targets:"
 	@echo "  ai                 Detect AI editor, set up skills symlink, and launch"
 	@echo "  gen-tech-spec      Generate a technical specification for a connector"
