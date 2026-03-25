@@ -807,7 +807,9 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                         .into())
                     }
                 }
-                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) | UpiData::UpiInApp(_) => {
+                    Ok(UpiFlowType::Intent)
+                }
             }
         }
         _ => Err(ConnectorError::NotSupported {

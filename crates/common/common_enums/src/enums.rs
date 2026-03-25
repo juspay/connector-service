@@ -1030,6 +1030,7 @@ pub enum PaymentMethodType {
     UpiCollect,
     UpiIntent,
     UpiQr,
+    UpiInApp,
     Vipps,
     VietQr,
     Venmo,

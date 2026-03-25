@@ -959,6 +959,14 @@ impl<
                         ),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiInApp(upi_inapp) => {
+                    let upi_source = convert_upi_source(upi_inapp.upi_source)?;
+                    Ok(Self::Upi(
+                        crate::payment_method_data::UpiData::UpiInApp(
+                            crate::payment_method_data::UpiInAppData { upi_source },
+                        ),
+                    ))
+                }
                 // ============================================================================
                 // REWARD METHODS - Flattened direct variants
                 // ============================================================================
@@ -1982,6 +1990,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::UpiQr => {
                 Ok(Some(PaymentMethodType::UpiIntent))
             } // UpiQr not yet implemented, fallback to UpiIntent
+            grpc_api_types::payments::PaymentMethodType::UpiInApp => {
+                Ok(Some(PaymentMethodType::UpiInApp))
+            }
             grpc_api_types::payments::PaymentMethodType::ClassicReward => {
                 Ok(Some(PaymentMethodType::ClassicReward))
             }
@@ -2090,6 +2101,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_) => Ok(Some(PaymentMethodType::UpiCollect)),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_) => Ok(Some(PaymentMethodType::UpiIntent)),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_) => Ok(Some(PaymentMethodType::UpiIntent)), // UpiQr not yet implemented, fallback to UpiIntent
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiInApp(_) => Ok(Some(PaymentMethodType::UpiInApp)),
                 // ============================================================================
                 // REWARD METHODS - Flattened direct variants
                 // ============================================================================
@@ -4227,6 +4239,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiInApp(_)),
+            } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::ClassicReward(_)),
             } => Ok(Self::Reward),
             grpc_api_types::payments::PaymentMethod {
@@ -5440,6 +5456,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
 
             grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethodType::UpiInApp => Ok(Self::Upi),
 
             grpc_api_types::payments::PaymentMethodType::Affirm => Ok(Self::PayLater),
             grpc_api_types::payments::PaymentMethodType::AfterpayClearpay => Ok(Self::PayLater),
@@ -8610,6 +8627,7 @@ pub enum PaymentMethodDataType {
     Wero,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
+    UpiInApp,
 }
 
 impl ForeignTryFrom<String> for Secret<time::Date> {

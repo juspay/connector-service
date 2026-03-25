@@ -603,7 +603,7 @@ fn determine_upi_app_name<
     match &request.payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
             match upi_data {
-                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => {
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) | UpiData::UpiInApp(_) => {
                     // For UPI Intent and UPI QR, return generic intent as fallback
                     // TODO: Extract bank code from metadata if available
                     Ok(None)
@@ -650,7 +650,7 @@ fn determine_upi_flow<
                         })
                     }
                 }
-                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => {
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) | UpiData::UpiInApp(_) => {
                     // UPI Intent flow - uses S2S flow "2" for intent-based transactions
                     // pg=UPI, bankcode=INTENT for intent flows
                     Ok((

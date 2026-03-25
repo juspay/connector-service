@@ -71,6 +71,7 @@ message PaymentMethod {
     UpiCollect upi_collect = 30;                        // UPI Collect
     UpiIntent upi_intent = 31;                          // UPI Intent
     UpiQr upi_qr = 32;                                  // UPI QR
+    UpiInApp upi_in_app = 33;                         // UPI InApp
     
     // ONLINE BANKING (40-59) - Direct variants
     OnlineBankingThailand online_banking_thailand = 40;
@@ -567,6 +568,11 @@ message UpiIntent {
 }
 
 message UpiQr {
+  // UPI source type
+  optional UpiSource upi_source = 1;
+}
+
+message UpiInApp {
   // UPI source type
   optional UpiSource upi_source = 1;
 }

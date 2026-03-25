@@ -836,6 +836,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiCollect
             | common_enums::PaymentMethodType::UpiIntent
             | common_enums::PaymentMethodType::UpiQr
+            | common_enums::PaymentMethodType::UpiInApp
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
             | common_enums::PaymentMethodType::SepaGuaranteedDebit

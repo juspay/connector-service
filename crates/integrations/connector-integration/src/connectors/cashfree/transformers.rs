@@ -252,7 +252,8 @@ fn get_cashfree_payment_method_data<
                     })
                 }
                 domain_types::payment_method_data::UpiData::UpiIntent(_)
-                | domain_types::payment_method_data::UpiData::UpiQr(_) => {
+                | domain_types::payment_method_data::UpiData::UpiQr(_)
+                | domain_types::payment_method_data::UpiData::UpiInApp(_) => {
                     // Intent flow: channel = "link", no UPI ID needed
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {

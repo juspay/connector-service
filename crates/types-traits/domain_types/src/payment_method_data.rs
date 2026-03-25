@@ -244,6 +244,7 @@ impl<T: PaymentMethodDataTypes> PaymentMethodData<T> {
                 UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
                 UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
                 UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
+                UpiData::UpiInApp(inapp_data) => inapp_data.upi_source.as_ref(),
             },
             _ => None,
         }
@@ -422,6 +423,8 @@ pub enum UpiData {
     UpiIntent(UpiIntentData),
     /// UPI QR - Unique QR generated per txn
     UpiQr(UpiQrData),
+    /// UPI InApp - Payment initiated within an app using UPI SDK
+    UpiInApp(UpiInAppData),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -463,6 +466,11 @@ pub struct UpiIntentData {
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct UpiQrData {
+    pub upi_source: Option<UpiSource>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiInAppData {
     pub upi_source: Option<UpiSource>,
 }
 

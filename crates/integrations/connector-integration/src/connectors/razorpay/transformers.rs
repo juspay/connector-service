@@ -1416,7 +1416,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 (None, Some(vpa))
             }
             PaymentMethodData::Upi(UpiData::UpiIntent(_))
-            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => (Some("intent"), None),
+            | PaymentMethodData::Upi(UpiData::UpiQr(_))
+            | PaymentMethodData::Upi(UpiData::UpiInApp(_)) => (Some("intent"), None),
             _ => (None, None), // Default fallback
         };
 

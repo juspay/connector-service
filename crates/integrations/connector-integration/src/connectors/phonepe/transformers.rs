@@ -275,6 +275,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
                 },
+                UpiData::UpiInApp(_) => {
+                    return Err(errors::ConnectorError::NotImplemented(
+                        "UPI InApp not supported for PhonePe".to_string(),
+                    )
+                    .into())
+                }
             },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
@@ -431,6 +437,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
                 },
+                UpiData::UpiInApp(_) => {
+                    return Err(errors::ConnectorError::NotImplemented(
+                        "UPI InApp not supported for PhonePe".to_string(),
+                    )
+                    .into())
+                }
             },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
