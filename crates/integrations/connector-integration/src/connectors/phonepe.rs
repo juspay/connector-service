@@ -7,18 +7,20 @@ use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::Mi
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, CreateSubscription, DefendDispute,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        ConnectorCustomerResponse, ConnectorSpecifications, CreateSubscriptionData,
+        CreateSubscriptionResponseData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
@@ -41,7 +43,8 @@ use serde::Serialize;
 use transformers as phonepe;
 
 use self::transformers::{
-    PhonepePaymentsRequest, PhonepePaymentsResponse, PhonepeSyncRequest, PhonepeSyncResponse,
+    PhonepeCreateSubscriptionRequest, PhonepeCreateSubscriptionResponse, PhonepePaymentsRequest,
+    PhonepePaymentsResponse, PhonepeSyncRequest, PhonepeSyncResponse,
 };
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -180,6 +183,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateSubscriptionV2 for Phonepe<T>
+{
+}
+
 // Define connector prerequisites
 macros::create_all_prerequisites!(
     connector_name: Phonepe,
@@ -196,6 +204,12 @@ macros::create_all_prerequisites!(
             request_body: PhonepeSyncRequest,
             response_body: PhonepeSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateSubscription,
+            request_body: PhonepeCreateSubscriptionRequest,
+            response_body: PhonepeCreateSubscriptionResponse,
+            router_data: RouterDataV2<CreateSubscription, PaymentFlowData, CreateSubscriptionData, CreateSubscriptionResponseData>,
         )
     ],
     amount_converters: [
@@ -437,6 +451,52 @@ macros::macro_connector_implementation!(
             };
 
             Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
+        }
+    }
+);
+
+// CreateSubscription flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Phonepe,
+    curl_request: Json(PhonepeCreateSubscriptionRequest),
+    curl_response: PhonepeCreateSubscriptionResponse,
+    flow_name: CreateSubscription,
+    resource_common_data: PaymentFlowData,
+    flow_request: CreateSubscriptionData,
+    flow_response: CreateSubscriptionResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateSubscription, PaymentFlowData, CreateSubscriptionData, CreateSubscriptionResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+            ];
+
+            // Build the request to get the checksum for X-VERIFY header
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
+                router_data: req,
+            };
+            let connector_req = PhonepeCreateSubscriptionRequest::try_from(&connector_router_data)?;
+            headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
+
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateSubscription, PaymentFlowData, CreateSubscriptionData, CreateSubscriptionResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{}{}", base_url, constants::API_SUBSCRIPTION_CREATE_ENDPOINT))
         }
     }
 );

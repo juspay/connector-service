@@ -1657,6 +1657,29 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct CreateSubscriptionData {
+    pub merchant_id: Secret<String>,
+    pub subscription_id: String,
+    pub customer_id: Option<Secret<String>>,
+    pub subscription_name: Option<String>,
+    pub auth_workflow_type: Option<String>,
+    pub amount_type: Option<String>,
+    pub amount: MinorUnit,
+    pub currency: common_enums::Currency,
+    pub frequency: Option<String>,
+    pub recurring_count: Option<i64>,
+    pub description: Option<String>,
+    pub mobile_number: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateSubscriptionResponseData {
+    pub subscription_id: Option<String>,
+    pub state: Option<String>,
+    pub status_code: u16,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

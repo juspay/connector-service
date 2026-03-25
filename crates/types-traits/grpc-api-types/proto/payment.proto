@@ -2613,6 +2613,47 @@ message RecurringPaymentServiceRevokeResponse {
 }
 
 // ============================================================================
+// SUBSCRIPTION FLOW MESSAGES
+// ============================================================================
+
+// Request message for creating a subscription
+message RecurringPaymentServiceCreateSubscriptionRequest {
+  // Identification
+  optional string merchant_subscription_id = 1;
+
+  // Amount Information
+  Money amount = 2;
+
+  // Customer Details
+  optional string customer_id = 3;
+  optional string mobile_number = 4;
+
+  // Subscription Details
+  optional string subscription_name = 5;
+  optional string auth_workflow_type = 6;
+  optional string amount_type = 7;
+  optional string frequency = 8;
+  optional int64 recurring_count = 9;
+  optional string description = 10;
+}
+
+// Response message for creating a subscription
+message RecurringPaymentServiceCreateSubscriptionResponse {
+  // Subscription Details
+  optional string subscription_id = 1;
+  optional string state = 2;
+
+  // Status Information
+  optional ErrorInfo error = 3;
+  uint32 status_code = 4;
+  map<string, string> response_headers = 5;
+
+  // Raw Response/Request for debugging
+  optional SecretString raw_connector_response = 6;
+  optional SecretString raw_connector_request = 7;
+}
+
+// ============================================================================
 // 3DS AUTHENTICATION FLOW MESSAGES
 // ============================================================================
 

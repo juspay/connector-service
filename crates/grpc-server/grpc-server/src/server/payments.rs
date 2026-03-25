@@ -12,21 +12,22 @@ use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        VerifyWebhookSource, Void, VoidPC,
+        CreateSessionToken, CreateSubscription, IncrementalAuthorization, MandateRevoke, PSync,
+        PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorResponseHeaders, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        ConnectorCustomerResponse, ConnectorResponseHeaders, CreateSubscriptionData,
+        CreateSubscriptionResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -75,7 +76,8 @@ use grpc_api_types::payments::{
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
     PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
-    RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
+    RecurringPaymentServiceChargeResponse, RecurringPaymentServiceCreateSubscriptionRequest,
+    RecurringPaymentServiceCreateSubscriptionResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
 use hyperswitch_masking::ExposeInterface;
@@ -220,6 +222,11 @@ trait RecurringPaymentOperational {
         &self,
         request: RequestData<RecurringPaymentServiceRevokeRequest>,
     ) -> Result<tonic::Response<RecurringPaymentServiceRevokeResponse>, tonic::Status>;
+
+    async fn internal_create_subscription(
+        &self,
+        request: RequestData<RecurringPaymentServiceCreateSubscriptionRequest>,
+    ) -> Result<tonic::Response<RecurringPaymentServiceCreateSubscriptionResponse>, tonic::Status>;
 }
 
 trait MerchantAuthenticationOperational {
@@ -3340,6 +3347,21 @@ impl RecurringPaymentOperational for RecurringPayments {
         generate_response_fn: generate_mandate_revoke_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_create_subscription,
+        log_prefix: "CREATE_SUBSCRIPTION",
+        request_type: RecurringPaymentServiceCreateSubscriptionRequest,
+        response_type: RecurringPaymentServiceCreateSubscriptionResponse,
+        flow_marker: CreateSubscription,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: CreateSubscriptionData,
+        response_data_type: CreateSubscriptionResponseData,
+        request_data_constructor: CreateSubscriptionData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_create_subscription_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -3525,6 +3547,48 @@ impl RecurringPaymentService for RecurringPayments {
             config.clone(),
             FlowName::Authenticate,
             |request_data| async move { self.internal_mandate_revoke(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_subscription",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateSubscription.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateSubscription.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_subscription(
+        &self,
+        request: tonic::Request<RecurringPaymentServiceCreateSubscriptionRequest>,
+    ) -> Result<tonic::Response<RecurringPaymentServiceCreateSubscriptionResponse>, tonic::Status>
+    {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "RecurringPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::CreateSubscription,
+            |request_data| async move { self.internal_create_subscription(request_data).await },
         )
         .await
     }
@@ -3882,6 +3946,57 @@ pub fn generate_mandate_revoke_response(
             response_headers,
             network_transaction_id: None,
             merchant_revoke_id: e.connector_transaction_id,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
+}
+
+pub fn generate_create_subscription_response(
+    router_data_v2: RouterDataV2<
+        CreateSubscription,
+        PaymentFlowData,
+        CreateSubscriptionData,
+        CreateSubscriptionResponseData,
+    >,
+) -> Result<
+    RecurringPaymentServiceCreateSubscriptionResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let create_subscription_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+    match create_subscription_response {
+        Ok(response) => Ok(RecurringPaymentServiceCreateSubscriptionResponse {
+            subscription_id: response.subscription_id,
+            state: response.state,
+            error: None,
+            status_code: response.status_code.into(),
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(RecurringPaymentServiceCreateSubscriptionResponse {
+            subscription_id: None,
+            state: None,
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    code: Some(e.code),
+                    message: Some(e.message.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: e.status_code.into(),
+            response_headers,
             raw_connector_response,
             raw_connector_request,
         }),
