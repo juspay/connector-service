@@ -676,6 +676,8 @@ pub enum WalletData {
     MbWay(MbWayData),
     Satispay(SatispayData),
     Wero(WeroData),
+    CredIntent(CredIntentData),
+    CredCollect(CredCollectData),
 }
 
 impl WalletData {
@@ -724,6 +726,12 @@ pub struct SatispayData {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct WeroData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct CredIntentData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct CredCollectData {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct MifinityData {

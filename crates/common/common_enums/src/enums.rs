@@ -1036,6 +1036,8 @@ pub enum PaymentMethodType {
     Walley,
     WeChatPay,
     Wero,
+    CredIntent,
+    CredCollect,
     SevenEleven,
     Lawson,
     MiniStop,

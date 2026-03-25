@@ -1507,7 +1507,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | WalletData::BluecodeRedirect { .. }
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::Wero(_)
+            | WalletData::CredIntent(_)
+            | WalletData::CredCollect(_) => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }

@@ -848,6 +848,8 @@ enum PaymentMethodType {
   INSTANT_BANK_TRANSFER_POLAND = 101;
   SATISPAY = 102;
   WERO = 103;
+  CRED_INTENT = 108;
+  CRED_COLLECT = 109;
 }
 
 // Product type enumeration

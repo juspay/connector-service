@@ -214,7 +214,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::RevolutPay(_)
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => {
+            | WalletData::Wero(_)
+            | WalletData::CredIntent(_)
+            | WalletData::CredCollect(_) => {
                 Err(ConnectorError::NotImplemented("Payment method".to_string()))?
             }
         };
