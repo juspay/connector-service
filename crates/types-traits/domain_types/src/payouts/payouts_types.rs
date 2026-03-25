@@ -198,6 +198,7 @@ pub struct PayoutCreateRecipientRequest {
     pub amount: common_utils::types::MinorUnit,
     pub source_currency: common_enums::Currency,
     pub payout_method_data: Option<PayoutMethodData>,
+    pub recipient_type: common_enums::PayoutRecipientType,
 }
 
 #[derive(Debug, Clone)]
