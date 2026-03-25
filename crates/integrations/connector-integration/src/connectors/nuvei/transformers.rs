@@ -1,3 +1,4 @@
+use cards::CardNumber;
 use common_utils::{consts, pii, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -135,7 +136,7 @@ pub struct NuveiPaymentOption<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub card: Option<NuveiCard<T>>,
+    pub card: Option<NuveiCardOption<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alternative_payment_method: Option<NuveiAlternativePaymentMethod>,
 }
@@ -190,6 +191,34 @@ pub struct NuveiExternalToken {
 pub enum NuveiExternalTokenProvider {
     ApplePay,
     GooglePay,
+}
+
+// Card type for decrypted wallet payments (e.g. decrypted Google Pay / Apple Pay).
+// card_number holds the network token PAN from the decrypted wallet data.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiDecryptedWalletCard {
+    pub card_number: CardNumber,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_month: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_year: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_4_digits: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_token: Option<NuveiExternalToken>,
+}
+
+// Untagged so both variants serialise to the same JSON object under the "card" key.
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum NuveiCardOption<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    Generic(NuveiCard<T>),
+    DecryptedWallet(NuveiDecryptedWalletCard),
 }
 
 // For Encrypted Apple Pay: JSON structure to be encoded into mobile_token
@@ -563,25 +592,25 @@ fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Sen
 // Helper function to build Google Pay card data
 fn build_google_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     google_pay_data: &domain_types::payment_method_data::GooglePayWalletData,
-) -> Result<NuveiCard<T>, error_stack::Report<errors::ConnectorError>> {
+) -> Result<NuveiCardOption<T>, error_stack::Report<errors::ConnectorError>> {
     use domain_types::payment_method_data::GpayTokenizationData;
 
     match &google_pay_data.tokenization_data {
-        // Decrypted Google Pay: Extract PAN, expiry, cryptogram, ECI
+        // Decrypted Google Pay: send network token PAN + expiry + last4 + brand + cryptogram + ECI
         GpayTokenizationData::Decrypted(google_pay_decrypt_data) => {
-            Ok(NuveiCard {
-                card_number: None,
-                card_holder_name: None,
+            Ok(NuveiCardOption::DecryptedWallet(NuveiDecryptedWalletCard {
+                card_number: google_pay_decrypt_data.application_primary_account_number.clone(),
                 expiration_month: Some(google_pay_decrypt_data.card_exp_month.clone()),
                 expiration_year: Some(google_pay_decrypt_data.card_exp_year.clone()),
-                cvv: None,
+                last_4_digits: Some(Secret::new(google_pay_decrypt_data.application_primary_account_number.get_last4())),
+                brand: Some(google_pay_data.info.card_network.clone()),
                 external_token: Some(NuveiExternalToken {
                     external_token_provider: NuveiExternalTokenProvider::GooglePay,
                     mobile_token: None,
                     cryptogram: google_pay_decrypt_data.cryptogram.clone(),
                     eci_provider: google_pay_decrypt_data.eci_indicator.clone(),
                 }),
-            })
+            }))
         }
         // Encrypted Google Pay: JSON-encode entire Google Pay data
         GpayTokenizationData::Encrypted(encrypted_data) => {
@@ -609,7 +638,7 @@ fn build_google_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Se
             let mobile_token_json = serde_json::to_string(&google_pay_json)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-            Ok(NuveiCard {
+            Ok(NuveiCardOption::Generic(NuveiCard {
                 card_number: None,
                 card_holder_name: None,
                 expiration_month: None,
@@ -621,7 +650,7 @@ fn build_google_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Se
                     cryptogram: None,
                     eci_provider: None,
                 }),
-            })
+            }))
         }
     }
 }
@@ -853,14 +882,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?;
 
                 NuveiPaymentOption {
-                    card: Some(NuveiCard {
+                    card: Some(NuveiCardOption::Generic(NuveiCard {
                         card_number: Some(card_data.card_number.clone()),
                         card_holder_name: Some(card_holder_name),
                         expiration_month: Some(card_data.card_exp_month.clone()),
                         expiration_year: Some(card_data.card_exp_year.clone()),
                         cvv: Some(card_data.card_cvc.clone()),
                         external_token: None,
-                    }),
+                    })),
                     alternative_payment_method: None,
                 }
             }
@@ -924,7 +953,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 match wallet_data {
                     WalletData::ApplePay(apple_pay_data) => NuveiPaymentOption {
-                        card: Some(build_apple_pay_card(apple_pay_data)?),
+                        card: Some(NuveiCardOption::Generic(build_apple_pay_card(apple_pay_data)?)),
                         alternative_payment_method: None,
                     },
                     WalletData::GooglePay(google_pay_data) => NuveiPaymentOption {
