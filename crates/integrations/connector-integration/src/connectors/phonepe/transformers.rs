@@ -6,9 +6,10 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync},
+    connector_flow::{Authorize, InitiateTopup, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        InitiateTopupData, InitiateTopupResponseData, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, ResponseId, WalletFlowData,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
@@ -1120,4 +1121,287 @@ fn extract_bin_from_masked_account_number(masked_account_number: Option<&str>) -
             .filter(|bin| bin.chars().all(|c| c.is_ascii_digit()))
             .map(str::to_string)
     })
+}
+
+// ===== INITIATE TOPUP REQUEST STRUCTURES =====
+
+/// The outer wire-level request body sent to PhonePe's wallet topup API.
+/// Contains a base64-encoded JSON payload in the `request` field.
+#[derive(Debug, Serialize)]
+pub struct PhonepeTopupRequest {
+    request: Secret<String>,
+    #[serde(skip)]
+    pub checksum: String,
+}
+
+/// The inner payload that gets JSON-serialized and base64-encoded
+/// before being placed in the `request` field of `PhonepeTopupRequest`.
+#[derive(Debug, Serialize)]
+struct PhonepeTopupRequestPayload {
+    #[serde(rename = "merchantId")]
+    merchant_id: Secret<String>,
+    amount: i64,
+    #[serde(rename = "userAuthToken")]
+    user_auth_token: Secret<String>,
+    #[serde(rename = "linkType")]
+    link_type: String,
+    #[serde(rename = "topupWorkflowType")]
+    topup_workflow_type: String,
+    #[serde(rename = "deviceContext", skip_serializing_if = "Option::is_none")]
+    device_context: Option<PhonepeTopupDeviceContext>,
+}
+
+/// Device context for the topup request containing the PhonePe app version code.
+#[derive(Debug, Serialize)]
+struct PhonepeTopupDeviceContext {
+    #[serde(rename = "phonePeVersionCode")]
+    phonepe_version_code: i64,
+}
+
+// ===== INITIATE TOPUP RESPONSE STRUCTURES =====
+
+/// PhonePe wallet topup response - tries SuccessTopupResp first, falls back to error.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeTopupResponse {
+    pub success: bool,
+    pub code: String,
+    pub message: String,
+    #[serde(rename = "_data", alias = "data")]
+    pub data: Option<PhonepeTopupResponseData>,
+}
+
+/// Response data containing the deeplink URL for SDK-based topup.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeTopupResponseData {
+    #[serde(rename = "responseType")]
+    pub response_type: Option<String>,
+    #[serde(rename = "redirectUrl")]
+    pub redirect_url: Option<String>,
+}
+
+// ===== INITIATE TOPUP REQUEST BUILDING =====
+
+/// Helper to extract PhonePe version code from connector_feature_data.
+/// The connector_feature_data JSON is expected to contain a "phonepe_version_code" field.
+fn get_phonepe_version_code(
+    connector_feature_data: &Option<Secret<serde_json::Value>>,
+) -> Option<i64> {
+    connector_feature_data.as_ref().and_then(|data| {
+        data.peek()
+            .get("phonepe_version_code")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i64>().ok())
+    })
+}
+
+// TryFrom implementation for owned PhonepeRouterData wrapper (InitiateTopup)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PhonepeRouterData<
+            RouterDataV2<
+                InitiateTopup,
+                WalletFlowData,
+                InitiateTopupData,
+                InitiateTopupResponseData,
+            >,
+            T,
+        >,
+    > for PhonepeTopupRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        wrapper: PhonepeRouterData<
+            RouterDataV2<
+                InitiateTopup,
+                WalletFlowData,
+                InitiateTopupData,
+                InitiateTopupResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &wrapper.router_data;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
+
+        let wallet_token = router_data
+            .request
+            .wallet_token
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "wallet_token",
+            })?
+            .clone();
+
+        let amount = router_data.request.amount.0;
+
+        let version_code = get_phonepe_version_code(&router_data.request.connector_feature_data);
+        let device_context = version_code.map(|code| PhonepeTopupDeviceContext {
+            phonepe_version_code: code,
+        });
+
+        let payload = PhonepeTopupRequestPayload {
+            merchant_id: auth.merchant_id.clone(),
+            amount,
+            user_auth_token: wallet_token,
+            link_type: constants::WALLET_TOPUP_DEEPLINK.to_string(),
+            topup_workflow_type: constants::TOPUP_WORKFLOW_TRANSACTIONAL.to_string(),
+            device_context,
+        };
+
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        let api_path = format!("/{}", constants::API_WALLET_TOPUP_ENDPOINT);
+        let checksum =
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            request: Secret::new(base64_payload),
+            checksum,
+        })
+    }
+}
+
+// TryFrom implementation for borrowed PhonepeRouterData wrapper (InitiateTopup, for headers)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &PhonepeRouterData<
+            &RouterDataV2<
+                InitiateTopup,
+                WalletFlowData,
+                InitiateTopupData,
+                InitiateTopupResponseData,
+            >,
+            T,
+        >,
+    > for PhonepeTopupRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: &PhonepeRouterData<
+            &RouterDataV2<
+                InitiateTopup,
+                WalletFlowData,
+                InitiateTopupData,
+                InitiateTopupResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
+
+        let wallet_token = router_data
+            .request
+            .wallet_token
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "wallet_token",
+            })?
+            .clone();
+
+        let amount = router_data.request.amount.0;
+
+        let version_code = get_phonepe_version_code(&router_data.request.connector_feature_data);
+        let device_context = version_code.map(|code| PhonepeTopupDeviceContext {
+            phonepe_version_code: code,
+        });
+
+        let payload = PhonepeTopupRequestPayload {
+            merchant_id: auth.merchant_id.clone(),
+            amount,
+            user_auth_token: wallet_token,
+            link_type: constants::WALLET_TOPUP_DEEPLINK.to_string(),
+            topup_workflow_type: constants::TOPUP_WORKFLOW_TRANSACTIONAL.to_string(),
+            device_context,
+        };
+
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        let api_path = format!("/{}", constants::API_WALLET_TOPUP_ENDPOINT);
+        let checksum =
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            request: Secret::new(base64_payload),
+            checksum,
+        })
+    }
+}
+
+// ===== INITIATE TOPUP RESPONSE HANDLING =====
+
+impl TryFrom<ResponseRouterData<PhonepeTopupResponse, Self>>
+    for RouterDataV2<InitiateTopup, WalletFlowData, InitiateTopupData, InitiateTopupResponseData>
+{
+    type Error = Error;
+
+    fn try_from(item: ResponseRouterData<PhonepeTopupResponse, Self>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        if response.success {
+            // Extract the deeplink/redirect URL from the response data
+            let redirect_url = response
+                .data
+                .as_ref()
+                .and_then(|data| data.redirect_url.clone());
+
+            match redirect_url {
+                Some(url) => Ok(Self {
+                    response: Ok(InitiateTopupResponseData::TopupSdkResponse { deeplink_url: url }),
+                    resource_common_data: WalletFlowData {
+                        status: common_enums::AttemptStatus::AuthenticationPending,
+                        ..item.router_data.resource_common_data
+                    },
+                    ..item.router_data
+                }),
+                None => {
+                    // Success but no redirect URL — return NoResponseData
+                    Ok(Self {
+                        response: Ok(InitiateTopupResponseData::NoResponseData),
+                        resource_common_data: WalletFlowData {
+                            status: common_enums::AttemptStatus::Pending,
+                            ..item.router_data.resource_common_data
+                        },
+                        ..item.router_data
+                    })
+                }
+            }
+        } else {
+            // Error response - PhonePe returned success: false
+            let error_message = response.message.clone();
+            let error_code = response.code.clone();
+
+            tracing::warn!(
+                "PhonePe topup failed - Code: {}, Message: {}, Status: {}",
+                error_code,
+                error_message,
+                item.http_code
+            );
+
+            let attempt_status = get_phonepe_error_status(&error_code);
+
+            Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: error_code,
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: item.http_code,
+                    attempt_status,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            })
+        }
+    }
 }

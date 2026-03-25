@@ -374,17 +374,16 @@ pub trait InitiateTopupV2:
 {
 }
 
-impl<T> InitiateTopupV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
-
-impl<T>
-    ConnectorIntegrationV2<
-        connector_flow::InitiateTopup,
-        WalletFlowData,
-        InitiateTopupData,
-        InitiateTopupResponseData,
-    > for T
-where
-    T: ConnectorCommon + Sync + Send + 'static,
+impl<T> InitiateTopupV2 for T where
+    T: ConnectorCommon
+        + ConnectorIntegrationV2<
+            connector_flow::InitiateTopup,
+            WalletFlowData,
+            InitiateTopupData,
+            InitiateTopupResponseData,
+        > + Sync
+        + Send
+        + 'static
 {
 }
 
