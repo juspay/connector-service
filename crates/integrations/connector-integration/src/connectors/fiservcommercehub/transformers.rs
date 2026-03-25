@@ -284,7 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "card_holder_name",
                     })?;
                 let expiration_month = card.card_exp_month.peek().to_string();
-                let expiration_year = card.card_exp_year.peek().to_string();
+                let expiration_year = card.get_expiry_year_4_digit().peek().to_string();
 
                 let plain_block =
                     format!("{card_data}{name_on_card}{expiration_month}{expiration_year}");
