@@ -4540,6 +4540,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::CredIntent(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::CredCollect(_)),
+            } => Ok(Self::Wallet),
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                 error_identifier: 400,
