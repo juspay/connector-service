@@ -53,18 +53,22 @@ If not on `{BRANCH}`, something is wrong — report FAILED.
 
 ### 1b: Find the techspec
 
+Techspecs are located at `/home/kanikachaudhary/Kanika/euler-techspec-output/` with naming pattern `{CONNECTOR_UPPER}_spec.md`.
+
 ```bash
-ls techspec/{connector}.md
+# Try uppercase connector name (primary pattern)
+CONNECTOR_UPPER=$(echo "{CONNECTOR}" | tr '[:lower:]' '[:upper:]')
+ls /home/kanikachaudhary/Kanika/euler-techspec-output/${CONNECTOR_UPPER}_spec.md
 ```
 
-Where `{connector}` is the lowercase version of `{CONNECTOR}`. If not found, also try variations:
+If not found, try variations (spaces/hyphens may become underscores):
 ```bash
-ls techspec/ | grep -i {connector}
+ls /home/kanikachaudhary/Kanika/euler-techspec-output/ | grep -i {connector}
 ```
 
-If no techspec found → report FAILED with reason "No techspec found at techspec/{connector}.md".
+If no techspec found → report FAILED with reason "No techspec found at /home/kanikachaudhary/Kanika/euler-techspec-output/{CONNECTOR_UPPER}_spec.md".
 
-Store `{TECHSPEC_PATH}` (e.g., `techspec/adyen.md`).
+Store `{TECHSPEC_PATH}` (e.g., `/home/kanikachaudhary/Kanika/euler-techspec-output/RAZORPAY_spec.md`).
 
 ### 1c: Find connector source files
 
@@ -72,9 +76,15 @@ Store `{TECHSPEC_PATH}` (e.g., `techspec/adyen.md`).
 find crates/integrations/connector-integration/src/connectors/ -iname "*{connector}*" | head -20
 ```
 
-Note the actual directory/file name (e.g., `adyen.rs` and `adyen/transformers.rs`). If not found → report FAILED with reason "No connector source files found".
+Note the actual directory/file name (e.g., `adyen.rs` and `adyen/transformers.rs`).
 
-Store `{CONNECTOR_SOURCE_FILES}`.
+**If connector source files are NOT found**: This means the connector is **brand new** and does not exist in the codebase yet. This is valid — the Flow Decider and Flow Agents will create the connector from scratch during implementation. In this case:
+- Set `{CONNECTOR_SOURCE_FILES}` to `"NEW_CONNECTOR"` (a sentinel value)
+- The Flow Decider will know there are no existing flows to skip
+- The first Flow Agent (typically the foundational flow like Authorize or CreateOrder) will create the connector module, struct, `ConnectorCommon`, `create_all_prerequisites!`, and transformers module from scratch
+- Do NOT report FAILED — proceed to Phase 2
+
+Store `{CONNECTOR_SOURCE_FILES}` (either actual paths or `"NEW_CONNECTOR"`).
 
 ---
 
@@ -93,7 +103,7 @@ Task(
 Variables:
   CONNECTOR: <connector name, exact casing>
   TECHSPEC_PATH: <path to techspec>
-  CONNECTOR_SOURCE_FILES: <paths to connector .rs files>"
+  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>"
 )
 ```
 
@@ -101,7 +111,7 @@ Variables:
 
 Parse the returned flow plan to extract:
 - `ORDERED_FLOWS` — the ordered list of flow names with status PLAN
-- For each flow: its `TECHSPEC_SECTION`, `GRPCURL_SERVICE`, and `PATTERN_GUIDE`
+- For each flow: its `TECHSPEC_SECTION` and `GRPCURL_SERVICE`
 
 ---
 
@@ -120,16 +130,54 @@ For each flow in `ORDERED_FLOWS`, in order:
 
 ### 3a: Check dependency gates
 
-Before spawning the Flow Agent, check if this flow's dependencies are met:
+Before spawning the Flow Agent, check if this flow's dependencies are met. The Flow Decider determines the full flow list and order — it may include flows beyond the 6 core ones. Apply these dependency rules:
+
+**Pre-Authorize flows (no Authorize dependency):**
 
 | Flow | Dependency | Gate |
 |------|-----------|------|
-| Authorize | None | Always proceed |
-| PSync | Authorize must have succeeded | If Authorize FAILED → SKIP PSync |
-| Capture | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP Capture |
-| Refund | Authorize must have succeeded (need `connector_transaction_id`) | If Authorize FAILED → SKIP Refund |
-| RSync | Refund must have succeeded (need `connector_refund_id`) | If Refund FAILED/SKIPPED → SKIP RSync |
-| Void | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP Void |
+| CreateOrder | None | Always proceed |
+| CreateAccessToken | None | Always proceed |
+| CreateConnectorCustomer | None | Always proceed |
+| SessionToken | None | Always proceed |
+| SdkSessionToken | None | Always proceed |
+| PaymentMethodToken | None | Always proceed |
+| PreAuthenticate | None | Always proceed |
+
+**Authorize and post-Authorize flows:**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| Authorize | Pre-Authorize flows if any (as ordered by decider) | Proceed after pre-flows complete |
+| Authenticate | PreAuthenticate must have succeeded | If PreAuthenticate FAILED → SKIP |
+| PostAuthenticate | Authenticate must have succeeded | If Authenticate FAILED → SKIP |
+| PSync | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| Capture | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP |
+| IncrementalAuthorization | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| Refund | Authorize must have succeeded (need `connector_transaction_id`) | If Authorize FAILED → SKIP |
+| RSync | Refund must have succeeded (need `connector_refund_id`) | If Refund FAILED/SKIPPED → SKIP |
+| Void | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP |
+| VoidPC | Capture must have succeeded | If Capture FAILED → SKIP |
+| SetupMandate | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| RepeatPayment | SetupMandate must have succeeded | If SetupMandate FAILED → SKIP |
+| MandateRevoke | SetupMandate must have succeeded | If SetupMandate FAILED → SKIP |
+
+**Dispute flows (independent of payment lifecycle — need a charged payment):**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| DSync | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| AcceptDispute | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| SubmitEvidence | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| DefendDispute | Authorize must have succeeded | If Authorize FAILED → SKIP |
+
+**Webhook flow:**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| IncomingWebhook | None, but typically implemented last | Always proceed |
+
+**General rule**: The Flow Decider determines the order. If you encounter a flow not listed above, check if it needs a `connector_transaction_id` (depends on Authorize) or `connector_refund_id` (depends on Refund). If unclear, proceed — the Testing Agent will catch dependency issues at runtime.
 
 If a dependency is not met, mark the flow as SKIPPED with reason "Prerequisite {dependency} not met" and continue to the next flow.
 
@@ -146,7 +194,7 @@ Variables:
   FLOW_NAME: <flow name from the ordered list>
   TECHSPEC_PATH: <path to techspec>
   TECHSPEC_SECTION: <section identifier from flow plan>
-  CONNECTOR_SOURCE_FILES: <paths to connector .rs files>
+  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>
   PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from the previous flow, or empty for first flow>
   ACCUMULATED_IDS: <JSON with all extracted IDs so far>"
 )
@@ -175,7 +223,9 @@ After the Flow Agent returns:
 
 3. **Update `PREVIOUS_FLOW_GRPCURL`** with this flow's raw grpcurl command + output (for the next flow to use as reference)
 
-4. **Apply dependency enforcement** for subsequent flows (see gate table in 3a)
+4. **Update `CONNECTOR_SOURCE_FILES`**: If this was the first flow for a NEW_CONNECTOR, the Flow Agent will have created the connector files. Update `CONNECTOR_SOURCE_FILES` from `"NEW_CONNECTOR"` to the actual paths reported in `files_modified` so subsequent Flow Agents get the real paths.
+
+5. **Apply dependency enforcement** for subsequent flows (see gate table in 3a)
 
 **WAIT** for this result before spawning the next flow. The next flow MUST be in a SEPARATE, SUBSEQUENT message.
 
@@ -240,12 +290,8 @@ Return the final result:
 CONNECTOR: {CONNECTOR}
 STATUS: SUCCESS | PARTIAL | FAILED | SKIPPED
 FLOWS:
-  - Authorize: SUCCESS | FAILED | SKIPPED | EXISTING
-  - PSync: SUCCESS | FAILED | SKIPPED | EXISTING
-  - Capture: SUCCESS | FAILED | SKIPPED | EXISTING
-  - Refund: SUCCESS | FAILED | SKIPPED | EXISTING
-  - RSync: SUCCESS | FAILED | SKIPPED | EXISTING
-  - Void: SUCCESS | FAILED | SKIPPED | EXISTING
+  <For each flow from the Flow Decider's plan (not a fixed list — may include any combination of flows):>
+  - {FlowName}: SUCCESS | FAILED | SKIPPED | EXISTING
 FLOWS_SUCCEEDED: <count>
 FLOWS_FAILED: <count>
 FLOWS_SKIPPED: <count>
