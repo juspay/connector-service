@@ -146,7 +146,7 @@ pub fn get_account_holder_name(
 - Mandate: Required for recurring payments
 
 ```rust
-// File: backend/connector-integration/src/connectors/adyen/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/adyen/transformers.rs
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
@@ -241,7 +241,7 @@ let billing_address = match bank_debit_data {
 - Special: Requires mandate_data for recurring payments
 
 ```rust
-// File: backend/connector-integration/src/connectors/stripe/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/stripe/transformers.rs
 
 impl From<&payment_method_data::BankDebitData> for StripePaymentMethodType {
     fn from(bank_debit_data: &payment_method_data::BankDebitData) -> Self {
@@ -313,7 +313,7 @@ fn get_bank_debit_data(
 - Limited: SEPA only
 
 ```rust
-// File: backend/connector-integration/src/connectors/novalnet/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/novalnet/transformers.rs
 
 PaymentMethodData::BankDebit(ref bank_debit_data) => {
     let payment_type = NovalNetPaymentTypes::try_from(
@@ -447,7 +447,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 ### Complete Bank Debit Connector Implementation
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -648,7 +648,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 ### Transformers File Template
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use common_utils::{ext_traits::OptionExt, pii, request::Method, types::MinorUnit};
 use domain_types::{
@@ -1273,6 +1273,6 @@ async fn test_bank_debit_mandate_creation() {
 
 ## Connector-Specific References
 
-- **Adyen**: `backend/connector-integration/src/connectors/adyen/transformers.rs:1654-1696`
-- **Stripe**: `backend/connector-integration/src/connectors/stripe/transformers.rs:1204-1260`
-- **Novalnet**: `backend/connector-integration/src/connectors/novalnet/transformers.rs:467-527`
+- **Adyen**: `crates/integrations/connector-integration/src/connectors/adyen/transformers.rs:1654-1696`
+- **Stripe**: `crates/integrations/connector-integration/src/connectors/stripe/transformers.rs:1204-1260`
+- **Novalnet**: `crates/integrations/connector-integration/src/connectors/novalnet/transformers.rs:467-527`

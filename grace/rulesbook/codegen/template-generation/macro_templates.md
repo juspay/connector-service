@@ -23,7 +23,7 @@ Use these placeholders when generating code:
 ## Template 1: Complete Connector File Structure
 
 ```rust
-// File: backend/connector-integration/src/connectors/{{connector_name}}.rs
+// File: crates/integrations/connector-integration/src/connectors/{{connector_name}}.rs
 
 mod test;
 pub mod transformers;

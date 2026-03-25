@@ -58,7 +58,7 @@ The IncomingWebhook flow handles asynchronous notifications from payment connect
 
 ### Trait Definition
 
-The `IncomingWebhook` trait is defined in `backend/interfaces/src/connector_types.rs`:
+The `IncomingWebhook` trait is defined in `crates/types-traits/interfaces/src/connector_types.rs`:
 
 ```rust
 pub trait IncomingWebhook {

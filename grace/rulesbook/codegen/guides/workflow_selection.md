@@ -328,7 +328,7 @@ Examples:
 ### "Connector not found"
 
 - Check connector name spelling
-- Verify connector exists in `backend/connector-integration/src/connectors/`
+- Verify connector exists in `crates/integrations/connector-integration/src/connectors/`
 - If new connector, use `.gracerules` instead
 
 ### "Prerequisites not met"

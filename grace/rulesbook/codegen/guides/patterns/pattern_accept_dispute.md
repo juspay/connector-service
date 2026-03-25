@@ -748,7 +748,7 @@ mod tests {
 ## Example: Complete Adyen Implementation Reference
 
 ```rust
-// File: backend/connector-integration/src/connectors/adyen/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/adyen/transformers.rs
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -838,7 +838,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
 ```
 
 ```rust
-// File: backend/connector-integration/src/connectors/adyen.rs
+// File: crates/integrations/connector-integration/src/connectors/adyen.rs
 
 // In create_all_prerequisites! macro:
 (

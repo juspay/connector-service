@@ -32,7 +32,7 @@ No URLs, no integration details — just names. The **Links Agent** (`2.1_links.
 4. **Build -> gRPC Test -> Validate -> Commit**: Never commit code that hasn't passed both `cargo build` AND `grpcurl` tests. This is a hard gate.
 5. **MANDATORY: Do NOT move to the next connector until grpcurl testing is fully complete for the current connector.** The grpcurl Authorize call with the appropriate payment method must either pass (SUCCESS) or exhaust all retry attempts (FAILED) before you proceed. No connector may be left in an untested state.
 6. **CRITICAL — No looping without fixing**: NEVER retry a grpcurl test or cargo build without making an actual code change first. If you get an error, you MUST: (a) read the server logs to diagnose the root cause, (b) identify the specific file and line to change, (c) make the fix, (d) rebuild, and ONLY THEN retest. Retesting the exact same code is forbidden — it will produce the exact same error. If you cannot diagnose the error after reading logs, report FAILED immediately. Do NOT loop.
-7. **Scoped git**: Only stage connector-specific files (`git add backend/connector-integration/src/connectors/{connector}*`). Never `git add -A`. Never force push.
+7. **Scoped git**: Only stage connector-specific files (`git add crates/integrations/connector-integration/src/connectors/{connector}*`). Never `git add -A`. Never force push.
 8. **Credentials**: Read from `creds.json` at the repo root. If a connector is missing from it, **silently skip that connector** (mark as SKIPPED with reason "no credentials"). Do NOT ask the user or pause for input.
 9. **Only do what's listed**: Do not invent steps. Do not add features. Do not write tests. Follow the phases below exactly.
 10. **Connector list source**: ALL connectors come from `{CONNECTORS_FILE}` in the repo root. Never hardcode connector names.
@@ -65,7 +65,7 @@ Store the returned list as `CONNECTOR_LIST`. This is the authoritative list of c
 ```bash
 # From connector-service root:
 # Verify directory
-pwd && ls Cargo.toml backend/ Makefile
+pwd && ls Cargo.toml crates/ Makefile
 # Sync to latest main
 git stash push -m "pre-flight-stash" 2>/dev/null || true
 git checkout main && git pull origin main

@@ -196,8 +196,8 @@ on:
    branches: [main]
    paths:
      - 'docs/**'
-     - 'backend/grpc-api-types/**'
-     - 'backend/connector-integration/**'
+     - 'crates/types-traits/grpc-api-types/**'
+     - 'crates/integrations/connector-integration/**'
      - 'sdk/**'
  release:
    types: [published]

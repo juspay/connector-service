@@ -39,7 +39,7 @@ Reward is a payment method category in Grace-UCS that represents cash-based or p
 
 ## Reward Payment Method Variants
 
-From `backend/domain_types/src/payment_method_data.rs`:
+From `crates/types-traits/domain_types/src/payment_method_data.rs`:
 
 ```rust
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
@@ -50,7 +50,7 @@ pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
 }
 ```
 
-From `backend/common_enums/src/enums.rs`:
+From `crates/common/common_enums/src/enums.rs`:
 
 ```rust
 #[derive(...)]
@@ -139,7 +139,7 @@ The following connectors have Reward listed in their match arms but return `NotI
 
 ### CashToCode Implementation (Reference Implementation)
 
-**File**: `backend/connector-integration/src/connectors/cashtocode/transformers.rs`
+**File**: `crates/integrations/connector-integration/src/connectors/cashtocode/transformers.rs`
 
 #### 1. Request Structure
 
@@ -658,7 +658,7 @@ RedirectForm::from((response_data.pay_url, Method::Get))
 
 - [pattern_authorize.md](./pattern_authorize.md) - Generic authorize flow patterns
 - [utility_functions_reference.md](./utility_functions_reference.md) - Common utility functions
-- Connector-specific implementations in `backend/connector-integration/src/connectors/`
+- Connector-specific implementations in `crates/integrations/connector-integration/src/connectors/`
 
 ---
 
