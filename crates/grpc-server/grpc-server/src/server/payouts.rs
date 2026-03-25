@@ -12,7 +12,7 @@ use domain_types::{
         PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
         PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
     },
-    types::{
+    payouts::types::{
         generate_payout_create_link_response, generate_payout_create_recipient_response,
         generate_payout_create_response, generate_payout_enroll_disburse_account_response,
         generate_payout_get_response, generate_payout_stage_response,

@@ -8,7 +8,7 @@ use grpc_api_types::payouts::{
     PayoutServiceVoidRequest, PayoutServiceVoidResponse,
 };
 
-use crate::macros::{req_transformer, res_transformer};
+use crate::macros::{payout_req_transformer, payout_res_transformer};
 
 use domain_types::{
     connector_flow::{
@@ -25,7 +25,7 @@ use domain_types::{
 };
 
 // payout create request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_create_req_transformer,
     request_type: PayoutServiceCreateRequest,
     flow_marker: PayoutCreate,
@@ -35,7 +35,7 @@ req_transformer!(
 );
 
 // payout create response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_create_res_transformer,
     request_type: PayoutServiceCreateRequest,
     response_type: PayoutServiceCreateResponse,
@@ -47,7 +47,7 @@ res_transformer!(
 );
 
 // payout transfer request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_transfer_req_transformer,
     request_type: PayoutServiceTransferRequest,
     flow_marker: PayoutTransfer,
@@ -57,7 +57,7 @@ req_transformer!(
 );
 
 // payout transfer response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_transfer_res_transformer,
     request_type: PayoutServiceTransferRequest,
     response_type: PayoutServiceTransferResponse,
@@ -69,7 +69,7 @@ res_transformer!(
 );
 
 // payout get request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_get_req_transformer,
     request_type: PayoutServiceGetRequest,
     flow_marker: PayoutGet,
@@ -79,7 +79,7 @@ req_transformer!(
 );
 
 // payout get response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_get_res_transformer,
     request_type: PayoutServiceGetRequest,
     response_type: PayoutServiceGetResponse,
@@ -91,7 +91,7 @@ res_transformer!(
 );
 
 // payout void request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_void_req_transformer,
     request_type: PayoutServiceVoidRequest,
     flow_marker: PayoutVoid,
@@ -101,7 +101,7 @@ req_transformer!(
 );
 
 // payout void response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_void_res_transformer,
     request_type: PayoutServiceVoidRequest,
     response_type: PayoutServiceVoidResponse,
@@ -113,7 +113,7 @@ res_transformer!(
 );
 
 // payout stage request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_stage_req_transformer,
     request_type: PayoutServiceStageRequest,
     flow_marker: PayoutStage,
@@ -123,7 +123,7 @@ req_transformer!(
 );
 
 // payout stage response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_stage_res_transformer,
     request_type: PayoutServiceStageRequest,
     response_type: PayoutServiceStageResponse,
@@ -135,7 +135,7 @@ res_transformer!(
 );
 
 // payout create_link request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_create_link_req_transformer,
     request_type: PayoutServiceCreateLinkRequest,
     flow_marker: PayoutCreateLink,
@@ -145,7 +145,7 @@ req_transformer!(
 );
 
 // payout create_link response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_create_link_res_transformer,
     request_type: PayoutServiceCreateLinkRequest,
     response_type: PayoutServiceCreateLinkResponse,
@@ -157,7 +157,7 @@ res_transformer!(
 );
 
 // payout create_recipient request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_create_recipient_req_transformer,
     request_type: PayoutServiceCreateRecipientRequest,
     flow_marker: PayoutCreateRecipient,
@@ -167,7 +167,7 @@ req_transformer!(
 );
 
 // payout create_recipient response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_create_recipient_res_transformer,
     request_type: PayoutServiceCreateRecipientRequest,
     response_type: PayoutServiceCreateRecipientResponse,
@@ -179,7 +179,7 @@ res_transformer!(
 );
 
 // payout enroll_disburse_account request transformer
-req_transformer!(
+payout_req_transformer!(
     fn_name: payout_enroll_disburse_account_req_transformer,
     request_type: PayoutServiceEnrollDisburseAccountRequest,
     flow_marker: PayoutEnrollDisburseAccount,
@@ -189,7 +189,7 @@ req_transformer!(
 );
 
 // payout enroll_disburse_account response transformer
-res_transformer!(
+payout_res_transformer!(
     fn_name: payout_enroll_disburse_account_res_transformer,
     request_type: PayoutServiceEnrollDisburseAccountRequest,
     response_type: PayoutServiceEnrollDisburseAccountResponse,

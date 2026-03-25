@@ -1638,3 +1638,354 @@ impl
         })
     }
 }
+
+pub fn generate_payout_create_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutCreate,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutCreateRequest,
+        super::payouts_types::PayoutCreateResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreateResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
+            response,
+        )),
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_transfer_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutTransfer,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutTransferRequest,
+        super::payouts_types::PayoutTransferResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceTransferResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceTransferResponse {
+                merchant_payout_id: response.merchant_payout_id,
+                payout_status: Some(payout_status),
+                connector_payout_id: response.connector_payout_id,
+                error: None,
+                status_code: u32::from(response.status_code),
+            })
+        }
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceTransferResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_get_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutGet,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutGetRequest,
+        super::payouts_types::PayoutGetResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceGetResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceGetResponse {
+                merchant_payout_id: response.merchant_payout_id,
+                payout_status: Some(payout_status),
+                connector_payout_id: response.connector_payout_id,
+                error: None,
+                status_code: u32::from(response.status_code),
+            })
+        }
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceGetResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_void_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutVoid,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutVoidRequest,
+        super::payouts_types::PayoutVoidResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceVoidResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceVoidResponse {
+                merchant_payout_id: response.merchant_payout_id,
+                payout_status: Some(payout_status),
+                connector_payout_id: response.connector_payout_id,
+                error: None,
+                status_code: u32::from(response.status_code),
+            })
+        }
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceVoidResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_stage_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutStage,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutStageRequest,
+        super::payouts_types::PayoutStageResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceStageResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceStageResponse {
+                merchant_payout_id: response.merchant_payout_id,
+                payout_status: Some(payout_status),
+                connector_payout_id: response.connector_payout_id,
+                error: None,
+                status_code: u32::from(response.status_code),
+            })
+        }
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceStageResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_create_link_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutCreateLink,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutCreateLinkRequest,
+        super::payouts_types::PayoutCreateLinkResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreateLinkResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceCreateLinkResponse {
+                merchant_payout_id: response.merchant_payout_id,
+                payout_status: Some(payout_status),
+                connector_payout_id: response.connector_payout_id,
+                error: None,
+                status_code: u32::from(response.status_code),
+            })
+        }
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceCreateLinkResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
+}
+
+pub fn generate_payout_create_recipient_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutCreateRecipient,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutCreateRecipientRequest,
+        super::payouts_types::PayoutCreateRecipientResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreateRecipientResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(
+                grpc_api_types::payouts::PayoutServiceCreateRecipientResponse {
+                    merchant_payout_id: response.merchant_payout_id,
+                    payout_status: Some(payout_status),
+                    connector_payout_id: response.connector_payout_id,
+                    error: None,
+                    status_code: u32::from(response.status_code),
+                },
+            )
+        }
+        Err(err) => Ok(
+            grpc_api_types::payouts::PayoutServiceCreateRecipientResponse {
+                merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+                payout_status: Some(
+                    grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+                ),
+                connector_payout_id: err.connector_transaction_id.clone(),
+                error: Some(grpc_api_types::payouts::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                        code: Some(err.code.clone()),
+                        message: Some(err.message.clone()),
+                        reason: err.reason.clone(),
+                    }),
+                    issuer_details: None,
+                }),
+                status_code: u32::from(err.status_code),
+            },
+        ),
+    }
+}
+
+pub fn generate_payout_enroll_disburse_account_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutEnrollDisburseAccount,
+        super::payouts_types::PayoutFlowData,
+        super::payouts_types::PayoutEnrollDisburseAccountRequest,
+        super::payouts_types::PayoutEnrollDisburseAccountResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                response.payout_status,
+            ) as i32;
+            Ok(
+                grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountResponse {
+                    merchant_payout_id: response.merchant_payout_id,
+                    payout_status: Some(payout_status),
+                    connector_payout_id: response.connector_payout_id,
+                    error: None,
+                    status_code: u32::from(response.status_code),
+                },
+            )
+        }
+        Err(err) => Ok(
+            grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountResponse {
+                merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+                payout_status: Some(
+                    grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+                ),
+                connector_payout_id: err.connector_transaction_id.clone(),
+                error: Some(grpc_api_types::payouts::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                        code: Some(err.code.clone()),
+                        message: Some(err.message.clone()),
+                        reason: err.reason.clone(),
+                    }),
+                    issuer_details: None,
+                }),
+                status_code: u32::from(err.status_code),
+            },
+        ),
+    }
+}
