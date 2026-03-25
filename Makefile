@@ -167,15 +167,15 @@ endef
 
 # Launch editor with a specific skill
 # Usage: $(call LAUNCH_SKILL,skill-name)
-# - claude: "query" as positional arg with /skill-name slash command
+# - claude: /skill-name slash command as positional arg
 # - opencode: --prompt flag (skills auto-invoke, prompt hints the agent)
-# - codex: $skill-name mention syntax as positional arg
+# - codex: plain prompt that loads the skill and asks for required inputs
 # - cursor/windsurf: open project (skills auto-load as rules)
 define LAUNCH_SKILL
 	case $$choice in \
 		claude)   exec claude "/$(1)" ;; \
 		opencode) exec opencode --prompt "Use the $(1) skill" ;; \
-		codex)    exec codex '$$$(1)' ;; \
+		codex)    exec codex "Use the $(1) skill. Ask the user for any required inputs before starting." ;; \
 		cursor)   echo "Skill '$(1)' available as a rule in Cursor"; exec cursor . ;; \
 		windsurf) echo "Skill '$(1)' available as a rule in Windsurf"; exec windsurf . ;; \
 	esac
