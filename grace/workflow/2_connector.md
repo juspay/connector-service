@@ -134,9 +134,7 @@ Set and maintain these values yourself:
 - `{PREVIOUS_CODEGEN_FAILURE_FINGERPRINT}` = empty
 - `{PREVIOUS_TEST_STATUS}` = `NOT_RUN`
 - `{PREVIOUS_TEST_REASON}` = empty
-- `{PREVIOUS_TEST_COMMAND}` = `not run`
 - `{PREVIOUS_TEST_OUTPUT}` = empty
-- `{PREVIOUS_TEST_FILE}` = empty
 - `{PREVIOUS_TEST_FILES_MODIFIED}` = empty
 - `{PREVIOUS_TEST_FAILURE_CATEGORY}` = empty
 - `{PREVIOUS_TEST_FAILURE_FINGERPRINT}` = empty
@@ -165,9 +163,7 @@ Variables:
   PREVIOUS_CODEGEN_FAILURE_FINGERPRINT: <previous codegen failure fingerprint>
   PREVIOUS_TEST_STATUS: <previous test status or NOT_RUN>
   PREVIOUS_TEST_REASON: <previous test reason>
-  PREVIOUS_TEST_COMMAND: <previous cargo test command>
-  PREVIOUS_TEST_OUTPUT: <previous cargo test output>
-  PREVIOUS_TEST_FILE: <previous connector test file path>
+  PREVIOUS_TEST_OUTPUT: <previous test output>
   PREVIOUS_TEST_FILES_MODIFIED: <previous test files modified>
   PREVIOUS_TEST_FAILURE_CATEGORY: <previous test failure category>
   PREVIOUS_TEST_FAILURE_FINGERPRINT: <previous test failure fingerprint>
@@ -183,6 +179,8 @@ Store the codegen result:
 - `{CODEGEN_GRPCURL_OUTPUT}` = full raw grpcurl output from the final attempt inside codegen
 - `{CODEGEN_FAILURE_FINGERPRINT}` = concise stable failure signature from codegen, or empty on success
 - `{CODEGEN_FILES_MODIFIED}` = exact file paths reported by the Code Generation Agent
+- `{IMPLEMENTED_FLOWS}` = comma-separated flow names from the connector source, or `unknown`
+- `{IMPLEMENTED_PAYMENT_METHODS}` = comma-separated top-level PaymentMethodData variant names, or `unknown`
 
 **Gate**:
 - If the Code Generation Agent returns `SKIPPED`, report this connector as `SKIPPED` and go directly to Phase 6.
@@ -208,7 +206,9 @@ Variables:
   FAILURE_REASON: <codegen failure reason, empty if SUCCESS>
   CODEGEN_FILES_MODIFIED: <exact file paths reported by the Code Generation Agent>
   CODEGEN_GRPCURL_RESULT: <PASS, FAIL, or NOT_RUN>
-  CODEGEN_GRPCURL_OUTPUT: <raw grpcurl output from codegen>"
+  CODEGEN_GRPCURL_OUTPUT: <raw grpcurl output from codegen>
+  IMPLEMENTED_FLOWS: <comma-separated flow names from codegen, or unknown>
+  IMPLEMENTED_PAYMENT_METHODS: <comma-separated payment method names from codegen, or unknown>"
 )
 ```
 
