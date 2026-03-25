@@ -2851,6 +2851,53 @@ message PaymentServiceIncrementalAuthorizationResponse {
   optional ConnectorState state = 6;
 }
 
+// ============================================================================
+// RESEND OTP FOR WALLET FLOW MESSAGES
+// ============================================================================
+
+// Request message for resending OTP in wallet payment flows
+message PaymentServiceResendOtpForWalletRequest {
+  // OTP token from the previous OTP trigger
+  optional string otp_token = 1;
+
+  // Payment identification
+  optional string payment_id = 2;
+
+  // Connector transaction reference
+  optional string connector_transaction_id = 3;
+}
+
+// Response message for resending OTP in wallet payment flows
+message PaymentServiceResendOtpForWalletResponse {
+  // Whether the OTP resend was successful
+  bool is_successful = 1;
+
+  // Whether resend is still enabled for further attempts
+  optional bool is_resend_enabled = 2;
+
+  // Whether the submit action is enabled
+  optional bool is_submit_enabled = 3;
+
+  // Next actions available after OTP resend
+  repeated string next_action = 4;
+
+  // Connector transaction reference
+  optional string connector_transaction_id = 5;
+
+  // Error information if the operation failed
+  optional ErrorInfo error = 6;
+
+  // HTTP status code from the connector
+  uint32 status_code = 7;
+
+  // Response headers from the connector
+  map<string, string> response_headers = 8;
+
+  // Raw response/request for debugging
+  optional SecretString raw_connector_response = 9;
+  optional SecretString raw_connector_request = 10;
+}
+
 // Request message for EventService.HandleEvent RPC
 message EventServiceHandleRequest {
   // Identification

@@ -1657,6 +1657,22 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct ResendOtpForWalletData {
+    pub otp_token: Option<String>,
+    pub payment_id: Option<String>,
+    pub connector_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResendOtpForWalletResponseData {
+    pub is_successful: bool,
+    pub is_resend_enabled: Option<bool>,
+    pub is_submit_enabled: Option<bool>,
+    pub next_action: Option<Vec<String>>,
+    pub connector_transaction_id: Option<String>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,
