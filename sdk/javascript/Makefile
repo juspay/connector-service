@@ -42,6 +42,74 @@ install-codegen-deps:
 	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
 
 # ---------------------------------------------------------------------------
+# generate-bindings
+# Copies the pre-built FFI native library into the generated output directory
+# so it is bundled with the npm package. The JavaScript SDK drives the native
+# library directly via Node.js FFI; no UniFFI code generation is required.
+# Requires: build-ffi-lib to have been run first (or library downloaded in CI).
+# ---------------------------------------------------------------------------
+generate-bindings:
+	@[ -f "$(LIBRARY)" ] || \
+		(echo "Error: FFI library not found at $(LIBRARY). Run 'make build-ffi-lib' first." && exit 1)
+	@echo "Copying FFI library to $(GENERATED_OUT)/..."
+	@mkdir -p $(GENERATED_OUT)
+	@cp -f $(LIBRARY) $(GENERATED_OUT)/
+	@echo "Library copied to $(GENERATED_OUT)/"
+
+# ---------------------------------------------------------------------------
+# generate-proto
+# Generates a static protobuf JavaScript module and its TypeScript declaration
+# from the .proto files using protobufjs (pbjs/pbts). Output is placed in the
+# generated output directory alongside the native FFI library.
+# ---------------------------------------------------------------------------
+generate-proto: install-deps
+	@echo "Generating static protobuf JS module..."
+	@mkdir -p $(GENERATED_OUT)
+	@cd $(SDK_ROOT) && ./node_modules/.bin/pbjs \
+		-t static-module -w commonjs --no-delimited --alt-comment \
+		-p $(PROTO_DIR) \
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto \
+		$(PROTO_DIR)/sdk_config.proto \
+		-o $(GENERATED_OUT)/proto.js
+	@echo "Proto JS generated: $(GENERATED_OUT)/proto.js"
+	@cd $(SDK_ROOT) && ./node_modules/.bin/pbts \
+		-o $(GENERATED_OUT)/proto.d.ts $(GENERATED_OUT)/proto.js
+	@echo "Proto TS generated: $(GENERATED_OUT)/proto.d.ts"
+
+# ---------------------------------------------------------------------------
+# generate-grpc-bindings
+# Copies the pre-built gRPC FFI native library into the generated output
+# directory so it is bundled with the npm package.
+# Requires: build-grpc-ffi-lib to have been run first.
+# ---------------------------------------------------------------------------
+generate-grpc-bindings:
+	@[ -f "$(GRPC_FFI_LIBRARY)" ] || \
+		(echo "Error: gRPC FFI library not found at $(GRPC_FFI_LIBRARY). Run 'make build-grpc-ffi-lib' first." && exit 1)
+	@echo "Copying gRPC FFI library to $(GENERATED_OUT)/..."
+	@mkdir -p $(GENERATED_OUT)
+	@cp -f $(GRPC_FFI_LIBRARY) $(GENERATED_OUT)/
+	@echo "gRPC library copied to $(GENERATED_OUT)/"
+
+# ---------------------------------------------------------------------------
+# generate-all
+# Runs all code-generation steps: copies the native library and generates the
+# protobuf JS/TS module. Proto depends on install-deps; both can run in any
+# order relative to each other.
+# ---------------------------------------------------------------------------
+generate-all: generate-proto generate-bindings generate-flows
+
+# ---------------------------------------------------------------------------
+# generate-flows
+# Generates flow methods (authorize, capture, etc.) by running the SDK
+# codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
+# ---------------------------------------------------------------------------
+generate-flows: install-codegen-deps generate-descriptor
+	@echo "Generating JavaScript flow methods..."
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
+	@echo "JavaScript flow methods generated."
+
+# ---------------------------------------------------------------------------
 # generate-descriptor
 # Generates the proto descriptor file used by all SDK codegen scripts.
 # ---------------------------------------------------------------------------
