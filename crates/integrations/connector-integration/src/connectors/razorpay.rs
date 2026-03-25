@@ -384,6 +384,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     connector_req,
                 ))))
             }
+            PaymentMethodData::Wallet(_) => {
+                let connector_req =
+                    razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
+                Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+                    connector_req,
+                ))))
+            }
             _ => {
                 let connector_req =
                     razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
@@ -1192,6 +1199,28 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
                         supported_card_networks: razorpay_supported_card_network.clone(),
                     },
                 )),
+            },
+        );
+
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Wallet,
+            PaymentMethodType::CredIntent,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: razorpay_supported_capture_methods.clone(),
+                specific_features: None,
+            },
+        );
+
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Wallet,
+            PaymentMethodType::CredCollect,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: razorpay_supported_capture_methods.clone(),
+                specific_features: None,
             },
         );
 

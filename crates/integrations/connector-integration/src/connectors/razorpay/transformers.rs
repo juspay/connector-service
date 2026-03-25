@@ -118,6 +118,18 @@ pub struct CardDetails<
     pub cvv: Option<Secret<String>>,
 }
 
+#[derive(Default, Debug, Serialize)]
+pub struct CardPaymentData<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    pub card: CardDetails<T>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WalletPaymentData {
+    pub wallet: String,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthenticationChannel {
@@ -145,6 +157,7 @@ pub struct BrowserInfo {
     pub language: Option<String>,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RazorpayPaymentRequest<
@@ -156,7 +169,8 @@ pub struct RazorpayPaymentRequest<
     pub email: Email,
     pub order_id: String,
     pub method: PaymentMethodType,
-    pub card: PaymentMethodSpecificData<T>,
+    #[serde(flatten)]
+    pub payment_data: PaymentMethodSpecificData<T>,
     pub authentication: Option<AuthenticationDetails>,
     pub browser: Option<BrowserInfo>,
     pub ip: Secret<String>,
@@ -164,12 +178,13 @@ pub struct RazorpayPaymentRequest<
     pub user_agent: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged, rename_all = "snake_case")]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum PaymentMethodSpecificData<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    Card(CardDetails<T>),
+    Card(CardPaymentData<T>),
+    Wallet(WalletPaymentData),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,18 +291,25 @@ fn extract_payment_method_and_data<
         PaymentMethodData::Card(card_data) => {
             let card_holder_name = customer_name.clone();
 
-            let card = PaymentMethodSpecificData::Card(CardDetails {
-                number: card_data.card_number.clone(),
-                name: card_holder_name.map(Secret::new),
-                expiry_month: Some(card_data.card_exp_month.clone()),
-                expiry_year: card_data.card_exp_year.clone(),
-                cvv: Some(card_data.card_cvc.clone()),
+            let card = PaymentMethodSpecificData::Card(CardPaymentData {
+                card: CardDetails {
+                    number: card_data.card_number.clone(),
+                    name: card_holder_name.map(Secret::new),
+                    expiry_month: Some(card_data.card_exp_month.clone()),
+                    expiry_year: card_data.card_exp_year.clone(),
+                    cvv: Some(card_data.card_cvc.clone()),
+                },
             });
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::Wallet(_) => {
+            let wallet_data = PaymentMethodSpecificData::Wallet(WalletPaymentData {
+                wallet: "phonepe".to_string(),
+            });
+            Ok((PaymentMethodType::Wallet, wallet_data))
+        }
         PaymentMethodData::CardRedirect(_)
-        | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
         | PaymentMethodData::BankRedirect(_)
         | PaymentMethodData::BankDebit(_)
@@ -433,7 +455,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             email,
             order_id,
             method,
-            card,
+            payment_data: card,
             authentication,
             browser,
             ip,
@@ -469,11 +491,125 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
+            PaymentMethodData::Wallet(_) => {
+                Self::try_from((item, &item.router_data.request.payment_method_data))
+            }
             _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card payments are supported".into(),
+                "Only card and wallet payments are supported".into(),
             )
             .into()),
         }
+    }
+}
+
+// Wallet-specific TryFrom for RazorpayPaymentRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &RazorpayRouterData<
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+        &PaymentMethodData<T>,
+    )> for RazorpayPaymentRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            &PaymentMethodData<T>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, _payment_method_data) = value;
+        let amount = item.amount;
+        let currency = item.router_data.request.currency.to_string();
+
+        let billing = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_payment_billing();
+
+        let contact = billing
+            .and_then(|billing| billing.phone.as_ref())
+            .and_then(|phone| phone.number.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "contact",
+            })?;
+
+        let billing_email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .ok();
+
+        let email = billing_email
+            .or(item.router_data.request.email.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id",
+            })?;
+
+        let wallet_data = PaymentMethodSpecificData::Wallet(WalletPaymentData {
+            wallet: "phonepe".to_string(),
+        });
+
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
+
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
+
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
+
+        Ok(Self {
+            amount,
+            currency,
+            contact,
+            email,
+            order_id,
+            method: PaymentMethodType::Wallet,
+            payment_data: wallet_data,
+            authentication: None,
+            browser: None,
+            ip,
+            referer,
+            user_agent,
+        })
     }
 }
 
