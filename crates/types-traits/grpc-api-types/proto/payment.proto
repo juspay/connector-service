@@ -2613,6 +2613,37 @@ message RecurringPaymentServiceRevokeResponse {
 }
 
 // ============================================================================
+// WALLET DELINK MESSAGES
+// ============================================================================
+
+// Request message for delinking/unregistering a wallet from a customer
+message PaymentServiceDelinkWalletRequest {
+  // Identifier of the wallet to delink
+  string wallet_id = 1;
+  // Auth token for the linked wallet
+  string user_auth_token = 2;
+  // Merchant identifier
+  string merchant_id = 3;
+}
+
+// Response message for wallet delink operation
+message PaymentServiceDelinkWalletResponse {
+  // Whether the delink operation succeeded
+  bool success = 1;
+  // Error code if the operation failed
+  optional string error_code = 2;
+  // Error message if the operation failed
+  optional string error_message = 3;
+  // HTTP status code from the connector
+  uint32 status_code = 4;
+  // Response headers from the connector
+  map<string, string> response_headers = 5;
+  // Raw response/request for debugging
+  optional SecretString raw_connector_response = 6;
+  optional SecretString raw_connector_request = 7;
+}
+
+// ============================================================================
 // 3DS AUTHENTICATION FLOW MESSAGES
 // ============================================================================
 

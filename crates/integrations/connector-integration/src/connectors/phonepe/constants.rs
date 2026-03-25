@@ -35,5 +35,8 @@ pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0";
 // ===== CHECKSUM =====
 pub const CHECKSUM_SEPARATOR: &str = "###";
 
+// ===== WALLET DELINK ENDPOINT =====
+pub const API_DELINK_WALLET_ENDPOINT: &str = "v3/merchant/token/unlink";
+
 // ===== CONTENT TYPES =====
 pub const APPLICATION_JSON: &str = "application/json";

@@ -1657,6 +1657,20 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct DelinkWalletData {
+    pub wallet_id: String,
+    pub user_auth_token: String,
+    pub merchant_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DelinkWalletResponseData {
+    pub success: bool,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

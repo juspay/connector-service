@@ -133,6 +133,10 @@ service PaymentService {
   // Handle incoming webhooks from payment processors.
   // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
   rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
+
+  // Detach/unregister a wallet from a customer. Calls the connector to unlink
+  // the wallet token so it can no longer be used for payments.
+  rpc DelinkWallet(PaymentServiceDelinkWalletRequest) returns (PaymentServiceDelinkWalletResponse);
 }
 
 // ======================================================================================

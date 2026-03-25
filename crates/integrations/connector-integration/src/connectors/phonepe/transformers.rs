@@ -8,7 +8,8 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        DelinkWalletData, DelinkWalletResponseData, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
@@ -1120,4 +1121,126 @@ fn extract_bin_from_masked_account_number(masked_account_number: Option<&str>) -
             .filter(|bin| bin.chars().all(|c| c.is_ascii_digit()))
             .map(str::to_string)
     })
+}
+
+// ===== DELINK WALLET TYPES =====
+
+/// PhonePe-specific delink wallet request payload (inner JSON before Base64 encoding)
+#[derive(Debug, Serialize)]
+pub struct PhonepeDelinkWalletRequestPayload {
+    #[serde(rename = "merchantId")]
+    pub merchant_id: String,
+    #[serde(rename = "userAuthToken")]
+    pub user_auth_token: String,
+}
+
+/// PhonePe S2S request wrapper (Base64 encoded payload)
+#[derive(Debug, Serialize)]
+pub struct PhonepeDelinkWalletRequest {
+    pub request: String,
+    #[serde(skip)]
+    pub checksum: String,
+}
+
+/// PhonePe delink wallet response
+/// PhonePe returns either a success response (same shape as VerifyOtpResp) or an error response.
+/// We unify them into a single struct since both have `success`, `code`, `message`.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeDelinkWalletResponse {
+    pub success: bool,
+    pub code: String,
+    #[serde(default = "default_delink_error_message")]
+    pub message: String,
+}
+
+fn default_delink_error_message() -> String {
+    "Delink wallet operation failed".to_string()
+}
+
+// ===== DELINK WALLET REQUEST BUILDING =====
+
+impl TryFrom<&DelinkWalletData> for PhonepeDelinkWalletRequest {
+    type Error = Error;
+
+    fn try_from(data: &DelinkWalletData) -> Result<Self, Self::Error> {
+        let payload = PhonepeDelinkWalletRequestPayload {
+            merchant_id: data.merchant_id.clone(),
+            user_auth_token: data.user_auth_token.clone(),
+        };
+
+        // Convert to JSON and Base64 encode
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        // Checksum will be computed separately with auth details; store empty here
+        // The actual checksum is computed in the connector integration get_headers/get_request_body
+        Ok(Self {
+            request: base64_payload,
+            checksum: String::new(),
+        })
+    }
+}
+
+/// Build a PhonepeDelinkWalletRequest with proper checksum from RouterDataV2
+pub fn build_delink_wallet_request(
+    data: &DelinkWalletData,
+    connector_config: &ConnectorSpecificConfig,
+) -> Result<PhonepeDelinkWalletRequest, Error> {
+    let auth = PhonepeAuthType::try_from(connector_config)?;
+
+    let payload = PhonepeDelinkWalletRequestPayload {
+        merchant_id: data.merchant_id.clone(),
+        user_auth_token: data.user_auth_token.clone(),
+    };
+
+    // Convert to JSON and Base64 encode
+    let json_payload = Encode::encode_to_string_of_json(&payload)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+    let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+    // Generate checksum: SHA256(base64Payload + "/v3/merchant/token/unlink" + saltKey) + "###" + saltIndex
+    let api_path = format!("/{}", constants::API_DELINK_WALLET_ENDPOINT);
+    let checksum =
+        generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+    Ok(PhonepeDelinkWalletRequest {
+        request: base64_payload,
+        checksum,
+    })
+}
+
+// ===== DELINK WALLET RESPONSE HANDLING =====
+
+impl TryFrom<PhonepeDelinkWalletResponse> for DelinkWalletResponseData {
+    type Error = Error;
+
+    fn try_from(response: PhonepeDelinkWalletResponse) -> Result<Self, Self::Error> {
+        if response.success {
+            // PhonePe returned success: true
+            Ok(DelinkWalletResponseData {
+                success: true,
+                error_code: None,
+                error_message: None,
+            })
+        } else {
+            // PhonePe returned success: false
+            // Special case: INVALID_USER_AUTH_TOKEN means wallet is already delinked — treat as success
+            if response.code == "INVALID_USER_AUTH_TOKEN" {
+                Ok(DelinkWalletResponseData {
+                    success: true,
+                    error_code: None,
+                    error_message: None,
+                })
+            } else {
+                Ok(DelinkWalletResponseData {
+                    success: false,
+                    error_code: Some(response.code),
+                    error_message: Some(response.message),
+                })
+            }
+        }
+    }
 }

@@ -323,6 +323,7 @@ pub enum FlowName {
     Unknown,
     IncrementalAuthorization,
     PayoutCreate,
+    DelinkWallet,
 }
 
 impl FlowName {
@@ -356,6 +357,7 @@ impl FlowName {
             Self::PayoutCreate => "PayoutCreate",
             Self::MandateRevoke => "MandateRevoke",
             Self::Unknown => "Unknown",
+            Self::DelinkWallet => "delink_wallet",
         }
     }
 }
