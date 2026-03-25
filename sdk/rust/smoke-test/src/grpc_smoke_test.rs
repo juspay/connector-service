@@ -22,7 +22,9 @@ mod connectors {
 include!(concat!(env!("OUT_DIR"), "/grpc_helpers.rs"));
 
 use grpc_api_types::health_check::{health_client::HealthClient, HealthCheckRequest};
-use hyperswitch_payments_client::{GrpcClient, GrpcConfig, Secret};
+use hyperswitch_payments_client::{
+    build_connector_config, ConnectorSpecificConfig, GrpcClient, GrpcConfig,
+};
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -84,16 +86,8 @@ fn extract_creds_value(obj: &serde_json::Value, keys: &[&str]) -> Option<String>
 struct FlatCreds {
     endpoint: String,
     connector: String,
-    auth_type: String,
-    api_key: String,
-    #[serde(default)]
-    api_secret: Option<String>,
-    #[serde(default)]
-    key1: Option<String>,
-    #[serde(default)]
-    merchant_id: Option<String>,
-    #[serde(default)]
-    tenant_id: Option<String>,
+    /// Connector-specific configuration for x-connector-config header
+    connector_config: serde_json::Value,
 }
 
 impl From<FlatCreds> for GrpcConfig {
@@ -101,12 +95,7 @@ impl From<FlatCreds> for GrpcConfig {
         GrpcConfig {
             endpoint: c.endpoint,
             connector: c.connector,
-            auth_type: c.auth_type,
-            api_key: Secret::new(c.api_key),
-            api_secret: c.api_secret.map(Secret::new),
-            key1: c.key1.map(Secret::new),
-            merchant_id: c.merchant_id,
-            tenant_id: c.tenant_id,
+            connector_config: c.connector_config,
         }
     }
 }
@@ -162,12 +151,7 @@ struct Args {
     creds_file: Option<String>,
     endpoint: Option<String>,
     connector: Option<String>,
-    auth_type: Option<String>,
-    api_key: Option<String>,
-    api_secret: Option<String>,
-    key1: Option<String>,
-    merchant_id: Option<String>,
-    tenant_id: Option<String>,
+    connector_config: Option<String>,
 }
 
 fn parse_args() -> Args {
@@ -176,12 +160,7 @@ fn parse_args() -> Args {
         creds_file: None,
         endpoint: None,
         connector: None,
-        auth_type: None,
-        api_key: None,
-        api_secret: None,
-        key1: None,
-        merchant_id: None,
-        tenant_id: None,
+        connector_config: None,
     };
     let mut i = 0usize;
     while i < raw.len() {
@@ -195,19 +174,13 @@ fn parse_args() -> Args {
             "--creds-file" => args.creds_file = Some(next!()),
             "--endpoint" => args.endpoint = Some(next!()),
             "--connector" => args.connector = Some(next!()),
-            "--auth-type" => args.auth_type = Some(next!()),
-            "--api-key" => args.api_key = Some(next!()),
-            "--api-secret" => args.api_secret = Some(next!()),
-            "--key1" => args.key1 = Some(next!()),
-            "--merchant-id" => args.merchant_id = Some(next!()),
-            "--tenant-id" => args.tenant_id = Some(next!()),
+            "--connector-config" => args.connector_config = Some(next!()),
             "--help" | "-h" => {
                 println!("Usage: grpc-smoke-test [options]");
-                println!("  --creds-file <path>   JSON creds file (default: creds.json)");
-                println!("  --endpoint <url>      gRPC server endpoint");
-                println!("  --connector <name>    Connector name (e.g. stripe)");
-                println!("  --auth-type <type>    Auth type (e.g. header-key)");
-                println!("  --api-key <key>       API key");
+                println!("  --creds-file <path>       JSON creds file (default: creds.json)");
+                println!("  --endpoint <url>          gRPC server endpoint");
+                println!("  --connector <name>        Connector name (e.g. stripe)");
+                println!("  --connector-config <json> Connector config JSON (format: config->ConnectorName->api_key)");
                 std::process::exit(0);
             }
             _ => {}
@@ -224,7 +197,7 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
             .map_err(|e| format!("Cannot read {creds_file}: {e}"))?;
         let raw: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| format!("Invalid JSON in {creds_file}: {e}"))?;
-        // Flat format: top-level "endpoint" and "connector" keys (legacy grpc-creds.json style).
+        // Flat format: top-level "endpoint" and "connector" keys with "connector_config".
         if raw.get("endpoint").and_then(|v| v.as_str()).is_some() {
             let creds: FlatCreds = serde_json::from_value(raw)
                 .map_err(|e| format!("Invalid format in {creds_file}: {e}"))?;
@@ -235,21 +208,37 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
             let entry = raw
                 .get(connector)
                 .ok_or_else(|| format!("Connector '{connector}' not found in {creds_file}"))?;
+
+            // Build connector-specific config from legacy format
+            let api_key = extract_creds_value(entry, &["api_key"]).unwrap_or_default();
+            let api_secret = extract_creds_value(entry, &["api_secret"]);
+            let key1 = extract_creds_value(entry, &["key1"]);
+            let merchant_id = extract_creds_value(entry, &["merchant_account", "merchant_id"]);
+            let tenant_id = extract_creds_value(entry, &["tenant_id"]);
+
+            // Capitalize connector name for config key
+            let connector_variant = connector
+                .chars()
+                .enumerate()
+                .map(|(i, c)| if i == 0 { c.to_ascii_uppercase() } else { c })
+                .collect::<String>();
+
             GrpcConfig {
                 endpoint: args
                     .endpoint
                     .clone()
                     .unwrap_or_else(|| "http://localhost:8000".to_string()),
                 connector: connector.to_string(),
-                auth_type: args
-                    .auth_type
-                    .clone()
-                    .unwrap_or_else(|| "header-key".to_string()),
-                api_key: Secret::new(extract_creds_value(entry, &["api_key"]).unwrap_or_default()),
-                api_secret: extract_creds_value(entry, &["api_secret"]).map(Secret::new),
-                key1: extract_creds_value(entry, &["key1"]).map(Secret::new),
-                merchant_id: extract_creds_value(entry, &["merchant_account", "merchant_id"]),
-                tenant_id: extract_creds_value(entry, &["tenant_id"]),
+                connector_config: build_connector_config(
+                    connector_variant,
+                    ConnectorSpecificConfig {
+                        api_key: Some(api_key),
+                        api_secret,
+                        key1,
+                        merchant_id,
+                        tenant_id,
+                    },
+                ),
             }
         }
     } else {
@@ -263,30 +252,16 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
     if let Some(v) = args.connector {
         config.connector = v;
     }
-    if let Some(v) = args.auth_type {
-        config.auth_type = v;
-    }
-    if let Some(v) = args.api_key {
-        config.api_key = Secret::new(v);
-    }
-    if let Some(secret) = args.api_secret {
-        config.api_secret = Some(Secret::new(secret));
-    }
-    if let Some(key1) = args.key1 {
-        config.key1 = Some(Secret::new(key1));
-    }
-    if args.merchant_id.is_some() {
-        config.merchant_id = args.merchant_id;
-    }
-    if args.tenant_id.is_some() {
-        config.tenant_id = args.tenant_id;
+    if let Some(v) = args.connector_config {
+        config.connector_config =
+            serde_json::from_str(&v).map_err(|e| format!("Invalid connector-config JSON: {e}"))?;
     }
     Ok(config)
 }
 
 fn print_non_sensitive_config() {
     println!("\n{}", "=".repeat(60));
-    println!("{}", bold("gRPC Smoke Test"));
+    println!("{}", bold("Rust gRPC Smoke Test"));
     println!("{}", "=".repeat(60));
     println!();
 }

@@ -42,6 +42,8 @@ from payments.generated.payment_pb2 import (
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    PayoutServiceCreateRequest,
+    PayoutServiceCreateResponse,
     ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
     ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
     ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
@@ -144,6 +146,12 @@ class PaymentClient(_ConnectorClientBase):
 
     def void(self, request: PaymentServiceVoidRequest, options: RequestConfig | None = ...) -> PaymentServiceVoidResponse:
         """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
+        ...
+
+
+class PayoutClient(_ConnectorClientBase):
+    def payout_create(self, request: PayoutServiceCreateRequest, options: RequestConfig | None = ...) -> PayoutServiceCreateResponse:
+        """PayoutService.Create — Creates a payout."""
         ...
 
 

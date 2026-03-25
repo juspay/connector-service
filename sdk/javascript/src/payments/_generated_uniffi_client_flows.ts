@@ -191,6 +191,23 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('get', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for payout_create flow. */
+  payoutCreateReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_create', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_create flow. */
+  payoutCreateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_create', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for post_authenticate flow. */
   postAuthenticateReq(
     requestBytes: Buffer | Uint8Array,

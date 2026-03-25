@@ -142,7 +142,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L63) · [Rust](../../examples/phonepe/rust/phonepe.rs#L65)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L63) · [Rust](../../examples/phonepe/rust/phonepe.rs#L64)
 
 #### PaymentService.Get
 
@@ -153,4 +153,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L75) · [Rust](../../examples/phonepe/rust/phonepe.rs#L77)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L75) · [Rust](../../examples/phonepe/rust/phonepe.rs#L76)

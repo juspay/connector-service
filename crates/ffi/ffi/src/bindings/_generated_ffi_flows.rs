@@ -1,5 +1,5 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate
+// Source: services.proto ∩ services/*.rs  |  Regenerate: make generate
 
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest,
@@ -29,6 +29,10 @@ use grpc_api_types::payments::{
     TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest,
 };
+use grpc_api_types::payouts::{
+    PayoutServiceCreateRequest,
+};
+
 use crate::handlers::payments::{
     accept_req_handler, accept_res_handler,
     authenticate_req_handler, authenticate_res_handler,
@@ -41,6 +45,7 @@ use crate::handlers::payments::{
     create_session_token_req_handler, create_session_token_res_handler,
     defend_req_handler, defend_res_handler,
     get_req_handler, get_res_handler,
+    payout_create_req_handler, payout_create_res_handler,
     post_authenticate_req_handler, post_authenticate_res_handler,
     pre_authenticate_req_handler, pre_authenticate_res_handler,
     proxy_authenticate_req_handler, proxy_authenticate_res_handler,
@@ -80,6 +85,8 @@ define_ffi_flow!(create_session_token, MerchantAuthenticationServiceCreateSessio
 define_ffi_flow!(defend, DisputeServiceDefendRequest, defend_req_handler, defend_res_handler);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler);
+// payout_create: PayoutService.Create — Creates a payout.
+define_ffi_flow!(payout_create, PayoutServiceCreateRequest, payout_create_req_handler, payout_create_res_handler);
 // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
 define_ffi_flow!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, post_authenticate_req_handler, post_authenticate_res_handler);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.

@@ -113,7 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L76) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L99)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L76) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L73)
 
 #### PaymentService.Get
 
@@ -124,7 +124,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L86) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L106)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L86) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L80)
 
 #### PaymentService.Refund
 
@@ -135,7 +135,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L122) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L120)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L122) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L116)
 
 #### PaymentService.Void
 
@@ -146,7 +146,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L132) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L127)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L132) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L123)
 
 ### Authentication
 
@@ -159,4 +159,4 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L94) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L113)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L94) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L87)

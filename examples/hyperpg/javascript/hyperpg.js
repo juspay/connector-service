@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py hyperpg
 //
 // Hyperpg — all integration scenarios and flows in one file.
-// Run a scenario:  node hyperpg.js checkout_autocapture
+// Run a scenario:  node hyperpg.js checkout_card
 'use strict';
 
 const { PaymentClient } = require('hs-playlib');
@@ -56,21 +56,6 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
-function _buildRefundRequest(connectorTransactionId) {
-    return {
-        "merchantRefundId": "probe_refund_001",  // Identification
-        "connectorTransactionId": connectorTransactionId,
-        "paymentAmount": 1000,  // Amount Information
-        "refundAmount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "reason": "customer_request"  // Reason for the refund
-    };
-}
-
-
-// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -107,7 +92,16 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     }
 
     // Step 2: Refund — return funds to the customer
-    const refundResponse = await paymentClient.refund(_buildRefundRequest(authorizeResponse.connectorTransactionId));
+    const refundResponse = await paymentClient.refund({
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "customer_request"  // Reason for the refund
+    });
 
     if (refundResponse.status === 'FAILED') {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
@@ -156,17 +150,8 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
-// Flow: PaymentService.Refund
-async function refund(merchantTransactionId, config = _defaultConfig) {
-    const paymentClient = new PaymentClient(config);
 
-    const refundResponse = await paymentClient.refund(_buildRefundRequest('probe_connector_txn_001'));
-
-    return { status: refundResponse.status };
-}
-
-
-module.exports = { processCheckoutAutocapture, processRefund, processGetPayment, authorize, get, refund, _buildAuthorizeRequest, _buildGetRequest, _buildRefundRequest };
+module.exports = { processCheckoutAutocapture, processRefund, processGetPayment, authorize, get };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

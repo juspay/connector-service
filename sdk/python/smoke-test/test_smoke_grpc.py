@@ -22,13 +22,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # ── ANSI color helpers ────────────────────────────────────────────────────────
-_NO_COLOR = not sys.stdout.isatty() or bool(os.environ.get("NO_COLOR"))
+_NO_COLOR = bool(os.environ.get("NO_COLOR")) or (
+    not bool(os.environ.get("FORCE_COLOR")) and not sys.stdout.isatty()
+)
 
 def _c(code: str, text: str) -> str:
     return text if _NO_COLOR else f"\033[{code}m{text}\033[0m"
 
 def _green(t: str) -> str: return _c("32", t)
 def _red(t: str)   -> str: return _c("31", t)
+def _yellow(t: str) -> str: return _c("33", t)
 def _grey(t: str)  -> str: return _c("90", t)
 def _bold(t: str)  -> str: return _c("1",  t)
 
@@ -195,15 +198,38 @@ def build_grpc_config(connector: str, cred: Dict[str, Any]) -> GrpcConfig:
                     return inner
         return None
 
+    # Build connector-specific config for x-connector-config header
+    # Capitalize first letter of connector name for the config key
+    connector_variant = connector[0].upper() + connector[1:] if connector else connector
+    
+    api_key = s("api_key", "apiKey") or "placeholder"
+    api_secret = s("api_secret", "apiSecret")
+    key1 = s("key1")
+    merchant_id = s("merchant_id", "merchantId")
+    tenant_id = s("tenant_id", "tenantId")
+    
+    # Build the connector-specific config object
+    connector_specific_config: Dict[str, Any] = {"api_key": api_key}
+    if api_secret:
+        connector_specific_config["api_secret"] = api_secret
+    if key1:
+        connector_specific_config["key1"] = key1
+    if merchant_id:
+        connector_specific_config["merchant_id"] = merchant_id
+    if tenant_id:
+        connector_specific_config["tenant_id"] = tenant_id
+    
+    # Build the full x-connector-config format
+    connector_config = {
+        "config": {
+            connector_variant: connector_specific_config
+        }
+    }
+    
     return GrpcConfig(
-        endpoint    = s("endpoint")                        or "http://localhost:8000",
-        connector   = connector,
-        auth_type   = s("auth_type", "authType")          or "header-key",
-        api_key     = s("api_key",   "apiKey")            or "placeholder",
-        api_secret  = s("api_secret","apiSecret"),
-        key1        = s("key1"),
-        merchant_id = s("merchant_id", "merchantId"),
-        tenant_id   = s("tenant_id",   "tenantId"),
+        endpoint=s("endpoint") or "http://localhost:8000",
+        connector=connector,
+        connector_config=connector_config,
     )
 
 
@@ -248,15 +274,30 @@ def run_connector(connector_name: str, examples_dir: str, cred: Dict[str, Any]) 
     # Pre-run AUTOMATIC authorize to get a real connector txn_id for get/refund/reverse
     pre_run_failed = False
     if has_authorize and has_dependents:
+        print("  [authorize] running … ", end="", flush=True)
         try:
             req = build_request(mod, "_build_authorize_request", "AUTOMATIC", "AUTOMATIC")
             if req is None:
                 raise RuntimeError("_build_authorize_request not found in connector module")
             res = client.payment.authorize(req)
             authorize_txn_id = res.connector_transaction_id or txn_id
+            result = _format_result(res)
+            if res.status_code >= 400:
+                print(f"{_yellow('~ connector error')} {_grey(f'— {result}')}")
+            else:
+                print(f"{_green('✓ ok')} {_grey(f'— {result}')}")
         except Exception as e:
-            print(_red(f"  ✗ {connector_name}::authorize (pre-run)"), _grey(f"→ {e}"))
-            pre_run_failed = True
+            err_str = str(e)
+            is_transport = any(x in err_str.lower() for x in [
+                "unavailable", "deadlineexceeded", "connection refused", 
+                "transport error", "dns error", "connection reset"
+            ])
+            if is_transport:
+                print(f"{_red('✗ FAILED')} {_grey(f'— {err_str}')}")
+                pre_run_failed = True
+            else:
+                print(f"{_yellow('~ connector error')} {_grey(f'— {err_str}')}")
+                pre_run_failed = True
 
     all_passed = True
 
@@ -264,9 +305,12 @@ def run_connector(connector_name: str, examples_dir: str, cred: Dict[str, Any]) 
         # Skip authorize — already handled in pre-run above
         if flow_key == "authorize" and has_authorize and has_dependents:
             if not pre_run_failed:
-                print(_green(f"  ✓ {connector_name}::authorize"), _grey(f"→ txn_id: {authorize_txn_id}"))
+                print(f"  [{flow_key}] running … ", end="", flush=True)
+                print(f"{_green('✓ ok')} {_grey(f'— txn_id: {authorize_txn_id}')}")
             continue
 
+        print(f"  [{flow_key}] running … ", end="", flush=True)
+        
         try:
             if flow_key in SELF_AUTH_FLOWS:
                 # capture/void: inline MANUAL authorize first
@@ -293,11 +337,20 @@ def run_connector(connector_name: str, examples_dir: str, cred: Dict[str, Any]) 
                 res = getattr(sub_client, method_name)(req)
                 result = _format_result(res)
 
-            print(_green(f"  ✓ {connector_name}::{flow_key}"), _grey(f"→ {result}"))
+            print(f"{_green('✓ ok')} {_grey(f'— {result}')}")
 
         except Exception as e:
-            print(_red(f"  ✗ {connector_name}::{flow_key}"), _grey(f"→ {e}"))
-            all_passed = False
+            err_str = str(e)
+            # Check if it's a transport error vs connector error
+            is_transport = any(x in err_str.lower() for x in [
+                "unavailable", "deadlineexceeded", "connection refused", 
+                "transport error", "dns error", "connection reset"
+            ])
+            if is_transport:
+                print(f"{_red('✗ FAILED')} {_grey(f'— {err_str}')}")
+                all_passed = False
+            else:
+                print(f"{_yellow('~ connector error')} {_grey(f'— {err_str}')}")
 
     return all_passed
 

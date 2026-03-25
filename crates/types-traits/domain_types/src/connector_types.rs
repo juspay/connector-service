@@ -3710,6 +3710,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
+            AuthType::Truelayer(_) => Ok(Self::Truelayer),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),

@@ -145,6 +145,7 @@ generate-descriptor:
 		--include_source_info \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "Descriptor written to scripts/generators/code/services.desc"
@@ -184,6 +185,7 @@ generate: install-deps generate-descriptor generate-rust generate-grpc-client ge
 		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "All SDK clients regenerated successfully!"
@@ -198,27 +200,43 @@ test-rust: ## Run Rust FFI smoke test
 
 GRPC_CONNECTOR ?= $(CONNECTORS)
 GRPC_PROFILE   ?= release-fast
+QUIET          ?= 1
 
-test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python) with a combined summary
+# Filter output if QUIET=1 (suppress build logs, show only test results)
+ifeq ($(QUIET),1)
+  OUTPUT_FILTER = 2>&1 | grep -v "^\[INFO\]\|^\[WARNING\]\|^Building\|^Running\|^Checking\|^Compiling\|^Finished\|^Build\|^Running\|cargo check\|Compiling\|^   Compiling\|^   Finished\|^     Running\|^     Finished\|^cargo\|^\s*-->\|^\s*::\|^Note:\|^warning:" || true
+  BUILD_FLAGS = --quiet 2>/dev/null || true
+else
+  OUTPUT_FILTER = 
+  BUILD_FLAGS = 
+endif
+
+test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python + Kotlin) with a combined summary. Use QUIET=0 for verbose output.
 	@{ \
-		RUST_EXIT=0; JS_EXIT=0; PY_EXIT=0; \
+		RUST_EXIT=0; JS_EXIT=0; PY_EXIT=0; KT_EXIT=0; \
 		\
-		printf "\n\033[1m── Rust gRPC ──\033[0m\n"; \
+		printf "\n\033[1m═══ gRPC Smoke Tests ═══\033[0m\n\n"; \
+		printf "\033[1m── Rust gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/rust test-grpc \
-			GRPC_CONNECTOR=$(GRPC_CONNECTOR) GRPC_PROFILE=$(GRPC_PROFILE); \
+			GRPC_CONNECTOR=$(GRPC_CONNECTOR) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | grep -v "^   Compiling\|^   Finished\|^     Running" || true; \
 		RUST_EXIT=$$?; \
 		\
 		printf "\n\033[1m── JavaScript gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE); \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
 		JS_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Python gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE); \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
 		PY_EXIT=$$?; \
 		\
-		printf "\n\033[1m══ gRPC results ══\033[0m\n"; \
+		printf "\n\033[1m── Kotlin gRPC ──\033[0m\n"; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30 || true; \
+		KT_EXIT=$$?; \
+		\
+		printf "\n\033[1m══ gRPC Results Summary ══\033[0m\n"; \
 		[ $$RUST_EXIT -eq 0 ] \
 			&& printf "  \033[32m✓\033[0m Rust\n" \
 			|| printf "  \033[31m✗\033[0m Rust (exit $$RUST_EXIT)\n"; \
@@ -228,8 +246,11 @@ test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python) with a comb
 		[ $$PY_EXIT -eq 0 ] \
 			&& printf "  \033[32m✓\033[0m Python\n" \
 			|| printf "  \033[31m✗\033[0m Python (exit $$PY_EXIT)\n"; \
+		[ $$KT_EXIT -eq 0 ] \
+			&& printf "  \033[32m✓\033[0m Kotlin\n" \
+			|| printf "  \033[31m✗\033[0m Kotlin (exit $$KT_EXIT)\n"; \
 		\
-		TOTAL=$$(( RUST_EXIT | JS_EXIT | PY_EXIT )); \
+		TOTAL=$$(( RUST_EXIT | JS_EXIT | PY_EXIT | KT_EXIT )); \
 		printf "\n"; \
 		[ $$TOTAL -eq 0 ] \
 			&& printf "\033[32mAll gRPC tests passed.\033[0m\n" \

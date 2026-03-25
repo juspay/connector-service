@@ -79,45 +79,6 @@ def _build_get_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceGetRequest(),
     )
 
-def _build_recurring_charge_request():
-    return ParseDict(
-        {
-            "connector_recurring_payment_id": {  # Reference to existing mandate
-                "mandate_id_type": {
-                    "connector_mandate_id": "probe-mandate-123"
-                }
-            },
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {  # Optional payment Method Information (for network transaction flows)
-                "token": {"token": {"value": "probe_pm_token"}}  # Payment tokens
-            },
-            "return_url": "https://example.com/recurring-return",
-            "description": "Probe payment",
-            "connector_customer_id": "cust_probe_123",
-            "payment_method_type": "PAY_PAL",
-            "off_session": True  # Behavioral Flags and Preferences
-        },
-        payment_pb2.RecurringPaymentServiceChargeRequest(),
-    )
-
-def _build_refund_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": connector_transaction_id,
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request"  # Reason for the refund
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    )
-
 def _build_void_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -240,7 +201,19 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
+    refund_response = await payment_client.refund(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    ))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -323,18 +296,34 @@ async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.
     """Flow: RecurringPaymentService.Charge"""
     recurringpayment_client = RecurringPaymentClient(config)
 
-    recurring_response = await recurringpayment_client.charge(_build_recurring_charge_request())
+    # Step 1: Recurring Charge — charge against the stored mandate
+    recurring_response = await recurringpayment_client.charge(ParseDict(
+        {
+            "connector_recurring_payment_id": {  # Reference to existing mandate
+                "mandate_id_type": {
+                    "connector_mandate_id": "probe-mandate-123"
+                }
+            },
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "payment_method": {  # Optional payment Method Information (for network transaction flows)
+                "token": {"token": {"value": "probe_pm_token"}}  # Payment tokens
+            },
+            "return_url": "https://example.com/recurring-return",
+            "description": "Probe payment",
+            "connector_customer_id": "cust_probe_123",
+            "payment_method_type": "PAY_PAL",
+            "off_session": True  # Behavioral Flags and Preferences
+        },
+        payment_pb2.RecurringPaymentServiceChargeRequest(),
+    ))
+
+    if recurring_response.status == "FAILED":
+        raise RuntimeError(f"Recurring_Charge failed: {recurring_response.error}")
 
     return {"status": recurring_response.status}
-
-
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Refund"""
-    payment_client = PaymentClient(config)
-
-    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
-
-    return {"status": refund_response.status}
 
 
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

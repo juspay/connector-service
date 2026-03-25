@@ -15,14 +15,17 @@ use grpc_api_types::payments::{
     payout_service_client::PayoutServiceClient,
     proxy_payment_service_client::ProxyPaymentServiceClient,
     recurring_payment_service_client::RecurringPaymentServiceClient,
+    refund_service_client::RefundServiceClient,
     tokenized_payment_service_client::TokenizedPaymentServiceClient,
     // request / response types (all unique types across all services)
     CustomerServiceCreateRequest,
     CustomerServiceCreateResponse,
+    DisputeResponse,
     DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse,
     DisputeServiceDefendRequest,
     DisputeServiceDefendResponse,
+    DisputeServiceGetRequest,
     DisputeServiceSubmitEvidenceRequest,
     DisputeServiceSubmitEvidenceResponse,
     EventServiceHandleRequest,
@@ -66,12 +69,18 @@ use grpc_api_types::payments::{
     PayoutServiceCreateLinkResponse,
     PayoutServiceCreateRecipientRequest,
     PayoutServiceCreateRecipientResponse,
+    PayoutServiceCreateRequest,
+    PayoutServiceCreateResponse,
     PayoutServiceEnrollDisburseAccountRequest,
     PayoutServiceEnrollDisburseAccountResponse,
+    PayoutServiceGetRequest,
+    PayoutServiceGetResponse,
     PayoutServiceStageRequest,
     PayoutServiceStageResponse,
     PayoutServiceTransferRequest,
     PayoutServiceTransferResponse,
+    PayoutServiceVoidRequest,
+    PayoutServiceVoidResponse,
     ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
     ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
     ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
@@ -82,6 +91,7 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse,
     RefundResponse,
+    RefundServiceGetRequest,
     TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest,
 };
@@ -161,6 +171,7 @@ impl_grpc_client!(
         DisputeServiceSubmitEvidenceRequest,
         DisputeServiceSubmitEvidenceResponse
     ),
+    (dispute_get, get, DisputeServiceGetRequest, DisputeResponse),
     (
         defend,
         defend,
@@ -172,6 +183,12 @@ impl_grpc_client!(
         accept,
         DisputeServiceAcceptRequest,
         DisputeServiceAcceptResponse
+    ),
+    (
+        dispute_handle_event,
+        handle_event,
+        EventServiceHandleRequest,
+        EventServiceHandleResponse
     ),
 );
 
@@ -312,6 +329,12 @@ impl_grpc_client!(
         PaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse
     ),
+    (
+        payment_handle_event,
+        handle_event,
+        EventServiceHandleRequest,
+        EventServiceHandleResponse
+    ),
 );
 
 // PayoutService
@@ -319,10 +342,28 @@ impl_grpc_client!(
     GrpcPayoutClient,
     PayoutServiceClient,
     (
+        payout_create,
+        create,
+        PayoutServiceCreateRequest,
+        PayoutServiceCreateResponse
+    ),
+    (
         transfer,
         transfer,
         PayoutServiceTransferRequest,
         PayoutServiceTransferResponse
+    ),
+    (
+        payout_get,
+        get,
+        PayoutServiceGetRequest,
+        PayoutServiceGetResponse
+    ),
+    (
+        payout_void,
+        void,
+        PayoutServiceVoidRequest,
+        PayoutServiceVoidResponse
     ),
     (
         stage,
@@ -404,6 +445,19 @@ impl_grpc_client!(
     ),
 );
 
+// RefundService
+impl_grpc_client!(
+    GrpcRefundClient,
+    RefundServiceClient,
+    (refund_get, get, RefundServiceGetRequest, RefundResponse),
+    (
+        refund_handle_event,
+        handle_event,
+        EventServiceHandleRequest,
+        EventServiceHandleResponse
+    ),
+);
+
 // TokenizedPaymentService
 impl_grpc_client!(
     GrpcTokenizedPaymentClient,
@@ -431,17 +485,12 @@ impl_grpc_client!(
 ///
 /// # Example
 /// ```rust,no_run
-/// # use hyperswitch_payments_client::{GrpcClient, GrpcConfig};
+/// # use hyperswitch_payments_client::{GrpcClient, GrpcConfig, build_connector_config, ConnectorSpecificConfig};
 /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = GrpcClient::new(GrpcConfig {
-///     endpoint:    "http://localhost:8000".into(),
-///     connector:   "stripe".into(),
-///     auth_type:   "header-key".into(),
-///     api_key:     "sk_test_...".into(),
-///     api_secret:  None,
-///     key1:        None,
-///     merchant_id: None,
-///     tenant_id:   None,
+///     endpoint: "http://localhost:8000".into(),
+///     connector: "stripe".into(),
+///     connector_config: build_connector_config("Stripe", ConnectorSpecificConfig::new("sk_test_...")),
 /// }).await?;
 ///
 /// let _ = client.customer.create(Default::default()).await;
@@ -461,6 +510,7 @@ pub struct GrpcClient {
     pub payout: GrpcPayoutClient,
     pub proxy_payment: GrpcProxyPaymentClient,
     pub recurring_payment: GrpcRecurringPaymentClient,
+    pub refund: GrpcRefundClient,
     pub tokenized_payment: GrpcTokenizedPaymentClient,
 }
 
@@ -499,6 +549,7 @@ impl GrpcClient {
                 channel.clone(),
                 Arc::clone(&headers),
             ),
+            refund: GrpcRefundClient::new(channel.clone(), Arc::clone(&headers)),
             tokenized_payment: GrpcTokenizedPaymentClient::new(
                 channel.clone(),
                 Arc::clone(&headers),

@@ -4,6 +4,8 @@
 package payments
 
 import types.Payment.*
+import types.Payouts.*
+import types.PaymentMethods.*
 
 import uniffi.connector_service_ffi.acceptReqTransformer
 import uniffi.connector_service_ffi.acceptResTransformer
@@ -27,6 +29,8 @@ import uniffi.connector_service_ffi.defendReqTransformer
 import uniffi.connector_service_ffi.defendResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
+import uniffi.connector_service_ffi.payoutCreateReqTransformer
+import uniffi.connector_service_ffi.payoutCreateResTransformer
 import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
@@ -72,6 +76,7 @@ object FlowRegistry {
         "create_session_token" to ::createSessionTokenReqTransformer,
         "defend" to ::defendReqTransformer,
         "get" to ::getReqTransformer,
+        "payout_create" to ::payoutCreateReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
         "proxy_authenticate" to ::proxyAuthenticateReqTransformer,
@@ -101,6 +106,7 @@ object FlowRegistry {
         "create_session_token" to ::createSessionTokenResTransformer,
         "defend" to ::defendResTransformer,
         "get" to ::getResTransformer,
+        "payout_create" to ::payoutCreateResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
         "proxy_authenticate" to ::proxyAuthenticateResTransformer,
@@ -249,6 +255,17 @@ class PaymentClient(
     // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
     fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
+
+}
+
+class PayoutClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // payout_create: PayoutService.Create — Creates a payout.
+    fun payout_create(request: PayoutServiceCreateRequest, options: RequestConfig? = null): PayoutServiceCreateResponse =
+        executeFlow("payout_create", request.toByteArray(), PayoutServiceCreateResponse.parser(), options)
 
 }
 

@@ -67,8 +67,8 @@ generate-proto: install-deps
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbjs \
 		-t static-module -w commonjs --no-delimited --alt-comment \
 		-p $(PROTO_DIR) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
-		$(PROTO_DIR)/sdk_config.proto $(PROTO_DIR)/payouts.proto \
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto \
+		$(PROTO_DIR)/sdk_config.proto \
 		-o $(GENERATED_OUT)/proto.js
 	@echo "Proto JS generated: $(GENERATED_OUT)/proto.js"
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbts \
@@ -121,6 +121,7 @@ generate-descriptor:
 		--include_source_info \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "Descriptor written to scripts/generators/code/services.desc"
@@ -262,7 +263,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings 
 		echo "  Note: no creds.json found, test will use placeholder credentials"; \
 	fi
 	@cd /tmp/test-hyperswitch-js-grpc && npx tsc && \
-		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules node test_smoke_grpc.js \
+		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules FORCE_COLOR=1 node test_smoke_grpc.js \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples; \
 		EXIT=$$?; \
 		pkill -f grpc-server 2>/dev/null || true; \

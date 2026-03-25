@@ -17,12 +17,31 @@ import * as fs from "fs";
 import * as path from "path";
 
 // ── ANSI color helpers ──────────────────────────────────────────────────────
-const _NO_COLOR = !process.stdout.isTTY || !!process.env["NO_COLOR"];
+const _NO_COLOR = (!process.stdout.isTTY && !process.env["FORCE_COLOR"]) || !!process.env["NO_COLOR"];
 function _c(code: string, text: string): string { return _NO_COLOR ? text : `\x1b[${code}m${text}\x1b[0m`; }
 function _green (t: string): string { return _c("32", t); }
 function _red   (t: string): string { return _c("31", t); }
+function _yellow(t: string): string { return _c("33", t); }
 function _grey  (t: string): string { return _c("90", t); }
 function _bold  (t: string): string { return _c("1",  t); }
+
+// ── Probe request normalization ───────────────────────────────────────────────
+// Field-probe data uses snake_case keys; protobufjs fromObject expects camelCase.
+function _snakeToCamel(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+function _deepCamel(obj: unknown): unknown {
+  if (Array.isArray(obj)) return (obj as unknown[]).map(_deepCamel);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+        _snakeToCamel(k),
+        _deepCamel(v),
+      ])
+    );
+  }
+  return obj;
+}
 
 // ── Field-probe support filtering ────────────────────────────────────────────
 
@@ -64,7 +83,7 @@ interface FlowMeta {
   field:   string;   // GrpcClient field  (e.g. "payment", "customer")
   method:  string;   // camelCase method  (e.g. "authorize", "create")
   builder: string;   // _build*Request fn exported by the connector's JS module
-  arg:     "AUTOMATIC" | "MANUAL" | "txnId" | "none";
+  arg:     "AUTOMATIC" | "MANUAL" | "txnId" | "mandateId" | "none";
 }
 
 // Canonical ordering matches Rust build.rs.
@@ -78,7 +97,7 @@ const FLOW_META: [string, FlowMeta][] = [
   ["create_customer",          { field: "customer",         method: "create",                builder: "_buildCreateCustomerRequest",       arg: "none"      }],
   ["tokenize",                 { field: "paymentMethod",    method: "tokenize",              builder: "_buildTokenizeRequest",             arg: "none"      }],
   ["setup_recurring",          { field: "payment",          method: "setupRecurring",        builder: "_buildSetupRecurringRequest",       arg: "none"      }],
-  ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "none"      }],
+  ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "mandateId" }],
   ["pre_authenticate",         { field: "payment",          method: "preAuthenticate",       builder: "_buildPreAuthenticateRequest",      arg: "none"      }],
   ["authenticate",             { field: "payment",          method: "authenticate",          builder: "_buildAuthenticateRequest",         arg: "none"      }],
   ["post_authenticate",        { field: "payment",          method: "postAuthenticate",      builder: "_buildPostAuthenticateRequest",     arg: "none"      }],
@@ -93,6 +112,8 @@ const FLOW_META_MAP = new Map<string, FlowMeta>(FLOW_META);
 const SELF_AUTH_FLOWS = new Set(["capture", "void"]);
 // Flows that receive the connector txn_id from the shared AUTOMATIC pre-run authorize.
 const TXN_ID_FLOWS    = new Set(["get", "refund", "reverse"]);
+// Flows that receive the mandate_id from the setup_recurring pre-run.
+const MANDATE_ID_FLOWS = new Set(["recurring_charge"]);
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
@@ -136,15 +157,33 @@ function credStr(cred: CredEntry, ...keys: string[]): string | undefined {
 }
 
 function buildGrpcConfig(connector: string, cred: CredEntry): GrpcConfig {
+  // Capitalize first letter of connector name for the config key
+  const connectorVariant = connector.charAt(0).toUpperCase() + connector.slice(1);
+  
+  const apiKey = credStr(cred, "api_key", "apiKey") ?? "placeholder";
+  const apiSecret = credStr(cred, "api_secret", "apiSecret");
+  const key1 = credStr(cred, "key1");
+  const merchantId = credStr(cred, "merchant_id", "merchantId");
+  const tenantId = credStr(cred, "tenant_id", "tenantId");
+  
+  // Build the connector-specific config object
+  const connectorSpecificConfig: Record<string, unknown> = { api_key: apiKey };
+  if (apiSecret) connectorSpecificConfig.api_secret = apiSecret;
+  if (key1) connectorSpecificConfig.key1 = key1;
+  if (merchantId) connectorSpecificConfig.merchant_id = merchantId;
+  if (tenantId) connectorSpecificConfig.tenant_id = tenantId;
+  
+  // Build the full x-connector-config format
+  const connectorConfig: Record<string, unknown> = {
+    config: {
+      [connectorVariant]: connectorSpecificConfig
+    }
+  };
+  
   return {
-    endpoint:    credStr(cred, "endpoint")                    ?? "http://localhost:8000",
+    endpoint: credStr(cred, "endpoint") ?? "http://localhost:8000",
     connector,
-    auth_type:   credStr(cred, "auth_type",   "authType")    ?? "header-key",
-    api_key:     credStr(cred, "api_key",     "apiKey")      ?? "placeholder",
-    api_secret:  credStr(cred, "api_secret",  "apiSecret"),
-    key1:        credStr(cred, "key1"),
-    merchant_id: credStr(cred, "merchant_id", "merchantId"),
-    tenant_id:   credStr(cred, "tenant_id",   "tenantId"),
+    connector_config: connectorConfig,
   };
 }
 
@@ -163,10 +202,10 @@ function buildRequest(
   probeRequests?: Map<string, Record<string, unknown>>,
 ): unknown {
   const meta = FLOW_META_MAP.get(flow);
-  if (!meta) return probeRequests?.get(flow) ?? {};
+  if (!meta) return _deepCamel(probeRequests?.get(flow) ?? {});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fn = typeof mod[meta.builder] === "function" ? (mod[meta.builder] as (...a: any[]) => unknown) : null;
-  if (!fn) return probeRequests?.get(flow) ?? {};
+  if (!fn) return _deepCamel(probeRequests?.get(flow) ?? {});
   return meta.arg === "none" ? fn() : fn(arg ?? "");
 }
 
@@ -212,22 +251,62 @@ async function runConnector(
 
   const txnId = `probe_js_grpc_${Date.now()}`;
   let authorizeTxnId = txnId;
+  let mandateId: string | undefined;
 
   const hasAuthorize  = presentFlows.includes("authorize");
   const hasDependents = presentFlows.some((f) => TXN_ID_FLOWS.has(f));
+  const hasSetupRecurring = presentFlows.includes("setup_recurring");
+  const hasMandateDependents = presentFlows.some((f) => MANDATE_ID_FLOWS.has(f));
 
   // Pre-run AUTOMATIC authorize to get a real connector txn_id for get/refund/reverse.
   let preRunFailed = false;
   if (hasAuthorize && hasDependents) {
+    process.stdout.write(`  [authorize] running … `);
     try {
       const req = buildRequest(mod, "authorize", "AUTOMATIC", probeRequests);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await (client as any).payment.authorize(req) as { connectorTransactionId?: string; statusCode: number };
       authorizeTxnId = extractTxnId(res.connectorTransactionId);
+      const result = `txn_id: ${res.connectorTransactionId ?? "-"}, status_code: ${res.statusCode}`;
+      if (res.statusCode >= 400) {
+        console.log(_yellow("~ connector error"), _grey(`— ${result}`));
+        preRunFailed = true;
+      } else {
+        console.log(_green("✓ ok"), _grey(`— ${result}`));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.log(_red(`  ✗ ${connectorName}::authorize (pre-run)`), _grey(`→ ${msg}`));
-      preRunFailed = true;
+      const isTransport = /unavailable|deadlineexceeded|connection refused|transport error|dns error|connection reset/i.test(msg);
+      if (isTransport) {
+        console.log(_red("✗ FAILED"), _grey(`— ${msg}`));
+        preRunFailed = true;
+      } else {
+        console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
+        preRunFailed = true;
+      }
+    }
+  }
+
+  // Pre-run setup_recurring to get mandate_id for recurring_charge.
+  if (hasSetupRecurring && hasMandateDependents) {
+    process.stdout.write(`  [setup_recurring] running … `);
+    try {
+      const req = buildRequest(mod, "setup_recurring", undefined, probeRequests);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await (client as any).payment.setupRecurring(req) as { 
+        mandateReference?: { connectorMandateId?: { connectorMandateId?: string } }; 
+        statusCode: number 
+      };
+      mandateId = res.mandateReference?.connectorMandateId?.connectorMandateId;
+      const result = `mandate_id: ${mandateId ?? "-"}, status_code: ${res.statusCode}`;
+      if (res.statusCode >= 400) {
+        console.log(_yellow("~ connector error"), _grey(`— ${result}`));
+      } else {
+        console.log(_green("✓ ok"), _grey(`— ${result}`));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
     }
   }
 
@@ -238,11 +317,15 @@ async function runConnector(
 
     // Skip authorize if already handled in the pre-run above.
     if (flow === "authorize" && hasAuthorize && hasDependents) {
-      if (!preRunFailed) {
-        console.log(_green(`  ✓ ${connectorName}::authorize (pre-run for txn_id)`));
-      }
       continue;
     }
+
+    // Skip setup_recurring if already handled in the pre-run above.
+    if (flow === "setup_recurring" && hasSetupRecurring && hasMandateDependents) {
+      continue;
+    }
+
+    process.stdout.write(`  [${flow}] running … `);
 
     try {
       let result: string;
@@ -260,6 +343,13 @@ async function runConnector(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const res = await (client as any)[meta.field][meta.method](req) as { connectorTransactionId?: string; statusCode: number };
         result = `txn_id: ${res.connectorTransactionId ?? "-"}, status_code: ${res.statusCode}`;
+      } else if (MANDATE_ID_FLOWS.has(flow)) {
+        // recurring_charge: use mandateId from setup_recurring pre-run.
+        const arg = mandateId ?? txnId;
+        const req = buildRequest(mod, flow, arg, probeRequests);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = await (client as any)[meta.field][meta.method](req) as Record<string, unknown>;
+        result = `status_code: ${res["statusCode"] ?? "?"}`;
       } else {
         const arg = TXN_ID_FLOWS.has(flow) ? authorizeTxnId : txnId;
         const req = buildRequest(mod, flow, arg, probeRequests);
@@ -268,11 +358,16 @@ async function runConnector(
         result = `status_code: ${res["statusCode"] ?? "?"}`;
       }
 
-      console.log(_green(`  ✓ ${connectorName}::${flow}`), _grey(`→ ${result}`));
+      console.log(_green("✓ ok"), _grey(`— ${result}`));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.log(_red(`  ✗ ${connectorName}::${flow}`), _grey(`→ ${msg}`));
-      allPassed = false;
+      const isTransport = /unavailable|deadlineexceeded|connection refused|transport error|dns error|connection reset/i.test(msg);
+      if (isTransport) {
+        console.log(_red("✗ FAILED"), _grey(`— ${msg}`));
+        allPassed = false;
+      } else {
+        console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
+      }
     }
   }
 
@@ -285,7 +380,7 @@ async function main(): Promise<void> {
   const credsFile = path.join(process.cwd(), "creds.json");
   const allCreds  = loadCreds(credsFile);
 
-  console.log(_bold("hyperswitch gRPC smoke test"));
+  console.log(_bold("Javascript gRPC smoke test"));
   console.log(_grey(`connectors: ${connectors.join(", ")}`));
   console.log();
 

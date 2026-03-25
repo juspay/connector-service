@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
     serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
     "merchant_capture_id": "probe_capture_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -39,7 +39,7 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     })).unwrap_or_default()
 }
 
-pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -57,37 +57,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
-pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
-    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {  // Reference to existing mandate
-        "mandate_id_type": {
-            "connector_mandate_id": "probe-mandate-123",
-        },
-    },
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows)
-        "payment_method": {
-            "token": "probe_pm_token",  // Payment tokens
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences
-    "state": {  // State Information
-        "access_token": {  // Access token obtained from connector
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
-}
-
-pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -107,7 +77,7 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     })).unwrap_or_default()
 }
 
-pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -139,7 +109,33 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
 // Flow: RecurringPaymentService.Charge
 #[allow(dead_code)]
 pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.recurring_charge(build_recurring_charge_request(), &HashMap::new(), None).await?;
+    let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
+    "connector_recurring_payment_id": {  // Reference to existing mandate
+        "mandate_id_type": {
+            "connector_mandate_id": "probe-mandate-123",
+        },
+    },
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {  // Optional payment Method Information (for network transaction flows)
+        "payment_method": {
+            "token": "probe_pm_token",  // Payment tokens
+        }
+    },
+    "return_url": "https://example.com/recurring-return",
+    "connector_customer_id": "cust_probe_123",
+    "payment_method_type": "PAY_PAL",
+    "off_session": true,  // Behavioral Flags and Preferences
+    "state": {  // State Information
+        "access_token": {  // Access token obtained from connector
+            "token": "probe_access_token",  // The token string.
+            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
+        },
+    },
+    })).unwrap_or_default(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
@@ -156,6 +152,7 @@ pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> R
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
+
 
 #[allow(dead_code)]
 #[tokio::main]

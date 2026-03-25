@@ -36,6 +36,9 @@ const FLOWS = {
   // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
   get                       : { request: "PaymentServiceGetRequest", response: "PaymentServiceGetResponse" },
 
+  // payout_create: PayoutService.Create — Creates a payout.
+  payout_create             : { request: "PayoutServiceCreateRequest", response: "PayoutServiceCreateResponse" },
+
   // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
   post_authenticate         : { request: "PaymentMethodAuthenticationServicePostAuthenticateRequest", response: "PaymentMethodAuthenticationServicePostAuthenticateResponse" },
 

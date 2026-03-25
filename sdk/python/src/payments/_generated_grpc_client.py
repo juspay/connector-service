@@ -9,7 +9,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from payments.generated import payment_pb2
 
@@ -22,28 +22,22 @@ class GrpcConfig:
 
     Field names are snake_case — they are serialised to JSON and sent to the
     Rust FFI layer which deserialises them into GrpcConfigInput.
+    
+    The connector_config field should contain the connector-specific authentication
+    and configuration in the format expected by the server:
+    {"config": {"ConnectorName": {"api_key": "...", ...}}}
     """
 
-    endpoint:   str
-    connector:  str
-    auth_type:  str
-    api_key:    str
-    api_secret: Optional[str] = None
-    key1:       Optional[str] = None
-    merchant_id: Optional[str] = None
-    tenant_id:  Optional[str] = None
+    endpoint: str
+    connector: str
+    connector_config: Dict[str, Any]
 
     def to_json_bytes(self) -> bytes:
         d: dict = {
-            "endpoint":   self.endpoint,
-            "connector":  self.connector,
-            "auth_type":  self.auth_type,
-            "api_key":    self.api_key,
+            "endpoint": self.endpoint,
+            "connector": self.connector,
+            "connector_config": self.connector_config,
         }
-        if self.api_secret  is not None: d["api_secret"]   = self.api_secret
-        if self.key1         is not None: d["key1"]         = self.key1
-        if self.merchant_id  is not None: d["merchant_id"]  = self.merchant_id
-        if self.tenant_id    is not None: d["tenant_id"]    = self.tenant_id
         return json.dumps(d).encode()
 
 
@@ -153,6 +147,14 @@ class GrpcDisputeClient:
             req, payment_pb2.DisputeServiceSubmitEvidenceResponse,
         )
 
+    def dispute_get(self, req: payment_pb2.DisputeServiceGetRequest) -> payment_pb2.DisputeResponse:
+        """DisputeService.Get — Retrieve dispute status and evidence submission state. Tracks dispute progress through bank review process for informed decision-making."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "dispute/dispute_get",
+            req, payment_pb2.DisputeResponse,
+        )
+
     def defend(self, req: payment_pb2.DisputeServiceDefendRequest) -> payment_pb2.DisputeServiceDefendResponse:
         """DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation."""
         return _call_grpc(
@@ -167,6 +169,14 @@ class GrpcDisputeClient:
             self._ffi, self._config,
             "dispute/accept",
             req, payment_pb2.DisputeServiceAcceptResponse,
+        )
+
+    def dispute_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
+        """DisputeService.HandleEvent — Handle incoming webhooks from connectors."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "dispute/dispute_handle_event",
+            req, payment_pb2.EventServiceHandleResponse,
         )
 
 
@@ -361,6 +371,14 @@ class GrpcPaymentClient:
             req, payment_pb2.PaymentServiceSetupRecurringResponse,
         )
 
+    def payment_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
+        """PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payment/payment_handle_event",
+            req, payment_pb2.EventServiceHandleResponse,
+        )
+
 
 class GrpcPayoutClient:
     """PayoutService — gRPC sub-client."""
@@ -369,12 +387,36 @@ class GrpcPayoutClient:
         self._ffi    = ffi
         self._config = config
 
+    def payout_create(self, req: payment_pb2.PayoutServiceCreateRequest) -> payment_pb2.PayoutServiceCreateResponse:
+        """PayoutService.Create — Creates a payout."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/payout_create",
+            req, payment_pb2.PayoutServiceCreateResponse,
+        )
+
     def transfer(self, req: payment_pb2.PayoutServiceTransferRequest) -> payment_pb2.PayoutServiceTransferResponse:
         """PayoutService.Transfer — Creates a payout fund transfer."""
         return _call_grpc(
             self._ffi, self._config,
             "payout/transfer",
             req, payment_pb2.PayoutServiceTransferResponse,
+        )
+
+    def payout_get(self, req: payment_pb2.PayoutServiceGetRequest) -> payment_pb2.PayoutServiceGetResponse:
+        """PayoutService.Get — Retrieve payout details."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/payout_get",
+            req, payment_pb2.PayoutServiceGetResponse,
+        )
+
+    def payout_void(self, req: payment_pb2.PayoutServiceVoidRequest) -> payment_pb2.PayoutServiceVoidResponse:
+        """PayoutService.Void — Void a payout."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/payout_void",
+            req, payment_pb2.PayoutServiceVoidResponse,
         )
 
     def stage(self, req: payment_pb2.PayoutServiceStageRequest) -> payment_pb2.PayoutServiceStageResponse:
@@ -482,6 +524,30 @@ class GrpcRecurringPaymentClient:
         )
 
 
+class GrpcRefundClient:
+    """RefundService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def refund_get(self, req: payment_pb2.RefundServiceGetRequest) -> payment_pb2.RefundResponse:
+        """RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "refund/refund_get",
+            req, payment_pb2.RefundResponse,
+        )
+
+    def refund_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
+        """RefundService.HandleEvent — Handle incoming webhooks from payment processor for refund-specific events. This delegates to EventService internally but provides a service-specific endpoint."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "refund/refund_handle_event",
+            req, payment_pb2.EventServiceHandleResponse,
+        )
+
+
 class GrpcTokenizedPaymentClient:
     """TokenizedPaymentService — gRPC sub-client."""
 
@@ -520,8 +586,7 @@ class GrpcClient:
         client = GrpcClient(GrpcConfig(
             endpoint  = "http://localhost:8000",
             connector = "stripe",
-            auth_type = "header-key",
-            api_key   = "sk_test_...",
+            connector_config = {"config": {"Stripe": {"api_key": "sk_test_..."}}},
         ))
         res = client.customer.create(...)
         res = client.dispute.submit_evidence(...)
@@ -539,6 +604,7 @@ class GrpcClient:
     payout: GrpcPayoutClient
     proxy_payment: GrpcProxyPaymentClient
     recurring_payment: GrpcRecurringPaymentClient
+    refund: GrpcRefundClient
     tokenized_payment: GrpcTokenizedPaymentClient
 
     def __init__(self, config: GrpcConfig, lib_path: Optional[str] = None) -> None:
@@ -553,4 +619,5 @@ class GrpcClient:
         self.payout = GrpcPayoutClient(ffi, config)
         self.proxy_payment = GrpcProxyPaymentClient(ffi, config)
         self.recurring_payment = GrpcRecurringPaymentClient(ffi, config)
+        self.refund = GrpcRefundClient(ffi, config)
         self.tokenized_payment = GrpcTokenizedPaymentClient(ffi, config)
