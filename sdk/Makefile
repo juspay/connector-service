@@ -136,13 +136,13 @@ generate-descriptor:
 	@echo "Generating proto descriptor..."
 	@mkdir -p $(REPO_ROOT)/scripts/generators/code
 	@protoc \
-		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
 		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
 		--include_source_info \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/services.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_config.proto
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "Descriptor written to scripts/generators/code/services.desc"
 
 # ---------------------------------------------------------------------------
@@ -176,12 +176,13 @@ generate: install-deps generate-descriptor generate-rust generate-python generat
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
 	@MYPY_BIN="$$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts', 'posix_user'))")" && \
 		PATH="$$MYPY_BIN:$$PATH" python3 -m grpc_tools.protoc \
-		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
+		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
 		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_config.proto
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "All SDK clients regenerated successfully!"
 
 # ---------------------------------------------------------------------------
@@ -219,8 +220,8 @@ clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
 	@rm -f $(REPO_ROOT)/scripts/generators/code/services.desc
-	@rm -f $(REPO_ROOT)/backend/ffi/src/handlers/_generated_flow_registrations.rs
-	@rm -f $(REPO_ROOT)/backend/ffi/src/bindings/_generated_ffi_flows.rs
+	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs
+	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java clean

@@ -135,7 +135,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 Most connectors don't support VoidPC and use a stub implementation. In these cases, the Refund flow should be used instead.
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 use domain_types::{
     connector_flow::{Void, VoidPC},
@@ -182,7 +182,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 For connectors that support post-capture void operations (like WorldpayVantiv).
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for {ConnectorName}<T>
@@ -293,7 +293,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 For connectors using the macro framework with VoidPC support.
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 macros::create_all_prerequisites!(
     connector_name: {ConnectorName},

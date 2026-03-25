@@ -40,7 +40,7 @@ Most connectors in the Grace-UCS codebase currently return `NotImplemented` for 
 ### Direct Carrier Billing Data Structure
 
 ```rust
-// From backend/domain_types/src/payment_method_data.rs
+// From crates/types-traits/domain_types/src/payment_method_data.rs
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MobilePaymentData {
