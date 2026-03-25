@@ -1657,6 +1657,71 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+/// Request data for the InitiateTopup wallet flow.
+/// Contains data required to initiate a wallet topup via a connector.
+#[derive(Debug, Clone)]
+pub struct InitiateTopupData {
+    pub wallet_token: Option<Secret<String>>,
+    pub wallet_id: Option<String>,
+    pub amount: MinorUnit,
+    pub currency: Currency,
+    pub topup_txn_id: String,
+    pub return_url: Option<String>,
+    pub gateway_reference_id: Option<String>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
+}
+
+/// Response data for the InitiateTopup wallet flow.
+#[derive(Debug, Clone)]
+pub enum InitiateTopupResponseData {
+    /// Connector returned a deeplink URL for SDK-based topup
+    TopupSdkResponse { deeplink_url: String },
+    /// Connector returned a redirect URL for web-based topup
+    TopupRedirectResponse { redirect_url: String },
+    /// Topup initiated successfully but no response data to return
+    NoResponseData,
+}
+
+/// Flow data for wallet topup flows (shared context across the topup lifecycle).
+#[derive(Default, Debug, Clone)]
+pub struct WalletFlowData {
+    pub connectors: crate::types::Connectors,
+    pub connector_name: String,
+    pub status: AttemptStatus,
+    pub connector_response_headers: Option<http::HeaderMap>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub metadata: Option<SecretSerdeValue>,
+}
+
+impl RawConnectorRequestResponse for WalletFlowData {
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, raw_connector_request: Option<Secret<String>>) {
+        self.raw_connector_request = raw_connector_request;
+    }
+
+    fn set_raw_connector_response(&mut self, raw_connector_response: Option<Secret<String>>) {
+        self.raw_connector_response = raw_connector_response;
+    }
+}
+
+impl ConnectorResponseHeaders for WalletFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

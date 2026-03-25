@@ -11438,3 +11438,157 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
     };
     Ok(response)
 }
+
+// ============================================================================
+// WALLET: INITIATE TOPUP
+// ============================================================================
+
+/// Generate a gRPC response for the InitiateTopup flow from the router data.
+pub fn generate_initiate_topup_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::InitiateTopup,
+        crate::connector_types::WalletFlowData,
+        crate::connector_types::InitiateTopupData,
+        crate::connector_types::InitiateTopupResponseData,
+    >,
+) -> Result<
+    grpc_api_types::payments::WalletServiceInitiateTopupResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+
+    match router_data_v2.response {
+        Ok(response) => {
+            let status = router_data_v2.resource_common_data.status;
+            let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+
+            let topup_result = match response {
+                crate::connector_types::InitiateTopupResponseData::TopupSdkResponse {
+                    deeplink_url,
+                } => Some(
+                    grpc_api_types::payments::wallet_service_initiate_topup_response::TopupResult::DeeplinkUrl(
+                        deeplink_url,
+                    ),
+                ),
+                crate::connector_types::InitiateTopupResponseData::TopupRedirectResponse {
+                    redirect_url,
+                } => Some(
+                    grpc_api_types::payments::wallet_service_initiate_topup_response::TopupResult::RedirectUrl(
+                        redirect_url,
+                    ),
+                ),
+                crate::connector_types::InitiateTopupResponseData::NoResponseData => None,
+            };
+
+            Ok(
+                grpc_api_types::payments::WalletServiceInitiateTopupResponse {
+                    status: grpc_status.into(),
+                    error: None,
+                    status_code: 200,
+                    response_headers,
+                    topup_result,
+                    raw_connector_response,
+                    raw_connector_request,
+                },
+            )
+        }
+        Err(err) => {
+            let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(
+                common_enums::AttemptStatus::Failure,
+            );
+
+            Ok(
+                grpc_api_types::payments::WalletServiceInitiateTopupResponse {
+                    status: grpc_status.into(),
+                    error: Some(grpc_api_types::payments::ErrorInfo {
+                        unified_details: None,
+                        connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                            code: Some(err.code.clone()),
+                            message: Some(err.message.clone()),
+                            reason: err.reason.clone(),
+                        }),
+                        issuer_details: None,
+                    }),
+                    status_code: u32::from(err.status_code),
+                    response_headers,
+                    topup_result: None,
+                    raw_connector_response,
+                    raw_connector_request,
+                },
+            )
+        }
+    }
+}
+
+/// ForeignTryFrom: Convert gRPC WalletServiceInitiateTopupRequest into domain InitiateTopupData
+impl ForeignTryFrom<grpc_api_types::payments::WalletServiceInitiateTopupRequest>
+    for crate::connector_types::InitiateTopupData
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        item: grpc_api_types::payments::WalletServiceInitiateTopupRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = item.amount.ok_or_else(|| {
+            report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_REQUIRED_FIELD".to_string(),
+                error_identifier: 400,
+                error_message: "amount is required for initiate topup".to_string(),
+                error_object: None,
+            }))
+        })?;
+
+        let currency = common_enums::Currency::foreign_try_from(amount.currency())?;
+
+        Ok(Self {
+            wallet_token: item.wallet_token,
+            wallet_id: item.wallet_id,
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency,
+            topup_txn_id: item.topup_txn_id,
+            return_url: item.return_url,
+            gateway_reference_id: item.gateway_reference_id,
+            connector_feature_data: item.connector_feature_data.map(|m| {
+                let metadata = m.expose();
+                let value =
+                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
+                Secret::new(value)
+            }),
+        })
+    }
+}
+
+/// ForeignTryFrom: Convert gRPC WalletServiceInitiateTopupRequest into domain WalletFlowData
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::WalletServiceInitiateTopupRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::connector_types::WalletFlowData
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        (_item, connectors, _metadata): (
+            grpc_api_types::payments::WalletServiceInitiateTopupRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            connectors,
+            connector_name: String::new(),
+            status: common_enums::AttemptStatus::default(),
+            connector_response_headers: None,
+            raw_connector_request: None,
+            raw_connector_response: None,
+            metadata: None,
+        })
+    }
+}

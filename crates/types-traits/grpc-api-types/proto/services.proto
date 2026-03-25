@@ -267,6 +267,17 @@ service PaymentMethodAuthenticationService {
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
 }
 
+// ============================================================================
+// WALLET SERVICE — Manages wallet lifecycle operations including topup
+//                   initiation and wallet balance management.
+// ============================================================================
+
+service WalletService {
+  // Initiate a wallet topup via the payment connector. Returns a deeplink URL
+  // for SDK-based flows or a redirect URL for web-based flows.
+  rpc InitiateTopup(WalletServiceInitiateTopupRequest) returns (WalletServiceInitiateTopupResponse);
+}
+
 service PayoutService {
   // Creates a payout.
   rpc Create(PayoutServiceCreateRequest) returns (PayoutServiceCreateResponse);

@@ -9,12 +9,13 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
-    MandateRevokeRequestData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-    PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
-    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    InitiateTopupData, MandateRevokeRequestData, PaymentCreateOrderData,
+    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+    PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+    PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+    PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundSyncData,
+    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
@@ -26,12 +27,13 @@ use domain_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        IncrementalAuthorizationIntegrityObject, MandateRevokeIntegrityObject,
-        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        IncrementalAuthorizationIntegrityObject, InitiateTopupIntegrityObject,
+        MandateRevokeIntegrityObject, PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject,
+        PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -177,6 +179,7 @@ impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
 impl_check_integrity!(PayoutCreateRequest);
+impl_check_integrity!(InitiateTopupData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -524,6 +527,19 @@ impl GetIntegrityObject<PayoutCreateIntegrityObject> for PayoutCreateRequest {
         PayoutCreateIntegrityObject {
             amount: self.amount,
             currency: self.source_currency,
+        }
+    }
+}
+
+impl GetIntegrityObject<InitiateTopupIntegrityObject> for InitiateTopupData {
+    fn get_response_integrity_object(&self) -> Option<InitiateTopupIntegrityObject> {
+        None // Topup responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> InitiateTopupIntegrityObject {
+        InitiateTopupIntegrityObject {
+            amount: self.amount,
+            currency: self.currency,
         }
     }
 }
@@ -1227,6 +1243,36 @@ fn check_integrity_result(
 }
 
 impl FlowIntegrity for PayoutCreateIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for InitiateTopupIntegrityObject {
     type IntegrityObject = Self;
 
     fn compare(

@@ -3239,6 +3239,53 @@ message CustomerServiceDeleteResponse {
 }
 
 // ============================================================================
+// WALLET SERVICE MESSAGES
+// ============================================================================
+
+// Request message for initiating a wallet topup
+message WalletServiceInitiateTopupRequest {
+  // Identification
+  string topup_txn_id = 1;
+
+  // Amount Information
+  Money amount = 2;
+
+  // Wallet Information
+  optional SecretString wallet_token = 3;
+  optional string wallet_id = 4;
+
+  // URLs
+  optional string return_url = 5;
+
+  // Connector Reference
+  optional string gateway_reference_id = 6;
+
+  // Connector Feature Data
+  optional SecretString connector_feature_data = 7;
+}
+
+// Response message for initiating a wallet topup
+message WalletServiceInitiateTopupResponse {
+  // Status Information
+  PaymentStatus status = 1;
+  optional ErrorInfo error = 2;
+  uint32 status_code = 3;
+  map<string, string> response_headers = 4;
+
+  // Topup Result — one of deeplink, redirect, or empty
+  oneof topup_result {
+    // Deeplink URL for SDK-based topup
+    string deeplink_url = 5;
+    // Redirect URL for web-based topup
+    string redirect_url = 6;
+  }
+
+  // Raw Response/Request for debugging
+  optional SecretString raw_connector_response = 7;
+  optional SecretString raw_connector_request = 8;
+}
+
+// ============================================================================
 // CONNECTOR CONFIGURATION MESSAGES
 // ============================================================================
 
