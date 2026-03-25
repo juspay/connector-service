@@ -212,3 +212,72 @@ pub struct PayoutEnrollDisburseAccountResponse {
     pub connector_payout_id: Option<String>,
     pub status_code: u16,
 }
+
+// ========== CreditToWallet Flow Types ==========
+
+#[derive(Debug, Clone)]
+pub struct CreditToWalletFlowData {
+    pub merchant_id: common_utils::id_type::MerchantId,
+    pub connectors: Connectors,
+    pub connector_request_reference_id: String,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub test_mode: Option<bool>,
+}
+
+impl RawConnectorRequestResponse for CreditToWalletFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl ConnectorResponseHeaders for CreditToWalletFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CreditToWalletData {
+    pub amount: common_utils::types::MinorUnit,
+    pub currency: String,
+    pub reference_id: String,
+    pub user_account_id: String,
+    pub program_id: String,
+    pub credit_expiry: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreditToWalletResponseData {
+    pub transaction_id: String,
+    pub status: CreditToWalletStatus,
+    pub balance: Option<i64>,
+    pub status_code: u16,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum CreditToWalletStatus {
+    Success,
+    Pending,
+    Failed,
+}

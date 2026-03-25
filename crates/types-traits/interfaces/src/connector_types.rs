@@ -22,6 +22,7 @@ use domain_types::{
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
+        CreditToWalletData, CreditToWalletFlowData, CreditToWalletResponseData,
         PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
         PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,
         PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,
@@ -79,6 +80,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PayoutCreateLinkV2
     + PayoutCreateRecipientV2
     + PayoutEnrollDisburseAccountV2
+    + CreditToWalletV2
 {
 }
 
@@ -807,5 +809,15 @@ impl<T>
     > for T
 where
     T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait CreditToWalletV2:
+    ConnectorIntegrationV2<
+    connector_flow::CreditToWallet,
+    CreditToWalletFlowData,
+    CreditToWalletData,
+    CreditToWalletResponseData,
+>
 {
 }

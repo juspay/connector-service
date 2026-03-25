@@ -4,7 +4,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
+    connector_flow::{Authorize, Capture, CreateOrder, CreditToWallet, RSync, Refund},
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
@@ -12,6 +12,10 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payouts::payouts_types::{
+        CreditToWalletData, CreditToWalletFlowData, CreditToWalletResponseData,
+        CreditToWalletStatus,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -1650,5 +1654,151 @@ pub fn json_value_to_string(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(s) => s.clone(),
         _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
+    }
+}
+
+// ============ CreditToWallet Request/Response Types ============
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct RazorpayCreditToWalletRequest {
+    pub amount: MinorUnit,
+    pub action: String,
+    pub currency: String,
+    pub reference_id: String,
+    pub linked_transaction_id: Option<String>,
+    pub description: Option<String>,
+    pub notes: Option<serde_json::Value>,
+    pub method: String,
+    pub wallet: RazorpayWalletDetails,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayWalletDetails {
+    pub user_id: String,
+    pub expire_at: String,
+    pub program_id: String,
+}
+
+impl TryFrom<&CreditToWalletData> for RazorpayCreditToWalletRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(data: &CreditToWalletData) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount: data.amount,
+            action: "load".to_string(),
+            currency: data.currency.clone(),
+            reference_id: data.reference_id.clone(),
+            linked_transaction_id: None,
+            description: data.description.clone(),
+            notes: None,
+            method: "wallet".to_string(),
+            wallet: RazorpayWalletDetails {
+                user_id: data.user_account_id.clone(),
+                expire_at: data.credit_expiry.clone(),
+                program_id: data.program_id.clone(),
+            },
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RazorpayCreditToWalletResponse {
+    Success(Box<RazorpayCreditToWalletSuccessResponse>),
+    Error(Box<RazorpayCreditToWalletErrorResponse>),
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayCreditToWalletSuccessResponse {
+    #[serde(rename = "_id")]
+    pub id: String,
+    pub entity: Option<String>,
+    pub amount: Option<i64>,
+    #[serde(rename = "type")]
+    pub txn_type: Option<String>,
+    pub currency: Option<String>,
+    pub reference_id: Option<String>,
+    pub wallet: Option<RazorpayCreditToWalletWalletInfo>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayCreditToWalletWalletInfo {
+    pub user_id: Option<String>,
+    pub program_id: Option<String>,
+    pub balance: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayCreditToWalletErrorResponse {
+    pub message: Option<String>,
+    pub error: Option<RazorpayCreditToWalletErrorDetail>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayCreditToWalletErrorDetail {
+    pub code: Option<String>,
+    pub description: Option<String>,
+    pub reason: Option<String>,
+    pub field: Option<String>,
+}
+
+impl ForeignTryFrom<(RazorpayCreditToWalletResponse, Self, u16)>
+    for RouterDataV2<
+        CreditToWallet,
+        CreditToWalletFlowData,
+        CreditToWalletData,
+        CreditToWalletResponseData,
+    >
+{
+    type Error = errors::ConnectorError;
+
+    fn foreign_try_from(
+        (response, data, http_code): (RazorpayCreditToWalletResponse, Self, u16),
+    ) -> Result<Self, Self::Error> {
+        match response {
+            RazorpayCreditToWalletResponse::Success(success) => {
+                let balance = success.wallet.as_ref().and_then(|w| w.balance);
+
+                let response_data = CreditToWalletResponseData {
+                    transaction_id: success.id,
+                    status: CreditToWalletStatus::Success,
+                    balance,
+                    status_code: http_code,
+                    error_code: None,
+                    error_message: None,
+                };
+
+                Ok(Self {
+                    response: Ok(response_data),
+                    ..data
+                })
+            }
+            RazorpayCreditToWalletResponse::Error(error) => {
+                let error_code = error.error.as_ref().and_then(|e| e.code.clone());
+                let error_message = error
+                    .error
+                    .as_ref()
+                    .and_then(|e| e.description.clone())
+                    .or(error.message.clone());
+
+                let response_data = CreditToWalletResponseData {
+                    transaction_id: String::new(),
+                    status: CreditToWalletStatus::Failed,
+                    balance: None,
+                    status_code: http_code,
+                    error_code,
+                    error_message,
+                };
+
+                Ok(Self {
+                    response: Ok(response_data),
+                    ..data
+                })
+            }
+        }
     }
 }
