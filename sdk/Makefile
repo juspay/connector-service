@@ -211,30 +211,58 @@ else
   BUILD_FLAGS = 
 endif
 
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+
+# Internal target: wait for gRPC server to be ready (checks TCP port 8000)
+_wait-for-server:
+	@echo "Waiting for gRPC server (up to 30s)..."
+	@for i in $$(seq 1 30); do \
+		if nc -z localhost 8000 2>/dev/null || bash -c 'exec 3<>/dev/tcp/localhost/8000' 2>/dev/null; then \
+			echo "Server ready."; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Server did not start within 30s"; \
+	exit 1
+
 test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python + Kotlin) with a combined summary. Use QUIET=0 for verbose output.
 	@{ \
 		RUST_EXIT=0; JS_EXIT=0; PY_EXIT=0; KT_EXIT=0; \
 		\
 		printf "\n\033[1m═══ gRPC Smoke Tests ═══\033[0m\n\n"; \
-		printf "\033[1m── Rust gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/rust test-grpc \
+		\
+		printf "Building grpc-server ($(GRPC_PROFILE))...\n"; \
+		cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) 2>&1 | grep -v "^   Compiling\|^   Finished" || true; \
+		\
+		printf "\nStarting gRPC server (shared across all tests)...\n"; \
+		pkill -KILL -f grpc-server 2>/dev/null || true; \
+		sleep 1; \
+		cd $(REPO_ROOT) && $(GRPC_SERVER_BIN) > /tmp/grpc-server.log 2>&1 & \
+		$(MAKE) -C $(REPO_ROOT)/sdk _wait-for-server; \
+		\
+		printf "\n\033[1m── Rust gRPC ──\033[0m\n"; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/rust test-grpc-no-server \
 			GRPC_CONNECTOR=$(GRPC_CONNECTOR) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | grep -v "^   Compiling\|^   Finished\|^     Running" || true; \
 		RUST_EXIT=$$?; \
 		\
 		printf "\n\033[1m── JavaScript gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc \
+		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc-no-server \
 			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
 		JS_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Python gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc \
+		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc-no-server \
 			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
 		PY_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Kotlin gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc \
+		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc-no-server \
 			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30 || true; \
 		KT_EXIT=$$?; \
+		\
+		printf "\nStopping gRPC server...\n"; \
+		pkill -f grpc-server 2>/dev/null || true; \
 		\
 		printf "\n\033[1m══ gRPC Results Summary ══\033[0m\n"; \
 		[ $$RUST_EXIT -eq 0 ] \

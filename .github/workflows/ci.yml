@@ -224,6 +224,16 @@ jobs:
           fi
           make -C sdk test
 
+      - name: Run SDK gRPC Tests
+        shell: bash
+        run: |
+          if [[ -f "creds.json" ]]; then
+            echo "Running SDK gRPC tests with connector credentials"
+            make -C sdk test-grpc
+          else
+            echo "Skipping SDK gRPC tests - no connector credentials available"
+          fi
+
       - name: Regenerate SDK code
         shell: bash
         run: make -C sdk generate
