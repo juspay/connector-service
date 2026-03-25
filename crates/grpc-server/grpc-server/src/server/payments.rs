@@ -34,7 +34,14 @@ use domain_types::{
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{VerifyWebhookSourceResponseData, VerifyWebhookStatus},
     types::{
-        PaymentMethodDataAction, generate_access_token_response_data, generate_create_order_response, generate_payment_authenticate_response, generate_payment_capture_response, generate_payment_incremental_authorization_response, generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response, generate_payment_sdk_session_token_response, generate_payment_sync_response, generate_payment_void_post_capture_response, generate_payment_void_response, generate_refund_response, generate_repeat_payment_response, generate_setup_mandate_response
+        generate_access_token_response_data, generate_create_order_response,
+        generate_payment_authenticate_response, generate_payment_capture_response,
+        generate_payment_incremental_authorization_response,
+        generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response,
+        generate_payment_sdk_session_token_response, generate_payment_sync_response,
+        generate_payment_void_post_capture_response, generate_payment_void_response,
+        generate_refund_response, generate_repeat_payment_response,
+        generate_setup_mandate_response, PaymentMethodDataAction,
     },
     utils::ForeignTryFrom,
 };
@@ -765,7 +772,7 @@ impl Payments {
 
         // Create connector request data
         let payment_authorize_data =
-            PaymentsAuthorizeData::foreign_try_from((payload.clone(), payment_method_data))
+            PaymentsAuthorizeData::foreign_try_from((payload.clone(), payment_method_data.clone()))
                 .map_err(|err| {
                     tracing::error!("Failed to process payment authorize data: {:?}", err);
                     PaymentAuthorizationError::new(
@@ -858,23 +865,25 @@ impl Payments {
                     flow: std::marker::PhantomData,
                     resource_common_data: payment_flow_data,
                     connector_config,
-                    request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
-                        |err| {
-                            tracing::error!(
-                                "Failed to process payment authorize data in error path: {:?}",
-                                err
-                            );
-                            PaymentAuthorizationError::new(
-                                grpc_api_types::payments::PaymentStatus::Pending,
-                                Some(
-                                    "Failed to process payment authorize data in error path"
-                                        .to_string(),
-                                ),
-                                Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                                None,
-                            )
-                        },
-                    )?,
+                    request: PaymentsAuthorizeData::foreign_try_from((
+                        payload.clone(),
+                        payment_method_data,
+                    ))
+                    .map_err(|err| {
+                        tracing::error!(
+                            "Failed to process payment authorize data in error path: {:?}",
+                            err
+                        );
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(
+                                "Failed to process payment authorize data in error path"
+                                    .to_string(),
+                            ),
+                            Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                            None,
+                        )
+                    })?,
                     response: Err(ErrorResponse {
                         status_code: api_error.error_identifier,
                         code: api_error.sub_code.clone(),
@@ -1445,14 +1454,14 @@ impl PaymentService for Payments {
                 let metadata = &request_data.masked_metadata;
                 let payload = request_data.payload;
 
-                let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(&payload.payment_method)
+                let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
                     .map_err(|err| {
                         tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
                         tonic::Status::invalid_argument("Invalid payment method data")
                     })?;
 
                 let authorize_response = match payment_method_data_action {
-                    PaymentMethodDataAction::ProxyCard(proxy_card_details) => {
+                    PaymentMethodDataAction::CardProxy(proxy_card_details) => {
                         let token_data = proxy_card_details.to_token_data();
                         let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<VaultTokenHolder>::foreign_try_from(proxy_card_details).map_err(|err| {
                             tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
@@ -1484,32 +1493,35 @@ impl PaymentService for Payments {
 
                     }
                     PaymentMethodDataAction::Card(card_details) => {
-                                tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
-                                let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details)?);
-                                match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                    &config,
-                                    payload.clone(),
-                                    metadata_payload.connector,
-                                    metadata_payload.connector_config.clone(),
-                                    metadata,
-                                    &metadata_payload,
-                                    &service_name,
-                                    &metadata_payload.request_id,
-                                    None,
-                                    payment_method_data,
-                                ))
-                                .await
-                                {
-                                    Ok(response) => {
-                                        tracing::info!("REGULAR: Authorization completed successfully without injector");
-                                        response
-                                    },
-                                    Err(error_response) => {
-                                        tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
-                                        PaymentServiceAuthorizeResponse::from(error_response)
-                                    },
-                                }
-                            }
+                        tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+                        let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details).map_err(|err| {
+                            tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                            tonic::Status::invalid_argument("Invalid payment method data")
+                        })?);
+                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                            &config,
+                            payload.clone(),
+                            metadata_payload.connector,
+                            metadata_payload.connector_config.clone(),
+                            metadata,
+                            &metadata_payload,
+                            &service_name,
+                            &metadata_payload.request_id,
+                            None,
+                            payment_method_data,
+                        ))
+                        .await
+                        {
+                            Ok(response) => {
+                                tracing::info!("REGULAR: Authorization completed successfully without injector");
+                                response
+                            },
+                            Err(error_response) => {
+                                tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
+                                PaymentServiceAuthorizeResponse::from(error_response)
+                            },
+                        }
+                    }
                     PaymentMethodDataAction::Default => {
                         //foreign try from
                         let payment_method_data = payment_method_data::PaymentMethodData::foreign_try_from(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
@@ -2443,8 +2455,37 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
+                    let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                        .map_err(|err| {
+                            tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                            tonic::Status::invalid_argument("Invalid payment method data")
+                        })?;
+                    let payment_method_data = match payment_method_data_action{
+                            PaymentMethodDataAction::Card(card_details) => {
+                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+                            let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details).map_err(|err| {
+                                tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                                tonic::Status::invalid_argument("Invalid payment method data")
+                            })?);
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::Default => {
+                            //foreign try from
+                            let payment_method_data = payment_method_data::PaymentMethodData::foreign_try_from(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                                .map_err(|err| {
+                                    tracing::error!("Failed to convert payment method data: {:?}", err);
+                                    tonic::Status::invalid_argument("Invalid payment method data")
+                                })?;
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::CardProxy(_) =>{
+                            Err(tonic::Status::invalid_argument("Invalid payment method data"))
+                        }
+                    }?;
+                
+
                     let setup_mandate_request_data =
-                        SetupMandateRequestData::foreign_try_from(payload.clone())
+                        SetupMandateRequestData::foreign_try_from((payload.clone(), payment_method_data))
                             .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
@@ -2639,9 +2680,39 @@ impl PaymentMethodService for PaymentMethod {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
+                    let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                        .map_err(|err| {
+                            tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                            tonic::Status::invalid_argument("Invalid payment method data")
+                        })?;
+                    let payment_method_data = match payment_method_data_action{
+                            PaymentMethodDataAction::Card(card_details) => {
+                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+                            let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details).map_err(|err| {
+                                tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                                tonic::Status::invalid_argument("Invalid payment method data")
+                            })?);
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::Default => {
+                            //foreign try from
+                            let payment_method_data = payment_method_data::PaymentMethodData::foreign_try_from(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                                .map_err(|err| {
+                                    tracing::error!("Failed to convert payment method data: {:?}", err);
+                                    tonic::Status::invalid_argument("Invalid payment method data")
+                                })?;
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::CardProxy(_) =>{
+                            //when moved to internal fn, this would be available
+                            Err(tonic::Status::invalid_argument("Invalid payment method data"))
+                        }
+                    }?;
+
                     // Get payment method token request data
+
                     let payment_method_token_request_data =
-                        PaymentMethodTokenizationData::foreign_try_from(payload.clone()).map_err(
+                        PaymentMethodTokenizationData::foreign_try_from((payload.clone(), payment_method_data)).map_err(
                             |err| {
                                 tracing::error!(
                                     "Failed to process payment method token data: {:?}",
@@ -3460,8 +3531,37 @@ impl RecurringPaymentService for RecurringPayments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
+                    let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                        .map_err(|err| {
+                            tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                            tonic::Status::invalid_argument("Invalid payment method data")
+                        })?;
+                    let payment_method_data = match payment_method_data_action{
+                            PaymentMethodDataAction::Card(card_details) => {
+                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+                            let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details).map_err(|err| {
+                                tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
+                                tonic::Status::invalid_argument("Invalid payment method data")
+                            })?);
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::Default => {
+                            //foreign try from
+                            let payment_method_data = payment_method_data::PaymentMethodData::foreign_try_from(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                                .map_err(|err| {
+                                    tracing::error!("Failed to convert payment method data: {:?}", err);
+                                    tonic::Status::invalid_argument("Invalid payment method data")
+                                })?;
+                            Ok(payment_method_data)
+                        }
+                        PaymentMethodDataAction::CardProxy(_) =>{
+                            //when moved to internal fn, this would be available
+                            Err(tonic::Status::invalid_argument("Invalid payment method data"))
+                        }
+                    }?;
+
                     // Create repeat payment data
-                    let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                    let repeat_payment_data = RepeatPaymentData::foreign_try_from((payload.clone(), payment_method_data))
                         .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
@@ -3585,7 +3685,8 @@ impl PaymentMethodAuthOperational for PaymentMethodAuthentication {
         request_data_constructor: PaymentsPreAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_pre_authenticate_response,
-        all_keys_required: None
+        all_keys_required: None,
+        has_payment_method_data: option
     );
 
     implement_connector_operation!(
@@ -3600,7 +3701,8 @@ impl PaymentMethodAuthOperational for PaymentMethodAuthentication {
         request_data_constructor: PaymentsAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_authenticate_response,
-        all_keys_required: None
+        all_keys_required: None,
+        has_payment_method_data: option
     );
 
     implement_connector_operation!(
@@ -3615,7 +3717,8 @@ impl PaymentMethodAuthOperational for PaymentMethodAuthentication {
         request_data_constructor: PaymentsPostAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_post_authenticate_response,
-        all_keys_required: None
+        all_keys_required: None,
+        has_payment_method_data: option
     );
 }
 
