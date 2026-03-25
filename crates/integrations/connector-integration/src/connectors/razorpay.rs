@@ -384,6 +384,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     connector_req,
                 ))))
             }
+            PaymentMethodData::Wallet(_) => {
+                let connector_req =
+                    razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
+                Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+                    connector_req,
+                ))))
+            }
             _ => {
                 let connector_req =
                     razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
