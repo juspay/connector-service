@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method test-grpc
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -97,6 +97,13 @@ proto-lint:
 proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
+
+CONNECTORS   ?= stripe
+GRPC_PROFILE ?= release-fast
+
+## Run gRPC smoke tests for all SDKs (Rust + JS + Python) with a combined pass/fail summary
+test-grpc:
+	@$(MAKE) -C sdk test-grpc CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE)
 
 ## Run field-probe to generate connector flow data
 field-probe:
@@ -251,5 +258,8 @@ help:
 	@echo "  add-payment-method Add payment method support to an existing connector"
 	@echo
 	@echo "Other Targets:"
-	@echo "  test-ucs Run interactive UCS connector tests"
-	@echo "  help     Show this help message"
+	@echo "  test-grpc              Run gRPC smoke tests for all SDKs (Rust + JS + Python)"
+	@echo "    CONNECTORS=stripe    Connector(s) to test (comma-separated)"
+	@echo "    GRPC_PROFILE=...     Cargo profile (default: release-fast)"
+	@echo "  test-ucs               Run interactive UCS connector tests"
+	@echo "  help                   Show this help message"
