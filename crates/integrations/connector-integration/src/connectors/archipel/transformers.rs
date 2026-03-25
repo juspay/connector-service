@@ -627,7 +627,7 @@ impl
     TryFrom<
         ResponseRouterData<
             ArchipelCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
@@ -636,7 +636,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             ArchipelCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
@@ -915,12 +915,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         ResponseRouterData<
             ArchipelPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -928,12 +923,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<
             ArchipelPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.error {
@@ -1101,7 +1091,7 @@ impl<F>
     TryFrom<
         ResponseRouterData<
             ArchipelVoidResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
@@ -1110,7 +1100,7 @@ impl<F>
     fn try_from(
         item: ResponseRouterData<
             ArchipelVoidResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
@@ -1279,7 +1269,7 @@ impl
     TryFrom<
         ResponseRouterData<
             ArchipelRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
@@ -1288,7 +1278,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             ArchipelRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.error {
@@ -1326,7 +1316,7 @@ impl<F>
     TryFrom<
         ResponseRouterData<
             ArchipelRSyncResponse,
-            RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
@@ -1335,7 +1325,7 @@ impl<F>
     fn try_from(
         item: ResponseRouterData<
             ArchipelRSyncResponse,
-            RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error.clone() {
@@ -1535,12 +1525,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         ResponseRouterData<
             ArchipelSetupMandateResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     >
     for RouterDataV2<
@@ -1554,12 +1539,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<
             ArchipelSetupMandateResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {

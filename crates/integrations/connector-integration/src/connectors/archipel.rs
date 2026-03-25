@@ -506,7 +506,6 @@ macros::macro_connector_implementation!(
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_feature_data)?;
             match capture_method {
                 enums::CaptureMethod::Automatic | enums::CaptureMethod::SequentialAutomatic => {
-                    println!("here");
                     Ok(format!("{}{}", base_url, "/pay"))
                 }
                 enums::CaptureMethod::Manual => Ok(format!("{}{}", base_url, "/authorize")),
