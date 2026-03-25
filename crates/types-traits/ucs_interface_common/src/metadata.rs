@@ -1,5 +1,5 @@
 use common_utils::{
-    consts::{self, X_SHADOW_MODE},
+    consts::{self, X_ENVIRONMENT, X_SHADOW_MODE},
     errors::CustomResult,
     fp_utils,
     lineage::LineageIds,
@@ -37,6 +37,8 @@ pub struct MetadataPayload {
     pub reference_id: Option<String>,
     pub shadow_mode: bool,
     pub resource_id: Option<String>,
+    /// Environment dimension for superposition config resolution (e.g., "production", "sandbox")
+    pub environment: Option<String>,
 }
 
 pub fn get_metadata_payload(
@@ -54,6 +56,7 @@ pub fn get_metadata_payload(
     let reference_id = reference_id_from_metadata(metadata)?;
     let resource_id = resource_id_from_metadata(metadata)?;
     let shadow_mode = shadow_mode_from_metadata(metadata);
+    let environment = environment_from_metadata(metadata);
 
     Ok(MetadataPayload {
         tenant_id,
@@ -65,6 +68,7 @@ pub fn get_metadata_payload(
         reference_id,
         shadow_mode,
         resource_id,
+        environment,
     })
 }
 
@@ -165,6 +169,14 @@ pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
         .flatten()
         .map(|value| value.to_lowercase() == "true")
         .unwrap_or(false)
+}
+
+/// Extracts environment from the x-environment header for superposition config resolution.
+pub fn environment_from_metadata(metadata: &metadata::MetadataMap) -> Option<String> {
+    parse_optional_metadata(metadata, X_ENVIRONMENT)
+        .ok()
+        .flatten()
+        .map(|s| s.to_string())
 }
 
 pub fn parse_metadata<'a>(
