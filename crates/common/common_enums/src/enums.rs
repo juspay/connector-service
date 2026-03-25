@@ -1018,6 +1018,7 @@ pub enum PaymentMethodType {
     Pse,
     RedCompra,
     RedPagos,
+    RedirectWalletDebit,
     SamsungPay,
     Satispay,
     Sepa,

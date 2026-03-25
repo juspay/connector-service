@@ -351,7 +351,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
+                | WalletData::Wero(_)
+                | WalletData::RedirectWalletDebit(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Noon"),
                 )),
             },
@@ -1217,9 +1218,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         | WalletData::RevolutPay(_)
                         | WalletData::MbWay(_)
                         | WalletData::Satispay(_)
-                        | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
-                            utils::get_unimplemented_payment_method_error_message("Noon"),
-                        )),
+                        | WalletData::Wero(_)
+                        | WalletData::RedirectWalletDebit(_) => {
+                            Err(ConnectorError::NotImplemented(
+                                utils::get_unimplemented_payment_method_error_message("Noon"),
+                            ))
+                        }
                     },
                     PaymentMethodData::CardRedirect(_)
                     | PaymentMethodData::PayLater(_)

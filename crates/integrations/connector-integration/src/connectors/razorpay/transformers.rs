@@ -170,6 +170,12 @@ pub enum PaymentMethodSpecificData<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardDetails<T>),
+    Wallet(WalletDetails),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletDetails {
+    pub wallet: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,8 +292,11 @@ fn extract_payment_method_and_data<
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::Wallet(_wallet_data) => {
+            let wallet = PaymentMethodSpecificData::Wallet(WalletDetails { wallet: None });
+            Ok((PaymentMethodType::Wallet, wallet))
+        }
         PaymentMethodData::CardRedirect(_)
-        | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
         | PaymentMethodData::BankRedirect(_)
         | PaymentMethodData::BankDebit(_)

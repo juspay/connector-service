@@ -2789,6 +2789,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::WalletData::MbWay(_) => Self::MbWay,
                 payment_method_data::WalletData::Satispay(_) => Self::Satispay,
                 payment_method_data::WalletData::Wero(_) => Self::Wero,
+                payment_method_data::WalletData::RedirectWalletDebit(_) => {
+                    Self::RedirectWalletDebit
+                }
             },
             PaymentMethodData::PayLater(pay_later_data) => match pay_later_data {
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,

@@ -66,6 +66,7 @@ message PaymentMethod {
     MBWay mb_way = 25;                                  // MB WAY 
     Satispay satispay = 26;                             // Satispay 
     Wero wero = 27;                                     // Wero 
+    RedirectWalletDebit redirect_wallet_debit = 28;      // Redirect Wallet Debit
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -517,6 +518,11 @@ message Satispay {
 // Wero - European digital wallet payment solution
 message Wero {
   // Fields will be added as needed for Wero integration
+}
+
+// Redirect Wallet Debit - Wallet payment via redirect flow
+message RedirectWalletDebit {
+  // Fields will be added as needed for redirect wallet debit integration
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
