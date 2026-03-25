@@ -29,7 +29,6 @@ import uniffi.connector_service_ffi.defendReqTransformer
 import uniffi.connector_service_ffi.defendResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
-// payout_create transformers not yet implemented in FFI
 import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
@@ -226,8 +225,6 @@ class PaymentClient(
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
 
 }
-
-// class PayoutClient -- payout_create not yet implemented in FFI
 
 class RecurringPaymentClient(
     config: ConnectorConfig,

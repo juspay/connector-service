@@ -6,7 +6,6 @@ package payments
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 import com.sun.jna.Library
-import com.sun.jna.Memory
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
@@ -79,18 +78,23 @@ private object GrpcFfi {
     }
 
     fun call(method: String, configBytes: ByteArray, reqBytes: ByteArray): ByteArray {
-        // Use JNA Memory to allocate native buffers — avoids GetDirectBufferAddress
-        // which is restricted in unnamed modules on Java 22+.
-        val configMem = Memory(configBytes.size.toLong().coerceAtLeast(1))
-        configMem.write(0, configBytes, 0, configBytes.size)
+        // Allocate direct buffers for JNA FFI (required for getDirectBufferPointer)
+        val configBuf = java.nio.ByteBuffer.allocateDirect(configBytes.size)
+        configBuf.put(configBytes)
+        configBuf.flip()
+        require(configBuf.isDirect) { "configBuf must be a direct buffer" }
+        val configPtr = Native.getDirectBufferPointer(configBuf)
 
-        val reqMem = Memory(reqBytes.size.toLong().coerceAtLeast(1))
-        reqMem.write(0, reqBytes, 0, reqBytes.size)
+        val reqBuf = java.nio.ByteBuffer.allocateDirect(reqBytes.size)
+        reqBuf.put(reqBytes)
+        reqBuf.flip()
+        require(reqBuf.isDirect) { "reqBuf must be a direct buffer" }
+        val reqPtr = Native.getDirectBufferPointer(reqBuf)
 
         val outLen = IntByReference(0)
 
         val resultPtr = lib.hyperswitch_grpc_call(
-            method, configMem, configBytes.size, reqMem, reqBytes.size, outLen
+            method, configPtr, configBytes.size, reqPtr, reqBytes.size, outLen
         )
 
         val len = outLen.value

@@ -392,7 +392,55 @@ def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
     )
 
 
+KOTLIN_UNIFFI_BINDINGS = SDK_ROOT / "java/src/main/kotlin/generated/uniffi/connector_service_ffi/connector_service_ffi.kt"
+
+
+def _available_uniffi_transformers() -> set[str] | None:
+    """
+    Parse the generated uniffi Kotlin bindings to find which transformer
+    functions are actually available. Returns None if the file doesn't exist
+    (treated as "all available" — don't filter).
+    """
+    if not KOTLIN_UNIFFI_BINDINGS.exists():
+        return None
+    text = KOTLIN_UNIFFI_BINDINGS.read_text()
+    found: set[str] = set()
+    # Matches both standard flows (foo_req_transformer) and single-step flows (foo_transformer)
+    for m in re.finditer(r"fn_func_(\w+_transformer)\b", text):
+        found.add(m.group(1))
+    return found
+
+
 def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
+    available = _available_uniffi_transformers()
+
+    if available is not None:
+        filtered_flows = []
+        for f in flows:
+            symbol = f"{f['name']}_req_transformer"
+            if symbol in available:
+                filtered_flows.append(f)
+            else:
+                print(
+                    f"  WARNING: '{symbol}' not in uniffi bindings — skipping '{f['name']}' "
+                    "from Kotlin SDK. Run 'make -C sdk/java generate-bindings' to include it.",
+                    file=sys.stderr,
+                )
+        flows = filtered_flows
+
+        filtered_single = []
+        for f in single_flows:
+            symbol = f"{f['name']}_transformer"
+            if symbol in available:
+                filtered_single.append(f)
+            else:
+                print(
+                    f"  WARNING: '{symbol}' not in uniffi bindings — skipping '{f['name']}' "
+                    "from Kotlin SDK. Run 'make -C sdk/java generate-bindings' to include it.",
+                    file=sys.stderr,
+                )
+        single_flows = filtered_single
+
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_services = sorted(set(groups) | set(single_groups))

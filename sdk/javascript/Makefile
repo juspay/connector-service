@@ -262,7 +262,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings 
 		echo "  Note: no creds.json found, test will use placeholder credentials"; \
 	fi
 	@cd /tmp/test-hyperswitch-js-grpc && npx tsc && \
-		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules node test_smoke_grpc.js \
+		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules FORCE_COLOR=1 node test_smoke_grpc.js \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples; \
 		EXIT=$$?; \
 		pkill -f grpc-server 2>/dev/null || true; \

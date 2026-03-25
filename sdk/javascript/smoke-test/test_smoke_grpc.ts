@@ -17,13 +17,31 @@ import * as fs from "fs";
 import * as path from "path";
 
 // ── ANSI color helpers ──────────────────────────────────────────────────────
-const _NO_COLOR = !process.stdout.isTTY || !!process.env["NO_COLOR"];
+const _NO_COLOR = (!process.stdout.isTTY && !process.env["FORCE_COLOR"]) || !!process.env["NO_COLOR"];
 function _c(code: string, text: string): string { return _NO_COLOR ? text : `\x1b[${code}m${text}\x1b[0m`; }
 function _green (t: string): string { return _c("32", t); }
 function _red   (t: string): string { return _c("31", t); }
 function _yellow(t: string): string { return _c("33", t); }
 function _grey  (t: string): string { return _c("90", t); }
 function _bold  (t: string): string { return _c("1",  t); }
+
+// ── Probe request normalization ───────────────────────────────────────────────
+// Field-probe data uses snake_case keys; protobufjs fromObject expects camelCase.
+function _snakeToCamel(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+function _deepCamel(obj: unknown): unknown {
+  if (Array.isArray(obj)) return (obj as unknown[]).map(_deepCamel);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+        _snakeToCamel(k),
+        _deepCamel(v),
+      ])
+    );
+  }
+  return obj;
+}
 
 // ── Field-probe support filtering ────────────────────────────────────────────
 
@@ -182,10 +200,10 @@ function buildRequest(
   probeRequests?: Map<string, Record<string, unknown>>,
 ): unknown {
   const meta = FLOW_META_MAP.get(flow);
-  if (!meta) return probeRequests?.get(flow) ?? {};
+  if (!meta) return _deepCamel(probeRequests?.get(flow) ?? {});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fn = typeof mod[meta.builder] === "function" ? (mod[meta.builder] as (...a: any[]) => unknown) : null;
-  if (!fn) return probeRequests?.get(flow) ?? {};
+  if (!fn) return _deepCamel(probeRequests?.get(flow) ?? {});
   return meta.arg === "none" ? fn() : fn(arg ?? "");
 }
 
