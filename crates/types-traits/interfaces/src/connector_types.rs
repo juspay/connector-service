@@ -21,6 +21,7 @@ use domain_types::{
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payouts::payouts_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
     router_data::ConnectorSpecificConfig,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
@@ -64,6 +65,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + MandateRevokeV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
+    + PayoutCreateV2
 {
 }
 
@@ -333,6 +335,30 @@ pub trait VerifyWebhookSourceV2:
     VerifyWebhookSourceRequestData,
     VerifyWebhookSourceResponseData,
 >
+{
+}
+
+pub trait PayoutCreateV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreate,
+    PayoutFlowData,
+    PayoutCreateRequest,
+    PayoutCreateResponse,
+>
+{
+}
+
+impl<T> PayoutCreateV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutCreate,
+        PayoutFlowData,
+        PayoutCreateRequest,
+        PayoutCreateResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
 {
 }
 

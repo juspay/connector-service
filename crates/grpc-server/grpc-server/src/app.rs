@@ -9,6 +9,7 @@ use grpc_api_types::{
         payment_method_authentication_service_server, payment_method_service_server,
         payment_service_server, recurring_payment_service_server, refund_service_server,
     },
+    payouts::payout_service_server,
 };
 use std::{future::Future, net, sync::Arc};
 use tokio::{
@@ -114,6 +115,7 @@ pub struct Service {
     pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
     pub customer_service: crate::server::payments::Customer,
     pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
+    pub payouts_service: crate::server::payouts::Payouts,
 }
 
 impl Service {
@@ -159,6 +161,7 @@ impl Service {
             customer_service,
             payment_method_authentication_service:
                 crate::server::payments::PaymentMethodAuthentication,
+            payouts_service: crate::server::payouts::Payouts,
         }
     }
 
@@ -303,6 +306,9 @@ impl Service {
             ))
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
+            ))
+            .add_service(payout_service_server::PayoutServiceServer::new(
+                self.payouts_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;

@@ -2,13 +2,15 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use crate::{
-    connector_types, payment_method_data::SamsungPayWalletCredentials,
+    connector_types::{self, ConnectorEnum},
+    payment_method_data::SamsungPayWalletCredentials,
     utils::extract_connector_request_reference_id,
 };
 use common_enums::{
     CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,
     SamsungPayCardBrand,
 };
+use common_utils::config_patch::Patch;
 use common_utils::{
     consts::{self, NO_ERROR_CODE, X_EXTERNAL_VAULT_METADATA},
     id_type::CustomerId,
@@ -390,6 +392,26 @@ impl ConnectorParams {
             third_base_url: None,
         }
     }
+
+    /// Patch this ConnectorParams with resolved URLs from superposition.
+    ///
+    /// Only non-empty resolved URLs will override the existing values.
+    /// This allows superposition to selectively override specific URLs
+    /// while keeping static config values for others.
+    pub fn patch_with_resolved_urls(
+        &self,
+        base_url: Option<String>,
+        dispute_base_url: Option<String>,
+        secondary_base_url: Option<String>,
+        third_base_url: Option<String>,
+    ) -> Self {
+        Self {
+            base_url: base_url.unwrap_or_else(|| self.base_url.clone()),
+            dispute_base_url: dispute_base_url.or(self.dispute_base_url.clone()),
+            secondary_base_url: secondary_base_url.or(self.secondary_base_url.clone()),
+            third_base_url: third_base_url.or(self.third_base_url.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq, config_patch_derive::Patch)]
@@ -420,6 +442,100 @@ impl HasConnectors for RefundFlowData {
 impl HasConnectors for DisputeFlowData {
     fn connectors(&self) -> &Connectors {
         &self.connectors
+    }
+}
+
+impl Connectors {
+    /// Patch the specified connector's URL configuration with resolved URLs from superposition.
+    ///
+    /// This method creates a new `Connectors` instance with the specified connector's
+    /// `ConnectorParams` updated with the resolved URLs. All other connectors remain unchanged.
+    ///
+    /// This implementation leverages the `config_patch` framework to apply selective patches
+    /// to individual connector fields, avoiding manual match arms for each connector.
+    ///
+    /// # Arguments
+    /// * `connector` - The connector enum variant
+    /// * `urls` - The resolved URLs from superposition configuration
+    ///
+    /// # Returns
+    /// `Ok(Connectors)` - A new `Connectors` instance with the patched connector params.
+    /// `Err(ApplicationErrorResponse)` - If the connector is not supported for URL patching.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let urls = ConnectorUrls {
+    ///     base_url: Some("https://api.stripe.com/".to_string()),
+    ///     ..Default::default()
+    /// };
+    /// let patched = connectors.patch_connector_urls(&ConnectorEnum::Stripe, &urls)?;
+    /// ```
+    pub fn patch_connector_urls(
+        &self,
+        connector: &ConnectorEnum,
+        urls: &common_utils::superposition_config::ConnectorUrls,
+    ) -> Result<Self, ApplicationErrorResponse> {
+        let mut patched = self.clone();
+
+        // Create a patch for ConnectorParams with the resolved URLs
+        let params_patch = ConnectorParamsPatch {
+            base_url: urls.base_url.clone(),
+            dispute_base_url: Some(urls.dispute_base_url.clone()),
+            secondary_base_url: Some(urls.secondary_base_url.clone()),
+            third_base_url: Some(urls.third_base_url.clone()),
+        };
+
+        // Apply the patch to the appropriate connector field
+        // Using the config_patch framework, missing fields in the patch mean "no change"
+        match connector {
+            ConnectorEnum::Stripe => {
+                patched.stripe.apply(params_patch);
+            }
+            ConnectorEnum::Adyen => {
+                patched.adyen.apply(params_patch);
+            }
+            ConnectorEnum::Paypal => {
+                patched.paypal.apply(params_patch);
+            }
+            ConnectorEnum::Braintree => {
+                patched.braintree.apply(params_patch);
+            }
+            ConnectorEnum::Checkout => {
+                patched.checkout.apply(params_patch);
+            }
+            ConnectorEnum::Cybersource => {
+                patched.cybersource.apply(params_patch);
+            }
+            ConnectorEnum::Revolut => {
+                patched.revolut.apply(params_patch);
+            }
+            ConnectorEnum::Worldpay => {
+                patched.worldpay.apply(params_patch);
+            }
+            ConnectorEnum::Trustpay => {
+                // TrustPay uses ConnectorParamsWithMoreUrls which has different fields
+                let trustpay_patch = ConnectorParamsWithMoreUrlsPatch {
+                    base_url: urls.base_url.clone(),
+                    base_url_bank_redirects: urls.base_url_bank_redirects.clone(),
+                };
+                patched.trustpay.apply(trustpay_patch);
+            }
+            _ => {
+                // Connector not supported for URL patching - return error
+                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR_FOR_URL_PATCHING".to_string(),
+                    error_identifier: 400,
+                    error_message: format!(
+                        "Connector '{}' is not supported for dynamic URL patching from superposition. \
+                         Supported connectors: stripe, adyen, paypal, braintree, checkout, cybersource, revolut, worldpay, trustpay",
+                        connector
+                    ),
+                    error_object: None,
+                }));
+            }
+        }
+
+        Ok(patched)
     }
 }
 
@@ -3156,6 +3272,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -3281,6 +3398,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
@@ -3379,6 +3497,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -3455,6 +3574,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
@@ -3525,6 +3645,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -4063,6 +4184,41 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         }
     };
     Ok(response)
+}
+
+pub fn generate_payout_create_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutCreate,
+        crate::payouts::payouts_types::PayoutFlowData,
+        crate::payouts::payouts_types::PayoutCreateRequest,
+        crate::payouts::payouts_types::PayoutCreateResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreateResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
+            response,
+        )),
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
 }
 
 // ForeignTryFrom for PaymentMethod gRPC enum to internal enum
@@ -5015,6 +5171,20 @@ pub fn generate_payment_sync_response(
                             }))
                     });
 
+                let amount = router_data_v2
+                    .resource_common_data
+                    .amount
+                    .as_ref()
+                    .map(|money| {
+                        grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                            |currency| grpc_api_types::payments::Money {
+                                minor_amount: money.amount.get_amount_as_i64(),
+                                currency: currency as i32,
+                            },
+                        )
+                    })
+                    .transpose()?;
+
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
                         &grpc_resource_id,
@@ -5027,7 +5197,7 @@ pub fn generate_payment_sync_response(
                     mandate_reference: mandate_reference_grpc,
                     error: None,
                     network_transaction_id: network_txn_id,
-                    amount: None,
+                    amount,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
                     payment_method_type: None,
                     capture_method: None,
@@ -5994,6 +6164,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -6104,6 +6275,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -6681,6 +6853,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -6748,6 +6921,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -7091,6 +7265,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: None,
@@ -7196,6 +7371,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: None,
@@ -8242,6 +8418,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -8741,6 +8918,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -8920,6 +9098,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -9067,6 +9246,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -10485,6 +10665,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -10588,6 +10769,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -10684,6 +10866,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -10759,6 +10942,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,

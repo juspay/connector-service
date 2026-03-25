@@ -180,6 +180,7 @@ generate: install-deps generate-descriptor generate-rust generate-python generat
 		--python_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		--mypy_out=$(REPO_ROOT)/sdk/python/src/payments/generated \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
+		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
 		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
 	@echo "All SDK clients regenerated successfully!"
