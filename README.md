@@ -29,17 +29,17 @@ Today, integrating multiple payment processors either makes developers running i
 
 Because every payment processor has diverse APIs, error codes, authentication methods, pdf documents to read, and above all - different behaviour in the actual environment when compared to documented specs. All this rests as tribal or undocumented knowledge making it harder AI agents which are very good at implementing clearly documented specification.
 
-**Prism is a stateless, unified connector library for AI agents and Developers to connect with any payment processor**
+**Prism is a stateless, unified connector library for AI agents and Developers to connect with any payment processor.**
 
-**Prism offers hardened transformation through testing on payment processor environment & iterative bug fixing**
+**Prism offers hardened transformation through testing on payment processor environment & iterative bug fixing.**
 
-**Prism can be embedded in you server application with its wide range of multi-language SDKs, or run as a rRPC microservice**
+**Prism can be embedded in you server application with its wide range of multi-language SDKs, or run as a rRPC microservice.**
 
 
 | ❌ Without Prism | ✅ With Prism |
 |------------------------------|----------------------------|
 | 🗂️ 100+ different API schemas | 📋 Single unified schema |
-| ⏳ Never ending agent loops/ months of integration work | ⚡ Hours to integrate, Agent driven |
+| ⏳ In-deterministic agent loops / months of integration work | ⚡ Deterministic agent loops, hours to integrate |
 | 🔗 Brittle, provider-specific code | 🔓 Portable, provider-agnostic code |
 | 🚫 Hard to switch providers | 🔄 Change providers in 1 line |
 
@@ -102,9 +102,9 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.juspay</groupId>
-    <artifactId>hyperswitch-prism</artifactId>
-    <version>1.0.0</version>
+    <groupId>io.hyperswitch</groupId>
+    <artifactId>prism</artifactId>
+    <version>0.0.1</version>
 </dependency>
 ```
 
@@ -234,8 +234,8 @@ Each flow uses the same unified schema regardless of the underlying processor's 
 
 ```bash
 # Clone the repository
-git clone https://github.com/manojradhakrishnan/connector-service.git
-cd connector-service
+git clone https://github.com/juspay/hyperswitch-prism.git
+cd hyperswitch-prism
 
 
 # Build
