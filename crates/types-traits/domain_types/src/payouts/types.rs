@@ -162,18 +162,6 @@ impl From<payouts::payouts_types::PayoutCreateResponse>
     for grpc_api_types::payouts::PayoutServiceCreateResponse
 {
     fn from(response: payouts::payouts_types::PayoutCreateResponse) -> Self {
-        let error = response
-            .error_message
-            .map(|msg| grpc_api_types::payouts::ErrorInfo {
-                unified_details: None,
-                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
-                    code: response.error_code,
-                    message: Some(msg.clone()),
-                    reason: Some(msg),
-                }),
-                issuer_details: None,
-            });
-
         let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
             response.payout_status,
         ) as i32;
@@ -182,7 +170,7 @@ impl From<payouts::payouts_types::PayoutCreateResponse>
             merchant_payout_id: response.merchant_payout_id,
             payout_status: Some(payout_status),
             connector_payout_id: response.connector_payout_id,
-            error,
+            error: None,
             status_code: u32::from(response.status_code),
         }
     }

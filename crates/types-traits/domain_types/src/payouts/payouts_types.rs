@@ -89,8 +89,6 @@ pub struct PayoutCreateResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -113,8 +111,6 @@ pub struct PayoutTransferResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -129,8 +125,6 @@ pub struct PayoutGetResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -147,8 +141,6 @@ pub struct PayoutStageResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -163,8 +155,6 @@ pub struct PayoutVoidResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -187,8 +177,6 @@ pub struct PayoutCreateLinkResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -206,8 +194,6 @@ pub struct PayoutCreateRecipientResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
 
@@ -224,7 +210,5 @@ pub struct PayoutEnrollDisburseAccountResponse {
     pub merchant_payout_id: Option<String>,
     pub payout_status: common_enums::PayoutStatus,
     pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
     pub status_code: u16,
 }
