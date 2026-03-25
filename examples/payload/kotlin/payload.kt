@@ -16,7 +16,6 @@ import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.Currency
 import payments.PaymentMethodType
-import payments.TokenPaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
@@ -32,7 +31,7 @@ private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServi
         }
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
@@ -50,7 +49,7 @@ private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGe
         }
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
@@ -70,7 +69,7 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
         reason = "customer_request"  // Reason for the refund
         stateBuilder.apply {  // State data for access token storage and other connector-specific state
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
@@ -84,7 +83,7 @@ private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceV
         connectorTransactionId = connectorTransactionIdStr
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
@@ -130,7 +129,9 @@ fun recurringCharge(txnId: String) {
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
-            token = TokenPaymentMethodType.probe_pm_token  // Payment tokens
+            tokenBuilder.apply {  // Payment tokens
+                tokenBuilder.value = "probe_pm_token"
+            }
         }
         returnUrl = "https://example.com/recurring-return"
         connectorCustomerId = "cust_probe_123"
@@ -138,7 +139,7 @@ fun recurringCharge(txnId: String) {
         offSession = true  // Behavioral Flags and Preferences
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }

@@ -26,7 +26,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         }
         paymentMethodBuilder.apply {  // Payment method to be used
             upiCollectBuilder.apply {  // UPI Collect
-                vpaId = "test@upi"  // Virtual Payment Address
+                vpaIdBuilder.value = "test@upi"  // Virtual Payment Address
             }
         }
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
