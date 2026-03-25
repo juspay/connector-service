@@ -374,17 +374,16 @@ pub trait ResendOtpForWalletV2:
 {
 }
 
-impl<T> ResendOtpForWalletV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
-
-impl<T>
-    ConnectorIntegrationV2<
-        connector_flow::ResendOtpForWallet,
-        PaymentFlowData,
-        ResendOtpForWalletData,
-        ResendOtpForWalletResponseData,
-    > for T
-where
-    T: ConnectorCommon + Sync + Send + 'static,
+impl<T> ResendOtpForWalletV2 for T where
+    T: ConnectorIntegrationV2<
+            connector_flow::ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        > + ConnectorCommon
+        + Sync
+        + Send
+        + 'static
 {
 }
 

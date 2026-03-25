@@ -18,7 +18,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        ResendOtpForWallet, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -31,7 +31,8 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
+        RefundsData, RefundsResponseData, RequestDetails, ResendOtpForWalletData,
+        ResendOtpForWalletResponseData, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
@@ -1271,4 +1272,124 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MandateRevokeResponseData,
     > for Razorpay<T>
 {
+}
+
+// ========== ResendOtpForWallet ==========
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        ResendOtpForWallet,
+        PaymentFlowData,
+        ResendOtpForWalletData,
+        ResendOtpForWalletResponseData,
+    > for Razorpay<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    where
+        Self: ConnectorIntegrationV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+    {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        let connector_transaction_id = req
+            .request
+            .connector_transaction_id
+            .as_deref()
+            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        Ok(format!(
+            "{base_url}v1/payments/{connector_transaction_id}/otp/resend"
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let connector_req = razorpay::RazorpayResendOtpRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            ResendOtpForWallet,
+            PaymentFlowData,
+            ResendOtpForWalletData,
+            ResendOtpForWalletResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: razorpay::RazorpayResendOtpResponse = res
+            .response
+            .parse_struct("RazorpayResendOtpResponse")
+            .map_err(|err| {
+                report!(errors::ConnectorError::ResponseDeserializationFailed).attach_printable(
+                    format!("Failed to parse RazorpayResendOtpResponse: {err:?}"),
+                )
+            })?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
