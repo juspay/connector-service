@@ -471,6 +471,9 @@ pub struct VerifyWebhookSourceRequestData {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ResendOtpForWalletIntegrityObject {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VerifyWebhookSourceIntegrityObject {
     pub webhook_id: String,
 }
