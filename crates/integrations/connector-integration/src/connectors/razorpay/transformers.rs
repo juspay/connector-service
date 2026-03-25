@@ -11,7 +11,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -170,6 +172,7 @@ pub enum PaymentMethodSpecificData<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardDetails<T>),
+    Wallet,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,8 +289,15 @@ fn extract_payment_method_and_data<
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+            WalletData::DirectWalletDebit(_) => {
+                Ok((PaymentMethodType::Wallet, PaymentMethodSpecificData::Wallet))
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Unsupported wallet type for Razorpay".to_string(),
+            )),
+        },
         PaymentMethodData::CardRedirect(_)
-        | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
         | PaymentMethodData::BankRedirect(_)
         | PaymentMethodData::BankDebit(_)
@@ -469,8 +479,89 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
+            PaymentMethodData::Wallet(WalletData::DirectWalletDebit(_)) => {
+                let amount = item.amount;
+                let currency = item.router_data.request.currency.to_string();
+
+                let billing = item
+                    .router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing();
+
+                let contact = billing
+                    .and_then(|billing| billing.phone.as_ref())
+                    .and_then(|phone| phone.number.clone())
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "contact",
+                    })?;
+
+                let billing_email = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_email()
+                    .ok();
+
+                let email = billing_email
+                    .or(item.router_data.request.email.clone())
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "email",
+                    })?;
+
+                let order_id = item
+                    .router_data
+                    .resource_common_data
+                    .reference_id
+                    .clone()
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "order_id",
+                    })?;
+
+                let (method, card) = extract_payment_method_and_data(
+                    &item.router_data.request.payment_method_data,
+                    item.router_data.request.customer_name.clone(),
+                )?;
+
+                let ip = item
+                    .router_data
+                    .request
+                    .get_ip_address_as_optional()
+                    .map(|ip| Secret::new(ip.expose()))
+                    .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
+
+                let user_agent = item
+                    .router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|info| info.get_user_agent().ok())
+                    .unwrap_or_else(|| "Mozilla/5.0".to_string());
+
+                let referer = item
+                    .router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|info| info.get_referer().ok())
+                    .unwrap_or_else(|| "https://example.com".to_string());
+
+                Ok(Self {
+                    amount,
+                    currency,
+                    contact,
+                    email,
+                    order_id,
+                    method,
+                    card,
+                    authentication: None,
+                    browser: None,
+                    ip,
+                    referer,
+                    user_agent,
+                })
+            }
             _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card payments are supported".into(),
+                "Only card and wallet payments are supported".into(),
             )
             .into()),
         }

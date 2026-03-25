@@ -294,7 +294,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | WalletData::RevolutPay(_)
                     | WalletData::MbWay(_)
                     | WalletData::Satispay(_)
-                    | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
+                    | WalletData::Wero(_)
+                    | WalletData::DirectWalletDebit(_) => Err(ConnectorError::NotImplemented(
                         domain_types::utils::get_unimplemented_payment_method_error_message(
                             "Cybersource",
                         ),
@@ -2140,7 +2141,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
+                | WalletData::Wero(_)
+                | WalletData::DirectWalletDebit(_) => Err(ConnectorError::NotImplemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Cybersource",
                     ),

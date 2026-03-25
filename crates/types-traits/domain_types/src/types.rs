@@ -1016,6 +1016,11 @@ impl<
                         payment_method_data::WeroData {},
                     )))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::DirectWalletDebit(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::DirectWalletDebit(
+                        payment_method_data::DirectWalletDebitData {},
+                    )))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(
                     mifinity_data,
                 ) => Ok(Self::Wallet(payment_method_data::WalletData::Mifinity(
@@ -2032,6 +2037,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
                 Ok(Some(PaymentMethodType::Satispay))
             }
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
+            grpc_api_types::payments::PaymentMethodType::DirectWalletDebit => {
+                Ok(Some(PaymentMethodType::DirectWalletDebit))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -2120,6 +2128,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => Ok(Some(PaymentMethodType::MbWay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => Ok(Some(PaymentMethodType::Satispay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => Ok(Some(PaymentMethodType::Wero)),
+                grpc_api_types::payments::payment_method::PaymentMethod::DirectWalletDebit(_) => Ok(Some(PaymentMethodType::DirectWalletDebit)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -5437,6 +5446,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::MbWay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Satispay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::DirectWalletDebit => Ok(Self::Wallet),
 
             grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
@@ -8608,6 +8618,7 @@ pub enum PaymentMethodDataType {
     MbWay,
     Satispay,
     Wero,
+    DirectWalletDebit,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
 }

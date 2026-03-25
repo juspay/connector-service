@@ -66,6 +66,7 @@ message PaymentMethod {
     MBWay mb_way = 25;                                  // MB WAY 
     Satispay satispay = 26;                             // Satispay 
     Wero wero = 27;                                     // Wero 
+    DirectWalletDebit direct_wallet_debit = 29;         // Direct Wallet Debit
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -518,6 +519,9 @@ message Satispay {
 message Wero {
   // Fields will be added as needed for Wero integration
 }
+
+// DirectWalletDebit - Direct wallet debit payment method
+message DirectWalletDebit {}
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
 message ApplePayThirdPartySdkWallet {
