@@ -215,14 +215,15 @@ Variables:
 Store the test result:
 - `{TEST_STATUS}` = `PASS`, `FAIL`, or `NOT_SUPPORTED`
 - `{TEST_REASON}` = reason string (empty if `PASS`)
-- `{TEST_FAILURE_CATEGORY}` = concise category such as `ASSERTION`, `COMPILATION`, `MODULE_WIRING`, `UNSUPPORTED_PATTERN`, or `OTHER`
+- `{TEST_STRATEGY}` = `ENABLE_EXISTING_SUITE`, `ADD_OVERRIDE`, `ADD_SCENARIO`, `ADD_SUITE`, or `NOT_SUPPORTED`
+- `{TEST_FAILURE_CATEGORY}` = concise category such as `SCHEMA_DRIFT`, `SCENARIO_FAIL`, `JSON_SYNTAX`, `MISSING_PROTO_FIELD`, or `OTHER`
 - `{TEST_FAILURE_FINGERPRINT}` = concise stable failure signature, or empty on success
 - `{TEST_REPAIR_HINT}` = direct hint for the next codegen attempt, or empty on success
 - `{FLOW_TESTS_ADDED}` = `YES` or `NO`
-- `{TEST_FILE}` = connector test file path (empty if none)
+- `{SUITES_TOUCHED}` = comma-separated suite names, or empty
+- `{SCENARIOS_TOUCHED}` = comma-separated scenario names, or empty
 - `{TEST_FILES_MODIFIED}` = exact file paths reported by the Test Agent
-- `{TEST_COMMAND}` = final cargo test command, or `not run`
-- `{TEST_OUTPUT}` = raw output from the final cargo test command, or a concise explanation when no cargo test command ran
+- `{TEST_OUTPUT}` = raw output from the final validation command, or a concise explanation when no command ran
 
 ### 4d: Aggregate the current attempt
 
@@ -306,9 +307,12 @@ Variables:
   GRPCURL_RESULT: <latest PASS, FAIL, or NOT_RUN result from codegen>
   GRPCURL_OUTPUT: <latest raw grpcurl output from the Code Generation Agent>
   TEST_STATUS: <latest PASS, FAIL, or NOT_SUPPORTED result from the Test Agent>
+  TEST_STRATEGY: <latest ENABLE_EXISTING_SUITE, ADD_OVERRIDE, ADD_SCENARIO, ADD_SUITE, or NOT_SUPPORTED>
   TEST_REASON: <latest test reason, empty if PASS>
   FLOW_TESTS_ADDED: <YES or NO>
-  TEST_OUTPUT: <latest raw cargo test output or concise explanation>
+  SUITES_TOUCHED: <comma-separated suite names>
+  SCENARIOS_TOUCHED: <comma-separated scenario names>
+  TEST_OUTPUT: <latest raw scenario harness output or concise explanation>
   FILES_TO_COMMIT: <exact union of all codegen and test files touched across the repair loop>
   ATTEMPTS_USED: <outer-loop attempts used>
   MAX_ATTEMPTS: 20
@@ -368,5 +372,5 @@ REASON: <if not SUCCESS, prefer PR failure reason, else connector failure reason
 | Links Agent | `2.1_links.md` | Find and verify backend API documentation links |
 | Tech Spec Agent | `2.2_techspec.md` | Generate tech spec via grace CLI |
 | Code Generation Agent | `2.3_codegen.md` | Read, analyze, implement, build, and grpcurl test while consuming retry feedback |
-| Test Agent | `2.4_test.md` | Ensure connector test file exists, add flow tests when supported, and run cargo test |
+| Test Agent | `2.4_test.md` | Add connector to scenario-driven test harness (specs.json, override.json, scenario.json), run schema checks and suite runner |
 | PR Agent | `2.5_pr.md` | Commit exact modified files, cherry-pick to a clean branch, scrub creds, push, and create PR in `juspay/connector-service` |
