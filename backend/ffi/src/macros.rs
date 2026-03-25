@@ -97,7 +97,6 @@ macro_rules! req_transformer {
                 + Clone
                 + serde::Serialize
                 + serde::de::DeserializeOwned
-                + domain_types::types::CardConversionHelper
                 + 'static,
         >(
             payload: $request_type,
@@ -162,7 +161,6 @@ macro_rules! res_transformer {
                 + serde::de::DeserializeOwned
                 + Clone
                 + Sync
-                + domain_types::types::CardConversionHelper
                 + 'static,
         >(
             payload: $request_type,
