@@ -32,7 +32,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 **Prism offers hardened transformation through testing on payment processor environment & iterative bug fixing**
 
-**Prism can be embedded in you server application with its wide range of multi-language SDKs, or run as a rRPC microservice**
+**Prism can be embedded in your server application with its wide range of multi-language SDKs, or run as a gRPC microservice**
 
 
 | ❌ Without Prism | ✅ With Prism |
@@ -60,6 +60,11 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 ## 🏗️ Architecture
 
+The Prism library is compliant for payment processing by design. It is:
+- **Stateless** — Hence, no PII or PCI data stored
+- **Credential free** — The API keys are never logged nor exposed
+- **Payment compliance outsourcing supported** — You can continue to outsource your PCI compliance to third party vaults, or payment processor without having to handle credit card data. 
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -69,7 +74,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Prism Library                           │
-│                 (Type-safe, idiomatic interface)                │
+│     (Type-safe, idiomatic interface, Multi-language SDK)        │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
                                  ▼
@@ -173,7 +178,6 @@ main().catch(console.error);
 
 ---
 
-
 ## 🔄 Routing between Payment Providers
 
 Once the basic plumbing is implemented you can leverage Prism's core benefit - **switch payment providers by changing one line**.
@@ -196,12 +200,11 @@ Once the basic plumbing is implemented you can leverage Prism's core benefit - *
 
   console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
 
-
 // EUR goes to Adyen
-createOrderWithRouting('order-456', 'EUR', 2500);
+createOrder('order-456', 'EUR', 2500);
 
 // USD goes to Stripe
-createOrderWithRouting('order-123', 'USD', 1000);
+createOrder('order-123', 'USD', 1000);
 ```
 
 **One integration pattern. Any service category.**
@@ -209,18 +212,16 @@ createOrderWithRouting('order-123', 'USD', 1000);
 No rewriting. No re-architecting. Just swap the client with rules.
 Each flow uses the same unified schema regardless of the underlying processor's API differences. No custom code per provider.
 
-You can learn more about [intelligent routing](https://docs.hyperswitch.io/explore-hyperswitch/workflows/intelligent-routing) and [smart retries](https://docs.hyperswitch.io/explore-hyperswitch/workflows/smart-retries) to add more capabilities to your system.
+You can learn more about [intelligent routing](https://docs.hyperswitch.io/explore-hyperswitch/workflows/intelligent-routing) and [smart retries](https://docs.hyperswitch.io/explore-hyperswitch/workflows/smart-retries) to add more intelligence. It can help configure and manage diverse payment acceptance setup, as well as improve conversion rates.
 
 ---
 
 ## 🛠️ Development
 
-
 ### Prerequisites
 
 - Rust 1.70+
 - Protocol Buffers (protoc)
-
 
 ### Building from Source
 
@@ -229,10 +230,8 @@ You can learn more about [intelligent routing](https://docs.hyperswitch.io/explo
 git clone https://github.com/manojradhakrishnan/connector-service.git
 cd connector-service
 
-
 # Build
 cargo build --release
-
 
 # Run tests
 cargo test
@@ -240,30 +239,13 @@ cargo test
 
 ---
 
-
-## 🔒 Security
-
-- **Stateless by design** — No PII or PCI data stored
-- **Memory-safe** — Built in Rust, no buffer overflows
-- **Encrypted credentials** — API keys never logged or exposed
-
-
 ### Reporting Vulnerabilities
-
-
 Please report security issues to [security@juspay.in](mailto:security@juspay.in).
-
 
 ---
 
-
 <div align="center">
 
-
-**[⬆ Back to Top](#connector-service)**
-
-
 Built and maintained by [Juspay hyperswitch](https://hyperswitch.io)
-
 
 </div>

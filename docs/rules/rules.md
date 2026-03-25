@@ -686,9 +686,9 @@ Include a details section for each connector with:
 **Format:**
 ```markdown
 ### Stripe
-- **Location**: `backend/connector-integration/src/connectors/stripe.rs`
-- **Transformers**: `backend/connector-integration/src/connectors/stripe/transformers.rs`
-- **Tests**: `backend/grpc-server/tests/stripe_payment_flows_test.rs`
+- **Location**: `crates/integrations/connector-integration/src/connectors/stripe.rs`
+- **Transformers**: `crates/integrations/connector-integration/src/connectors/stripe/transformers.rs`
+- **Tests**: `crates/grpc-server/grpc-server/tests/stripe_payment_flows_test.rs`
 - **Supported Operations**: Authorize, Capture, Void, PSync, Refund, RSync, SetupMandate
 ```
 

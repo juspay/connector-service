@@ -245,8 +245,8 @@ Create: Custom checklist for this review
 ```bash
 # Analyze modified files
 Files to review:
-- backend/connector-integration/src/connectors/[connector_name].rs
-- backend/connector-integration/src/connectors/[connector_name]/transformers.rs
+- crates/integrations/connector-integration/src/connectors/[connector_name].rs
+- crates/integrations/connector-integration/src/connectors/[connector_name]/transformers.rs
 
 # Check for patterns
 For each file:
