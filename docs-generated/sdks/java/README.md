@@ -1,11 +1,11 @@
-# Python SDK
+# Java SDK
 
 <!--
 ---
-title: Python SDK
-description: Python SDK for the Hyperswitch Prism payment orchestration platform
+title: Java SDK
+description: Java SDK for the Hyperswitch Prism payment orchestration platform
 last_updated: 2026-03-21
-sdk_language: python
+sdk_language: java
 ---
 -->
 
@@ -31,41 +31,63 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 ## Installation
 
-```bash
-pip install hyperswitch_prism
+### Maven
+
+```xml
+<dependency>
+    <groupId>io.hyperswitch</groupId>
+    <artifactId>prism</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+### Gradle
+
+```groovy
+implementation 'io.hyperswitch:prism:1.0.0'
 ```
 
 ## Quick Start
 
-```python
-from hyperswitch_prism import PaymentClient
+```java
+import com.hyperswitch.prism.PaymentClient;
+import java.util.Map;
+import java.util.HashMap;
 
-payment_client = PaymentClient(
-    connector='stripe',
-    api_key='YOUR_API_KEY',
-    environment='SANDBOX'
-)
+PaymentClient paymentClient = PaymentClient.builder()
+    .connector("stripe")
+    .apiKey("YOUR_API_KEY")
+    .environment("SANDBOX")
+    .build();
 
-# Authorize a payment
-response = await payment_client.authorize({
-    "merchant_transaction_id": "txn_order_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD"
-    },
-    "payment_method": {
-        "card": {
-            "card_number": {"value": "4242424242424242"},
-            "card_exp_month": {"value": "12"},
-            "card_exp_year": {"value": "2027"},
-            "card_cvc": {"value": "123"},
-            "card_holder_name": {"value": "John Doe"}
-        }
-    },
-    "auth_type": "NO_THREE_DS"
-})
+// Build amount
+Map<String, Object> amount = new HashMap<>();
+amount.put("minorAmount", 1000);
+amount.put("currency", "USD");
 
-print(response["status"])  # AUTHORIZED
+// Build card details
+Map<String, Object> cardDetails = new HashMap<>();
+cardDetails.put("cardNumber", Map.of("value", "4242424242424242"));
+cardDetails.put("cardExpMonth", Map.of("value", "12"));
+cardDetails.put("cardExpYear", Map.of("value", "2027"));
+cardDetails.put("cardCvc", Map.of("value", "123"));
+cardDetails.put("cardHolderName", Map.of("value", "John Doe"));
+
+// Build payment method
+Map<String, Object> paymentMethod = new HashMap<>();
+paymentMethod.put("card", cardDetails);
+
+// Build request
+Map<String, Object> request = new HashMap<>();
+request.put("merchantTransactionId", "txn_order_001");
+request.put("amount", amount);
+request.put("paymentMethod", paymentMethod);
+request.put("authType", "NO_THREE_DS");
+request.put("captureMethod", "MANUAL");
+
+// Authorize payment
+Map<String, Object> response = paymentClient.authorize(request);
+System.out.println(response.get("status")); // AUTHORIZED
 ```
 
 ## Services
@@ -87,27 +109,26 @@ print(response["status"])  # AUTHORIZED
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `connector` | str | Yes | Payment connector name (stripe, adyen, etc.) |
-| `api_key` | str | Yes | Your API key |
-| `environment` | str | Yes | SANDBOX or PRODUCTION |
-| `timeout` | int | No | Request timeout in seconds (default: 30) |
+| `connector` | String | Yes | Payment connector name (stripe, adyen, etc.) |
+| `apiKey` | String | Yes | Your API key |
+| `environment` | String | Yes | SANDBOX or PRODUCTION |
+| `timeout` | Duration | No | Request timeout (default: 30s) |
 
 ## Error Handling
 
-```python
-from hyperswitch_prism.exceptions import PaymentDeclined, ValidationError
-
-try:
-    response = await payment_client.authorize(request)
-except PaymentDeclined as e:
-    # Handle declined payment
-    print(f"Payment declined: {e.message}")
-except ValidationError as e:
-    # Handle validation error
-    print(f"Validation error: {e.errors}")
-except HyperswitchError as e:
-    # Handle other errors
-    print(f"Error: {e.message}")
+```java
+try {
+    Map<String, Object> response = paymentClient.authorize(request);
+} catch (PaymentDeclinedException e) {
+    // Handle declined payment
+    System.err.println("Payment declined: " + e.getMessage());
+} catch (ValidationException e) {
+    // Handle validation error
+    System.err.println("Validation error: " + e.getErrors());
+} catch (HyperswitchException e) {
+    // Handle other errors
+    System.err.println("Error: " + e.getMessage());
+}
 ```
 
 ## Support
