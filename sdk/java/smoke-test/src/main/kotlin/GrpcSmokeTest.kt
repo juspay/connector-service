@@ -47,6 +47,7 @@ fun buildAuthorizeRequest(captureMethod: CaptureMethod): PaymentServiceAuthorize
                 cardHolderNameBuilder.value = "John Doe"
             }
         }
+        addressBuilder.billingAddressBuilder  // initialize empty billing address (required by connector-service)
         this.captureMethod = captureMethod
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"

@@ -83,7 +83,7 @@ interface FlowMeta {
   field:   string;   // GrpcClient field  (e.g. "payment", "customer")
   method:  string;   // camelCase method  (e.g. "authorize", "create")
   builder: string;   // _build*Request fn exported by the connector's JS module
-  arg:     "AUTOMATIC" | "MANUAL" | "txnId" | "none";
+  arg:     "AUTOMATIC" | "MANUAL" | "txnId" | "mandateId" | "none";
 }
 
 // Canonical ordering matches Rust build.rs.
@@ -97,7 +97,7 @@ const FLOW_META: [string, FlowMeta][] = [
   ["create_customer",          { field: "customer",         method: "create",                builder: "_buildCreateCustomerRequest",       arg: "none"      }],
   ["tokenize",                 { field: "paymentMethod",    method: "tokenize",              builder: "_buildTokenizeRequest",             arg: "none"      }],
   ["setup_recurring",          { field: "payment",          method: "setupRecurring",        builder: "_buildSetupRecurringRequest",       arg: "none"      }],
-  ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "none"      }],
+  ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "mandateId" }],
   ["pre_authenticate",         { field: "payment",          method: "preAuthenticate",       builder: "_buildPreAuthenticateRequest",      arg: "none"      }],
   ["authenticate",             { field: "payment",          method: "authenticate",          builder: "_buildAuthenticateRequest",         arg: "none"      }],
   ["post_authenticate",        { field: "payment",          method: "postAuthenticate",      builder: "_buildPostAuthenticateRequest",     arg: "none"      }],
@@ -112,6 +112,8 @@ const FLOW_META_MAP = new Map<string, FlowMeta>(FLOW_META);
 const SELF_AUTH_FLOWS = new Set(["capture", "void"]);
 // Flows that receive the connector txn_id from the shared AUTOMATIC pre-run authorize.
 const TXN_ID_FLOWS    = new Set(["get", "refund", "reverse"]);
+// Flows that receive the mandate_id from the setup_recurring pre-run.
+const MANDATE_ID_FLOWS = new Set(["recurring_charge"]);
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
@@ -249,9 +251,12 @@ async function runConnector(
 
   const txnId = `probe_js_grpc_${Date.now()}`;
   let authorizeTxnId = txnId;
+  let mandateId: string | undefined;
 
   const hasAuthorize  = presentFlows.includes("authorize");
   const hasDependents = presentFlows.some((f) => TXN_ID_FLOWS.has(f));
+  const hasSetupRecurring = presentFlows.includes("setup_recurring");
+  const hasMandateDependents = presentFlows.some((f) => MANDATE_ID_FLOWS.has(f));
 
   // Pre-run AUTOMATIC authorize to get a real connector txn_id for get/refund/reverse.
   let preRunFailed = false;
@@ -282,6 +287,29 @@ async function runConnector(
     }
   }
 
+  // Pre-run setup_recurring to get mandate_id for recurring_charge.
+  if (hasSetupRecurring && hasMandateDependents) {
+    process.stdout.write(`  [setup_recurring] running … `);
+    try {
+      const req = buildRequest(mod, "setup_recurring", undefined, probeRequests);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await (client as any).payment.setupRecurring(req) as { 
+        mandateReference?: { connectorMandateId?: { connectorMandateId?: string } }; 
+        statusCode: number 
+      };
+      mandateId = res.mandateReference?.connectorMandateId?.connectorMandateId;
+      const result = `mandate_id: ${mandateId ?? "-"}, status_code: ${res.statusCode}`;
+      if (res.statusCode >= 400) {
+        console.log(_yellow("~ connector error"), _grey(`— ${result}`));
+      } else {
+        console.log(_green("✓ ok"), _grey(`— ${result}`));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
+    }
+  }
+
   let allPassed = true;
 
   for (const flow of presentFlows) {
@@ -289,6 +317,11 @@ async function runConnector(
 
     // Skip authorize if already handled in the pre-run above.
     if (flow === "authorize" && hasAuthorize && hasDependents) {
+      continue;
+    }
+
+    // Skip setup_recurring if already handled in the pre-run above.
+    if (flow === "setup_recurring" && hasSetupRecurring && hasMandateDependents) {
       continue;
     }
 
@@ -310,6 +343,13 @@ async function runConnector(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const res = await (client as any)[meta.field][meta.method](req) as { connectorTransactionId?: string; statusCode: number };
         result = `txn_id: ${res.connectorTransactionId ?? "-"}, status_code: ${res.statusCode}`;
+      } else if (MANDATE_ID_FLOWS.has(flow)) {
+        // recurring_charge: use mandateId from setup_recurring pre-run.
+        const arg = mandateId ?? txnId;
+        const req = buildRequest(mod, flow, arg, probeRequests);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = await (client as any)[meta.field][meta.method](req) as Record<string, unknown>;
+        result = `status_code: ${res["statusCode"] ?? "?"}`;
       } else {
         const arg = TXN_ID_FLOWS.has(flow) ? authorizeTxnId : txnId;
         const req = buildRequest(mod, flow, arg, probeRequests);

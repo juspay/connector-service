@@ -546,16 +546,72 @@ def gen_kotlin_grpc_client() -> None:
     )
 
 
+# All proto message types that serialize as plain strings in Rust serde but need
+# {value: "..."} wrapping for protobufjs fromObject.
+_VALUE_WRAPPER_TYPES = frozenset([
+    ".types.SecretString",
+    ".types.CardNumberType",
+    ".types.NetworkTokenType",
+])
+
+
+def _collect_proto_field_maps(
+    desc_file: Path,
+) -> tuple[dict[str, list[str]], dict[str, dict[str, str]]]:
+    """
+    Parse proto descriptor in one pass and return:
+      secret_fields:  {MessageName: [camelCaseFieldName]}  — fields typed SecretString
+      msg_field_types:{MessageName: {camelCaseFieldName: NestedTypeName}} — other message fields
+    Both maps are keyed by short message name (e.g. "Ach", not ".types.Ach").
+    """
+    from google.protobuf.descriptor_pb2 import FileDescriptorSet, FieldDescriptorProto
+
+    with open(desc_file, "rb") as f:
+        desc_set = FileDescriptorSet.FromString(f.read())
+
+    secret_fields: dict[str, list[str]] = {}
+    msg_field_types: dict[str, dict[str, str]] = {}
+
+    def collect(message_type) -> None:
+        secrets: list[str] = []
+        nested_msgs: dict[str, str] = {}
+        for field in message_type.field:
+            if field.type != FieldDescriptorProto.TYPE_MESSAGE:
+                continue
+            camel = to_camel(field.name)
+            if field.type_name in _VALUE_WRAPPER_TYPES:
+                # SecretString, CardNumberType, NetworkTokenType — all {value: string} wrappers
+                secrets.append(camel)
+            else:
+                # Short name: ".types.Ach" → "Ach"
+                nested_msgs[camel] = field.type_name.split(".")[-1]
+        if secrets:
+            secret_fields[message_type.name] = secrets
+        if nested_msgs:
+            msg_field_types[message_type.name] = nested_msgs
+        for nested in message_type.nested_type:
+            collect(nested)
+
+    for file_desc in desc_set.file:
+        for message_type in file_desc.message_type:
+            collect(message_type)
+
+    return secret_fields, msg_field_types
+
+
 def gen_javascript_grpc_client() -> None:
     """Generate _generated_grpc_client.ts — JS gRPC sub-clients and GrpcClient from proto RPCs."""
     services, groups = _grpc_groups()
     all_types = sorted({t for flows in groups.values() for f in flows for t in (f["request"], f["response"])})
+    secret_string_fields, msg_field_types = _collect_proto_field_maps(PROTO_DESCRIPTOR)
     render(
         "javascript/grpc_client.ts.j2",
         JS_GRPC_CLIENT_OUT,
         services=services,
         groups=groups,
         all_types=all_types,
+        secret_string_fields=secret_string_fields,
+        msg_field_types=msg_field_types,
     )
 
 
