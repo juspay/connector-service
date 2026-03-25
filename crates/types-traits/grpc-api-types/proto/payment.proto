@@ -2852,6 +2852,50 @@ message PaymentServiceIncrementalAuthorizationResponse {
 }
 
 // ============================================================================
+// TRIGGER OTP FOR WALLET FLOW MESSAGES
+// ============================================================================
+
+// Request message for triggering OTP in wallet payment flows
+message PaymentServiceTriggerOtpForWalletRequest {
+  // Phone number of the customer
+  optional string phone_number = 1;
+
+  // Payment identification
+  optional string payment_id = 2;
+
+  // Connector transaction reference
+  optional string connector_transaction_id = 3;
+}
+
+// Response message for triggering OTP in wallet payment flows
+message PaymentServiceTriggerOtpForWalletResponse {
+  // Whether the OTP trigger was successful
+  bool is_successful = 1;
+
+  // OTP token returned by the connector for subsequent verify call
+  optional string otp_token = 2;
+
+  // Connector transaction reference
+  optional string connector_transaction_id = 3;
+
+  // Next actions available after OTP trigger
+  repeated string next_action = 4;
+
+  // Error information if the operation failed
+  optional ErrorInfo error = 5;
+
+  // HTTP status code from the connector
+  uint32 status_code = 6;
+
+  // Response headers from the connector
+  map<string, string> response_headers = 7;
+
+  // Raw response/request for debugging
+  optional SecretString raw_connector_response = 8;
+  optional SecretString raw_connector_request = 9;
+}
+
+// ============================================================================
 // RESEND OTP FOR WALLET FLOW MESSAGES
 // ============================================================================
 

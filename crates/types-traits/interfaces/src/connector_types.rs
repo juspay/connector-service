@@ -19,8 +19,9 @@ use domain_types::{
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, ResendOtpForWalletData, ResendOtpForWalletResponseData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyOtpForWalletData, VerifyOtpForWalletResponseData,
-        VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        SubmitEvidenceData, TriggerOtpForWalletData, TriggerOtpForWalletResponseData,
+        VerifyOtpForWalletData, VerifyOtpForWalletResponseData, VerifyWebhookSourceFlowData,
+        WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
@@ -68,6 +69,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
     + PayoutCreateV2
+    + TriggerOtpForWalletV2
     + ResendOtpForWalletV2
     + VerifyOtpForWalletV2
 {
@@ -405,6 +407,29 @@ impl<T> VerifyOtpForWalletV2 for T where
             PaymentFlowData,
             VerifyOtpForWalletData,
             VerifyOtpForWalletResponseData,
+        > + ConnectorCommon
+        + Sync
+        + Send
+        + 'static
+{
+}
+
+pub trait TriggerOtpForWalletV2:
+    ConnectorIntegrationV2<
+    connector_flow::TriggerOtpForWallet,
+    PaymentFlowData,
+    TriggerOtpForWalletData,
+    TriggerOtpForWalletResponseData,
+>
+{
+}
+
+impl<T> TriggerOtpForWalletV2 for T where
+    T: ConnectorIntegrationV2<
+            connector_flow::TriggerOtpForWallet,
+            PaymentFlowData,
+            TriggerOtpForWalletData,
+            TriggerOtpForWalletResponseData,
         > + ConnectorCommon
         + Sync
         + Send

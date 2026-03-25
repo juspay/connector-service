@@ -323,6 +323,7 @@ pub enum FlowName {
     Unknown,
     IncrementalAuthorization,
     PayoutCreate,
+    TriggerOtpForWallet,
     ResendOtpForWallet,
     VerifyOtpForWallet,
 }
@@ -357,6 +358,7 @@ impl FlowName {
             Self::IncrementalAuthorization => "IncrementalAuthorization",
             Self::PayoutCreate => "PayoutCreate",
             Self::MandateRevoke => "MandateRevoke",
+            Self::TriggerOtpForWallet => "TriggerOtpForWallet",
             Self::ResendOtpForWallet => "ResendOtpForWallet",
             Self::VerifyOtpForWallet => "VerifyOtpForWallet",
             Self::Unknown => "Unknown",

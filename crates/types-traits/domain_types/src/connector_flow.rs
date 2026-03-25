@@ -79,6 +79,9 @@ pub struct ResendOtpForWallet;
 #[derive(Debug, Clone)]
 pub struct VerifyOtpForWallet;
 
+#[derive(Debug, Clone)]
+pub struct TriggerOtpForWallet;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -108,6 +111,7 @@ pub enum FlowName {
     IncrementalAuthorization,
     MandateRevoke,
     PayoutCreate,
+    TriggerOtpForWallet,
     ResendOtpForWallet,
     VerifyOtpForWallet,
 }

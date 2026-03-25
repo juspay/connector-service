@@ -477,6 +477,9 @@ pub struct ResendOtpForWalletIntegrityObject {}
 pub struct VerifyOtpForWalletIntegrityObject {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TriggerOtpForWalletIntegrityObject {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VerifyWebhookSourceIntegrityObject {
     pub webhook_id: String,
 }

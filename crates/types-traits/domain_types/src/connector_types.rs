@@ -1689,6 +1689,21 @@ pub struct VerifyOtpForWalletResponseData {
     pub next_action: Option<Vec<String>>,
 }
 
+#[derive(Debug, Clone)]
+pub struct TriggerOtpForWalletData {
+    pub phone_number: Option<String>,
+    pub payment_id: Option<String>,
+    pub connector_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TriggerOtpForWalletResponseData {
+    pub is_successful: bool,
+    pub otp_token: Option<String>,
+    pub connector_transaction_id: Option<String>,
+    pub next_action: Option<Vec<String>>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

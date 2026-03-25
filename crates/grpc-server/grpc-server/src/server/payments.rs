@@ -14,7 +14,8 @@ use domain_types::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, ResendOtpForWallet,
-        SdkSessionToken, SetupMandate, VerifyOtpForWallet, VerifyWebhookSource, Void, VoidPC,
+        SdkSessionToken, SetupMandate, TriggerOtpForWallet, VerifyOtpForWallet,
+        VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -27,8 +28,8 @@ use domain_types::{
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResendOtpForWalletData,
         ResendOtpForWalletResponseData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, VerifyOtpForWalletData, VerifyOtpForWalletResponseData,
-        VerifyWebhookSourceFlowData,
+        SetupMandateRequestData, TriggerOtpForWalletData, TriggerOtpForWalletResponseData,
+        VerifyOtpForWalletData, VerifyOtpForWalletResponseData, VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -45,7 +46,7 @@ use domain_types::{
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
         generate_resend_otp_for_wallet_response, generate_setup_mandate_response,
-        generate_verify_otp_for_wallet_response,
+        generate_trigger_otp_for_wallet_response, generate_verify_otp_for_wallet_response,
     },
     utils::ForeignTryFrom,
 };
@@ -76,6 +77,7 @@ use grpc_api_types::payments::{
     PaymentServiceResendOtpForWalletRequest, PaymentServiceResendOtpForWalletResponse,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceTriggerOtpForWalletRequest, PaymentServiceTriggerOtpForWalletResponse,
     PaymentServiceVerifyOtpForWalletRequest, PaymentServiceVerifyOtpForWalletResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
@@ -192,6 +194,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServiceCreateOrderRequest>,
     ) -> Result<tonic::Response<PaymentServiceCreateOrderResponse>, tonic::Status>;
+
+    async fn internal_trigger_otp_for_wallet(
+        &self,
+        request: RequestData<PaymentServiceTriggerOtpForWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceTriggerOtpForWalletResponse>, tonic::Status>;
 
     async fn internal_resend_otp_for_wallet(
         &self,
@@ -1392,6 +1399,21 @@ impl PaymentOperationsInternal for Payments {
     );
 
     implement_connector_operation!(
+        fn_name: internal_trigger_otp_for_wallet,
+        log_prefix: "TRIGGER_OTP_FOR_WALLET",
+        request_type: PaymentServiceTriggerOtpForWalletRequest,
+        response_type: PaymentServiceTriggerOtpForWalletResponse,
+        flow_marker: TriggerOtpForWallet,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: TriggerOtpForWalletData,
+        response_data_type: TriggerOtpForWalletResponseData,
+        request_data_constructor: TriggerOtpForWalletData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_trigger_otp_for_wallet_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
         fn_name: internal_resend_otp_for_wallet,
         log_prefix: "RESEND_OTP_FOR_WALLET",
         request_type: PaymentServiceResendOtpForWalletRequest,
@@ -2553,6 +2575,49 @@ impl PaymentService for Payments {
             FlowName::IncrementalAuthorization,
             |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
                 self.internal_incremental_authorization(request_data).await
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "trigger_otp_for_wallet",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = FlowName::TriggerOtpForWallet.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::TriggerOtpForWallet.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn trigger_otp_for_wallet(
+        &self,
+        request: tonic::Request<PaymentServiceTriggerOtpForWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceTriggerOtpForWalletResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::TriggerOtpForWallet,
+            |request_data: RequestData<PaymentServiceTriggerOtpForWalletRequest>| async move {
+                self.internal_trigger_otp_for_wallet(request_data).await
             },
         )
         .await
