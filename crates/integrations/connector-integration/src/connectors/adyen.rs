@@ -10,7 +10,10 @@ use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
-    errors::CustomResult, events, ext_traits::{ByteSliceExt, OptionExt}, pii::SecretSerdeValue,
+    errors::CustomResult,
+    events,
+    ext_traits::{ByteSliceExt, OptionExt},
+    pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
 use domain_types::{
