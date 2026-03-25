@@ -11,7 +11,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyTopupWebhook, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -24,16 +24,17 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyTopupWebhookFlowData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
+    router_request_types::VerifyTopupWebhookData,
+    router_response_types::{Response, VerifyTopupWebhookResponseData},
     types::Connectors,
 };
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -666,4 +667,100 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         MandateRevokeResponseData,
     > for Paytm<T>
 {
+}
+
+// VerifyTopupWebhook — In-memory webhook verification for Paytm wallet topups
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyTopupWebhookV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VerifyTopupWebhook,
+        VerifyTopupWebhookFlowData,
+        VerifyTopupWebhookData,
+        VerifyTopupWebhookResponseData,
+    > for Paytm<T>
+{
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            VerifyTopupWebhook,
+            VerifyTopupWebhookFlowData,
+            VerifyTopupWebhookData,
+            VerifyTopupWebhookResponseData,
+        >,
+        _event_builder: Option<&mut events::Event>,
+        _res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            VerifyTopupWebhook,
+            VerifyTopupWebhookFlowData,
+            VerifyTopupWebhookData,
+            VerifyTopupWebhookResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        // Parse webhook body as JSON
+        let json_body: serde_json::Value = serde_json::from_slice(&data.request.webhook_body)
+            .map_err(|_| errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        tracing::debug!("Paytm VerifyTopupWebhook: parsed webhook body");
+
+        // Extract merchant key from connector config
+        let auth = paytm::PaytmAuthType::try_from(&data.connector_config)?;
+        let merchant_key = auth.merchant_key.expose();
+
+        // 1. Verify checksum
+        let checksum_verified =
+            paytm::verify_paytm_checksum(&json_body, &merchant_key).unwrap_or(false);
+
+        // 2. Verify order ID match
+        let webhook_order_id = json_body
+            .get("ORDERID")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let is_valid_txn_id = webhook_order_id == data.request.order_id;
+
+        // 3. Verify amount match
+        let webhook_amount = json_body
+            .get("TXNAMOUNT")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let is_valid_amount = webhook_amount == data.request.amount;
+
+        tracing::debug!(
+            "Paytm VerifyTopupWebhook flags: checksum={}, order_id={}, amount={}",
+            checksum_verified,
+            is_valid_txn_id,
+            is_valid_amount
+        );
+
+        let all_valid = checksum_verified && is_valid_txn_id && is_valid_amount;
+
+        let response = if all_valid {
+            Ok(VerifyTopupWebhookResponseData {
+                verification_result: true,
+                message: "Topup webhook verification successful".to_string(),
+            })
+        } else {
+            let reason = format!(
+                "Verification failed: checksum={}, order_id_match={}, amount_match={}",
+                checksum_verified, is_valid_txn_id, is_valid_amount
+            );
+            Ok(VerifyTopupWebhookResponseData {
+                verification_result: false,
+                message: reason,
+            })
+        };
+
+        Ok(RouterDataV2 {
+            flow: PhantomData,
+            resource_common_data: data.resource_common_data.clone(),
+            connector_config: data.connector_config.clone(),
+            request: data.request.clone(),
+            response,
+        })
+    }
 }

@@ -9,13 +9,14 @@
 
 use crate::connectors::*;
 use domain_types::{
-    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    connector_flow::{VerifyTopupWebhook, VerifyWebhookSource},
+    connector_types::{VerifyTopupWebhookFlowData, VerifyWebhookSourceFlowData},
     payment_method_data::PaymentMethodDataTypes,
-    router_request_types::VerifyWebhookSourceRequestData,
-    router_response_types::VerifyWebhookSourceResponseData,
+    router_request_types::{VerifyTopupWebhookData, VerifyWebhookSourceRequestData},
+    router_response_types::{VerifyTopupWebhookResponseData, VerifyWebhookSourceResponseData},
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::connector_types::{VerifyTopupWebhookV2, VerifyWebhookSourceV2};
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -127,3 +128,114 @@ default_impl_verify_webhook_source_v2!(
     Ppro
 );
 // PayPal has its own implementation in paypal.rs
+
+/// Macro to generate empty implementations of VerifyTopupWebhookV2 for connectors
+/// that don't need wallet topup webhook verification.
+///
+/// Usage: When a new connector is added, add it to the macro invocation below.
+/// If a connector needs real implementation (like Paytm), implement it in the connector's file.
+#[macro_export]
+macro_rules! default_impl_verify_topup_webhook_v2 {
+    ($($connector:ident),*) => {
+        $(
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                VerifyTopupWebhookV2 for $connector<T>
+            {
+            }
+
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                ConnectorIntegrationV2<
+                    VerifyTopupWebhook,
+                    VerifyTopupWebhookFlowData,
+                    VerifyTopupWebhookData,
+                    VerifyTopupWebhookResponseData,
+                > for $connector<T>
+            {
+            }
+
+        )*
+    };
+}
+
+// Generate default implementations for all connectors except Paytm (which has its own implementation)
+default_impl_verify_topup_webhook_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservcommercehub,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Hyperpg,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Mollie,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paypal,
+    Paysafe,
+    Payu,
+    Peachpayments,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Redsys,
+    Revolut,
+    Revolv3,
+    Finix,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Truelayer,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit,
+    Zift,
+    Ppro
+);
+// Paytm has its own VerifyTopupWebhook implementation in paytm.rs

@@ -3,6 +3,7 @@ use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
+    payments::wallet_service_server,
     payments::{
         composite_payment_service_server, composite_refund_service_server, customer_service_server,
         dispute_service_server, merchant_authentication_service_server,
@@ -116,6 +117,7 @@ pub struct Service {
     pub customer_service: crate::server::payments::Customer,
     pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
     pub payouts_service: crate::server::payouts::Payouts,
+    pub wallet_service: crate::server::wallet::Wallet,
 }
 
 impl Service {
@@ -162,6 +164,7 @@ impl Service {
             payment_method_authentication_service:
                 crate::server::payments::PaymentMethodAuthentication,
             payouts_service: crate::server::payouts::Payouts,
+            wallet_service: crate::server::wallet::Wallet,
         }
     }
 
@@ -309,6 +312,9 @@ impl Service {
             ))
             .add_service(payout_service_server::PayoutServiceServer::new(
                 self.payouts_service,
+            ))
+            .add_service(wallet_service_server::WalletServiceServer::new(
+                self.wallet_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;

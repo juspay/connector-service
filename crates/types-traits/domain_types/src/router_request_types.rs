@@ -474,3 +474,15 @@ pub struct VerifyWebhookSourceRequestData {
 pub struct VerifyWebhookSourceIntegrityObject {
     pub webhook_id: String,
 }
+
+#[derive(Debug, Clone)]
+pub struct VerifyTopupWebhookData {
+    pub webhook_body: Vec<u8>,
+    pub order_id: String,
+    pub amount: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VerifyTopupWebhookIntegrityObject {
+    pub order_id: String,
+}

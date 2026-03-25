@@ -11403,3 +11403,86 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
     };
     Ok(response)
 }
+
+// ============================================================================
+// VERIFY TOPUP WEBHOOK — Proto-to-Domain Conversions
+// ============================================================================
+
+impl ForeignTryFrom<grpc_api_types::payments::WalletServiceVerifyTopupWebhookRequest>
+    for crate::router_request_types::VerifyTopupWebhookData
+{
+    type Error = crate::errors::ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::WalletServiceVerifyTopupWebhookRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            webhook_body: value.webhook_body,
+            order_id: value.order_id,
+            amount: value.amount,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::WalletServiceVerifyTopupWebhookRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::connector_types::VerifyTopupWebhookFlowData
+{
+    type Error = crate::errors::ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::WalletServiceVerifyTopupWebhookRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            connectors,
+            connector_request_reference_id: format!("verify_topup_{}", value.order_id),
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+pub fn generate_verify_topup_webhook_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::VerifyTopupWebhook,
+        crate::connector_types::VerifyTopupWebhookFlowData,
+        crate::router_request_types::VerifyTopupWebhookData,
+        crate::router_response_types::VerifyTopupWebhookResponseData,
+    >,
+) -> Result<
+    grpc_api_types::payments::WalletServiceVerifyTopupWebhookResponse,
+    error_stack::Report<crate::errors::ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response_data) => Ok(
+            grpc_api_types::payments::WalletServiceVerifyTopupWebhookResponse {
+                verification_result: response_data.verification_result,
+                message: response_data.message,
+                error: None,
+            },
+        ),
+        Err(err) => Ok(
+            grpc_api_types::payments::WalletServiceVerifyTopupWebhookResponse {
+                verification_result: false,
+                message: err.message.clone(),
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                        code: Some(err.code),
+                        message: Some(err.message),
+                        reason: err.reason,
+                    }),
+                    issuer_details: None,
+                }),
+            },
+        ),
+    }
+}
