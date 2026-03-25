@@ -105,3 +105,13 @@ use_self = "warn"
 
 # Lints to allow
 option_map_unit_fn = "allow"
+
+# Patch the masking crate from the injector's git rev to use a version that is
+# compatible with serde 1.0.228+ (fixes serde::__private -> serde::__private228).
+# The injector at rev 02ed038e pulls masking from the same rev, but that version
+# uses serde::__private which was removed in serde 1.0.228. The local vendor copy
+# has the same masking API but with the serde compatibility fix applied.
+# All workspace crates also use masking from the same git rev (via package = "masking")
+# so that the [patch] unifies them to a single Secret<T> type.
+[patch."https://github.com/juspay/hyperswitch"]
+masking = { path = "vendor/masking" }

@@ -73,8 +73,8 @@ This workflow adds specific flows to an existing connector implementation.
 ### PHASE 0: CONNECTOR EXISTENCE CHECK
 **CRITICAL**: Before proceeding, you MUST verify if the connector exists:
 
-1. **Check connector file existence** at `crates/integrations/connector-integration/src/connectors/{connector_name}.rs`
-2. **Check connector directory** at `crates/integrations/connector-integration/src/connectors/{connector_name}/`
+1. **Check connector file existence** at `backend/connector-integration/src/connectors/{connector_name}.rs`
+2. **Check connector directory** at `backend/connector-integration/src/connectors/{connector_name}/`
 
 **IF CONNECTOR DOES NOT EXIST:**
 1. **DELEGATE TO**: Foundation Setup Subagent using add_connector.sh
@@ -82,7 +82,7 @@ This workflow adds specific flows to an existing connector implementation.
    - **WAIT FOR COMPLETION**
    - Validate connector foundation created successfully
 2. **DELEGATE TO**: Connector Mod Subagent
-   - Add connector to `crates/integrations/connector-integration/src/connectors.rs` mod list
+   - Add connector to `backend/connector-integration/src/connectors.rs` mod list
    - **WAIT FOR COMPLETION**
 3. **THEN PROCEED** to Phase 1
 
@@ -267,8 +267,8 @@ You are the Connector State Analysis Subagent. Your job is to analyze the curren
 #### STEP 1: Locate Connector Files
 ```bash
 # Find connector implementation files
-# Check: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
-# Check: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+# Check: backend/connector-integration/src/connectors/{connector_name}.rs
+# Check: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 ```
 
 #### STEP 2: Detect Implemented Flows
@@ -385,10 +385,10 @@ You are a Flow Implementation Subagent responsible for implementing ONE specific
 #### STEP 3: Read Available Utils & Enums
 ```bash
 # Read corresponding files:
-# - crates/grpc-server/grpc-server/src/utils.rs
-# - crates/types-traits/domain_types/src/utils.rs
-# - crates/integrations/connector-integration/src/utils.rs
-# - crates/common/common_enums/src/enums.rs
+# - backend/grpc-server/src/utils.rs
+# - backend/domain_types/src/utils.rs
+# - backend/connector-integration/src/utils.rs
+# - backend/common_enums/src/enums.rs
 # Study utils and enums and reuse as much as possible
 ```
 
@@ -434,7 +434,7 @@ Read: template-generation/macro_templates.md
 #### STEP 7: Execute Implementation Plan - MACRO-BASED APPROACH
 
 ## Part A: Add Flow to create_all_prerequisites! macro
-1. Open crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+1. Open backend/connector-integration/src/connectors/{connector_name}.rs
 2. Locate the existing create_all_prerequisites! macro invocation
 3. Add flow definition to the api: [ ] array:
 
@@ -490,7 +490,7 @@ macros::macro_connector_implementation!(
 5. Omit curl_request parameter for GET endpoints without body
 
 ## Part C: Create Request/Response Types in transformers.rs
-1. Open crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+1. Open backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 2. Define request struct:
 
 #[derive(Debug, Serialize)]

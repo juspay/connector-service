@@ -15,9 +15,8 @@ common_enums = { path = "../../common/common_enums", package = "ucs_common_enums
 common_utils = { path = "../../common/common_utils", package = "ucs_common_utils" }
 composite-service = { path = "../../internal/composite-service" }
 config_patch_derive = { path = "../../common/config_patch_derive" }
-hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
-# TODO! update to latest Hyperswitch Tag once hyperswitch_masking crate changes are merged to hyperswitch main
-injector = { git = "https://github.com/juspay/hyperswitch",  branch = "solve-injector-masking-cyclic-dependency" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+injector = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712" }
 tracing-kafka = { path = "../../common/tracing-kafka", optional = true }
 ucs_env = { path = "../../common/ucs_env" }
 ucs_interface_common = { path = "../../types-traits/ucs_interface_common" }

@@ -84,7 +84,7 @@ Variables:
 ### 3a: Verify directory and branch
 
 ```bash
-pwd && ls Cargo.toml crates/ Makefile     # verify directory
+pwd && ls Cargo.toml backend/ Makefile     # verify directory
 git status                                  # verify on {BRANCH} branch
 ```
 
@@ -107,7 +107,7 @@ Note: Specs may be in a flat `specs/` folder (e.g., `specs/adyen_bank_debit.md`)
 ### 3c: Find connector source files
 
 ```
-Search: crates/integrations/connector-integration/src/connectors/*{connector}*
+Search: backend/connector-integration/src/connectors/*{connector}*
 ```
 
 Note the actual name (e.g., `wells_fargo` vs `wellsfargo`). If not found -> report SKIPPED, go to Phase 6.
@@ -150,7 +150,7 @@ Store the codegen result:
 
 **GUARDRAIL: You MUST spawn a subagent. Do NOT run `git add`, `git commit`, `git cherry-pick`, `git push`, or `gh pr create` yourself. Violation = broken architecture.**
 
-**This phase runs for BOTH successful and failed connectors.** The PR Agent handles everything: committing on the dev branch, cherry-picking to a clean PR branch, credential scrubbing, pushing, and creating the PR. The only case where you skip this phase is if codegen produced no file changes at all (check `git status -- crates/integrations/connector-integration/src/connectors/{connector}*`).
+**This phase runs for BOTH successful and failed connectors.** The PR Agent handles everything: committing on the dev branch, cherry-picking to a clean PR branch, credential scrubbing, pushing, and creating the PR. The only case where you skip this phase is if codegen produced no file changes at all (check `git status -- backend/connector-integration/src/connectors/{connector}*`).
 
 You MUST use the **Task tool** to spawn a **PR Agent**. Do NOT read the workflow file yourself — the subagent reads it on its own.
 

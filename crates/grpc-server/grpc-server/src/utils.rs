@@ -359,6 +359,7 @@ macro_rules! implement_connector_operation {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             )
             .await
             .switch()

@@ -111,7 +111,7 @@ This is the current recommended approach using the macro framework for maximum c
 ### Main Connector File Pattern (Psync Flow Addition)
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+// File: backend/connector-integration/src/connectors/{connector_name}.rs
 
 // In the imports section, ensure PSync flow is included:
 use domain_types::{
@@ -248,7 +248,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 ### Transformers File Pattern (Psync Flow)
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 // Add psync-specific imports to existing imports:
 use domain_types::{

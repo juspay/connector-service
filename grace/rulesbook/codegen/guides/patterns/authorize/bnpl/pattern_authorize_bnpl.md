@@ -46,7 +46,7 @@ BNPL (Buy Now Pay Later) is a payment method that allows customers to purchase g
 
 ## Supported BNPL Variants
 
-Based on `crates/types-traits/domain_types/src/payment_method_data.rs`:
+Based on `backend/domain_types/src/payment_method_data.rs`:
 
 | Variant | Description | Common Connectors |
 |---------|-------------|-------------------|
@@ -100,7 +100,7 @@ Applies to: **Adyen**, **MultiSafepay**
 #### Main Connector File Structure
 
 ```rust
-// crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+// backend/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -151,7 +151,7 @@ macros::create_all_prerequisites!(
 #### Transformers Implementation
 
 ```rust
-// crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+// backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use domain_types::payment_method_data::{PayLaterData, PaymentMethodData};
 

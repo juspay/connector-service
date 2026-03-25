@@ -443,3 +443,60 @@ fn convert_to_auth_type(
         )),
     }
 }
+
+// ============================================================================
+// Vault credential loading
+// ============================================================================
+
+/// Vault credential details loaded from creds.json
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct VaultCredentials {
+    /// Vault type: "proxy" (VGS) or "transformation" (Hyperswitch Vault)
+    pub vault_connector_type: String,
+    /// Vault connector identifier (e.g., "vgs", "hyperswitch_vault")
+    pub vault_connector_id: String,
+    /// Vault-specific metadata fields
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Load vault credentials from the JSON configuration file
+///
+/// Looks for a key like "vault_vgs" or "vault_hyperswitch" in creds.json.
+/// The value should be a `VaultCredentials` object (not wrapped in `connector_account_details`).
+///
+/// # Arguments
+/// * `vault_name` - Key in creds.json (e.g., "vault_vgs", "vault_hyperswitch")
+///
+/// # Returns
+/// * `VaultCredentials` - The loaded vault credentials
+pub fn load_vault_credentials(vault_name: &str) -> Result<VaultCredentials, CredentialError> {
+    let creds_file_path = get_creds_file_path();
+    let creds_content = fs::read_to_string(&creds_file_path)?;
+    let json_value: serde_json::Value = serde_json::from_str(&creds_content)?;
+
+    let root_obj = json_value.as_object().ok_or_else(|| {
+        CredentialError::InvalidStructure("root".to_string(), "Expected JSON object".to_string())
+    })?;
+
+    let vault_value = root_obj
+        .get(vault_name)
+        .ok_or_else(|| CredentialError::ConnectorNotFound(vault_name.to_string()))?;
+
+    serde_json::from_value(vault_value.clone()).map_err(CredentialError::ParseError)
+}
+
+/// Build a base64-encoded `x-external-vault-metadata` header value from vault credentials.
+///
+/// The header contains the JSON structure expected by `parse_external_vault_config`:
+/// ```json
+/// {
+///   "vault_connector_type": "proxy" | "transformation",
+///   "vault_connector_id": "vgs" | "hyperswitch_vault",
+///   "metadata": { ... vault-specific fields ... }
+/// }
+/// ```
+pub fn build_vault_metadata_header(creds: &VaultCredentials) -> String {
+    let json = serde_json::to_string(creds).expect("Failed to serialize vault credentials");
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.encode(json.as_bytes())
+}

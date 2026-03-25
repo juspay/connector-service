@@ -19,7 +19,7 @@ Integration of the {{connector_name}} connector to UCS connector-service
    - Do not create new amount conversion code
 7. **File Organization**: Follow UCS directory structure
    ```
-   crates/integrations/connector-integration/src/connectors/
+   backend/connector-integration/src/connectors/
    ├── {{connector_name}}.rs
    └── {{connector_name}}/
        └── transformers.rs
@@ -156,7 +156,7 @@ Support ALL payment methods the connector offers:
 ### UCS Testing
 Create comprehensive gRPC integration tests:
 ```rust
-// File: crates/grpc-server/grpc-server/tests/{{connector_name}}_test.rs
+// File: backend/grpc-server/tests/{{connector_name}}_test.rs
 // Test all flows and payment methods through gRPC interface
 ```
 </reference_docs>
@@ -402,7 +402,7 @@ impl ConnectorCommon for {{connector_name}} {
 
 ### 7.1 gRPC Integration Tests
 ```rust
-// File: crates/grpc-server/grpc-server/tests/{{connector_name}}_test.rs
+// File: backend/grpc-server/tests/{{connector_name}}_test.rs
 
 #[tokio::test]
 async fn test_payment_authorize_success() {

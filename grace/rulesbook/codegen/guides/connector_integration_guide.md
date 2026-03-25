@@ -122,7 +122,7 @@ If resuming partial implementation:
 
 #### Step 2.1: Connector Structure Setup
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/connector_name.rs
+// File: backend/connector-integration/src/connectors/connector_name.rs
 
 #[derive(Debug, Clone)]
 pub struct ConnectorName;

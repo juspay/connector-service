@@ -10,7 +10,7 @@ common_enums = { path = "../../common/common_enums", package = "ucs_common_enums
 common_utils = { path = "../../common/common_utils", package = "ucs_common_utils" }
 domain_types = { path = "../domain_types" }
 ucs_env = { path = "../../common/ucs_env" }
-hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
 
 # Third-party dependencies
 base64 = "0.21.2"

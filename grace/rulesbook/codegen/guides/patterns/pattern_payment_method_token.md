@@ -138,7 +138,7 @@ This is the current recommended approach using the macro framework for maximum c
 ### File Structure Template
 
 ```
-connector-service/crates/integrations/connector-integration/src/connectors/
+connector-service/backend/connector-integration/src/connectors/
 ├── {connector_name}.rs           # Main connector implementation
 └── {connector_name}/
     └── transformers.rs           # Data transformation logic
@@ -147,7 +147,7 @@ connector-service/crates/integrations/connector-integration/src/connectors/
 ### Main Connector File Pattern
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+// File: backend/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -385,7 +385,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 ### Transformers File Pattern
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use std::collections::HashMap;
 use common_utils::{

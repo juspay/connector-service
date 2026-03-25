@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 hyperswitch-payments-client = { path = ".." }
 grpc-api-types = { path = "../../../crates/types-traits/grpc-api-types" }
-hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
 tokio = { version = "1", features = ["full"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

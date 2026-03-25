@@ -83,8 +83,8 @@ You, as the controller, must provide all necessary context including the pattern
 ### PHASE 0: CONNECTOR EXISTENCE CHECK
 **CRITICAL**: Before proceeding, you MUST verify if the connector exists:
 
-1. **Check connector file existence** at `crates/integrations/connector-integration/src/connectors/{connector_name}.rs`
-2. **Check connector directory** at `crates/integrations/connector-integration/src/connectors/{connector_name}/`
+1. **Check connector file existence** at `backend/connector-integration/src/connectors/{connector_name}.rs`
+2. **Check connector directory** at `backend/connector-integration/src/connectors/{connector_name}/`
 
 **IF CONNECTOR DOES NOT EXIST:**
 1. **DELEGATE TO**: Foundation Setup Subagent using add_connector.sh
@@ -92,7 +92,7 @@ You, as the controller, must provide all necessary context including the pattern
    - **WAIT FOR COMPLETION**
    - Validate connector foundation created successfully
 2. **DELEGATE TO**: Connector Mod Subagent
-   - Add connector to `crates/integrations/connector-integration/src/connectors.rs` mod list
+   - Add connector to `backend/connector-integration/src/connectors.rs` mod list
    - **WAIT FOR COMPLETION**
 3. **DELEGATE TO**: Authorize Flow Implementation Subagent
    - Implement Authorize flow (required foundation for payment methods)
@@ -436,8 +436,8 @@ You are the Connector State Analysis Subagent. Your job is to analyze the curren
 #### STEP 1: Locate Connector Files
 ```bash
 # Find connector implementation files
-# Check: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
-# Check: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+# Check: backend/connector-integration/src/connectors/{connector_name}.rs
+# Check: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 ```
 
 #### STEP 2: Detect Implemented Flows
@@ -609,7 +609,7 @@ You are a Payment Method Implementation Subagent responsible for adding ONE spec
 #### STEP 6: Implement Payment Method in Authorize Flow
 
 ## Part A: Add Payment Method Variant Handling
-1. Open crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+1. Open backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 2. Locate the request transformer's payment_method_data match statement
 3. Add new match arm for the payment method:
 

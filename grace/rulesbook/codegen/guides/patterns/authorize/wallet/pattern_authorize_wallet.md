@@ -197,7 +197,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #### Connector Examples
 
-**Stripe** (crates/integrations/connector-integration/src/connectors/stripe/transformers.rs):
+**Stripe** (backend/connector-integration/src/connectors/stripe/transformers.rs):
 ```rust
 // Stripe handles Apple Pay with potential pre-decrypted data
 WalletData::ApplePay(applepay_data) => {
@@ -211,7 +211,7 @@ WalletData::GooglePay(gpay_data) => {
 }
 ```
 
-**Cybersource** (crates/integrations/connector-integration/src/connectors/cybersource/transformers.rs):
+**Cybersource** (backend/connector-integration/src/connectors/cybersource/transformers.rs):
 ```rust
 // Cybersource handles Apple Pay with decrypted token
 WalletData::ApplePay(apple_pay_data) => {
@@ -334,7 +334,7 @@ impl<T> TryFrom<ResponseRouterData<ConnectorAuthResponse, Self>>
 
 #### Connector Examples
 
-**PayPal** (crates/integrations/connector-integration/src/connectors/paypal/transformers.rs):
+**PayPal** (backend/connector-integration/src/connectors/paypal/transformers.rs):
 ```rust
 // PayPal supports both redirect and SDK flows
 WalletData::PaypalRedirect(_) => {
@@ -984,7 +984,7 @@ mod integration_tests {
 ## Cross-References
 
 - [pattern_authorize.md](./pattern_authorize.md) - Base authorize flow patterns
-- [payment_method_data.rs](../../../../crates/types-traits/domain_types/src/payment_method_data.rs) - Wallet data structures
+- [payment_method_data.rs](../../../../backend/domain_types/src/payment_method_data.rs) - Wallet data structures
 - [utility_functions_reference.md](./utility_functions_reference.md) - Common utility functions
 
 ---

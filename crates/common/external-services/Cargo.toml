@@ -38,9 +38,8 @@ domain_types = { path = "../../types-traits/domain_types"}
 interfaces = { path = "../../types-traits/interfaces" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils", features = ["async_ext"] }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
-hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
-# TODO! update to latest Hyperswitch Tag once hyperswitch_masking crate changes are merged to hyperswitch main
-injector = { git = "https://github.com/juspay/hyperswitch", branch = "solve-injector-masking-cyclic-dependency", optional = true }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+injector = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", optional = true }
 url = "2.5.0"
 chrono = "0.4.31"
 

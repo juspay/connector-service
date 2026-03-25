@@ -43,7 +43,7 @@ add [Category]:[pm1],[pm2] and [Category2]:[pm3] to [ConnectorName] using grace/
 The UCS connector-service uses a modern, stateless architecture:
 
 ```
-crates/
+backend/
 ├── connector-integration/     # Connector-specific logic
 │   ├── src/connectors/       # Individual connector implementations
 │   │   ├── {connector}.rs    # Main connector file
@@ -381,7 +381,7 @@ add Apple Pay to ExistingConnector
 ### Connector Structure
 
 ```rust
-// Main connector file: crates/integrations/connector-integration/src/connectors/{connector}.rs
+// Main connector file: backend/connector-integration/src/connectors/{connector}.rs
 pub mod transformers;
 
 pub struct ConnectorName<T> {
@@ -395,7 +395,7 @@ macros::macro_connector_implementation!(
     // ... parameters
 );
 
-// Transformers: crates/integrations/connector-integration/src/connectors/{connector}/transformers.rs
+// Transformers: backend/connector-integration/src/connectors/{connector}/transformers.rs
 // Request/response transformations for all payment methods and flows
 ```
 

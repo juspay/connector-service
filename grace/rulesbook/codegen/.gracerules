@@ -180,7 +180,7 @@ You are the Foundation Setup Subagent. Your ONLY responsibility is to establish 
 ```bash
 # Check that we're in the correct UCS repository structure
 # Validate that add_connector.sh script exists
- # Verify crates/ directory structure exists
+# Verify backend/ directory structure exists
 ```
 
 #### STEP 2: Tech Spec Analysis
@@ -254,10 +254,10 @@ You are a Flow Implementation Subagent responsible for implementing ONE specific
 #### STEP 3: Read Available Utils & Enums
 ```bash
 # Read corresponding files: 
-- crates/grpc-server/grpc-server/src/utils.rs
-- crates/types-traits/domain_types/src/utils.rs
-- crates/integrations/connector-integration/src/utils.rs
-- crates/common/common_enums/src/enums.rs
+- backend/grpc-server/src/utils.rs
+- backend/domain_types/src/utils.rs
+- backend/connector-integration/src/utils.rs
+- backend/common_enums/src/enums.rs
 # Study utils and enums and reuse as much as possible
 ```
 
@@ -291,7 +291,7 @@ Read: template-generation/macro_templates.md
 # CRITICAL: ALWAYS use macro-based pattern, NOT manual trait implementation
 
 ## Part A: Add Flow to create_all_prerequisites! macro
-1. Open crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+1. Open backend/connector-integration/src/connectors/{connector_name}.rs
 2. Locate the existing create_all_prerequisites! macro invocation
 3. Add flow definition to the api: [ ] array:
 
@@ -347,7 +347,7 @@ macros::macro_connector_implementation!(
 5. Omit curl_request parameter for GET endpoints without body
 
 ## Part C: Create Request/Response Types in transformers.rs
-1. Open crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+1. Open backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 2. Define request struct:
 
 #[derive(Debug, Serialize)]
@@ -582,8 +582,8 @@ Create: Full checklist covering all implemented flows and patterns
 ```bash
 # Identify ALL files to review
 Files to analyze:
-- crates/integrations/connector-integration/src/connectors/{connector_name}.rs
-- crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+- backend/connector-integration/src/connectors/{connector_name}.rs
+- backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 # Execute systematic comprehensive code analysis across ALL flows
 
@@ -632,7 +632,7 @@ Files to analyze:
    - Reusable patterns identified
    - Create enums for Request/Response types instead of using raw string
    - Follow case sensitivity
-   - Reuse existing enums avoid creating new ones or using string/raw types eg.(Currency, Country etc. ref. crates/common/common_enums/src/enums.rs)
+   - Reuse existing enums avoid creating new ones or using string/raw types eg.(Currency, Country etc. ref. backend/common_enums/src/enums.rs)
 
    **FIELD USAGE QUALITY CHECKS:**
    - ✅ NO fields hardcoded to None - all unused fields removed

@@ -30,7 +30,7 @@ You will receive:
 
 ### Step 1: Generate Main Connector File
 
-Generate `crates/integrations/connector-integration/src/connectors/{connector_name}.rs` with:
+Generate `backend/connector-integration/src/connectors/{connector_name}.rs` with:
 
 #### 1.1 File Header and Imports
 ```rust
@@ -272,7 +272,7 @@ Ok(format!("{}{}/{}", self.connector_base_url_{{flow.flow_type}}s(req), "{{flow.
 
 ### Step 2: Generate Transformers File
 
-Generate `crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs` with:
+Generate `backend/connector-integration/src/connectors/{connector_name}/transformers.rs` with:
 
 #### 2.1 Imports and Auth Type
 
@@ -518,10 +518,10 @@ Output the complete code with:
 ## Example Output Structure
 
 ```
-=== File: crates/integrations/connector-integration/src/connectors/examplepay.rs ===
+=== File: backend/connector-integration/src/connectors/examplepay.rs ===
 [Complete connector implementation with macros]
 
-=== File: crates/integrations/connector-integration/src/connectors/examplepay/transformers.rs ===
+=== File: backend/connector-integration/src/connectors/examplepay/transformers.rs ===
 [Complete transformers implementation]
 ```
 

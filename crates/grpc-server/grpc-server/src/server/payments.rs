@@ -78,9 +78,9 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
-use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
-use injector::{TokenData, VaultConnectors};
+use hyperswitch_masking::{ExposeInterface, PeekInterface};
+use injector::TokenData;
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     verification::ConnectorSourceVerificationSecrets,
@@ -109,39 +109,34 @@ struct EventParams<'a> {
 #[derive(Debug, serde::Serialize)]
 struct CardTokenData {
     card_number: String,
-    cvv: String,
-    exp_month: String,
-    exp_year: String,
+    card_cvc: String,
+    card_exp_month: String,
+    card_exp_year: String,
 }
 
 trait ToTokenData {
     fn to_token_data(&self) -> TokenData;
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData;
 }
 
 impl ToTokenData for grpc_api_types::payments::CardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS)
-    }
-
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
             card_number: self
                 .card_number
                 .as_ref()
                 .map(|cn| cn.get_card_no())
                 .unwrap_or_default(),
-            cvv: self
+            card_cvc: self
                 .card_cvc
                 .as_ref()
                 .map(|cvc| cvc.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_month: self
+            card_exp_month: self
                 .card_exp_month
                 .as_ref()
                 .map(|em| em.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_year: self
+            card_exp_year: self
                 .card_exp_year
                 .as_ref()
                 .map(|ey| ey.clone().expose().to_string())
@@ -152,7 +147,39 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
-            vault_connector,
+        }
+    }
+}
+
+impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
+    fn to_token_data(&self) -> TokenData {
+        let card_data = CardTokenData {
+            card_number: self
+                .card_number
+                .as_ref()
+                .map(|cn| cn.peek().to_owned())
+                .unwrap_or_default(),
+            card_cvc: self
+                .card_cvc
+                .as_ref()
+                .map(|cvc| cvc.clone().expose().to_string())
+                .unwrap_or_default(),
+            card_exp_month: self
+                .card_exp_month
+                .as_ref()
+                .map(|em| em.clone().expose().to_string())
+                .unwrap_or_default(),
+            card_exp_year: self
+                .card_exp_year
+                .as_ref()
+                .map(|ey| ey.clone().expose().to_string())
+                .unwrap_or_default(),
+        };
+
+        let card_json = serde_json::to_value(card_data).unwrap_or(serde_json::Value::Null);
+
+        TokenData {
+            specific_token_data: SecretSerdeValue::new(card_json),
         }
     }
 }
@@ -359,6 +386,7 @@ impl Customer {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -477,6 +505,7 @@ impl Customer {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -641,6 +670,7 @@ impl CustomerService for Customer {
                             common_enums::CallConnectorAction::Trigger,
                             test_context,
                             api_tag,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -796,6 +826,7 @@ impl Payments {
             common_enums::CallConnectorAction::Trigger,
             test_context,
             api_tag,
+            config.vault.as_ref(),
         )
         .await;
 
@@ -1014,6 +1045,7 @@ impl Payments {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -1149,6 +1181,7 @@ impl Payments {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -1250,6 +1283,7 @@ impl Payments {
             common_enums::CallConnectorAction::Trigger,
             test_context,
             api_tag,
+            config.vault.as_ref(),
         )
         .await
         .switch()
@@ -1684,6 +1718,7 @@ impl PaymentService for Payments {
                             consume_or_trigger_flow,
                             test_context,
                             api_tag,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -2446,6 +2481,7 @@ impl PaymentService for Payments {
                             common_enums::CallConnectorAction::Trigger,
                             test_context,
                             api_tag,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -2650,6 +2686,7 @@ impl PaymentMethodService for PaymentMethod {
                             common_enums::CallConnectorAction::Trigger,
                             test_context,
                             api_tag,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -2784,6 +2821,7 @@ impl MerchantAuthentication {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -2922,6 +2960,7 @@ impl MerchantAuthentication {
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
                 api_tag,
+                config.vault.as_ref(),
             ),
         )
         .await
@@ -3465,6 +3504,7 @@ impl RecurringPaymentService for RecurringPayments {
                             common_enums::CallConnectorAction::Trigger,
                             test_context,
                             api_tag,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -3786,6 +3826,7 @@ async fn verify_webhook_source_external(
             common_enums::CallConnectorAction::Trigger,
             None,
             None,
+            None, // vault_config - not needed for webhook verification
         ),
     )
     .await

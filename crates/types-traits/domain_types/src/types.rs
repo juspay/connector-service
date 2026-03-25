@@ -368,6 +368,130 @@ pub struct Connectors {
     pub finix: ConnectorParams,
 }
 
+impl Connectors {
+    /// Get connector parameters by connector enum.
+    ///
+    /// Uses `ConnectorEnum` instead of `&str` for compile-time exhaustiveness
+    /// checking — the compiler will error if a new connector variant is added
+    /// without a corresponding match arm here.
+    pub fn get_connector_params(
+        &self,
+        connector: connector_types::ConnectorEnum,
+    ) -> Option<&ConnectorParams> {
+        use connector_types::ConnectorEnum;
+        match connector {
+            ConnectorEnum::Adyen => Some(&self.adyen),
+            ConnectorEnum::Forte => Some(&self.forte),
+            ConnectorEnum::Razorpay => Some(&self.razorpay),
+            ConnectorEnum::RazorpayV2 => Some(&self.razorpayv2),
+            ConnectorEnum::Fiserv => Some(&self.fiserv),
+            ConnectorEnum::Elavon => Some(&self.elavon),
+            ConnectorEnum::Xendit => Some(&self.xendit),
+            ConnectorEnum::Checkout => Some(&self.checkout),
+            ConnectorEnum::Authorizedotnet => Some(&self.authorizedotnet),
+            ConnectorEnum::Mifinity => Some(&self.mifinity),
+            ConnectorEnum::Phonepe => Some(&self.phonepe),
+            ConnectorEnum::Cashfree => Some(&self.cashfree),
+            ConnectorEnum::Paytm => Some(&self.paytm),
+            ConnectorEnum::Fiuu => Some(&self.fiuu),
+            ConnectorEnum::Payu => Some(&self.payu),
+            ConnectorEnum::Cashtocode => Some(&self.cashtocode),
+            ConnectorEnum::Novalnet => Some(&self.novalnet),
+            ConnectorEnum::Nexinets => Some(&self.nexinets),
+            ConnectorEnum::Noon => Some(&self.noon),
+            ConnectorEnum::Braintree => Some(&self.braintree),
+            ConnectorEnum::Volt => Some(&self.volt),
+            ConnectorEnum::Calida => Some(&self.calida),
+            ConnectorEnum::Cryptopay => Some(&self.cryptopay),
+            ConnectorEnum::Helcim => Some(&self.helcim),
+            ConnectorEnum::Dlocal => Some(&self.dlocal),
+            ConnectorEnum::Placetopay => Some(&self.placetopay),
+            ConnectorEnum::Rapyd => Some(&self.rapyd),
+            ConnectorEnum::Aci => Some(&self.aci),
+            ConnectorEnum::Trustpay => None, // trustpay uses ConnectorParamsWithMoreUrls
+            ConnectorEnum::Stripe => Some(&self.stripe),
+            ConnectorEnum::Cybersource => Some(&self.cybersource),
+            ConnectorEnum::Worldpay => Some(&self.worldpay),
+            ConnectorEnum::Worldpayvantiv => Some(&self.worldpayvantiv),
+            ConnectorEnum::Multisafepay => Some(&self.multisafepay),
+            ConnectorEnum::Payload => Some(&self.payload),
+            ConnectorEnum::Fiservemea => Some(&self.fiservemea),
+            ConnectorEnum::Paysafe => Some(&self.paysafe),
+            ConnectorEnum::Datatrans => Some(&self.datatrans),
+            ConnectorEnum::Bluesnap => Some(&self.bluesnap),
+            ConnectorEnum::Authipay => Some(&self.authipay),
+            ConnectorEnum::Bamboraapac => Some(&self.bamboraapac),
+            ConnectorEnum::Silverflow => Some(&self.silverflow),
+            ConnectorEnum::Celero => Some(&self.celero),
+            ConnectorEnum::Paypal => Some(&self.paypal),
+            ConnectorEnum::Stax => Some(&self.stax),
+            ConnectorEnum::Billwerk => Some(&self.billwerk),
+            ConnectorEnum::Hipay => Some(&self.hipay),
+            ConnectorEnum::Trustpayments => Some(&self.trustpayments),
+            ConnectorEnum::Redsys => Some(&self.redsys),
+            ConnectorEnum::Globalpay => Some(&self.globalpay),
+            ConnectorEnum::Nuvei => Some(&self.nuvei),
+            ConnectorEnum::Iatapay => Some(&self.iatapay),
+            ConnectorEnum::Jpmorgan => Some(&self.jpmorgan),
+            ConnectorEnum::Nmi => Some(&self.nmi),
+            ConnectorEnum::Shift4 => Some(&self.shift4),
+            ConnectorEnum::Paybox => Some(&self.paybox),
+            ConnectorEnum::Barclaycard => Some(&self.barclaycard),
+            ConnectorEnum::Nexixpay => Some(&self.nexixpay),
+            ConnectorEnum::Mollie => Some(&self.mollie),
+            ConnectorEnum::Airwallex => Some(&self.airwallex),
+            ConnectorEnum::Worldpayxml => Some(&self.worldpayxml),
+            ConnectorEnum::Tsys => Some(&self.tsys),
+            ConnectorEnum::Bankofamerica => Some(&self.bankofamerica),
+            ConnectorEnum::Powertranz => Some(&self.powertranz),
+            ConnectorEnum::Getnet => Some(&self.getnet),
+            ConnectorEnum::Bambora => Some(&self.bambora),
+            ConnectorEnum::Payme => Some(&self.payme),
+            ConnectorEnum::Revolut => Some(&self.revolut),
+            ConnectorEnum::Gigadat => Some(&self.gigadat),
+            ConnectorEnum::Loonio => Some(&self.loonio),
+            ConnectorEnum::Wellsfargo => Some(&self.wellsfargo),
+            ConnectorEnum::Hyperpg => Some(&self.hyperpg),
+            ConnectorEnum::Zift => Some(&self.zift),
+            ConnectorEnum::Revolv3 => Some(&self.revolv3),
+            ConnectorEnum::Ppro => Some(&self.ppro),
+            ConnectorEnum::Truelayer => Some(&self.truelayer),
+            ConnectorEnum::Peachpayments => Some(&self.peachpayments),
+            ConnectorEnum::Finix => Some(&self.finix),
+            ConnectorEnum::Fiservcommercehub => Some(&self.fiservcommercehub),
+        }
+    }
+
+    /// Resolve vault configuration for a connector
+    ///
+    /// Returns the vault config if `enable_vault_proxy` is true.
+    /// Priority:
+    /// 1. `vault_proxy_override` - connector-specific vault config
+    /// 2. `global_vault` - global vault config (passed as parameter)
+    ///
+    /// Returns `None` if vault proxy is not enabled for the connector.
+    ///
+    /// Note: This method clones the vault config when returning an override.
+    /// Since config resolution is not in a hot path, this is acceptable.
+    pub fn resolve_vault(
+        &self,
+        connector: connector_types::ConnectorEnum,
+        global_vault: Option<&VaultConfig>,
+    ) -> Option<VaultConfig> {
+        let params = self.get_connector_params(connector)?;
+
+        if !params.enable_vault_proxy {
+            return None;
+        }
+
+        // Priority: connector override > global config
+        params
+            .vault_proxy_override
+            .clone()
+            .or_else(|| global_vault.cloned())
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
@@ -379,6 +503,16 @@ pub struct ConnectorParams {
     pub secondary_base_url: Option<String>,
     #[serde(default)]
     pub third_base_url: Option<String>,
+    /// When true, routes requests through the global vault proxy
+    /// Note: Changes require restart - vault settings cannot be hot-patched for PCI compliance
+    #[serde(default)]
+    #[patch(ignore)]
+    pub enable_vault_proxy: bool,
+    /// Optional: Use a different vault than the global one
+    /// Note: Changes require restart - vault settings cannot be hot-patched for PCI compliance
+    #[serde(default)]
+    #[patch(ignore)]
+    pub vault_proxy_override: Option<VaultConfig>,
 }
 
 impl ConnectorParams {
@@ -388,6 +522,8 @@ impl ConnectorParams {
             dispute_base_url,
             secondary_base_url: None,
             third_base_url: None,
+            enable_vault_proxy: false,
+            vault_proxy_override: None,
         }
     }
 }
@@ -398,6 +534,125 @@ pub struct ConnectorParamsWithMoreUrls {
     pub base_url: String,
     /// base url for bank redirects
     pub base_url_bank_redirects: String,
+}
+
+// ============================================================================
+// VAULT CONFIGURATION
+// ============================================================================
+
+/// Global vault configuration enum
+/// Only one vault provider can be configured at a time
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+#[serde(tag = "provider", rename_all = "snake_case")]
+pub enum VaultConfig {
+    /// VGS Network Proxy (Very Good Security)
+    Vgs(VgsConfig),
+    /// Evervault Network Proxy (HTTP CONNECT Relay)
+    Evervault(EvervaultConfig),
+    /// Hyperswitch Vault Application Proxy
+    HyperswitchVault(HyperswitchVaultConfig),
+    /// TokenEx Application Proxy (TGAPI)
+    TokenEx(TokenExConfig),
+    /// Basis Theory Application Proxy
+    BasisTheory(BasisTheoryConfig),
+}
+
+/// VGS (Very Good Security) Network Proxy configuration
+#[derive(Clone, Default, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+pub struct VgsConfig {
+    /// VGS tenant identifier (e.g., "tntSANDBOX123")
+    pub tenant_id: String,
+    /// VGS environment (sandbox or production)
+    #[serde(default)]
+    pub environment: VgsEnvironment,
+    /// Reserved: CA certificate for TLS verification with VGS proxy
+    /// Not currently used - will be wired up in HTTP client integration phase
+    #[serde(default)]
+    pub ca_certificate: Option<String>,
+}
+
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum VgsEnvironment {
+    #[default]
+    Sandbox,
+    Production,
+}
+
+/// Evervault Network Proxy configuration (HTTP CONNECT Relay)
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct EvervaultConfig {
+    /// Evervault team identifier (e.g., "team_123abc")
+    pub team_id: String,
+    /// Evervault app identifier (e.g., "app_456def")
+    pub app_id: String,
+    /// Evervault API key for Relay authentication
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+}
+
+/// Hyperswitch Vault Application Proxy configuration
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct HyperswitchVaultConfig {
+    /// Hyperswitch API key (dev_xxx or prod_xxx)
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// Hyperswitch Profile ID
+    pub profile_id: String,
+    /// Hyperswitch Proxy endpoint URL
+    pub proxy_url: String,
+    /// Environment (sandbox or production)
+    pub environment: HyperswitchEnvironment,
+}
+
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum HyperswitchEnvironment {
+    #[default]
+    Sandbox,
+    Production,
+}
+
+/// TokenEx Application Proxy configuration (TGAPI)
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct TokenExConfig {
+    /// TokenEx API key for TGAPI authentication
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// TokenEx organization identifier
+    pub tokenex_id: String,
+    /// TGAPI endpoint URL
+    pub tgapi_url: String,
+    /// Default token scheme for new tokenizations
+    #[serde(default)]
+    pub default_token_scheme: TokenExTokenScheme,
+}
+
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenExTokenScheme {
+    #[default]
+    TokenFour,
+    Guid,
+    SixTokenFour,
+}
+
+/// Basis Theory Application Proxy configuration
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct BasisTheoryConfig {
+    /// Basis Theory API key (needs token:read, proxy:read permissions)
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// Basis Theory proxy endpoint URL
+    pub proxy_url: String,
+    /// Optional pre-configured proxy ID
+    pub proxy_id: Option<String>,
 }
 
 // Trait to provide access to connectors field
@@ -769,13 +1024,13 @@ impl<
                 // CARD METHODS
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
+                    let card = payment_method_data::Card::<T>::foreign_try_from((Some(card_details), None))?;
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(
                     card_details,
                 ) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
+                    let card = payment_method_data::Card::<T>::foreign_try_from((None, Some(card_details)))?;
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
@@ -2168,16 +2423,24 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
 // Helper trait for generic card conversion
 pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
     fn convert_card_details(
-        card: grpc_api_types::payments::CardDetails,
+        card: Option<grpc_api_types::payments::CardDetails>,
+        proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
     ) -> Result<payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
 }
 
 // Implementation for DefaultPCIHolder
 impl CardConversionHelper<Self> for DefaultPCIHolder {
     fn convert_card_details(
-        card: grpc_api_types::payments::CardDetails,
+        card: Option<grpc_api_types::payments::CardDetails>,
+        _proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
     ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
     {
+        let card = card.ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_DETAILS".to_owned(),
+            error_identifier: 400,
+            error_message: "Card details are required for card payment method".to_owned(),
+            error_object: None,
+        }))?;
         let card_network = match card.card_network() {
             grpc_api_types::payments::CardNetwork::Unspecified => None,
             _ => Some(CardNetwork::foreign_try_from(card.card_network())?),
@@ -2230,44 +2493,26 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
 // Implementation for VaultTokenHolder
 impl CardConversionHelper<Self> for VaultTokenHolder {
     fn convert_card_details(
-        card: grpc_api_types::payments::CardDetails,
+        _card: Option<grpc_api_types::payments::CardDetails>,
+        proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
     ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
     {
+        let card = proxy_card.ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_DETAILS".to_owned(),
+            error_identifier: 400,
+            error_message: "Proxy card details are required for vault card payment method"
+                .to_owned(),
+            error_object: None,
+        }))?;
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(
-                card.card_number
-                    .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Missing card number".to_owned(),
-                        error_object: None,
-                    }))
-                    .map(|cn| cn.get_card_no())?,
+                // Card number token is already stored in token_data, so we replace with
+                // the internal transformation template value for the injector to substitute.
+                "{{$card_number}}".to_string().into(),
             ),
-            card_exp_month: card
-                .card_exp_month
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_MONTH".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Month".to_owned(),
-                    error_object: None,
-                }))?,
-            card_exp_year: card
-                .card_exp_year
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_YEAR".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Year".to_owned(),
-                    error_object: None,
-                }))?,
-            card_cvc: card
-                .card_cvc
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_CVC".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing CVC".to_owned(),
-                    error_object: None,
-                }))?,
+            card_exp_month: "{{$card_exp_month}}".to_string().into(),
+            card_exp_year: "{{$card_exp_year}}".to_string().into(),
+            card_cvc: "{{$card_cvc}}".to_string().into(),
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,
@@ -2281,7 +2526,11 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
 }
 
 // Generic ForeignTryFrom implementation using the helper trait
-impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails> for payment_method_data::Card<T>
+impl<T>
+    ForeignTryFrom<(
+        Option<grpc_api_types::payments::CardDetails>,
+        Option<grpc_api_types::payments::ProxyCardDetails>,
+    )> for payment_method_data::Card<T>
 where
     T: PaymentMethodDataTypes
         + Default
@@ -2296,9 +2545,12 @@ where
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        card: grpc_api_types::payments::CardDetails,
+        (card, proxy_card): (
+            Option<grpc_api_types::payments::CardDetails>,
+            Option<grpc_api_types::payments::ProxyCardDetails>,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        T::convert_card_details(card)
+        T::convert_card_details(card, proxy_card)
     }
 }
 

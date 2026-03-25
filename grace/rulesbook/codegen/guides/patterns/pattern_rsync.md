@@ -101,7 +101,7 @@ This is the current recommended approach using the macro framework for maximum c
 ### Main Connector File Pattern (RSync Flow Addition)
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
+// File: backend/connector-integration/src/connectors/{connector_name}.rs
 
 use crate::connectors::macros::macro_connector_implementation;
 
@@ -217,7 +217,7 @@ macro_connector_implementation!(
 ### Transformers File Pattern (RSync Flow)
 
 ```rust
-// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use serde::{Deserialize, Serialize};
 use crate::{
