@@ -145,7 +145,7 @@ Generate the implementation plan using this structure:
 
 **Implementation:**
 ```rust
-// File: backend/connector-integration/src/connectors/{{connector_name}}.rs
+// File: crates/integrations/connector-integration/src/connectors/{{connector_name}}.rs
 // - Basic connector struct
 // - ConnectorCommon trait implementation
 // - Authentication type definition
@@ -459,7 +459,7 @@ impl IncomingWebhook for {{ConnectorName}} {
 
 **Test Structure:**
 ```rust
-// File: backend/grpc-server/tests/{{connector_name}}_test.rs
+// File: crates/grpc-server/grpc-server/tests/{{connector_name}}_test.rs
 
 #[tokio::test]
 async fn test_payment_authorize_card_success() {
@@ -513,7 +513,7 @@ async fn test_payment_authorize_apple_pay() {
 ### Integration Testing
 - **Scope**: Complete gRPC flows
 - **Coverage**: All implemented flows and payment methods
-- **Location**: `backend/grpc-server/tests/{{connector_name}}_test.rs`
+- **Location**: `crates/grpc-server/grpc-server/tests/{{connector_name}}_test.rs`
 
 ### Error Testing
 - **Scope**: All error scenarios
@@ -564,9 +564,9 @@ async fn test_payment_authorize_apple_pay() {
 
 **State Files to Check:**
 - `grace-ucs/connector_integration/{{connector_name}}/{{connector_name}}_specs.md`
-- `backend/connector-integration/src/connectors/{{connector_name}}.rs`
-- `backend/connector-integration/src/connectors/{{connector_name}}/transformers.rs`
-- `backend/grpc-server/tests/{{connector_name}}_test.rs`
+- `crates/integrations/connector-integration/src/connectors/{{connector_name}}.rs`
+- `crates/integrations/connector-integration/src/connectors/{{connector_name}}/transformers.rs`
+- `crates/grpc-server/grpc-server/tests/{{connector_name}}_test.rs`
 
 **Common Continuation Commands:**
 - `continue implementing {{connector_name}} connector in UCS - I have completed [X] and need to implement [Y]`

@@ -43,7 +43,7 @@ UPI (Unified Payments Interface) is India's real-time payment system that enable
 ### Rust Type Definitions
 
 ```rust
-// From backend/domain_types/src/payment_method_data.rs
+// From crates/types-traits/domain_types/src/payment_method_data.rs
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -147,7 +147,7 @@ pub enum UpiSource {
 ### Implementation Template
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -336,7 +336,7 @@ macros::macro_connector_implementation!(
 ### Transformers Implementation
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use domain_types::{
     connector_flow::Authorize,

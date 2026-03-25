@@ -45,7 +45,7 @@ install-codegen-deps:
 # ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
-# uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
+# uniffi-bindgen lives in its own crate (crates/internal/uniffi-bindgen) so the ffi
 # library never pulls in the uniffi/cli codegen deps. The output binary lands
 # in the same target/<PLATFORM>/release/ directory as before.
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ generate-proto:
 	@protoc \
 		-I $(PROTO_DIR) \
 		--java_out=$(GENERATED_JAVA) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
 	@echo "Proto stubs generated in $(GENERATED_JAVA)/"
 
 # ---------------------------------------------------------------------------
