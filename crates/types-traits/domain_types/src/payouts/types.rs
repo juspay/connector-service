@@ -983,6 +983,26 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
             .transpose()?;
 
+        let priority = value
+            .priority
+            .map(|priority| {
+                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority).map_err(
+                    |_| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "INVALID_PRIORITY".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Invalid payout priority".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    },
+                )
+            })
+            .transpose()?
+            .map(common_enums::PayoutPriority::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
             connector_quote_id: value.connector_quote_id.clone(),
@@ -990,14 +1010,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             source_currency,
             destination_currency,
-            priority: value
-                .priority
-                .map(|p| {
-                    common_enums::PayoutPriority::foreign_try_from(
-                        grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(p).unwrap(),
-                    )
-                })
-                .transpose()?,
+            priority,
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
             payout_method_data,
@@ -1153,6 +1166,26 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateLinkRequest>
             .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
             .transpose()?;
 
+        let priority = value
+            .priority
+            .map(|priority| {
+                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority).map_err(
+                    |_| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "INVALID_PRIORITY".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Invalid payout priority".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    },
+                )
+            })
+            .transpose()?
+            .map(common_enums::PayoutPriority::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
             connector_quote_id: value.connector_quote_id.clone(),
@@ -1160,14 +1193,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateLinkRequest>
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             source_currency,
             destination_currency,
-            priority: value
-                .priority
-                .map(|p| {
-                    common_enums::PayoutPriority::foreign_try_from(
-                        grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(p).unwrap(),
-                    )
-                })
-                .transpose()?,
+            priority,
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
             payout_method_data,
