@@ -60,9 +60,6 @@ const FLOWS = {
   // payout_void: PayoutService.Void — Void a payout.
   payout_void                    : { request: "PayoutServiceVoidRequest", response: "PayoutServiceVoidResponse" },
 
-  // payout_create: PayoutService.Create — Creates a payout.
-  payout_create        : { request: "PayoutServiceCreateRequest", response: "PayoutServiceCreateResponse" },
-
   // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
   post_authenticate              : { request: "PaymentMethodAuthenticationServicePostAuthenticateRequest", response: "PaymentMethodAuthenticationServicePostAuthenticateResponse" },
 
