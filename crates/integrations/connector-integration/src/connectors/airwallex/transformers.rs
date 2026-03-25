@@ -4,7 +4,7 @@ use common_utils::{
     request::Method,
     types::{FloatMajorUnit, StringMajorUnit},
 };
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -28,7 +28,7 @@ pub struct AirwallexAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for AirwallexAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Airwallex {
@@ -41,7 +41,7 @@ impl TryFrom<&ConnectorSpecificConfig> for AirwallexAuthType {
             })
         } else {
             Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             ))
@@ -223,7 +223,7 @@ pub struct AirwallexConfirmRequest {
 // Helper function to extract device data from browser info (matching Hyperswitch pattern)
 fn get_device_data<T: PaymentMethodDataTypes>(
     request: &PaymentsAuthorizeData<T>,
-) -> Result<Option<AirwallexDeviceData>, error_stack::Report<ConnectorRequestError>> {
+) -> Result<Option<AirwallexDeviceData>, error_stack::Report<IntegrationError>> {
     let browser_info = match request.get_browser_info() {
         Ok(info) => info,
         Err(_) => return Ok(None), // If browser info is not available, return None instead of erroring
@@ -284,7 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexPaymentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -333,7 +333,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_full_name()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "billing.first_name",
                                         context: Default::default(),
                                     })?,
@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_country()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "country_code",
                                         context: Default::default(),
                                     })?,
@@ -358,7 +358,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_full_name()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "billing.first_name",
                                         context: Default::default(),
                                     })?,
@@ -368,7 +368,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ))
                 }
                 _ => {
-                    return Err(ConnectorRequestError::NotSupported {
+                    return Err(IntegrationError::NotSupported {
                         message: "Bank Redirect Payment Method".to_string(),
                         connector: "Airwallex",
                         context: Default::default(),
@@ -377,7 +377,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             },
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment Method".to_string(),
                     connector: "Airwallex",
                     context: Default::default(),
@@ -558,7 +558,7 @@ fn get_payment_status(
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexPaymentsResponse, Self>,
@@ -610,7 +610,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResp
 impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexSyncResponse, Self>,
@@ -675,7 +675,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -694,7 +694,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::MinorUnit::new(capture_amount),
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -714,7 +714,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<AirwallexCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexCaptureResponse, Self>,
@@ -806,7 +806,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -826,7 +826,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::MinorUnit::new(refund_amount),
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -851,7 +851,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<AirwallexRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexRefundResponse, Self>,
@@ -882,7 +882,7 @@ pub type AirwallexRefundSyncResponse = AirwallexRefundResponse;
 impl TryFrom<ResponseRouterData<AirwallexRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexRefundSyncResponse, Self>,
@@ -936,7 +936,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -971,7 +971,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<AirwallexVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexVoidResponse, Self>,
@@ -1034,7 +1034,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexConfirmRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -1083,7 +1083,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_full_name()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "billing.first_name",
                                         context: Default::default(),
                                     })?,
@@ -1091,7 +1091,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_country()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "country_code",
                                         context: Default::default(),
                                     })?,
@@ -1108,7 +1108,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .router_data
                                     .resource_common_data
                                     .get_billing_full_name()
-                                    .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                                    .map_err(|_| IntegrationError::MissingRequiredField {
                                         field_name: "billing.first_name",
                                         context: Default::default(),
                                     })?,
@@ -1118,7 +1118,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ))
                 }
                 _ => {
-                    return Err(ConnectorRequestError::NotSupported {
+                    return Err(IntegrationError::NotSupported {
                         message: "Bank Redirect Payment Method".to_string(),
                         connector: "Airwallex",
                         context: Default::default(),
@@ -1127,7 +1127,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             },
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment Method".to_string(),
                     connector: "Airwallex",
                     context: Default::default(),
@@ -1248,7 +1248,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexIntentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::AirwallexRouterData<
@@ -1275,7 +1275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -1314,7 +1314,7 @@ impl TryFrom<ResponseRouterData<AirwallexIntentResponse, Self>>
         domain_types::connector_types::PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexIntentResponse, Self>,
@@ -1366,7 +1366,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AirwallexAccessTokenRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: super::AirwallexRouterData<
@@ -1396,7 +1396,7 @@ impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
         domain_types::connector_types::AccessTokenResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<AirwallexAccessTokenResponse, Self>,

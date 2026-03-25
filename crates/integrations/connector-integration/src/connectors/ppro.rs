@@ -51,8 +51,8 @@ use interfaces::{
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::sync::LazyLock;
@@ -86,7 +86,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError>
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError>
     {
         match auth_type {
             ConnectorSpecificConfig::Ppro {
@@ -103,7 +103,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     merchant_id.clone().into_masked(),
                 ),
             ]),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -114,11 +114,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: PproErrorResponse = res
             .response
             .parse_struct("Ppro ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
+            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
                 res.status_code,
             ))?;
 
@@ -316,7 +316,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = self.get_auth_header(&req.connector_config)?;
             header.push((
                 headers::CONTENT_TYPE.to_string(),
@@ -327,9 +327,9 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let agr_id = req.request.connector_mandate_id().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "mandate_reference.connector_mandate_id",
                 context: Default::default()
                 },
@@ -419,11 +419,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -435,18 +435,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::not_implemented(
+                return Err(IntegrationError::not_implemented(
                     "webhooks not implemented".to_string(),
                 )
                 .into())
@@ -493,19 +493,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<ConnectorRequestError>,
+        error_stack::Report<IntegrationError>,
     > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::not_implemented(
+                return Err(IntegrationError::not_implemented(
                     "webhooks not implemented".to_string(),
                 )
                 .into())
@@ -543,9 +543,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
-        error_stack::Report<ConnectorRequestError>,
+        error_stack::Report<IntegrationError>,
     > {
-        Err(ConnectorRequestError::not_implemented("process_dispute_webhook".to_string()).into())
+        Err(IntegrationError::not_implemented("process_dispute_webhook".to_string()).into())
     }
 
     fn verify_webhook_source(
@@ -553,20 +553,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<bool, error_stack::Report<IntegrationError>> {
         let connector_webhook_secrets = connector_webhook_secret
-            .ok_or(ConnectorRequestError::not_implemented(
+            .ok_or(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature = request.headers.get("Webhook-Signature").ok_or(
-            ConnectorRequestError::not_implemented("webhook signature not found".to_string()),
+            IntegrationError::not_implemented("webhook signature not found".to_string()),
         )?;
 
         let algorithm = crypto::HmacSha256;
         let expected_signature = hex::decode(signature).change_context(
-            ConnectorRequestError::not_implemented("webhook decoding failed".to_string()),
+            IntegrationError::not_implemented("webhook decoding failed".to_string()),
         )?;
 
         algorithm
@@ -575,7 +575,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 &expected_signature,
                 &request.body,
             )
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
     }
@@ -585,12 +585,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<ConnectorRequestError>,
+        error_stack::Report<IntegrationError>,
     > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -829,7 +829,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -845,7 +845,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/payment-charges", self.base_url(&req.resource_common_data.connectors)))
         }
     }
@@ -866,7 +866,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -878,8 +878,8 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
-            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+        ) -> CustomResult<String, IntegrationError> {
+            let id = req.request.get_connector_transaction_id().change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/v1/payment-charges/{}", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
@@ -901,7 +901,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -917,8 +917,8 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
-            let id = req.request.get_connector_transaction_id().change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+        ) -> CustomResult<String, IntegrationError> {
+            let id = req.request.get_connector_transaction_id().change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!("{}/v1/payment-charges/{}/captures", self.base_url(&req.resource_common_data.connectors), id))
         }
     }
@@ -940,7 +940,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -956,7 +956,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/v1/payment-charges/{}/voids", self.base_url(&req.resource_common_data.connectors), id))
         }
@@ -979,7 +979,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -995,7 +995,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/v1/payment-charges/{}/refunds", self.base_url(&req.resource_common_data.connectors), id))
         }
@@ -1017,7 +1017,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -1029,7 +1029,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let refund_id = req.request.connector_refund_id.clone();
             Ok(format!("{}/v1/payment-charges/{}", self.base_url(&req.resource_common_data.connectors), refund_id))
         }
@@ -1052,7 +1052,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
             let mut header = self.get_auth_header(&req.connector_config)?;
             header.push((
                 headers::CONTENT_TYPE.to_string(),
@@ -1063,7 +1063,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/payment-agreements", self.base_url(&req.resource_common_data.connectors)))
         }
     }

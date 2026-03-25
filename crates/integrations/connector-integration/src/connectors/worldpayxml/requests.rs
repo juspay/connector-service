@@ -4,7 +4,7 @@ use hyperswitch_masking::Secret;
 use serde::Serialize;
 
 use super::super::macros::GetSoapXml;
-use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::IntegrationError;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "UPPERCASE")]
@@ -15,9 +15,9 @@ pub enum WorldpayxmlAction {
 }
 fn generate_soap_xml<T: Serialize>(
     request: &T,
-) -> Result<String, error_stack::Report<ConnectorRequestError>> {
+) -> Result<String, error_stack::Report<IntegrationError>> {
     let xml_body = quick_xml::se::to_string(request).change_context(
-        ConnectorRequestError::RequestEncodingFailed {
+        IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         },
     )?;

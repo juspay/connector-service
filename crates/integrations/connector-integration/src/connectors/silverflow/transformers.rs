@@ -1,7 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{enums::Currency, AttemptStatus, CaptureMethod};
 use common_utils::types::MinorUnit;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -25,7 +25,7 @@ pub struct SilverflowAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for SilverflowAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -40,7 +40,7 @@ impl TryFrom<&ConnectorSpecificConfig> for SilverflowAuthType {
                 merchant_acceptor_key: merchant_acceptor_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -195,7 +195,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SilverflowPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::SilverflowRouterData<
@@ -217,7 +217,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
-                return Err(ConnectorRequestError::not_implemented(
+                return Err(IntegrationError::not_implemented(
                     "Only card payments are supported".to_string(),
                 )
                 .into())
@@ -230,7 +230,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .expose()
             .parse::<u16>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -239,7 +239,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .expose()
             .parse::<u8>()
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -363,7 +363,7 @@ pub struct SilverflowNetworkSpecificFields {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<SilverflowPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowPaymentsResponse, Self>,
@@ -442,7 +442,7 @@ pub type SilverflowSyncResponse = SilverflowPaymentsResponse;
 impl TryFrom<ResponseRouterData<SilverflowSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowSyncResponse, Self>,
@@ -548,7 +548,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SilverflowCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::SilverflowRouterData<
@@ -567,7 +567,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                .change_context(IntegrationError::MissingConnectorTransactionID {
                     context: Default::default(),
                 })?,
         );
@@ -584,7 +584,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SilverflowCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowCaptureResponse, Self>,
@@ -668,7 +668,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SilverflowRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::SilverflowRouterData<
@@ -695,7 +695,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SilverflowRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowRefundResponse, Self>,
@@ -738,7 +738,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SilverflowRefundSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: super::SilverflowRouterData<
@@ -755,7 +755,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SilverflowRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowRefundSyncResponse, Self>,
@@ -814,7 +814,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SilverflowVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::SilverflowRouterData<
@@ -838,7 +838,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SilverflowVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<SilverflowVoidResponse, Self>,

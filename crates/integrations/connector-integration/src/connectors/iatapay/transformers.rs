@@ -8,7 +8,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
@@ -32,7 +32,7 @@ pub struct IatapayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for IatapayAuthType {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -46,7 +46,7 @@ impl TryFrom<&ConnectorSpecificConfig> for IatapayAuthType {
                 merchant_id: merchant_id.to_owned(),
                 client_secret: client_secret.to_owned(),
             }),
-            _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(Report::new(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             })),
         }
@@ -184,7 +184,7 @@ pub struct RedirectMethod {
 /// Determine country code from payment method data
 fn get_country_from_payment_method<T>(
     payment_method_data: &PaymentMethodData<T>,
-) -> Result<CountryAlpha2, Report<ConnectorRequestError>>
+) -> Result<CountryAlpha2, Report<IntegrationError>>
 where
     T: PaymentMethodDataTypes,
 {
@@ -198,7 +198,7 @@ where
             BankRedirectData::Ideal { .. } => Ok(CountryAlpha2::NL),
             // LocalBankRedirect → Austria
             BankRedirectData::LocalBankRedirect { .. } => Ok(CountryAlpha2::AT),
-            _ => Err(Report::new(ConnectorRequestError::not_implemented(
+            _ => Err(Report::new(IntegrationError::not_implemented(
                 "Unsupported bank redirect type for Iatapay".to_string(),
             ))),
         },
@@ -215,7 +215,7 @@ where
             RealTimePaymentData::VietQr {} => Ok(CountryAlpha2::VN),
         },
 
-        _ => Err(Report::new(ConnectorRequestError::not_implemented(
+        _ => Err(Report::new(IntegrationError::not_implemented(
             "Payment method not supported by Iatapay".to_string(),
         ))),
     }
@@ -243,7 +243,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for IatapayPaymentsRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: crate::connectors::iatapay::IatapayRouterData<
@@ -280,14 +280,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Get return URL and webhook URL
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "router_return_url",
                 context: Default::default(),
             },
         )?;
 
         let webhook_url = item.router_data.request.webhook_url.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "webhook_url",
                 context: Default::default(),
             },
@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<IatapayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<IatapayPaymentsResponse, Self>,
@@ -378,7 +378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
                         let metadata_value = serde_json::to_value(metadata_map).change_context(
-                            ConnectorResponseError::response_handling_failed(item.http_code),
+                            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
                         )?;
                         (Some(metadata_value), None)
                     }
@@ -439,7 +439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<IatapaySyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<IatapaySyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -575,7 +575,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for IatapayRefundRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: crate::connectors::iatapay::IatapayRouterData<
@@ -604,7 +604,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: router_data.request.currency.to_string(),
             bank_transfer_description: router_data.request.reason.clone(),
             notification_url: router_data.request.webhook_url.clone().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "webhook_url",
                     context: Default::default(),
                 },
@@ -617,7 +617,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<IatapayRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<IatapayRefundResponse, Self>,
@@ -661,7 +661,7 @@ impl TryFrom<ResponseRouterData<IatapayRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<IatapayRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<IatapayRefundSyncResponse, Self>,
@@ -716,7 +716,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for IatapayAuthUpdateRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: crate::connectors::iatapay::IatapayRouterData<
@@ -741,7 +741,7 @@ impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
         domain_types::connector_types::AccessTokenResponseData,
     >
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<IatapayAuthUpdateResponse, Self>,

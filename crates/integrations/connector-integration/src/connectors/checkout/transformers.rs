@@ -12,7 +12,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
@@ -338,7 +338,7 @@ pub struct CheckoutThreeDS {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CheckoutAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Checkout {
             api_key,
@@ -353,7 +353,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CheckoutAuthType {
                 processing_channel_id: processing_channel_id.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType {
+            Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into())
@@ -412,7 +412,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<
@@ -515,14 +515,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                             let expiry_month = google_pay_decrypted_data
                                 .get_expiry_month()
-                                .change_context(ConnectorRequestError::InvalidDataFormat {
+                                .change_context(IntegrationError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_month",
                                     context: Default::default(),
                                 })?;
 
                             let expiry_year = google_pay_decrypted_data
                                 .get_four_digit_expiry_year()
-                                .change_context(ConnectorRequestError::InvalidDataFormat {
+                                .change_context(IntegrationError::InvalidDataFormat {
                                     field_name: "google_pay_decrypted_data.card_exp_year",
                                     context: Default::default(),
                                 })?;
@@ -544,7 +544,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Ok((p_source, None, Some(false), store_for_future_use))
                         }
                         domain_types::payment_method_data::GpayTokenizationData::Encrypted(_) => {
-                            Err(ConnectorRequestError::MissingRequiredField {
+                            Err(IntegrationError::MissingRequiredField {
                                 field_name: "google_pay_decrypted_data",
                                 context: Default::default(),
                             })
@@ -578,12 +578,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 }));
                             Ok((p_source, None, Some(false), store_for_future_use))
                         }
-                        None => Err(ConnectorRequestError::not_implemented(
+                        None => Err(IntegrationError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("checkout"),
                         )),
                     }
                 }
-                _ => Err(ConnectorRequestError::not_implemented(
+                _ => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("checkout"),
                 )),
             },
@@ -642,7 +642,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
                 Ok((payment_source, None, Some(false), store_for_future))
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -812,7 +812,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<
@@ -920,12 +920,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None,
                         ))
                     }
-                    _ => Err(ConnectorRequestError::not_implemented(
+                    _ => Err(IntegrationError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("checkout"),
                     )),
                 }
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -1078,7 +1078,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<
@@ -1202,7 +1202,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 });
                 Ok((payment_source, None, Some(false), payment_type, Some(true)))
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -1518,7 +1518,7 @@ pub struct Balances {
 fn get_connector_meta(
     capture_method: common_enums::CaptureMethod,
     http_status: u16,
-) -> CustomResult<serde_json::Value, ConnectorResponseError> {
+) -> CustomResult<serde_json::Value, ConnectorResponseTransformationError> {
     match capture_method {
         common_enums::CaptureMethod::Automatic
         | common_enums::CaptureMethod::SequentialAutomatic => Ok(serde_json::json!(CheckoutMeta {
@@ -1530,7 +1530,7 @@ fn get_connector_meta(
             }))
         }
         common_enums::CaptureMethod::Scheduled => {
-            Err(ConnectorResponseError::unexpected_response_error(http_status).into())
+            Err(ConnectorResponseTransformationError::unexpected_response_error(http_status).into())
         }
     }
 }
@@ -1539,7 +1539,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<PaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_cap((
             item.response.status,
@@ -1652,7 +1652,7 @@ impl<
     > TryFrom<ResponseRouterData<PaymentsResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_cap((
             item.response.status,
@@ -1773,7 +1773,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let connector_meta = get_connector_meta(
             item.router_data.request.capture_method.unwrap_or_default(),
@@ -1859,7 +1859,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let redirection_data = item
             .response
@@ -1878,12 +1878,12 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             },
             Some(common_enums::CaptureMethod::Scheduled) => {
                 return Err(
-                    ConnectorResponseError::unexpected_response_error(item.http_code).into(),
+                    ConnectorResponseTransformationError::unexpected_response_error(item.http_code).into(),
                 );
             }
             None => {
                 return Err(
-                    ConnectorResponseError::response_handling_failed_with_context(
+                    ConnectorResponseTransformationError::response_handling_failed_with_context(
                         item.http_code,
                         Some("Checkout PSync: capture_method absent on payment intent".to_string()),
                     )
@@ -1961,7 +1961,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<PaymentsResponseEnum, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<PaymentsResponseEnum, Self>) -> Result<Self, Self::Error> {
         let capture_sync_response_list = match item.response {
             PaymentsResponseEnum::PaymentResponse(payments_response) => {
@@ -2004,7 +2004,7 @@ fn http_code_to_attempt_status_for_void_flow(http_code: u16) -> common_enums::At
 impl<F> TryFrom<ResponseRouterData<PaymentVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<PaymentVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -2036,7 +2036,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaymentVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -2071,7 +2071,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaymentCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -2111,7 +2111,7 @@ pub struct PaymentCaptureResponse {
 impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<PaymentCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2136,7 +2136,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 Ok(id) => id.to_owned(),
                 Err(_) => {
                     return Err(
-                        ConnectorResponseError::response_handling_failed(item.http_code).into(),
+                        ConnectorResponseTransformationError::response_handling_failed(item.http_code).into(),
                     );
                 }
             }
@@ -2174,7 +2174,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         CheckoutRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for RefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CheckoutRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -2206,7 +2206,7 @@ fn http_code_to_refund_status(http_code: u16) -> common_enums::RefundStatus {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = http_code_to_refund_status(item.http_code);
         Ok(Self {
@@ -2326,14 +2326,14 @@ pub type RSyncResponse = Vec<ActionResponse>;
 impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RSyncResponse, Self>) -> Result<Self, Self::Error> {
         let refund_action_id = item.router_data.request.connector_refund_id.clone();
         let action_response = item
             .response
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
-            .ok_or(ConnectorResponseError::response_handling_failed(
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
                 item.http_code,
             ))?;
         let refund_status = common_enums::RefundStatus::from(action_response);

@@ -20,7 +20,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -236,7 +236,7 @@ pub enum PaymentSolution {
 fn build_bill_to(
     address_details: Option<&Address>,
     email: pii::Email,
-) -> Result<BillTo, error_stack::Report<ConnectorRequestError>> {
+) -> Result<BillTo, error_stack::Report<IntegrationError>> {
     let default_address = BillTo {
         first_name: None,
         last_name: None,
@@ -542,7 +542,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BankofamericaPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: BankofamericaRouterData<
             RouterDataV2<
@@ -590,7 +590,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletData::Wero(_) => Err(IntegrationError::not_implemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -614,7 +614,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -639,7 +639,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         payment_method_data::Card<T>,
     )> for BankofamericaPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         (item, ccard): (
             BankofamericaRouterData<
@@ -714,7 +714,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BankOfAmericaRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BankofamericaRouterData<
@@ -732,7 +732,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_refund_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                        .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
                     currency: item.router_data.request.currency,
@@ -780,7 +780,7 @@ impl From<BankOfAmericaRefundResponse> for common_enums::RefundStatus {
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BankOfAmericaRefundResponse, Self>,
@@ -840,7 +840,7 @@ pub struct BankOfAmericaRsyncResponse {
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaRsyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BankOfAmericaRsyncResponse, Self>,
@@ -921,7 +921,7 @@ pub type BankOfAmericaRsyncResponseForRSync = BankOfAmericaRsyncResponse;
 impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1421,7 +1421,7 @@ impl From<PaymentSolution> for String {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BankOfAmericaAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::BankOfAmerica {
             api_key,
@@ -1436,7 +1436,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BankOfAmericaAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType {
+            Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             })?
         }
@@ -1458,7 +1458,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Option<String>,
     )> for ProcessingInformation
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (item, solution, network): (
@@ -1524,7 +1524,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         payment_method_data::Card<T>,
     )> for PaymentInformation<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (_item, ccard): (
@@ -1607,7 +1607,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
@@ -1707,7 +1707,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BankofamericaPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BankofamericaRouterData<
@@ -1756,7 +1756,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletData::Wero(_) => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?,
             },
@@ -1777,7 +1777,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?
             }
@@ -1799,7 +1799,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         payment_method_data::Card<T>,
     )> for BankofamericaPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (item, ccard): (
@@ -1816,7 +1816,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ),
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            Err(ConnectorRequestError::NotSupported {
+            Err(IntegrationError::NotSupported {
                 message: "Card 3DS".to_string(),
                 connector: "BankOfAmerica",
                 context: Default::default(),
@@ -1865,7 +1865,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Option<BillTo>,
     )> for OrderInformationWithBill
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (item, bill_to): (
@@ -1888,7 +1888,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
         Ok(Self {
@@ -1914,7 +1914,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for OrderInformationWithBill
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &BankofamericaRouterData<
@@ -1940,7 +1940,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<&payment_method_data::Card<T>> for PaymentInformation<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(ccard: &payment_method_data::Card<T>) -> Result<Self, Self::Error> {
         let card_type = match ccard.card_network.clone().and_then(get_boa_card_type) {
@@ -1976,7 +1976,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Option<String>,
     )> for ProcessingInformation
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (_item, solution, network): (
@@ -2012,7 +2012,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2109,7 +2109,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2189,7 +2189,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2213,7 +2213,7 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<BankOfAmericaTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2284,7 +2284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BankofamericaCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BankofamericaRouterData<
@@ -2308,7 +2308,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_amount_to_capture,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                        .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
                     currency: item.router_data.request.currency,
@@ -2335,7 +2335,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BankofamericaVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BankofamericaRouterData<
@@ -2354,13 +2354,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data
                 .request
                 .amount
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "Amount",
                     context: Default::default(),
                 })?;
 
         let currency = item.router_data.request.currency.ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "Currency",
                 context: Default::default(),
             },
@@ -2382,13 +2382,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(amount, currency)
-                        .change_context(ConnectorRequestError::AmountConversionFailed {
+                        .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
                     currency,
                 },
                 reason: item.router_data.request.cancellation_reason.clone().ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "Cancellation Reason",
                         context: Default::default(),
                     },

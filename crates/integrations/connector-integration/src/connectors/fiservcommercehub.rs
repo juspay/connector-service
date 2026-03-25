@@ -121,7 +121,7 @@ macros::create_all_prerequisites!(
                 AccessTokenRequestData,
                 AccessTokenResponseData,
             >,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             Self: ConnectorIntegrationV2<
                 CreateAccessToken,
@@ -132,7 +132,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -143,9 +143,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                    .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                _ => return Err(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?
 };
 
             let authorization = auth.generate_hmac_signature(
@@ -187,10 +187,10 @@ macros::create_all_prerequisites!(
                 PaymentsResponseData,
             >,
             request_body_str: &str,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -247,7 +247,7 @@ macros::create_all_prerequisites!(
                 PaymentsSyncData,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             Self: ConnectorIntegrationV2<
                 PSync,
@@ -258,7 +258,7 @@ macros::create_all_prerequisites!(
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -269,9 +269,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                    .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                _ => return Err(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?
 };
 
             let authorization = auth.generate_hmac_signature(
@@ -307,13 +307,13 @@ macros::create_all_prerequisites!(
         pub fn build_void_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             Self: ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -324,9 +324,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                    .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                _ => return Err(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?
 };
 
             let authorization = auth.generate_hmac_signature(
@@ -363,13 +363,13 @@ macros::create_all_prerequisites!(
         pub fn build_refund_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             Self: ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -380,9 +380,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                    .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                _ => return Err(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?
 };
 
             let authorization = auth.generate_hmac_signature(
@@ -419,13 +419,13 @@ macros::create_all_prerequisites!(
         pub fn build_rsync_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             Self: ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_config)
-                    .change_context(errors::ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
+                    .change_context(errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let api_key = auth.api_key.clone().expose();
             let client_request_id =
@@ -436,9 +436,9 @@ macros::create_all_prerequisites!(
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?,
+                    .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?,
                 None => String::new(),
-                _ => return Err(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                _ => return Err(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?
 };
 
             let authorization = auth.generate_hmac_signature(
@@ -498,7 +498,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
         Ok(vec![])
     }
 
@@ -506,12 +506,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorResponseTransformationError> {
         let response: fiservcommercehub::FiservcommercehubErrorResponse = res
             .response
             .parse_struct("FiservcommercehubErrorResponse")
             .change_context(
-                errors::ConnectorResponseError::response_deserialization_failed(res.status_code),
+                errors::ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -605,7 +605,7 @@ macros::macro_connector_implementation!(
                 AccessTokenRequestData,
                 AccessTokenResponseData,
             >,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             self.build_access_token_headers(req)
         }
 
@@ -617,7 +617,7 @@ macros::macro_connector_implementation!(
                 AccessTokenRequestData,
                 AccessTokenResponseData,
             >,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}security/v1/keys/generate"))
         }
@@ -830,7 +830,7 @@ macros::macro_connector_implementation!(
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}payments/v1/charges"))
         }
@@ -843,7 +843,7 @@ macros::macro_connector_implementation!(
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
             use common_utils::request::{Method, RequestBuilder};
 
             let input_data = FiservcommercehubRouterData {
@@ -853,7 +853,7 @@ macros::macro_connector_implementation!(
             let request_body: FiservcommercehubAuthorizeRequest =
                 FiservcommercehubAuthorizeRequest::try_from(input_data)?;
             let request_body_str = serde_json::to_string(&request_body)
-                .change_context(errors::ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                .change_context(errors::IntegrationError::RequestEncodingFailed { context: Default::default() })?;
 
             let headers = self.build_authorize_headers(req, &request_body_str)?;
 
@@ -945,14 +945,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             self.build_psync_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!(
                 "{base_url}payments/v1/transaction-inquiry"
@@ -997,14 +997,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             self.build_void_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}payments/v1/cancels"))
         }
@@ -1027,14 +1027,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             self.build_rsync_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = req
                 .resource_common_data
                 .connectors
@@ -1062,14 +1062,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             self.build_refund_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorRequestError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = req
                 .resource_common_data
                 .connectors

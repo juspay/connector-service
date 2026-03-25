@@ -68,7 +68,7 @@ impl MandateAmountData {
             "mandate_data.mandate_type.{multi_use|single_use}.end_date",
         ))?;
         date_time::format_date(date, format).change_context(
-            crate::errors::ConnectorRequestError::InvalidDataFormat {
+            crate::errors::IntegrationError::InvalidDataFormat {
                 field_name: "date_format",
                 context: Default::default(),
             },

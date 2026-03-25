@@ -46,8 +46,8 @@ use self::{
     response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(
@@ -94,7 +94,7 @@ macros::create_all_prerequisites!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             // First try to parse as session token error response format
             if let Ok(session_error_response) = res
                 .response
@@ -375,7 +375,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         Ok(vec![(
             constants::CONTENT_TYPE_HEADER.to_string(),
             constants::CONTENT_TYPE_JSON.into(),
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_custom_error_response(res, event_builder)
     }
 }
@@ -408,7 +408,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
@@ -416,7 +416,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
@@ -431,7 +431,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -476,7 +476,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
 
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
@@ -485,7 +485,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
@@ -500,7 +500,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -523,7 +523,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
@@ -531,7 +531,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/v3/order/status"))
         }
@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }

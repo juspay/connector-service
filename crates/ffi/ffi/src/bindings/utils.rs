@@ -165,7 +165,7 @@ pub fn parse_metadata_for_req(
 
     // 3. Convert proto config to domain ConnectorSpecificConfig
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-        .map_err(|e: Report<domain_types::errors::ConnectorRequestError>| {
+        .map_err(|e: Report<domain_types::errors::IntegrationError>| {
             let app: ApplicationErrorResponse = ErrorSwitch::switch(e.current_context());
             ErrorSwitch::switch(&app)
         })?;
@@ -208,7 +208,7 @@ pub fn parse_metadata_for_res(
 
     // 3. Convert proto config to domain ConnectorSpecificConfig
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-        .map_err(|e: Report<domain_types::errors::ConnectorRequestError>| {
+        .map_err(|e: Report<domain_types::errors::IntegrationError>| {
             let app: ApplicationErrorResponse = ErrorSwitch::switch(e.current_context());
             ErrorSwitch::switch(&app)
         })?;

@@ -29,11 +29,11 @@ pub enum NextActionData {
 
 use super::constants;
 use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
-type Error = error_stack::Report<ConnectorRequestError>;
-type ResponseError = error_stack::Report<ConnectorResponseError>;
+type Error = error_stack::Report<IntegrationError>;
+type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
 
 // ===== AMOUNT CONVERSION =====
 // Using macro-generated PhonepeRouterData from crate::connectors::phonepe
@@ -244,7 +244,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -281,7 +281,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 },
             },
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "Phonepe",
                     context: Default::default(),
@@ -343,7 +343,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Convert to JSON and encode
         let json_payload = Encode::encode_to_string_of_json(&payload).change_context(
-            ConnectorRequestError::RequestEncodingFailed {
+            IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             },
         )?;
@@ -406,7 +406,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -443,7 +443,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 },
             },
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "Phonepe",
                     context: Default::default(),
@@ -505,7 +505,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Convert to JSON and encode
         let json_payload = Encode::encode_to_string_of_json(&payload).change_context(
-            ConnectorRequestError::RequestEncodingFailed {
+            IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             },
         )?;
@@ -620,7 +620,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                 }
             } else {
-                Err(ConnectorResponseError::response_deserialization_failed(item.http_code).into())
+                Err(ConnectorResponseTransformationError::response_deserialization_failed(item.http_code).into())
             }
         } else {
             // Error response - PhonePe returned success: false
@@ -701,7 +701,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PhonepeAuthType {
                 salt_key: salt_key.clone(),
                 key_index: salt_index.peek().clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -729,7 +729,7 @@ fn generate_phonepe_checksum(
     let sha256 = crypto::Sha256;
     let hash_bytes = sha256
         .generate_digest(checksum_input.as_bytes())
-        .change_context(ConnectorRequestError::RequestEncodingFailed {
+        .change_context(IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         })?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
@@ -919,7 +919,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                     })
                 }
             } else {
-                Err(ConnectorResponseError::response_deserialization_failed(item.http_code).into())
+                Err(ConnectorResponseTransformationError::response_deserialization_failed(item.http_code).into())
             }
         } else {
             // Error response from sync API - handle specific PhonePe error codes
@@ -961,7 +961,7 @@ fn generate_phonepe_sync_checksum(
     let sha256 = crypto::Sha256;
     let hash_bytes = sha256
         .generate_digest(checksum_input.as_bytes())
-        .change_context(ConnectorRequestError::RequestEncodingFailed {
+        .change_context(IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         })?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {

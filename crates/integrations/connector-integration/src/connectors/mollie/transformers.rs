@@ -3,7 +3,7 @@ use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -28,7 +28,7 @@ pub struct MollieAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for MollieAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -41,7 +41,7 @@ impl TryFrom<&ConnectorSpecificConfig> for MollieAuthType {
                 profile_token: profile_token.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -152,7 +152,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for MolliePaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MollieRouterData<
@@ -170,7 +170,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to convert amount to string major unit")?;
@@ -216,7 +216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }))
             }
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment method ".to_string(),
                     connector: "mollie",
                     context: Default::default(),
@@ -255,7 +255,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 value: amount_value,
             },
             description: item.resource_common_data.description.clone().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "description",
                     context: Default::default(),
                 },
@@ -344,7 +344,7 @@ impl MolliePaymentStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsRespons
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -493,7 +493,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MollieRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for MollieRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MollieRouterData<
@@ -506,7 +506,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -527,7 +527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -545,7 +545,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -566,7 +566,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -656,7 +656,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for MollieCardTokenRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MollieRouterData<
@@ -673,7 +673,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract card data from payment method
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 "Only card payment method is supported for tokenization".to_string(),
             )),
         }?;
@@ -682,7 +682,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = MollieAuthType::try_from(&item.connector_config)?;
         let profile_token =
             auth.profile_token
-                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "profile_token",
                     context: Default::default(),
                 })?;
@@ -704,7 +704,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // test_mode is required - error if not provided (matching Hyperswitch)
         let testmode = item.resource_common_data.test_mode.ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "test_mode",
                 context: Default::default(),
             },
@@ -734,7 +734,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MollieCardTokenRespon
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<MollieCardTokenResponse, Self>,
@@ -772,7 +772,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for MollieCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MollieRouterData<
@@ -785,7 +785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -795,7 +795,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 value: amount_value,
             }),
             description: item.resource_common_data.description.clone().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "description",
                     context: Default::default(),
                 },
@@ -808,7 +808,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,

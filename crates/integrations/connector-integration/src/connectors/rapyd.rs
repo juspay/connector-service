@@ -48,8 +48,8 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -202,9 +202,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = RapydAuthType::try_from(auth_type).change_context(
-            ConnectorRequestError::FailedToObtainAuthType {
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
         )?;
@@ -224,7 +224,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: Result<RapydPaymentsResponse, Report<common_utils::errors::ParsingError>> =
             res.response.parse_struct("rapyd ErrorResponse");
 
@@ -337,7 +337,7 @@ macros::create_all_prerequisites!(
             http_method: &str,
             url_path: &str,
             body: &str,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -386,7 +386,7 @@ macros::create_all_prerequisites!(
             body: &str,
             timestamp: i64,
             salt: &str,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let RapydAuthType {
             access_key,
             secret_key
@@ -421,7 +421,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
@@ -434,7 +434,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/payments", self.connector_base_url_payments(req)))
         }
     }
@@ -455,7 +455,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
@@ -465,7 +465,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let id = req.request.get_connector_transaction_id()?;
             Ok(format!("{}/v1/payments/{}", self.connector_base_url_payments(req), id))
         }
@@ -488,7 +488,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
@@ -500,7 +500,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let id = req.request.get_connector_transaction_id()?;
             Ok(format!("{}/v1/payments/{}/capture", self.connector_base_url_payments(req), id))
         }
@@ -522,7 +522,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
@@ -532,7 +532,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/payments/{}", self.connector_base_url_payments(req), req.request.connector_transaction_id))
         }
     }
@@ -554,7 +554,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
@@ -566,7 +566,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/refunds", self.connector_base_url_refunds(req)))
         }
     }
@@ -587,7 +587,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
@@ -597,7 +597,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/v1/refunds/{}", self.connector_base_url_refunds(req), req.request.connector_refund_id))
         }
     }

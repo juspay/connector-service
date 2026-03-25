@@ -32,7 +32,7 @@ impl BamboraAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BamboraAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -51,7 +51,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BamboraAuthType {
                 })
             }
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -240,7 +240,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for BamboraPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -259,7 +259,7 @@ impl<T: PaymentMethodDataTypes>
                     .resource_common_data
                     .get_optional_billing_full_name()
                     .or_else(|| item.request.customer_name.clone().map(Secret::new))
-                    .ok_or(ConnectorRequestError::MissingRequiredField {
+                    .ok_or(IntegrationError::MissingRequiredField {
                         field_name: "billing.first_name or customer_name",
                         context: Default::default(),
                     })?;
@@ -297,7 +297,7 @@ impl<T: PaymentMethodDataTypes>
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Selected payment method".to_string(),
                     connector: "bambora",
                     context: Default::default(),
@@ -311,13 +311,13 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .address
             .get_payment_billing()
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing",
                 context: Default::default(),
             })?;
 
         let billing_address = payment_billing.address.as_ref().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "billing.address",
                 context: Default::default(),
             },
@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes>
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount, item.request.currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to convert amount from minor to major units")?;
@@ -374,7 +374,7 @@ impl<T: PaymentMethodDataTypes>
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -443,7 +443,7 @@ pub struct BamboraCaptureRequest {
 impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
     for BamboraCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -451,7 +451,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let _transaction_id = match &item.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id,
             ResponseId::EncodedData(_) | ResponseId::NoResponseId => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                return Err(IntegrationError::MissingConnectorTransactionID {
                     context: Default::default(),
                 }
                 .into());
@@ -462,7 +462,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to convert capture amount from minor to major units")?;
@@ -477,7 +477,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -519,7 +519,7 @@ pub struct BamboraSyncRequest;
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for BamboraSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -534,7 +534,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -608,7 +608,7 @@ pub struct BamboraRefundRequest {
 impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for BamboraRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -617,7 +617,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -628,7 +628,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -659,7 +659,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -704,13 +704,13 @@ pub struct BamboraVoidRequest {
 impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
     for BamboraVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         if item.request.connector_transaction_id.is_empty() {
-            return Err(ConnectorRequestError::MissingConnectorTransactionID {
+            return Err(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             }
             .into());
@@ -721,7 +721,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let minor_amount =
             item.request
                 .amount
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "amount",
                     context: Default::default(),
                 })?;
@@ -730,7 +730,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let currency =
             item.request
                 .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "currency",
                     context: Default::default(),
                 })?;
@@ -739,7 +739,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(minor_amount, currency)
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to convert void amount from minor to major units")?;
@@ -751,7 +751,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BamboraPaymentsResponse, Self>,
@@ -789,7 +789,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 // Macro Wrapper Type Implementations
 
 use crate::connectors::bambora::BamboraRouterData;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 
 // Authorize - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -805,7 +805,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BamboraPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: BamboraRouterData<
@@ -831,7 +831,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BamboraCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: BamboraRouterData<
@@ -852,7 +852,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BamboraVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: BamboraRouterData<
@@ -873,7 +873,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BamboraRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: BamboraRouterData<

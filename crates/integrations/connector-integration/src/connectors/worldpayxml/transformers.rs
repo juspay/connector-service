@@ -22,8 +22,8 @@ use super::{
     WorldpayxmlRouterData,
 };
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 const API_VERSION: &str = "1.4";
 
@@ -35,7 +35,7 @@ pub struct WorldpayxmlAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for WorldpayxmlAuthType {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -49,7 +49,7 @@ impl TryFrom<&ConnectorSpecificConfig> for WorldpayxmlAuthType {
                 api_password: api_password.to_owned(),
                 merchant_code: merchant_code.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -67,7 +67,7 @@ fn get_worldpayxml_payment_method<T>(
     payment_method_data: &PaymentMethodData<T>,
     card: &Card<T>,
     billing_address: Option<&requests::WorldpayxmlBillingAddress>,
-) -> Result<requests::WorldpayxmlPaymentMethod, Report<ConnectorRequestError>>
+) -> Result<requests::WorldpayxmlPaymentMethod, Report<IntegrationError>>
 where
     T: PaymentMethodDataTypes,
 {
@@ -134,7 +134,7 @@ where
                 None => Ok(requests::WorldpayxmlPaymentMethod::Card(card_data)),
             }
         }
-        _ => Err(ConnectorRequestError::NotSupported {
+        _ => Err(IntegrationError::NotSupported {
             message: "Selected payment method".to_string(),
             connector: "worldpayxml",
             context: Default::default(),
@@ -157,7 +157,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlPaymentsRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -209,7 +209,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 billing_address.as_ref(),
             )?,
             _ => {
-                return Err(ConnectorRequestError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Selected payment method".to_string(),
                     connector: "worldpayxml",
                     context: Default::default(),
@@ -297,7 +297,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlCaptureRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -313,7 +313,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             })?;
 
@@ -357,7 +357,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlVoidRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -393,7 +393,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlRefundRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -447,7 +447,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlPSyncRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -463,7 +463,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             })?;
 
@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::WorldpayxmlRSyncRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: WorldpayxmlRouterData<
@@ -558,10 +558,10 @@ fn map_worldpayxml_refund_status(last_event: &WorldpayxmlLastEvent) -> RefundSta
 fn parse_last_event(
     event_str: &str,
     http_code: u16,
-) -> Result<WorldpayxmlLastEvent, Report<ConnectorResponseError>> {
+) -> Result<WorldpayxmlLastEvent, Report<ConnectorResponseTransformationError>> {
     serde_json::from_str(&format!("\"{}\"", event_str)).map_err(|_| {
         Report::new(
-            ConnectorResponseError::response_deserialization_failed_with_context(
+            ConnectorResponseTransformationError::response_deserialization_failed_with_context(
                 http_code,
                 Some("invalid last_event".to_string()),
             ),
@@ -574,7 +574,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<responses::WorldpayxmlAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlAuthorizeResponse, Self>,
@@ -606,7 +606,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract order status
         let order_status = response.reply.order_status.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(item.http_code),
+            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
         )?;
 
         // Check for error in order status
@@ -633,7 +633,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract payment details
         let payment = order_status.payment.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(item.http_code),
+            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
         )?;
 
         // Determine if auto-capture
@@ -677,7 +677,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>,
@@ -709,7 +709,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(item.http_code),
+            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract captureReceived
@@ -744,7 +744,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>,
@@ -776,7 +776,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(item.http_code),
+            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract cancelReceived
@@ -811,7 +811,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>,
@@ -848,7 +848,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Special handling: If error exists but payment is None, return current status (don't fail)
@@ -901,7 +901,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Determine if auto-capture from request data
@@ -953,7 +953,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::response_deserialization_failed(
+                    .ok_or(ConnectorResponseTransformationError::response_deserialization_failed(
                         item.http_code,
                     ))?;
 
@@ -1001,7 +1001,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>,
@@ -1029,7 +1029,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseError::response_deserialization_failed(item.http_code),
+            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
         )?;
 
         // Extract refundReceived
@@ -1055,7 +1055,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>,
@@ -1088,7 +1088,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Special handling: If error exists but payment is None, return Pending (don't fail)
@@ -1110,7 +1110,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseError::response_deserialization_failed(item.http_code),
+                    ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
                 )?;
 
                 // Map status from lastEvent using refund status mapping
@@ -1159,7 +1159,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::response_deserialization_failed(
+                    .ok_or(ConnectorResponseTransformationError::response_deserialization_failed(
                         item.http_code,
                     ))?;
 

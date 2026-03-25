@@ -18,7 +18,7 @@ use strum::{Display, EnumString};
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{ApiError, ApplicationErrorResponse, ConnectorRequestError},
+    errors::{ApiError, ApplicationErrorResponse, IntegrationError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -386,14 +386,14 @@ impl PaymentsSyncData {
                 | Some(common_enums::CaptureMethod::Scheduled)
         )
     }
-    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorRequestError> {
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, IntegrationError> {
         match self.connector_transaction_id.clone() {
             ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
             _ => Err(errors::ValidationError::IncorrectValueProvided {
                 field_name: "connector_transaction_id",
             })
             .attach_printable("Expected connector transaction ID not found")
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             })?,
         }
@@ -847,7 +847,7 @@ impl PaymentFlowData {
     {
         self.get_connector_meta()?
             .parse_value(std::any::type_name::<T>())
-            .change_context(ConnectorRequestError::NoConnectorMetaData {
+            .change_context(IntegrationError::NoConnectorMetaData {
                 context: Default::default(),
             })
     }
@@ -1508,7 +1508,7 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
             Some(common_enums::CaptureMethod::ManualMultiple)
             | Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(ConnectorRequestError::CaptureMethodNotSupported {
+                Err(IntegrationError::CaptureMethodNotSupported {
                     context: Default::default(),
                 }
                 .into())
@@ -1542,7 +1542,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
             Some(common_enums::CaptureMethod::ManualMultiple)
             | Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(ConnectorRequestError::CaptureMethodNotSupported {
+                Err(IntegrationError::CaptureMethodNotSupported {
                     context: Default::default(),
                 }
                 .into())
@@ -2291,7 +2291,7 @@ impl RefundsData {
         self.connector_refund_id
             .clone()
             .get_required_value("connector_refund_id")
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             })
     }
@@ -2349,14 +2349,14 @@ impl PaymentsCaptureData {
     pub fn is_multiple_capture(&self) -> bool {
         self.multiple_capture_data.is_some()
     }
-    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorRequestError> {
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, IntegrationError> {
         match self.connector_transaction_id.clone() {
             ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
             _ => Err(errors::ValidationError::IncorrectValueProvided {
                 field_name: "connector_transaction_id",
             })
             .attach_printable("Expected connector transaction ID not found")
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+            .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: Default::default(),
             })?,
         }
@@ -2746,7 +2746,7 @@ pub trait ConnectorSpecifications {
 #[macro_export]
 macro_rules! capture_method_not_supported {
     ($connector:expr, $capture_method:expr) => {
-        Err(errors::ConnectorRequestError::NotSupported {
+        Err(errors::IntegrationError::NotSupported {
             message: format!("{} for selected payment method", $capture_method),
             connector: $connector,
             context: Default::default(),
@@ -2754,7 +2754,7 @@ macro_rules! capture_method_not_supported {
         .into())
     };
     ($connector:expr, $capture_method:expr, $payment_method_type:expr) => {
-        Err(errors::ConnectorRequestError::NotSupported {
+        Err(errors::IntegrationError::NotSupported {
             message: format!("{} for {}", $capture_method, $payment_method_type),
             connector: $connector,
             context: Default::default(),
@@ -2766,7 +2766,7 @@ macro_rules! capture_method_not_supported {
 #[macro_export]
 macro_rules! payment_method_not_supported {
     ($connector:expr, $payment_method:expr, $payment_method_type:expr) => {
-        Err(errors::ConnectorRequestError::NotSupported {
+        Err(errors::IntegrationError::NotSupported {
             message: format!(
                 "Payment method {} with type {} is not supported",
                 $payment_method, $payment_method_type

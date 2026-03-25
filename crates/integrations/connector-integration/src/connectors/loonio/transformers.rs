@@ -2,7 +2,7 @@ use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
@@ -32,7 +32,7 @@ pub struct LoonioAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for LoonioAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -45,7 +45,7 @@ impl TryFrom<&ConnectorSpecificConfig> for LoonioAuthType {
                 merchant_token: merchant_token.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -123,7 +123,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for LoonioAuthorizeRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: LoonioRouterData<
             RouterDataV2<
@@ -148,7 +148,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .router_data
                     .resource_common_data
                     .get_billing()
-                    .change_context(ConnectorRequestError::MissingRequiredField {
+                    .change_context(IntegrationError::MissingRequiredField {
                         field_name: "billing",
                         context: Default::default(),
                     })
@@ -209,7 +209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                    .change_context(IntegrationError::AmountConversionFailed {
                         context: Default::default(),
                     })?;
                 Ok(Self {
@@ -224,7 +224,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     webhook_url: Some(item.router_data.request.get_webhook_url()?),
                 })
             }
-            PaymentMethodData::BankRedirect(_) => Err(ConnectorRequestError::not_implemented(
+            PaymentMethodData::BankRedirect(_) => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Loonio"),
             ))?,
             PaymentMethodData::Card(_)
@@ -244,7 +244,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::MobilePayment(_) => Err(ConnectorRequestError::not_implemented(
+            | PaymentMethodData::MobilePayment(_) => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Loonio"),
             ))?,
         }
@@ -259,7 +259,7 @@ pub struct LoonioAuthorizeResponse {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<LoonioAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<LoonioAuthorizeResponse, Self>,
@@ -359,7 +359,7 @@ pub struct LoonioTransactionSyncResponse {
 impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<LoonioPaymentResponseData, Self>,

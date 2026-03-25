@@ -18,7 +18,7 @@ use serde::Serialize;
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 
 // Wallet type constants
 const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";
@@ -64,7 +64,7 @@ fn convert_metadata_to_request_metadata(metadata: serde_json::Value) -> Vec<Requ
 fn get_card_holder_info(
     address: &domain_types::payment_address::AddressDetails,
     email: common_utils::pii::Email,
-) -> CustomResult<Option<BluesnapCardHolderInfo>, ConnectorRequestError> {
+) -> CustomResult<Option<BluesnapCardHolderInfo>, IntegrationError> {
     let first_name = address.get_first_name()?.clone();
     let last_name = address.get_last_name().unwrap_or(&first_name).clone();
 
@@ -78,7 +78,7 @@ fn get_card_holder_info(
 // Helper function to extract payer info from billing address (for ACH transactions)
 fn get_payer_info(
     address: &domain_types::payment_address::AddressDetails,
-) -> CustomResult<BluesnapPayerInfo, ConnectorRequestError> {
+) -> CustomResult<BluesnapPayerInfo, IntegrationError> {
     let first_name = address.get_first_name()?.clone();
     let last_name = address.get_last_name().unwrap_or(&first_name).clone();
     let zip = address.get_zip()?.clone();
@@ -127,7 +127,7 @@ impl BluesnapAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BluesnapAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -138,7 +138,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BluesnapAuthType {
                 password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -195,7 +195,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BluesnapAuthorizeRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::BluesnapRouterData<
@@ -236,7 +236,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // Convert card number to Secret<String>
                 let card_number = Secret::new(
                     serde_json::to_string(&card_data.card_number.clone().0)
-                        .change_context(ConnectorRequestError::RequestEncodingFailed {
+                        .change_context(IntegrationError::RequestEncodingFailed {
                             context: Default::default(),
                         })?
                         .trim_matches('"')
@@ -309,7 +309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
                         let encoded_payment_token = Secret::new(
                             serde_json::to_string(&apple_pay_data.payment_data).change_context(
-                                ConnectorRequestError::RequestEncodingFailed {
+                                IntegrationError::RequestEncodingFailed {
                                     context: Default::default(),
                                 },
                             )?,
@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
                         let encoded_payment_token = Secret::new(
                             serde_json::to_string(&google_pay_data.tokenization_data)
-                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                .change_context(IntegrationError::RequestEncodingFailed {
                                     context: Default::default(),
                                 })?,
                         );
@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         }
                     }
-                    _ => Err(ConnectorRequestError::not_implemented(
+                    _ => Err(IntegrationError::not_implemented(
                         "Selected wallet type is not supported".to_string(),
                     ))?,
                 };
@@ -395,7 +395,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let address_details = billing_address
                         .and_then(|addr| addr.address.as_ref())
                         .ok_or_else(|| {
-                            error_stack::report!(ConnectorRequestError::MissingRequiredField {
+                            error_stack::report!(IntegrationError::MissingRequiredField {
                                 field_name: "billing_address",
                                 context: Default::default()
                             })
@@ -436,11 +436,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         transaction_fraud_info,
                     }))
                 }
-                _ => Err(ConnectorRequestError::not_implemented(
+                _ => Err(IntegrationError::not_implemented(
                     "Only ACH Bank Debit is supported".to_string(),
                 ))?,
             },
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 "Selected payment method is not supported".to_string(),
             ))?,
         }
@@ -455,7 +455,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BluesnapCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::BluesnapRouterData<
@@ -468,7 +468,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_transaction_id = match router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(ref id) => id.clone(),
             _ => {
-                return Err(ConnectorRequestError::MissingConnectorTransactionID {
+                return Err(IntegrationError::MissingConnectorTransactionID {
                     context: Default::default(),
                 }
                 .into())
@@ -501,7 +501,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BluesnapVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::BluesnapRouterData<
@@ -531,7 +531,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for BluesnapRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::BluesnapRouterData<
@@ -558,7 +558,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapAuthorizeResponse, Self>,
@@ -593,7 +593,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
 impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapCaptureResponse, Self>,
@@ -633,7 +633,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<BluesnapVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
@@ -666,7 +666,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
 impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapPSyncResponse, Self>,
@@ -701,7 +701,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
 impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapRefundResponse, Self>,
@@ -721,12 +721,12 @@ impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
 
 pub fn map_chargeback_status_to_event_type(
     cb_status: &str,
-) -> CustomResult<domain_types::connector_types::EventType, ConnectorRequestError> {
+) -> CustomResult<domain_types::connector_types::EventType, IntegrationError> {
     use domain_types::connector_types::EventType;
 
     let status: BluesnapChargebackStatus =
         serde_json::from_value(serde_json::Value::String(cb_status.to_string())).change_context(
-            ConnectorRequestError::not_implemented("webhook event type not found".to_string()),
+            IntegrationError::not_implemented("webhook event type not found".to_string()),
         )?;
 
     Ok(match status {
@@ -761,7 +761,7 @@ pub fn map_webhook_event_to_incoming_webhook_event(
 impl TryFrom<ResponseRouterData<BluesnapRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapRefundSyncResponse, Self>,

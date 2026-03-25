@@ -30,8 +30,8 @@ use serde_with::skip_serializing_none;
 
 use super::ElavonRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ElavonAuthType {
@@ -41,7 +41,7 @@ pub struct ElavonAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for ElavonAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Elavon {
@@ -54,7 +54,7 @@ impl TryFrom<&ConnectorSpecificConfig> for ElavonAuthType {
                 ssl_user_id: ssl_user_id.clone(),
                 ssl_pin: ssl_pin.clone(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(report!(IntegrationError::FailedToObtainAuthType {
                 context: Default::default()
             })),
         }
@@ -157,7 +157,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ElavonPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ElavonRouterData<
@@ -181,7 +181,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(HyperswitchCaptureMethod::Automatic) => TransactionType::CcSale,
                     None => TransactionType::CcSale,
                     Some(other_capture_method) => {
-                        Err(report!(ConnectorRequestError::FlowNotSupported {
+                        Err(report!(IntegrationError::FlowNotSupported {
                             flow: format!("Capture method: {other_capture_method:?}"),
                             connector: "Elavon".to_string(),
                             context: Default::default()
@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = amount_converter
                     .convert(request_data.minor_amount, request_data.currency)
                     .map_err(|e| {
-                        report!(ConnectorRequestError::AmountConversionFailed {
+                        report!(IntegrationError::AmountConversionFailed {
                             context: Default::default()
                         })
                         .attach_printable(format!("Failed to convert amount: {e}"))
@@ -261,7 +261,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 tracing::debug!(?card_req, "Elavon Card Payment Request");
                 Ok(Self::Card(card_req))
             }
-            _ => Err(report!(ConnectorRequestError::not_implemented(
+            _ => Err(report!(IntegrationError::not_implemented(
                 "Only card payments are supported for Elavon".to_string()
             ))),
         }
@@ -300,7 +300,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for XMLElavonRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: ElavonRouterData<
@@ -324,7 +324,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Generate XML content directly
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|err| {
             tracing::info!(error=?err, "XML serialization error");
-            error_stack::report!(ConnectorRequestError::RequestEncodingFailed {
+            error_stack::report!(IntegrationError::RequestEncodingFailed {
                 context: Default::default()
             })
         })?;
@@ -356,7 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for XMLPSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: ElavonRouterData<
@@ -366,7 +366,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Direct implementation to avoid recursive calls
         let request = SyncRequest::try_from(&data.router_data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to create SyncRequest from RouterData")?;
@@ -377,7 +377,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Generate XML content directly
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|err| {
             tracing::info!(error=?err, "XML serialization error");
-            error_stack::report!(ConnectorRequestError::RequestEncodingFailed {
+            error_stack::report!(IntegrationError::RequestEncodingFailed {
                 context: Default::default()
             })
         })?;
@@ -410,7 +410,7 @@ pub enum SslResult {
 }
 
 impl TryFrom<String> for SslResult {
-    type Error = ConnectorResponseError;
+    type Error = ConnectorResponseTransformationError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
             "0" => Ok(Self::Approved),
@@ -767,7 +767,7 @@ impl<
     > TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         value: ResponseRouterData<ElavonPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -859,7 +859,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ElavonRouterData<
@@ -874,7 +874,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for SyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
@@ -886,7 +886,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
             _ => {
                 return Err(report!(
-                    ConnectorRequestError::MissingConnectorTransactionID {
+                    IntegrationError::MissingConnectorTransactionID {
                         context: Default::default()
                     }
                 ))
@@ -923,7 +923,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ElavonCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ElavonRouterData<
@@ -938,7 +938,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
                 return Err(report!(
-                    ConnectorRequestError::MissingConnectorTransactionID {
+                    IntegrationError::MissingConnectorTransactionID {
                         context: Default::default()
                     }
                 ))
@@ -952,7 +952,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -976,7 +976,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for XMLCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: ElavonRouterData<
@@ -986,14 +986,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the ElavonCaptureRequest
         let request = ElavonCaptureRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to create ElavonCaptureRequest")?;
 
         // Generate XML content
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
-            ConnectorRequestError::RequestEncodingFailed {
+            IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             }
         })?;
@@ -1013,7 +1013,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         value: ResponseRouterData<ElavonCaptureResponse, Self>,
@@ -1105,7 +1105,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for ElavonRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ElavonRouterData<
@@ -1121,7 +1121,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_converter = StringMajorUnitForConnector;
         let amount = amount_converter
             .convert(request_data.minor_refund_amount, request_data.currency)
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+            .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -1142,7 +1142,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for XMLRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: ElavonRouterData<
@@ -1152,14 +1152,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the ElavonRefundRequest
         let request = ElavonRefundRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to create ElavonRefundRequest")?;
 
         // Generate XML content
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
-            ConnectorRequestError::RequestEncodingFailed {
+            IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             }
         })?;
@@ -1179,7 +1179,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         value: ResponseRouterData<ElavonRefundResponse, Self>,
@@ -1252,7 +1252,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ElavonRouterData<
@@ -1267,7 +1267,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for SyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1294,7 +1294,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for XMLRSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: ElavonRouterData<
@@ -1304,14 +1304,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Create the SyncRequest
         let request = SyncRequest::try_from(data)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to create SyncRequest for RSync")?;
 
         // Generate XML content
         let xml_content = quick_xml::se::to_string_with_root("txn", &request).map_err(|_| {
-            ConnectorRequestError::RequestEncodingFailed {
+            IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             }
         })?;
@@ -1357,7 +1357,7 @@ pub fn get_refund_status_from_elavon_sync_response(
 impl<F> TryFrom<ResponseRouterData<ElavonRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(value: ResponseRouterData<ElavonRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -1414,7 +1414,7 @@ pub enum SyncTransactionType {
 impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(value: ResponseRouterData<ElavonPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,

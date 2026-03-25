@@ -53,8 +53,8 @@ use interfaces::{
 };
 
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 use transformers::{
     BankOfAmericaAuthType, BankOfAmericaPaymentsResponseForSetupMandate,
     BankOfAmericaPaymentsResponseForVoid, BankOfAmericaRefundRequestForRefund,
@@ -369,7 +369,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         _event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: Result<
             BankofamericaErrorResponse,
             Report<common_utils::errors::ParsingError>,
@@ -512,7 +512,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
             FCD: HasConnectors,
@@ -523,15 +523,15 @@ macros::create_all_prerequisites!(
         let merchant_account = auth.merchant_account.clone();
         let base_url = self.base_url(req.resource_common_data.connectors());
         let bankofamerica_host =
-            url::Url::parse(base_url).change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            url::Url::parse(base_url).change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
         let host = bankofamerica_host
             .host_str()
-            .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+            .ok_or(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
         let url = self.get_url(req)?;
         let skip_len = base_url.len().saturating_sub(1);
         if url.len() <= skip_len {
             return Err(
-                ConnectorRequestError::InvalidDataFormat {
+                IntegrationError::InvalidDataFormat {
                     field_name: "url",
                     context: Default::default()
 }
@@ -608,7 +608,7 @@ macros::create_all_prerequisites!(
         payload: &String,
         date: OffsetDateTime,
         http_method: Method,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let BankOfAmericaAuthType {
             api_key,
             merchant_account,
@@ -628,7 +628,7 @@ macros::create_all_prerequisites!(
         );
         let key_value = BASE64_ENGINE
             .decode(api_secret.expose())
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
+            .change_context(IntegrationError::InvalidConnectorConfig {
                 config: "connector_account_details.api_secret",
                 context: Default::default()
             })?;
@@ -662,14 +662,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(format!(
             "{}pts/v2/payments/",
             self.connector_base_url_payments(req)
@@ -693,19 +693,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let connector_payment_id = req
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+            .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}tss/v2/transactions/{connector_payment_id}",
             self.connector_base_url_payments(req)
@@ -730,19 +730,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let connector_payment_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
         Ok(format!(
             "{}pts/v2/payments/{connector_payment_id}/captures",
             self.connector_base_url_payments(req)
@@ -767,17 +767,17 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let connector_payment_id = &req.request.connector_transaction_id;
         if connector_payment_id.is_empty() {
-            return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+            return Err(IntegrationError::MissingConnectorTransactionID { context: Default::default() }.into());
         }
         Ok(format!(
             "{}pts/v2/payments/{connector_payment_id}/reversals",
@@ -803,14 +803,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(format!(
             "{}pts/v2/payments/",
             self.connector_base_url_payments(_req)
@@ -835,17 +835,17 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let connector_payment_id = &req.request.connector_transaction_id;
         if connector_payment_id.is_empty() {
-            return Err(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() }.into());
+            return Err(IntegrationError::MissingConnectorTransactionID { context: Default::default() }.into());
         }
         Ok(format!(
             "{}pts/v2/payments/{connector_payment_id}/refunds",
@@ -870,14 +870,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let refund_id = req.request.connector_refund_id.clone();
         Ok(format!(
             "{}tss/v2/transactions/{refund_id}",

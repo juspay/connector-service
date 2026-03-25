@@ -5,7 +5,7 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsResponseData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -27,7 +27,7 @@ pub struct CashfreeAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -37,7 +37,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
                 app_id: app_id.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
-            _ => Err(report!(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(report!(IntegrationError::FailedToObtainAuthType {
                 context: Default::default()
             })),
         }
@@ -221,7 +221,7 @@ fn get_cashfree_payment_method_data<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     payment_method_data: &PaymentMethodData<T>,
-) -> Result<CashfreePaymentMethod, ConnectorRequestError> {
+) -> Result<CashfreePaymentMethod, IntegrationError> {
     match payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
             match upi_data {
@@ -234,7 +234,7 @@ fn get_cashfree_payment_method_data<
                         .unwrap_or_default();
 
                     if vpa.is_empty() {
-                        return Err(ConnectorRequestError::MissingRequiredField {
+                        return Err(IntegrationError::MissingRequiredField {
                             field_name: "vpa_id for UPI collect",
                             context: Default::default(),
                         });
@@ -273,7 +273,7 @@ fn get_cashfree_payment_method_data<
                 }
             }
         }
-        _ => Err(ConnectorRequestError::NotSupported {
+        _ => Err(IntegrationError::NotSupported {
             message: "Only UPI payment methods are supported for Cashfree V3".to_string(),
             connector: "Cashfree",
             context: Default::default(),
@@ -299,7 +299,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CashfreeOrderCreateRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         wrapper: crate::connectors::cashfree::CashfreeRouterData<
@@ -331,7 +331,7 @@ impl
         >,
     > for CashfreeOrderCreateRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -360,7 +360,7 @@ impl
         >,
     )> for CashfreeOrderCreateRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         (converted_amount, item): (
@@ -377,7 +377,7 @@ impl
             .resource_common_data
             .address
             .get_payment_method_billing()
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing_address",
                 context: Default::default(),
             })?;
@@ -404,7 +404,7 @@ impl
 
         // Build order meta with return and notify URLs
         let return_url = item.resource_common_data.return_url.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "return_url",
                 context: Default::default(),
             },
@@ -412,7 +412,7 @@ impl
 
         // Get webhook URL from request - required for Cashfree V3
         let notify_url = item.request.webhook_url.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "webhook_url",
                 context: Default::default(),
             },
@@ -453,7 +453,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CashfreePaymentRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         wrapper: crate::connectors::cashfree::CashfreeRouterData<
@@ -476,7 +476,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for CashfreePaymentRequest
 {
-    type Error = Report<ConnectorRequestError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         // Extract payment_session_id from reference_id (set by CreateOrder response)
         let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "merchant_order_id",
                 context: Default::default(),
             },
@@ -510,7 +510,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // ============================================================================
 
 impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -529,7 +529,7 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<CashfreeOrderCreateResponse, Self>,
@@ -558,7 +558,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<CashfreePaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseError>;
+    type Error = Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<CashfreePaymentResponse, Self>,
@@ -572,7 +572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let deep_link = response.data.payload.map(|p| p.default_link).ok_or_else(
                         || {
                             Report::new(
-                                ConnectorResponseError::response_handling_failed_with_context(
+                                ConnectorResponseTransformationError::response_handling_failed_with_context(
                                     item.http_code,
                                     Some(
                                         "link channel: missing payload.default_link (UPI intent)"

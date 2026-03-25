@@ -5,7 +5,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -76,7 +76,7 @@ pub struct PayuAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -88,7 +88,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -276,7 +276,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PayuPaymentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::PayuRouterData<
@@ -300,7 +300,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -335,7 +335,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             firstname: router_data
                 .resource_common_data
                 .get_billing_first_name()
-                .change_context(ConnectorRequestError::MissingRequiredField {
+                .change_context(IntegrationError::MissingRequiredField {
                     field_name: "billing.first_name",
                     context: Default::default(),
                 })?,
@@ -345,27 +345,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             email: router_data
                 .resource_common_data
                 .get_billing_email()
-                .change_context(ConnectorRequestError::MissingRequiredField {
+                .change_context(IntegrationError::MissingRequiredField {
                     field_name: "billing.email",
                     context: Default::default(),
                 })?,
             phone: router_data
                 .resource_common_data
                 .get_billing_phone_number()
-                .change_context(ConnectorRequestError::MissingRequiredField {
+                .change_context(IntegrationError::MissingRequiredField {
                     field_name: "billing.phone_number",
                     context: Default::default(),
                 })?,
 
             // URLs - use router return URL if available
             surl: router_data.request.get_router_return_url().map_err(|_| {
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "router_return_url",
                     context: Default::default(),
                 }
             })?,
             furl: router_data.request.get_router_return_url().map_err(|_| {
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "router_return_url",
                     context: Default::default(),
                 }
@@ -382,7 +382,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .get_ip_address_as_optional()
                 .ok_or_else(|| {
-                    report!(ConnectorRequestError::MissingRequiredField {
+                    report!(IntegrationError::MissingRequiredField {
                         field_name: "IP address",
                         context: Default::default()
                     })
@@ -485,7 +485,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PayuSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::PayuRouterData<
@@ -503,7 +503,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorRequestError::MissingRequiredField {
+            .change_context(IntegrationError::MissingRequiredField {
                 field_name: "connector_transaction_id",
                 context: Default::default(),
             })?;
@@ -531,7 +531,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 fn generate_payu_verify_hash(
     request: &PayuSyncRequest,
     merchant_salt: &Secret<String>,
-) -> Result<String, ConnectorRequestError> {
+) -> Result<String, IntegrationError> {
     use sha2::{Digest, Sha512};
 
     // PayU verify hash format: key|command|var1|salt
@@ -621,7 +621,7 @@ fn determine_upi_app_name<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     request: &PaymentsAuthorizeData<T>,
-) -> Result<Option<String>, ConnectorRequestError> {
+) -> Result<Option<String>, IntegrationError> {
     // From Haskell getUpiAppName implementation:
     // getUpiAppName txnDetail = case getJuspayBankCodeFromInternalMetadata txnDetail of
     //   Just "JP_PHONEPE"   -> "phonepe"
@@ -657,7 +657,7 @@ fn determine_upi_flow<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     request: &PaymentsAuthorizeData<T>,
-) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorRequestError> {
+) -> Result<(Option<String>, Option<String>, Option<String>, String), IntegrationError> {
     // Based on Haskell implementation:
     // getTxnS2SType :: Bool -> Bool -> Bool -> Bool -> Bool -> Maybe Text
     // getTxnS2SType isTxnS2SFlow4Enabled s2sEnabled isDirectOTPTxn isEmandateRegister isDirectAuthorization
@@ -678,7 +678,7 @@ fn determine_upi_flow<
                         ))
                     } else {
                         // Missing VPA for UPI Collect - this should be an error
-                        Err(ConnectorRequestError::MissingRequiredField {
+                        Err(IntegrationError::MissingRequiredField {
                             field_name: "vpa_id",
                             context: Default::default(),
                         })
@@ -696,7 +696,7 @@ fn determine_upi_flow<
                 }
             }
         }
-        _ => Err(ConnectorRequestError::NotSupported {
+        _ => Err(IntegrationError::NotSupported {
             message: "Payment method not supported by PayU. Only UPI payments are supported"
                 .to_string(),
             connector: "PayU",
@@ -722,7 +722,7 @@ pub fn is_upi_collect_flow<
 fn generate_payu_hash(
     request: &PayuPaymentRequest,
     merchant_salt: &Secret<String>,
-) -> Result<String, ConnectorRequestError> {
+) -> Result<String, IntegrationError> {
     use sha2::{Digest, Sha512};
 
     // Build hash fields array exactly as PayU expects based on Haskell implementation
@@ -772,7 +772,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<PayuPaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<PayuPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
@@ -895,7 +895,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<PayuSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;

@@ -54,8 +54,8 @@ pub(crate) mod headers {
 }
 
 use super::macros;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 macros::create_all_prerequisites!(
     connector_name: Mollie,
@@ -108,7 +108,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -306,7 +306,7 @@ macros::macro_connector_implementation!(
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}/payments",
                 self.base_url(&req.resource_common_data.connectors)
@@ -339,12 +339,12 @@ macros::macro_connector_implementation!(
                 PaymentsSyncData,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let payment_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}/payments/{}",
                 self.base_url(&req.resource_common_data.connectors),
@@ -374,7 +374,7 @@ macros::macro_connector_implementation!(
                 PaymentVoidData,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let payment_id = req
                 .request
                 .connector_transaction_id
@@ -422,12 +422,12 @@ macros::macro_connector_implementation!(
                 PaymentsCaptureData,
                 PaymentsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let payment_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             Ok(format!(
                 "{}/payments/{}/captures",
                 self.base_url(&req.resource_common_data.connectors),
@@ -458,7 +458,7 @@ macros::macro_connector_implementation!(
                 RefundsData,
                 RefundsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
                 "{}/payments/{}/refunds",
@@ -490,7 +490,7 @@ macros::macro_connector_implementation!(
                 RefundSyncData,
                 RefundsResponseData,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let payment_id = req.request.connector_transaction_id.clone();
             let refund_id = req.request.connector_refund_id.clone();
             Ok(format!(
@@ -622,7 +622,7 @@ macros::macro_connector_implementation!(
                 PaymentMethodTokenizationData<T>,
                 PaymentMethodTokenResponse,
             >,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             // Use Mollie Components API (secondary_base_url) for card tokenization
             let secondary_base_url = req
                 .resource_common_data
@@ -630,7 +630,7 @@ macros::macro_connector_implementation!(
                 .mollie
                 .secondary_base_url
                 .as_ref()
-                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "secondary_base_url",
                 context: Default::default()
                 })?;
@@ -719,9 +719,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = mollie::MollieAuthType::try_from(auth_type).change_context(
-            ConnectorRequestError::FailedToObtainAuthType {
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
         )?;
@@ -735,11 +735,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: mollie::MollieErrorResponse = res
             .response
             .parse_struct("MollieErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
+            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
                 res.status_code,
             ))?;
 

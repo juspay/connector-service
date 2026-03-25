@@ -9,7 +9,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -23,14 +23,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-type HsInterfacesConnectorRequestError = ConnectorRequestError;
+type HsInterfacesConnectorRequestError = IntegrationError;
 
 const CAPTURE: &str = "capture";
 const VOID: &str = "void";
 const REVERSE: &str = "reverse";
 
 impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(connector_metadata: &Option<serde_json::Value>) -> Result<Self, Self::Error> {
         let config_data = crate::utils::to_connector_meta(connector_metadata.clone())?;
         Ok(config_data)
@@ -119,7 +119,7 @@ pub enum ForteSecCode {
 }
 
 impl TryFrom<utils::CardIssuer> for ForteCardType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(issuer: utils::CardIssuer) -> Result<Self, Self::Error> {
         match issuer {
             utils::CardIssuer::AmericanExpress => Ok(Self::Amex),
@@ -128,7 +128,7 @@ impl TryFrom<utils::CardIssuer> for ForteCardType {
             utils::CardIssuer::Visa => Ok(Self::Visa),
             utils::CardIssuer::DinersClub => Ok(Self::DinersClub),
             utils::CardIssuer::JCB => Ok(Self::Jcb),
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Forte"),
             )
             .into()),
@@ -149,7 +149,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for FortePaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ForteRouterData<
             RouterDataV2<
@@ -162,7 +162,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.currency != enums::Currency::USD {
-            return Err(ConnectorRequestError::NotSupported {
+            return Err(IntegrationError::NotSupported {
                 message: "Only USD currency is supported by Forte".to_string(),
                 connector: "Forte",
                 context: Default::default(),
@@ -205,7 +205,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                    .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
                 Ok(Self {
                     action,
                     authorization_amount,
@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .resource_common_data
                             .get_billing_full_name()
                             .ok())
-                        .ok_or(ConnectorRequestError::MissingRequiredField {
+                        .ok_or(IntegrationError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
                 context: Default::default()
                         })?;
@@ -265,7 +265,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
+                        .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
 
                     Ok(Self {
                         action,
@@ -275,22 +275,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 })
                 }
                 BankDebitData::SepaBankDebit { .. } => {
-                    Err(ConnectorRequestError::not_implemented(
+                    Err(IntegrationError::not_implemented(
                         "SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
                     ))?
                 }
                 BankDebitData::BecsBankDebit { .. } => {
-                    Err(ConnectorRequestError::not_implemented(
+                    Err(IntegrationError::not_implemented(
                         "BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
                     ))?
                 }
                 BankDebitData::BacsBankDebit { .. } => {
-                    Err(ConnectorRequestError::not_implemented(
+                    Err(IntegrationError::not_implemented(
                         "BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
                     ))?
                 }
                 BankDebitData::SepaGuaranteedBankDebit { .. } => {
-                    Err(ConnectorRequestError::not_implemented(
+                    Err(IntegrationError::not_implemented(
                         "SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
                     ))?
                 }
@@ -312,7 +312,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Forte"),
                 ))?
             }
@@ -329,7 +329,7 @@ pub struct ForteAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for ForteAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Forte {
@@ -356,7 +356,7 @@ impl TryFrom<&ConnectorSpecificConfig> for ForteAuthType {
                     api_secret_key: api_secret_key.to_owned(),
                 })
             }
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             })?,
         }
@@ -487,7 +487,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<FortePaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<FortePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -550,7 +550,7 @@ pub struct ForteLink {
 impl<F> TryFrom<ResponseRouterData<FortePaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<FortePaymentsSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -594,7 +594,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ForteCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ForteRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -605,13 +605,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .minor_amount_capturable
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "amount",
                 context: Default::default(),
             })?;
 
         if item.router_data.request.minor_amount_to_capture != minor_amount_authorized {
-            return Err(ConnectorRequestError::NotSupported {
+            return Err(IntegrationError::NotSupported {
                 message: "Forte only supports full captures.".to_string(),
                 connector: "Forte",
                 context: Default::default(),
@@ -668,7 +668,7 @@ pub struct ForteCaptureResponse {
 impl<F, T> TryFrom<ResponseRouterData<ForteCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<ForteCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
@@ -709,7 +709,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ForteCancelRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ForteRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -754,7 +754,7 @@ pub struct ForteCancelResponse {
 impl<F, T> TryFrom<ResponseRouterData<ForteCancelResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<ForteCancelResponse, Self>) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
@@ -793,7 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for ForteRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ForteRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -829,7 +829,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
         Ok(Self {
@@ -882,7 +882,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: RefundFlowData {
@@ -908,7 +908,7 @@ pub struct RefundSyncResponse {
 impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: RefundFlowData {

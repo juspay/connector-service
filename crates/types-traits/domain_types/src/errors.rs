@@ -123,7 +123,7 @@ pub struct IntegrationErrorContext {
 /// `ConnectorResponseTransformationError`.
 ///
 /// For rare cases (e.g. HTTP status unknown **and** [`Self::additional_context`] set), build
-/// [`ConnectorResponseError`] with a struct literal instead of adding more constructor helpers.
+/// [`ConnectorResponseTransformationError`] with a struct literal instead of adding more constructor helpers.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ResponseTransformationErrorContext {
     /// HTTP status from the connector response when known.
@@ -170,7 +170,7 @@ impl ResponseTransformationErrorContext {
 /// - request building variants from `ApiClientError` (`HeaderMapConstruction`, etc.)
 #[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
-pub enum ConnectorRequestError {
+pub enum IntegrationError {
     #[error("Error while obtaining URL for the integration")]
     FailedToObtainIntegrationUrl { context: IntegrationErrorContext },
     #[error("Failed to encode connector request")]
@@ -281,7 +281,7 @@ pub enum ConnectorRequestError {
     },
 }
 
-impl ConnectorRequestError {
+impl IntegrationError {
     /// Create a configuration/auth/metadata error with a standardized code.
     pub fn config_error(code: &'static str, message: impl Into<String>) -> Self {
         Self::config_error_with_context(code, message, IntegrationErrorContext::default())
@@ -362,7 +362,7 @@ impl ConnectorRequestError {
     }
 }
 
-impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
+impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
     fn switch(&self) -> ApplicationErrorResponse {
         let api_err = |sub_code: &str, id: u16| ApiError {
             sub_code: sub_code.to_string(),
@@ -414,18 +414,18 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
     }
 }
 
-/// Convert `Report<ConnectorRequestError>` to `Report<ApplicationErrorResponse>` for use in
+/// Convert `Report<IntegrationError>` to `Report<ApplicationErrorResponse>` for use in
 /// `types.rs` impls that have `type Error = ApplicationErrorResponse`.
 pub fn connector_request_report_to_application(
-    r: Report<ConnectorRequestError>,
+    r: Report<IntegrationError>,
 ) -> Report<ApplicationErrorResponse> {
     let ctx = r.current_context().clone().switch();
     r.change_context(ctx)
 }
 
-impl ErrorSwitch<ConnectorRequestError> for ApplicationErrorResponse {
-    fn switch(&self) -> ConnectorRequestError {
-        ConnectorRequestError::ConfigurationError {
+impl ErrorSwitch<IntegrationError> for ApplicationErrorResponse {
+    fn switch(&self) -> IntegrationError {
+        IntegrationError::ConfigurationError {
             code: "APPLICATION_ERROR",
             message: self.get_api_error().error_message.clone(),
             context: IntegrationErrorContext::default(),
@@ -439,11 +439,11 @@ impl common_utils::errors::ErrorSwitchFrom<ApplicationErrorResponse> for Applica
     }
 }
 
-/// Convert `Report<ApplicationErrorResponse>` to `Report<ConnectorRequestError>` for use in
-/// impls that have `type Error = ConnectorRequestError`.
+/// Convert `Report<ApplicationErrorResponse>` to `Report<IntegrationError>` for use in
+/// impls that have `type Error = IntegrationError`.
 pub fn application_report_to_connector_request(
     r: Report<ApplicationErrorResponse>,
-) -> Report<ConnectorRequestError> {
+) -> Report<IntegrationError> {
     let ctx = r.current_context().clone().switch();
     r.change_context(ctx)
 }
@@ -454,7 +454,7 @@ pub fn application_report_to_connector_request(
 /// - connector infra HTTP error responses (5xx, unexpected status)
 #[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
-pub enum ConnectorResponseError {
+pub enum ConnectorResponseTransformationError {
     #[error("Failed to deserialize connector response")]
     ResponseDeserializationFailed {
         /// Always present: set `http_status_code` to `Some` when the connector HTTP response is known.
@@ -476,7 +476,7 @@ pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
     None
 }
 
-impl ConnectorResponseError {
+impl ConnectorResponseTransformationError {
     /// HTTP status code from the connector response (`None` when not applicable).
     pub fn http_status_code(&self) -> Option<u16> {
         match self {
@@ -599,7 +599,7 @@ impl ConnectorResponseError {
     }
 }
 
-impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseError {
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseTransformationError {
     fn switch(&self) -> ApplicationErrorResponse {
         ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "INTERNAL_SERVER_ERROR".to_string(),
@@ -640,15 +640,15 @@ pub enum WebhookError {
 
 /// Wrapper enum used by `execute_connector_processing_step` (gRPC unified path)
 /// which performs all three phases in one call.
-/// SDK uses `ConnectorRequestError` / `ConnectorResponseError` directly.
+/// SDK uses `IntegrationError` / `ConnectorResponseTransformationError` directly.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ConnectorFlowError {
     #[error("Connector Request Transformation error: {0}")]
-    Request(#[from] ConnectorRequestError),
+    Request(#[from] IntegrationError),
     #[error("Client error: {0}")]
     Client(#[from] ApiClientError),
     #[error("Connector Response Transformation error: {0}")]
-    Response(#[from] ConnectorResponseError),
+    Response(#[from] ConnectorResponseTransformationError),
 }
 
 impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
@@ -747,7 +747,7 @@ impl From<common_enums::ApiClientError> for ApiClientError {
 
 /// Map a request-phase error report into `ConnectorFlowError::Request`.
 pub fn report_connector_request_to_flow(
-    report: Report<ConnectorRequestError>,
+    report: Report<IntegrationError>,
 ) -> Report<ConnectorFlowError> {
     let ctx = report.current_context().clone();
     report.change_context(ConnectorFlowError::Request(ctx))
@@ -755,7 +755,7 @@ pub fn report_connector_request_to_flow(
 
 /// Map a response-phase error report into `ConnectorFlowError::Response`.
 pub fn report_connector_response_to_flow(
-    report: Report<ConnectorResponseError>,
+    report: Report<ConnectorResponseTransformationError>,
 ) -> Report<ConnectorFlowError> {
     let ctx = report.current_context().clone();
     report.change_context(ConnectorFlowError::Response(ctx))
@@ -1496,8 +1496,8 @@ impl From<ApiErrorResponse> for crate::router_data::ErrorResponse {
     }
 }
 
-impl ErrorSwitch<ConnectorRequestError> for common_utils::errors::ParsingError {
-    fn switch(&self) -> ConnectorRequestError {
+impl ErrorSwitch<IntegrationError> for common_utils::errors::ParsingError {
+    fn switch(&self) -> IntegrationError {
         use common_utils::errors::ParsingError as Pe;
         let field_name = match self {
             Pe::EnumParseFailure(name) | Pe::StructParseFailure(name) | Pe::EncodeError(name) => {
@@ -1514,7 +1514,7 @@ impl ErrorSwitch<ConnectorRequestError> for common_utils::errors::ParsingError {
             Pe::StringToDecimalConversionFailure { .. } => "decimal",
             Pe::IntegerOverflow => "integer",
         };
-        ConnectorRequestError::InvalidDataFormat {
+        IntegrationError::InvalidDataFormat {
             field_name,
             context: IntegrationErrorContext::default(),
         }

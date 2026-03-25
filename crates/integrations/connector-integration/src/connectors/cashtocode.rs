@@ -42,8 +42,8 @@ use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaym
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -145,7 +145,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<bool, error_stack::Report<IntegrationError>> {
         let webhook_secret = match connector_webhook_secrets.clone() {
             Some(secrets) => secrets,
             None => return Ok(false),
@@ -155,19 +155,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             request
                 .headers
                 .get("authorization")
-                .ok_or(ConnectorRequestError::not_implemented(
+                .ok_or(IntegrationError::not_implemented(
                     "webhook signature not found".to_string(),
                 ))?;
 
         let signature = base64_signature.as_bytes();
 
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Could not convert secret to UTF-8")?;
         let signature_auth = String::from_utf8(signature.to_vec())
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Could not convert secret to UTF-8")?;
@@ -179,7 +179,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorRequestError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<IntegrationError>>
     {
         Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
@@ -191,12 +191,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<ConnectorRequestError>,
+        error_stack::Report<IntegrationError>,
     > {
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
             .parse_struct("CashtocodePaymentsSyncResponse")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook resource object not found".to_string(),
             ))?;
 
@@ -308,7 +308,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -350,7 +350,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -369,7 +369,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/merchant/paytokens", self.connector_base_url_payments(req)))
         }
     }
@@ -397,7 +397,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         // Cashtocode uses custom auth in get_headers
         Ok(vec![])
     }
@@ -406,11 +406,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: cashtocode::CashtocodeErrorResponse = res
             .response
             .parse_struct("CashtocodeErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
+            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
                 res.status_code,
             ))?;
 
@@ -598,15 +598,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 fn get_b64_auth_cashtocode(
     payment_method_type: Option<common_enums::PaymentMethodType>,
     auth_type: &transformers::CashtocodeAuth,
-) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
     fn construct_basic_auth(
         username: Option<Secret<String>>,
         password: Option<Secret<String>>,
-    ) -> Result<Maskable<String>, ConnectorRequestError> {
-        let username = username.ok_or(ConnectorRequestError::FailedToObtainAuthType {
+    ) -> Result<Maskable<String>, IntegrationError> {
+        let username = username.ok_or(IntegrationError::FailedToObtainAuthType {
             context: Default::default(),
         })?;
-        let password = password.ok_or(ConnectorRequestError::FailedToObtainAuthType {
+        let password = password.ok_or(IntegrationError::FailedToObtainAuthType {
             context: Default::default(),
         })?;
         Ok(format!(
@@ -630,7 +630,7 @@ fn get_b64_auth_cashtocode(
             auth_type.password_evoucher.to_owned(),
         ),
         _ => {
-            return Err(ConnectorRequestError::MissingPaymentMethodType {
+            return Err(IntegrationError::MissingPaymentMethodType {
                 context: Default::default(),
             })?
         }

@@ -16,7 +16,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         WebhookDetailsResponse,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -187,7 +187,7 @@ pub struct NovalnetPaymentsRequest<
 }
 
 impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(item: &common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
         match item {
             common_enums::PaymentMethodType::ApplePay => Ok(Self::APPLEPAY),
@@ -196,7 +196,7 @@ impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
             common_enums::PaymentMethodType::Paypal => Ok(Self::PAYPAL),
             common_enums::PaymentMethodType::Sepa => Ok(Self::DirectDebitSepa),
             common_enums::PaymentMethodType::Ach => Ok(Self::DirectDebitAch),
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Novalnet"),
             ))?,
         }
@@ -216,7 +216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<
@@ -310,7 +310,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -360,7 +360,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 req_wallet
                                     .tokenization_data
                                     .get_encrypted_google_pay_token()
-                                    .change_context(ConnectorRequestError::MissingRequiredField {
+                                    .change_context(IntegrationError::MissingRequiredField {
                                         field_name: "gpay wallet_token",
                                         context: Default::default(),
                                     })?
@@ -476,7 +476,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::Mifinity(_)
                 | WalletDataPaymentMethod::MbWay(_)
                 | WalletDataPaymentMethod::Satispay(_)
-                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletDataPaymentMethod::Wero(_) => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 )
                 .into()),
@@ -484,7 +484,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::BankDebit(ref bank_debit_data) => {
                 let payment_type = NovalNetPaymentTypes::try_from(
                     &item.router_data.request.payment_method_type.ok_or(
-                        ConnectorRequestError::MissingPaymentMethodType {
+                        IntegrationError::MissingPaymentMethodType {
                             context: Default::default(),
                         },
                     )?,
@@ -561,7 +561,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankDebitData::SepaGuaranteedBankDebit { .. }
                     | BankDebitData::BecsBankDebit { .. }
                     | BankDebitData::BacsBankDebit { .. } => {
-                        return Err(ConnectorRequestError::not_implemented(
+                        return Err(IntegrationError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("novalnet"),
                         )
                         .into());
@@ -575,7 +575,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     custom,
                 })
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
             .into()),
@@ -591,7 +591,7 @@ pub struct NovalnetAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for NovalnetAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Novalnet {
@@ -604,7 +604,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NovalnetAuthType {
                 payment_access_key: payment_access_key.to_owned(),
                 tariff_id: tariff_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -723,7 +723,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -827,7 +827,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -927,7 +927,7 @@ impl<
     > TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1150,7 +1150,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<
@@ -1180,7 +1180,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -1189,7 +1189,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .request
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                .change_context(IntegrationError::MissingConnectorTransactionID {
                     context: Default::default(),
                 })?,
             capture,
@@ -1228,7 +1228,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         NovalnetRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NovalnetRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -1242,7 +1242,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -1320,7 +1320,7 @@ pub struct NovalnetRefundResponse {
 impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1329,7 +1329,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .transaction
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
-            .ok_or(ConnectorResponseError::response_handling_failed(
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
                 item.http_code,
             ))?;
 
@@ -1379,7 +1379,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -1400,17 +1400,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .encoded_data
                 .clone()
                 .get_required_value("encoded_data")
-                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                .change_context(IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?;
             let novalnet_redirection_response =
                 serde_urlencoded::from_str::<NovalnetRedirectionResponse>(encoded_data.as_str())
-                    .change_context(ConnectorRequestError::InvalidDataFormat {
+                    .change_context(IntegrationError::InvalidDataFormat {
                         field_name: "encoded_data",
                         context: Default::default(),
                     })?;
             let tid = novalnet_redirection_response.tid.ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "tid",
                     context: Default::default(),
                 },
@@ -1422,7 +1422,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .router_data
                     .request
                     .get_connector_transaction_id()
-                    .change_context(ConnectorRequestError::MissingConnectorTransactionID {
+                    .change_context(IntegrationError::MissingConnectorTransactionID {
                         context: Default::default(),
                     })?,
             }
@@ -1459,7 +1459,7 @@ impl NovalnetSyncResponseTransactionData {
 impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1568,7 +1568,7 @@ pub struct NovalnetCaptureResponse {
 impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1645,7 +1645,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1673,7 +1673,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<NovalnetRefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<NovalnetRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1737,7 +1737,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetCancelRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1771,7 +1771,7 @@ pub struct NovalnetCancelResponse {
 impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NovalnetCancelResponse, Self>,
@@ -1910,21 +1910,21 @@ pub fn get_novalnet_dispute_status(status: WebhookEventType) -> WebhookDisputeSt
 }
 
 impl ForeignTryFrom<WebhookDisputeStatus> for common_enums::DisputeStatus {
-    type Error = ConnectorRequestError;
+    type Error = IntegrationError;
 
     fn foreign_try_from(value: WebhookDisputeStatus) -> error_stack::Result<Self, Self::Error> {
         match value {
             WebhookDisputeStatus::DisputeOpened => Ok(Self::DisputeOpened),
             WebhookDisputeStatus::DisputeWon => Ok(Self::DisputeWon),
-            WebhookDisputeStatus::Unknown => Err(ConnectorRequestError::not_implemented(
+            WebhookDisputeStatus::Unknown => Err(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?,
         }
     }
 }
 
-pub fn option_to_result<T>(opt: Option<T>) -> Result<T, ConnectorRequestError> {
-    opt.ok_or(ConnectorRequestError::not_implemented(
+pub fn option_to_result<T>(opt: Option<T>) -> Result<T, IntegrationError> {
+    opt.ok_or(IntegrationError::not_implemented(
         "webhook body decoding failed".to_string(),
     ))
 }
@@ -1942,7 +1942,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<
@@ -1953,7 +1953,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    ) -> Result<Self, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Self, error_stack::Report<IntegrationError>> {
         let auth = NovalnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
@@ -2071,7 +2071,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 req_wallet
                                     .tokenization_data
                                     .get_encrypted_google_pay_token()
-                                    .change_context(ConnectorRequestError::MissingRequiredField {
+                                    .change_context(IntegrationError::MissingRequiredField {
                                         field_name: "gpay wallet_token",
                                         context: Default::default(),
                                     })?
@@ -2149,7 +2149,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::MbWayRedirect(_)
                 | WalletDataPaymentMethod::MobilePayRedirect(_)
                 | WalletDataPaymentMethod::RevolutPay(_) => {
-                    Err(ConnectorRequestError::not_implemented(
+                    Err(IntegrationError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("novalnet"),
                     ))?
                 }
@@ -2192,11 +2192,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::Mifinity(_)
                 | WalletDataPaymentMethod::MbWay(_)
                 | WalletDataPaymentMethod::Satispay(_)
-                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletDataPaymentMethod::Wero(_) => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 ))?,
             },
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             ))?,
         }
@@ -2216,7 +2216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NovalnetPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NovalnetRouterData<
             RouterDataV2<
@@ -2305,14 +2305,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
         match item.router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(mandate_data) => {
                 let connector_mandate_id = mandate_data.get_connector_mandate_id().ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                         context: Default::default(),
                     },
@@ -2388,13 +2388,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             custom,
                         })
                     }
-                    _ => Err(ConnectorRequestError::not_implemented(
+                    _ => Err(IntegrationError::not_implemented(
                         utils::get_unimplemented_payment_method_error_message("novalnet"),
                     )
                     .into()),
                 }
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
             .into()),
@@ -2438,7 +2438,7 @@ pub fn get_incoming_webhook_event(
 }
 
 impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(notif: NovalnetWebhookNotificationResponse) -> Result<Self, Self::Error> {
         match notif.transaction {
@@ -2511,7 +2511,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                     }),
                 }
             }
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?,
         }
@@ -2519,7 +2519,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
 }
 
 impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetailsResponse {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(notif: NovalnetWebhookNotificationResponseRefunds) -> Result<Self, Self::Error> {
         let refund_id = notif
@@ -2527,7 +2527,7 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
             .refund
             .tid
             .map(|tid| tid.to_string())
-            .ok_or(ConnectorRequestError::not_implemented(
+            .ok_or(IntegrationError::not_implemented(
                 "missing refund transaction id in webhook".to_string(),
             ))?;
 

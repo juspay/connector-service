@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::requests::*;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::ConnectorResponseTransformationError;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -272,7 +272,7 @@ pub fn get_resource_id<T, F>(
     connector_transaction_id: Option<String>,
     transform_fn: F,
     http_status: u16,
-) -> Result<T, error_stack::Report<ConnectorResponseError>>
+) -> Result<T, error_stack::Report<ConnectorResponseTransformationError>>
 where
     F: Fn(String) -> T,
 {
@@ -302,7 +302,7 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(ConnectorResponseError::response_handling_failed(
+                .change_context(ConnectorResponseTransformationError::response_handling_failed(
                     http_status,
                 ))
         })
@@ -311,7 +311,7 @@ where
         .or_else(|| response.transaction_reference.map(&transform_fn))
         .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
-            error_stack::Report::new(ConnectorResponseError::response_handling_failed(
+            error_stack::Report::new(ConnectorResponseTransformationError::response_handling_failed(
                 http_status,
             ))
         })

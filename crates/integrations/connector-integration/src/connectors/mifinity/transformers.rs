@@ -5,7 +5,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for MifinityPaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: MifinityRouterData<
             RouterDataV2<
@@ -101,12 +101,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let metadata = MifinityConnectorMetadataObject {
             brand_id: auth
                 .brand_id
-                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "brand_id",
                     context: Default::default(),
                 })?,
             destination_account_number: auth.destination_account_number.ok_or(
-                ConnectorRequestError::InvalidConnectorConfig {
+                IntegrationError::InvalidConnectorConfig {
                     config: "destination_account_number",
                     context: Default::default(),
                 },
@@ -123,7 +123,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 item.router_data.request.minor_amount,
                                 item.router_data.request.currency,
                             )
-                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                            .change_context(IntegrationError::RequestEncodingFailed {
                                 context: Default::default(),
                             })?,
                         currency: item.router_data.request.currency,
@@ -166,7 +166,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .clone()
                     );
                     let client_reference = item.router_data.request.customer_id.clone().ok_or(
-                        ConnectorRequestError::MissingRequiredField {
+                        IntegrationError::MissingRequiredField {
                             field_name: "client_reference",
                             context: Default::default(),
                         },
@@ -225,7 +225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletData::Wero(_) => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
                 .into()),
@@ -248,7 +248,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
                 .into())
@@ -265,7 +265,7 @@ pub struct MifinityAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Mifinity {
@@ -278,7 +278,7 @@ impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
                 brand_id: brand_id.clone(),
                 destination_account_number: destination_account_number.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -302,7 +302,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<MifinityPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -386,7 +386,7 @@ pub enum MifinityPaymentStatus {
 impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<MifinityPsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {

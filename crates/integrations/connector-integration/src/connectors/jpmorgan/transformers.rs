@@ -17,10 +17,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 
-type Error = error_stack::Report<ConnectorRequestError>;
-type ResponseError = error_stack::Report<ConnectorResponseError>;
+type Error = error_stack::Report<IntegrationError>;
+type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +34,7 @@ pub struct JpmorganAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Jpmorgan {
@@ -53,7 +53,7 @@ impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
                 merchant_purchase_description: merchant_purchase_description.clone(),
                 statement_descriptor: statement_descriptor.clone(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -71,10 +71,10 @@ pub struct JpmorganConnectorMetadataObject {
 }
 
 impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
+            .change_context(IntegrationError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
                 context: Default::default(),
             })?;
@@ -135,14 +135,14 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>>
 
 fn map_capture_method(
     capture_method: Option<CaptureMethod>,
-) -> Result<requests::CapMethod, error_stack::Report<ConnectorRequestError>> {
+) -> Result<requests::CapMethod, error_stack::Report<IntegrationError>> {
     match capture_method {
         Some(CaptureMethod::Automatic) | None => Ok(requests::CapMethod::Now),
         Some(CaptureMethod::Manual) => Ok(requests::CapMethod::Manual),
         Some(CaptureMethod::Scheduled)
         | Some(CaptureMethod::ManualMultiple)
         | Some(CaptureMethod::SequentialAutomatic) => {
-            Err(ConnectorRequestError::not_implemented("Capture Method".to_string()).into())
+            Err(IntegrationError::not_implemented("Capture Method".to_string()).into())
         }
     }
 }
@@ -158,7 +158,7 @@ fn extract_account_holder_names<
         PaymentsResponseData,
     >,
     _bank_account_holder_name: &Option<Secret<String>>,
-) -> Result<(Secret<String>, Secret<String>), error_stack::Report<ConnectorRequestError>> {
+) -> Result<(Secret<String>, Secret<String>), error_stack::Report<IntegrationError>> {
     // Use billing address first_name and last_name directly (like Forte connector)
     let first_name = router_data
         .resource_common_data
@@ -203,7 +203,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // JPMorgan doesn't support 3DS payments
         if router_data.resource_common_data.auth_type == common_enums::AuthenticationType::ThreeDs {
-            return Err(ConnectorRequestError::NotSupported {
+            return Err(IntegrationError::NotSupported {
                 message: "3DS payments".to_string(),
                 connector: "JPMorgan",
                 context: Default::default(),
@@ -221,13 +221,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     requests::JpmorganMerchant {
                         merchant_software: requests::JpmorganMerchantSoftware {
                             company_name: auth.company_name.clone().ok_or(
-                                ConnectorRequestError::MissingRequiredField {
+                                IntegrationError::MissingRequiredField {
                                     field_name: "company_name",
                                     context: Default::default(),
                                 },
                             )?,
                             product_name: auth.product_name.clone().ok_or(
-                                ConnectorRequestError::MissingRequiredField {
+                                IntegrationError::MissingRequiredField {
                                     field_name: "product_name",
                                     context: Default::default(),
                                 },
@@ -237,7 +237,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             merchant_purchase_description: auth
                                 .merchant_purchase_description
                                 .clone()
-                                .ok_or(ConnectorRequestError::MissingRequiredField {
+                                .ok_or(IntegrationError::MissingRequiredField {
                                     field_name: "merchant_purchase_description",
                                     context: Default::default(),
                                 })?,
@@ -250,7 +250,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .card_exp_month
                             .peek()
                             .parse::<i32>()
-                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                            .change_context(IntegrationError::RequestEncodingFailed {
                                 context: Default::default(),
                             })?,
                     ),
@@ -259,7 +259,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .get_expiry_year_4_digit()
                             .peek()
                             .parse::<i32>()
-                            .change_context(ConnectorRequestError::RequestEncodingFailed {
+                            .change_context(IntegrationError::RequestEncodingFailed {
                                 context: Default::default(),
                             })?,
                     ),
@@ -313,13 +313,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     requests::JpmorganMerchant {
                         merchant_software: requests::JpmorganMerchantSoftware {
                             company_name: auth.company_name.clone().ok_or(
-                                ConnectorRequestError::MissingRequiredField {
+                                IntegrationError::MissingRequiredField {
                                     field_name: "company_name",
                                     context: Default::default(),
                                 },
                             )?,
                             product_name: auth.product_name.clone().ok_or(
-                                ConnectorRequestError::MissingRequiredField {
+                                IntegrationError::MissingRequiredField {
                                     field_name: "product_name",
                                     context: Default::default(),
                                 },
@@ -329,7 +329,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             merchant_purchase_description: auth
                                 .merchant_purchase_description
                                 .clone()
-                                .ok_or(ConnectorRequestError::MissingRequiredField {
+                                .ok_or(IntegrationError::MissingRequiredField {
                                     field_name: "merchant_purchase_description",
                                     context: Default::default(),
                                 })?,
@@ -370,7 +370,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Get statement_descriptor from connector config
                 let statement_descriptor = auth.statement_descriptor.clone().ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "statement_descriptor",
                         context: Default::default(),
                     },
@@ -386,11 +386,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     statement_descriptor,
                 })
             }
-            PaymentMethodData::BankDebit(_) => Err(ConnectorRequestError::not_implemented(
+            PaymentMethodData::BankDebit(_) => Err(IntegrationError::not_implemented(
                 "Only ACH Bank Debit is supported".to_string(),
             )
             .into()),
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 "Payment method not supported".to_string(),
             )
             .into()),
@@ -468,13 +468,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let merchant = requests::JpmorganMerchantRefund {
             merchant_software: requests::JpmorganMerchantSoftware {
                 company_name: auth.company_name.ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "company_name",
                         context: Default::default(),
                     },
                 )?,
                 product_name: auth.product_name.ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "product_name",
                         context: Default::default(),
                     },

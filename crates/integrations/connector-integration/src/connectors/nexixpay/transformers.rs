@@ -15,7 +15,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -32,7 +32,7 @@ use super::NexixpayRouterData;
 
 const MAX_ORDER_ID_LENGTH: usize = 18;
 
-fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, ConnectorRequestError> {
+fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, IntegrationError> {
     if payment_id.len() > MAX_ORDER_ID_LENGTH {
         if payment_id.starts_with("pay_") {
             Ok(payment_id
@@ -41,7 +41,7 @@ fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, ConnectorRequestE
                 .collect::<String>())
         } else {
             Err(error_stack::Report::from(
-                ConnectorRequestError::MaxFieldLengthViolated {
+                IntegrationError::MaxFieldLengthViolated {
                     field_name: "payment_id".to_string(),
                     connector: "Nexixpay".to_string(),
                     max_length: MAX_ORDER_ID_LENGTH,
@@ -61,7 +61,7 @@ pub struct NexixpayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for NexixpayAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -69,7 +69,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NexixpayAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                ConnectorRequestError::FailedToObtainAuthType {
+                IntegrationError::FailedToObtainAuthType {
                     context: Default::default()
                 }
             )),
@@ -132,15 +132,15 @@ pub struct NexixpayConnectorMetaData {
 pub fn get_payment_id(
     metadata: Option<serde_json::Value>,
     payment_intent: Option<NexixpayPaymentIntent>,
-) -> CustomResult<String, ConnectorRequestError> {
-    let connector_metadata = metadata.ok_or(ConnectorRequestError::MissingRequiredField {
+) -> CustomResult<String, IntegrationError> {
+    let connector_metadata = metadata.ok_or(IntegrationError::MissingRequiredField {
         field_name: "connector_feature_data",
         context: Default::default(),
     })?;
     let nexixpay_meta_data = serde_json::from_value::<NexixpayConnectorMetaData>(
         connector_metadata,
     )
-    .change_context(ConnectorRequestError::InvalidDataFormat {
+    .change_context(IntegrationError::InvalidDataFormat {
         field_name: "connector_feature_data",
         context: Default::default(),
     })?;
@@ -151,7 +151,7 @@ pub fn get_payment_id(
         NexixpayPaymentIntent::Authorize => nexixpay_meta_data.authorization_operation_id,
     };
     payment_id.ok_or_else(|| {
-        ConnectorRequestError::MissingRequiredField {
+        IntegrationError::MissingRequiredField {
             field_name: "operation_id",
             context: Default::default(),
         }
@@ -255,7 +255,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayPaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -272,7 +272,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract card data
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            payment_method_data => Err(ConnectorRequestError::NotSupported {
+            payment_method_data => Err(IntegrationError::NotSupported {
                 message: format!("Payment method {payment_method_data:?}"),
                 connector: "Nexixpay",
                 context: Default::default(),
@@ -290,14 +290,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // CRITICAL FIX: Extract operation_id and PaRes from authentication_data
         // This is set by PostAuthenticate and passed by Hyperswitch to Authorize
         let authentication_data = item.request.authentication_data.as_ref().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "authentication_data (must be present for 3DS flow)",
                 context: Default::default(),
             },
         )?;
 
         let operation_id = authentication_data.transaction_id.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name:
                     "authentication_data.transaction_id (operationId from PostAuthenticate)",
                 context: Default::default(),
@@ -391,7 +391,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.minor_amount, item.request.currency)
-                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                .change_context(IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?,
             currency: item.request.currency,
@@ -500,7 +500,7 @@ impl From<NexixpayPaymentStatus> for AttemptStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPaymentsResponse, Self>,
@@ -588,7 +588,7 @@ pub struct NexixpaySyncRequest;
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for NexixpaySyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -613,7 +613,7 @@ pub struct NexixpaySyncResponse {
 impl TryFrom<ResponseRouterData<NexixpaySyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<NexixpaySyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map operation result to payment status using From trait
@@ -656,7 +656,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -669,7 +669,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount - handle partial vs full capture
         let capture_amount = StringMinorUnitForConnector
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -690,7 +690,7 @@ pub struct NexixpayCaptureResponse {
 impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayCaptureResponse, Self>,
@@ -770,7 +770,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -785,7 +785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert refund amount
         let refund_amount = StringMinorUnitForConnector
             .convert(item.request.minor_refund_amount, item.request.currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -807,7 +807,7 @@ pub struct NexixpayRefundResponse {
 impl TryFrom<ResponseRouterData<NexixpayRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayRefundResponse, Self>,
@@ -852,7 +852,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayVoidRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -867,7 +867,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let void_amount =
             item.request
                 .amount
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "amount for void operation",
                     context: Default::default(),
                 })?;
@@ -875,14 +875,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency =
             item.request
                 .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "currency for void operation",
                     context: Default::default(),
                 })?;
 
         let void_amount_string = StringMinorUnitForConnector
             .convert(void_amount, currency)
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -904,7 +904,7 @@ pub struct NexixpayVoidResponse {
 impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<NexixpayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay void response is minimal (only operationId and time)
@@ -970,7 +970,7 @@ pub struct NexixpayRefundSyncRequest;
 impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for NexixpayRefundSyncRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1028,7 +1028,7 @@ impl From<NexixpayRefundResultStatus> for RefundStatus {
 impl TryFrom<ResponseRouterData<NexixpayRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayRSyncResponse, Self>,
@@ -1141,7 +1141,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayPreAuthenticateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -1157,13 +1157,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let item = &value.router_data;
         // Extract card data from payment method
         let card_data = match item.request.payment_method_data.as_ref().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "payment_method_data",
                 context: Default::default(),
             },
         )? {
             PaymentMethodData::Card(card) => card,
-            payment_method_data => Err(ConnectorRequestError::NotSupported {
+            payment_method_data => Err(IntegrationError::NotSupported {
                 message: format!("Payment method {payment_method_data:?} for 3DS"),
                 connector: "Nexixpay",
                 context: Default::default(),
@@ -1250,7 +1250,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency =
             item.request
                 .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "currency",
                     context: Default::default(),
                 })?;
@@ -1259,7 +1259,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.amount, currency)
-                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                .change_context(IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?,
             currency,
@@ -1333,7 +1333,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPreAuthenticateResponse, Self>,
@@ -1448,7 +1448,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NexixpayPostAuthenticateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         value: NexixpayRouterData<
@@ -1464,7 +1464,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let item = &value.router_data;
         // Following Hyperswitch pattern: Parse JSON payload from redirect response
         let redirect_response = item.request.redirect_response.as_ref().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "redirect_response",
                 context: Default::default(),
             },
@@ -1474,7 +1474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirect_payload_value = redirect_response
             .payload
             .as_ref()
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "request.redirect_response.payload",
                 context: Default::default(),
             })?
@@ -1483,7 +1483,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Parse the JSON payload into RedirectPayload struct
         let redirect_payload: NexixpayRedirectPayload =
             serde_json::from_value(redirect_payload_value.clone()).map_err(|_| {
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "redirection_payload",
                     context: Default::default(),
                 }
@@ -1503,7 +1503,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
             })
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "operationId (paymentId from redirect or connector_feature_data)",
                 context: Default::default(),
             })?;
@@ -1511,7 +1511,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract PaRes (3DS authentication response) from redirect payload
         let three_ds_auth_response = redirect_payload
             .pa_res
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "PaRes from redirect_response",
                 context: Default::default(),
             })?
@@ -1558,7 +1558,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPostAuthenticateResponse, Self>,

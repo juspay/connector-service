@@ -61,8 +61,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 use error_stack::ResultExt;
 
 pub(crate) mod headers {
@@ -258,7 +258,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -313,9 +313,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = novalnet::NovalnetAuthType::try_from(auth_type).change_context(
-            ConnectorRequestError::FailedToObtainAuthType {
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
         )?;
@@ -331,11 +331,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: novalnet::NovalnetErrorResponse = res
             .response
             .parse_struct("NovalnetErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
+            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
                 res.status_code,
             ))?;
 
@@ -371,13 +371,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let url = if req.request.is_auto_capture() {
                 format!("{}/payment",self.connector_base_url_payments(req))
             }
@@ -406,13 +406,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}/transaction/details",
                 self.connector_base_url_payments(req),
@@ -437,13 +437,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}/transaction/capture",
                 self.connector_base_url_payments(req)
@@ -468,13 +468,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}/transaction/refund",
                 self.connector_base_url_refunds(req)
@@ -499,13 +499,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}/transaction/details",
                 self.connector_base_url_refunds(req)
@@ -530,14 +530,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/transaction/cancel", self.connector_base_url_payments(req)))
         }
     }
@@ -559,14 +559,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/payment", self.connector_base_url_payments(req)))
         }
     }
@@ -588,14 +588,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let url = if req.request.is_auto_capture() {
                 format!("{}/payment",self.connector_base_url_payments(req))
             }
@@ -615,15 +615,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         let notif_item = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented(
+            IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ),
         )?;
 
         hex::decode(notif_item.event.checksum).change_context(
-            ConnectorRequestError::not_implemented(
+            IntegrationError::not_implemented(
                 "webhook verification secret invalid".to_string(),
             ),
         )
@@ -633,9 +633,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented(
+            IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ),
         )?;
@@ -664,7 +664,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .unwrap_or("".to_string());
 
         let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook verification secret invalid".to_string(),
             ))
             .attach_printable("Could not convert webhook secret auth to UTF-8")?;
@@ -688,7 +688,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<bool, error_stack::Report<IntegrationError>> {
         let algorithm = crypto::Sha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
@@ -748,9 +748,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented("webhook event type not found".to_string()),
+            IntegrationError::not_implemented("webhook event type not found".to_string()),
         )?;
 
         let optional_transaction_status = match notif.transaction {
@@ -767,7 +767,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let transaction_status =
-            optional_transaction_status.ok_or(ConnectorRequestError::MissingRequiredField {
+            optional_transaction_status.ok_or(IntegrationError::MissingRequiredField {
                 field_name: "transaction_status",
                 context: Default::default(),
             })?;
@@ -785,13 +785,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         let notif = get_webhook_object_from_body(&request.body).change_context(
-            ConnectorRequestError::not_implemented("webhook reference id not found".to_string()),
+            IntegrationError::not_implemented("webhook reference id not found".to_string()),
         )?;
 
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
+            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -806,16 +806,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
             .parse_struct("NovalnetWebhookNotificationResponse")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
 
         let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
+            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -830,10 +830,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         let notif: transformers::NovalnetWebhookNotificationResponse =
             get_webhook_object_from_body(&request.body).change_context(
-                ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
+                IntegrationError::not_implemented("webhook body decoding failed".to_string()),
             )?;
         let (amount, currency, reason, reason_code) = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
@@ -857,7 +857,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(DisputeWebhookDetailsResponse {
             amount: utils::convert_amount(
                 self.amount_converter,
-                amount.ok_or(ConnectorRequestError::AmountConversionFailed {
+                amount.ok_or(IntegrationError::AmountConversionFailed {
                     context: Default::default(),
                 })?,
                 novalnet::option_to_result(currency)?,
@@ -878,10 +878,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 fn get_webhook_object_from_body(
     body: &[u8],
-) -> CustomResult<novalnet::NovalnetWebhookNotificationResponse, ConnectorRequestError> {
+) -> CustomResult<novalnet::NovalnetWebhookNotificationResponse, IntegrationError> {
     let novalnet_webhook_notification_response = body
         .parse_struct("NovalnetWebhookNotificationResponse")
-        .change_context(ConnectorRequestError::not_implemented(
+        .change_context(IntegrationError::not_implemented(
             "webhook body decoding failed".to_string(),
         ))?;
 

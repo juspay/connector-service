@@ -40,8 +40,8 @@ use common_utils::{
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::IntegrationError;
+use domain_types::errors::ConnectorResponseTransformationError;
 use error_stack::ResultExt;
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
@@ -137,7 +137,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: &RequestDetails,
         _secrets: Option<ConnectorSourceVerificationSecrets>,
-    ) -> CustomResult<bool, ConnectorRequestError> {
+    ) -> CustomResult<bool, IntegrationError> {
         // Revolut does not support source verification for redirect responses
         Ok(false)
     }
@@ -145,7 +145,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn process_redirect_response(
         &self,
         _request: &RequestDetails,
-    ) -> CustomResult<RedirectDetailsResponse, ConnectorRequestError> {
+    ) -> CustomResult<RedirectDetailsResponse, IntegrationError> {
         Ok(RedirectDetailsResponse {
             resource_id: None,
             status: None,
@@ -235,11 +235,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         let signature_header = request
             .headers
             .get("revolut-signature")
-            .ok_or(ConnectorRequestError::not_implemented(
+            .ok_or(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Missing incoming webhook signature for Revolut")?;
@@ -250,14 +250,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let hex_signature = signature_parts
             .get(1)
-            .ok_or(ConnectorRequestError::not_implemented(
+            .ok_or(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Invalid signature format for Revolut")?;
 
         hex::decode(hex_signature)
             .attach_printable("Failed to decode hex signature")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
     }
@@ -266,19 +266,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
         // 1. Get the Timestamp
         let timestamp = request
             .headers
             .get("revolut-request-timestamp")
-            .ok_or(ConnectorRequestError::not_implemented(
+            .ok_or(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Missing timestamp header for Revolut")?;
 
         // 2. Get the Raw Body
         let body = std::str::from_utf8(&request.body)
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification message parsing failed for Revolut")?;
@@ -294,7 +294,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<bool, error_stack::Report<IntegrationError>> {
         // Revolut uses HMAC-SHA256
         let algorithm = crypto::HmacSha256;
 
@@ -304,12 +304,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 // If webhook secrets are not provided, take them from connector_account_details
                 let auth = revolut::RevolutAuthType::try_from(
                     connector_account_details.as_ref().ok_or(
-                        ConnectorRequestError::FailedToObtainAuthType {
+                        IntegrationError::FailedToObtainAuthType {
                             context: Default::default(),
                         },
                     )?,
                 )
-                .change_context(ConnectorRequestError::not_implemented(
+                .change_context(IntegrationError::not_implemented(
                     "webhook source verification failed".to_string(),
                 ))?;
 
@@ -317,7 +317,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     secret: auth
                         .signing_secret
                         .as_ref()
-                        .ok_or(ConnectorRequestError::not_implemented(
+                        .ok_or(IntegrationError::not_implemented(
                             "webhook source verification failed".to_string(),
                         ))?
                         .peek()
@@ -336,7 +336,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook source verification failed".to_string(),
             ))
             .attach_printable("Webhook source verification failed for Revolut")
@@ -347,11 +347,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         match notif.event {
@@ -383,16 +383,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
             .attach_printable("Failed to parse Revolut webhook body")
-            .change_context(ConnectorRequestError::not_implemented(
+            .change_context(IntegrationError::not_implemented(
                 "webhook body decoding failed".to_string(),
             ))?;
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            ConnectorRequestError::not_implemented("webhook response encoding failed".to_string()),
+            IntegrationError::not_implemented("webhook response encoding failed".to_string()),
         );
 
         response.map(|mut response| {
@@ -584,9 +584,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = revolut::RevolutAuthType::try_from(auth_type).change_context(
-            ConnectorRequestError::FailedToObtainAuthType {
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
         )?;
@@ -604,11 +604,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: revolut::RevolutErrorResponse = res
             .response
             .parse_struct("RevolutErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(
+            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(
                 res.status_code,
             ))?;
 
@@ -699,7 +699,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut header = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -740,13 +740,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders"))
         }
@@ -768,17 +768,17 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let order_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}"))
         }
@@ -801,7 +801,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut headers = self.build_headers(req)?;
 
             headers.push((
@@ -814,10 +814,10 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let order_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}/capture"))
         }
@@ -840,7 +840,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut headers = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -859,7 +859,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let order_id = req.request.connector_transaction_id.clone();
             let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
             Ok(format!("{base_url}/api/orders/{order_id}/refund"))
@@ -882,7 +882,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut headers = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -901,7 +901,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let order_id = req.request.connector_refund_id.clone();
             let base_url = req.resource_common_data.connectors.revolut.base_url.to_string();
             Ok(format!("{base_url}/api/orders/{order_id}"))

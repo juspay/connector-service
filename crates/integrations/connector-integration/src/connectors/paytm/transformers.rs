@@ -17,7 +17,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -114,7 +114,7 @@ pub struct PaytmAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PaytmAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -130,7 +130,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PaytmAuthType {
                 website: website.to_owned(),
                 client_id: client_id.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -170,7 +170,7 @@ impl<
         >,
     > for PaytmInitiateTxnRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MacroPaytmRouterData<
@@ -193,7 +193,7 @@ impl<
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -234,7 +234,7 @@ impl<
                     .connector
                     .amount_converter
                     .convert(details.amount, item.router_data.request.currency)
-                    .change_context(ConnectorRequestError::AmountConversionFailed {
+                    .change_context(IntegrationError::AmountConversionFailed {
                         context: Default::default(),
                     })?;
 
@@ -353,7 +353,7 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
         SessionTokenResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<PaytmInitiateTxnResponse, Self>,
@@ -427,7 +427,7 @@ impl<
         >,
     > for PaytmAuthorizeRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MacroPaytmRouterData<
@@ -457,7 +457,7 @@ impl<
             UpiFlowType::Intent => {
                 let timestamp = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
-                    .map_err(|_| ConnectorRequestError::InvalidDataFormat {
+                    .map_err(|_| IntegrationError::InvalidDataFormat {
                         field_name: "timestamp",
                         context: Default::default(),
                     })?
@@ -491,7 +491,7 @@ impl<
                 let vpa = match extract_upi_vpa(payment_method_data)? {
                     Some(vpa) => vpa,
                     None => {
-                        return Err(ConnectorRequestError::MissingRequiredField {
+                        return Err(IntegrationError::MissingRequiredField {
                             field_name: "vpa_id",
                             context: Default::default(),
                         }
@@ -536,7 +536,7 @@ impl<
     > TryFrom<ResponseRouterData<PaytmProcessTxnResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<PaytmProcessTxnResponse, Self>,
@@ -559,7 +559,7 @@ impl<
                         } else {
                             // For regular URLs, parse and convert
                             let url = Url::parse(&deep_link_info.deep_link).change_context(
-                                ConnectorResponseError::response_handling_failed(item.http_code),
+                                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
                             )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }
@@ -679,7 +679,7 @@ impl<
         >,
     > for PaytmTransactionStatusRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: MacroPaytmRouterData<
@@ -713,7 +713,7 @@ impl<
 impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<PaytmTransactionStatusResponse, Self>,
@@ -802,7 +802,7 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
 
 pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-) -> CustomResult<UpiFlowType, ConnectorRequestError> {
+) -> CustomResult<UpiFlowType, IntegrationError> {
     match payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
             match upi_data {
@@ -811,7 +811,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                     if collect_data.vpa_id.is_some() {
                         Ok(UpiFlowType::Collect)
                     } else {
-                        Err(ConnectorRequestError::MissingRequiredField {
+                        Err(IntegrationError::MissingRequiredField {
                             field_name: "vpa_id",
                             context: Default::default(),
                         }
@@ -821,7 +821,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                 UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
             }
         }
-        _ => Err(ConnectorRequestError::NotSupported {
+        _ => Err(IntegrationError::NotSupported {
             message: "Only UPI payment methods are supported".to_string(),
             connector: "Paytm",
             context: Default::default(),
@@ -833,7 +833,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
 // Helper function for UPI VPA extraction
 pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-) -> CustomResult<Option<String>, ConnectorRequestError> {
+) -> CustomResult<Option<String>, IntegrationError> {
     match payment_method_data {
         PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
             if let Some(vpa_id) = &collect_data.vpa_id {
@@ -841,13 +841,13 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
                 if vpa.contains('@') && vpa.len() > 3 {
                     Ok(Some(vpa))
                 } else {
-                    Err(ConnectorRequestError::RequestEncodingFailed {
+                    Err(IntegrationError::RequestEncodingFailed {
                         context: Default::default(),
                     }
                     .into())
                 }
             } else {
-                Err(ConnectorRequestError::MissingRequiredField {
+                Err(IntegrationError::MissingRequiredField {
                     field_name: "vpa_id",
                     context: Default::default(),
                 }
@@ -863,12 +863,12 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
 pub fn generate_paytm_signature(
     payload: &str,
     merchant_key: &str,
-) -> CustomResult<String, ConnectorRequestError> {
+) -> CustomResult<String, IntegrationError> {
     // Step 1: Generate random salt bytes using ring (same logic, different implementation)
     let rng = SystemRandom::new();
     let mut salt_bytes = [0u8; constants::SALT_LENGTH];
     rng.fill(&mut salt_bytes)
-        .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+        .map_err(|_| IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         })?;
 
@@ -897,7 +897,7 @@ pub fn generate_paytm_signature(
 // - Key length determines AES variant: 16→AES-128, 24→AES-192, other→AES-256
 // - Mode: CBC with PKCS7 padding (16-byte blocks)
 // - Output: Base64 encoded encrypted data
-fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestError> {
+fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, IntegrationError> {
     // PayTM uses fixed IV as specified in PayTMv1 implementation
     let iv = get_paytm_iv();
     let key_bytes = key.as_bytes();
@@ -920,7 +920,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                .map_err(|_| IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?
                 .len();
@@ -942,7 +942,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                .map_err(|_| IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?
                 .len();
@@ -971,7 +971,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorRequestEr
 
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                .map_err(|_| IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
                 })?
                 .len();
@@ -1011,16 +1011,16 @@ pub fn create_paytm_header(
     request_body: &impl Serialize,
     auth: &PaytmAuthType,
     channel_id: Option<&str>,
-) -> CustomResult<PaytmRequestHeader, ConnectorRequestError> {
+) -> CustomResult<PaytmRequestHeader, IntegrationError> {
     let _payload = serde_json::to_string(request_body).change_context(
-        ConnectorRequestError::RequestEncodingFailed {
+        IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         },
     )?;
     let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| ConnectorRequestError::InvalidDataFormat {
+        .map_err(|_| IntegrationError::InvalidDataFormat {
             field_name: "timestamp",
             context: Default::default(),
         })?

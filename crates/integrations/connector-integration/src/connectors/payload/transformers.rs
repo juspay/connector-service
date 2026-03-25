@@ -13,7 +13,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -40,8 +40,8 @@ pub use super::responses::{
     PayloadWebhookEvent, PayloadWebhooksTrigger,
 };
 
-type Error = error_stack::Report<ConnectorRequestError>;
-type ResponseError = error_stack::Report<ConnectorResponseError>;
+type Error = error_stack::Report<IntegrationError>;
+type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
 
 // Constants
 const PAYMENT_METHOD_TYPE_CARD: &str = "card";
@@ -70,17 +70,17 @@ impl TryFrom<(&ConnectorSpecificConfig, enums::Currency)> for PayloadAuth {
         match auth_type {
             ConnectorSpecificConfig::Payload { auth_key_map, .. } => auth_key_map
                 .get(&currency)
-                .ok_or(ConnectorRequestError::CurrencyNotSupported {
+                .ok_or(IntegrationError::CurrencyNotSupported {
                     message: currency.to_string(),
                     connector: "Payload",
                     context: Default::default(),
                 })?
                 .to_owned()
                 .parse_value::<Self>("PayloadAuth")
-                .change_context(ConnectorRequestError::FailedToObtainAuthType {
+                .change_context(IntegrationError::FailedToObtainAuthType {
                     context: Default::default(),
                 }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -99,14 +99,14 @@ impl TryFrom<&ConnectorSpecificConfig> for PayloadAuthType {
                         let auth = auth_value
                             .to_owned()
                             .parse_value::<PayloadAuth>("PayloadAuth")
-                            .change_context(ConnectorRequestError::FailedToObtainAuthType {
+                            .change_context(IntegrationError::FailedToObtainAuthType {
                                 context: Default::default(),
                             })?;
                         Ok((*currency, auth))
                     })
                     .collect::<Result<_, Self::Error>>()?,
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -140,13 +140,13 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             city: resource_common_data.get_billing_city()?,
             country: resource_common_data.get_billing_country()?,
             postal_code: billing_addr.zip.clone().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "billing.address.zip",
                     context: Default::default(),
                 },
             )?,
             state_province: billing_addr.state.clone().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "billing.address.state",
                     context: Default::default(),
                 },
@@ -172,7 +172,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             keep_active: is_mandate,
         })
     } else {
-        Err(ConnectorRequestError::NotSupported {
+        Err(IntegrationError::NotSupported {
             message: "Payment method".to_string(),
             connector: "Payload",
             context: Default::default(),
@@ -213,7 +213,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         match router_data.request.amount {
-            Some(amount) if amount > 0 => Err(ConnectorRequestError::FlowNotSupported {
+            Some(amount) if amount > 0 => Err(IntegrationError::FlowNotSupported {
                 flow: "Setup mandate with non zero amount".to_string(),
                 connector: "Payload".to_string(),
                 context: Default::default(),
@@ -290,16 +290,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 domain_types::payment_method_data::WalletData::GooglePay(_)
                 | domain_types::payment_method_data::WalletData::ApplePay(_) => {
-                    Err(ConnectorRequestError::not_implemented("Payment method".to_string()).into())
+                    Err(IntegrationError::not_implemented("Payment method".to_string()).into())
                 }
-                _ => Err(ConnectorRequestError::NotSupported {
+                _ => Err(IntegrationError::NotSupported {
                     message: "Wallet".to_string(),
                     connector: "Payload",
                     context: Default::default(),
                 }
                 .into()),
             },
-            _ => Err(ConnectorRequestError::NotSupported {
+            _ => Err(IntegrationError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "Payload",
                 context: Default::default(),
@@ -402,13 +402,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
                 connector_mandate_ref,
             ) => connector_mandate_ref.get_connector_mandate_id().ok_or(
-                ConnectorRequestError::MissingRequiredField {
+                IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id",
                     context: Default::default(),
                 },
             )?,
             _ => {
-                return Err(ConnectorRequestError::MissingRequiredField {
+                return Err(IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id for RepeatPayment",
                     context: Default::default(),
                 }
@@ -730,9 +730,9 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 // Webhook helper function to parse incoming webhook events
 pub fn parse_webhook_event(
     body: &[u8],
-) -> Result<PayloadWebhookEvent, error_stack::Report<ConnectorRequestError>> {
+) -> Result<PayloadWebhookEvent, error_stack::Report<IntegrationError>> {
     serde_json::from_slice::<PayloadWebhookEvent>(body).change_context(
-        ConnectorRequestError::not_implemented("webhook body decoding failed".to_string()),
+        IntegrationError::not_implemented("webhook body decoding failed".to_string()),
     )
 }
 

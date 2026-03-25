@@ -61,7 +61,7 @@ use self::transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
+use domain_types::errors::{IntegrationError, ConnectorResponseTransformationError};
 
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -72,9 +72,9 @@ pub(crate) mod headers {
 fn unwrap_json_wrapped_xml(
     response_bytes: &[u8],
     status_code: u16,
-) -> CustomResult<String, ConnectorResponseError> {
+) -> CustomResult<String, ConnectorResponseTransformationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorResponseError::response_handling_failed(
+        .change_context(ConnectorResponseTransformationError::response_handling_failed(
             status_code,
         ))
         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
@@ -83,7 +83,7 @@ fn unwrap_json_wrapped_xml(
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorResponseError::response_handling_failed(
+            .change_context(ConnectorResponseTransformationError::response_handling_failed(
                 status_code,
             ))
             .attach_printable("Failed to parse JSON-wrapped XML response")?
@@ -94,19 +94,19 @@ fn unwrap_json_wrapped_xml(
     Ok(xml_str)
 }
 
-/// Same as [`unwrap_json_wrapped_xml`] but for preprocess (macro expects [`ConnectorRequestError`]).
+/// Same as [`unwrap_json_wrapped_xml`] but for preprocess (macro expects [`IntegrationError`]).
 fn unwrap_json_wrapped_xml_for_preprocess(
     response_bytes: &[u8],
-) -> CustomResult<String, ConnectorRequestError> {
+) -> CustomResult<String, IntegrationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorRequestError::RequestEncodingFailed {
+        .change_context(IntegrationError::RequestEncodingFailed {
             context: Default::default(),
         })
         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
     let xml_str = if response_str.trim().starts_with('"') {
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorRequestError::BodySerializationFailed {
+            .change_context(IntegrationError::BodySerializationFailed {
                 context: Default::default(),
             })
             .attach_printable("Failed to parse JSON-wrapped XML response")?
@@ -225,7 +225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<bool, error_stack::Report<IntegrationError>> {
         Ok(false) // WorldpayVantiv doesn't support webhooks
     }
 
@@ -234,9 +234,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
         Err(error_stack::report!(
-            ConnectorRequestError::not_implemented("webhooks not implemented".to_string())
+            IntegrationError::not_implemented("webhooks not implemented".to_string())
         ))
     }
 
@@ -245,9 +245,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         Err(error_stack::report!(
-            ConnectorRequestError::not_implemented("webhooks not implemented".to_string())
+            IntegrationError::not_implemented("webhooks not implemented".to_string())
         ))
     }
 
@@ -256,9 +256,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
         Err(error_stack::report!(
-            ConnectorRequestError::not_implemented("webhooks not implemented".to_string())
+            IntegrationError::not_implemented("webhooks not implemented".to_string())
         ))
     }
 }
@@ -363,11 +363,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseError::response_handling_failed(res.status_code),
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
         )?;
 
         with_response_body!(event_builder, response);
@@ -417,7 +417,7 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
             _status_code: u16,
-        ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
+        ) -> CustomResult<bytes::Bytes, IntegrationError> {
             // Convert XML responses to JSON format for the macro's JSON parser
             let xml_str = unwrap_json_wrapped_xml_for_preprocess(&bytes)?;
 
@@ -425,13 +425,13 @@ macros::create_all_prerequisites!(
             if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
                 // This is an XML response - convert to JSON
                 let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                    .change_context(IntegrationError::BodySerializationFailed {
                         context: Default::default(),
                     })
                     .attach_printable("Failed to parse XML response in preprocess")?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(ConnectorRequestError::BodySerializationFailed {
+                    .change_context(IntegrationError::BodySerializationFailed {
                         context: Default::default(),
                     })
                     .attach_printable("Failed to serialize XML response to JSON in preprocess")?;
@@ -446,7 +446,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             // For XML-based flows (Authorize, Capture, Void, VoidPC, Refund, SetupMandate),
             // we don't send authorization header - it's included in the XML body
             Ok(vec![])
@@ -470,7 +470,7 @@ macros::create_all_prerequisites!(
         pub fn get_auth_header(
             &self,
             auth_type: &ConnectorSpecificConfig,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let auth = WorldpayvantivAuthType::try_from(auth_type)?;
             let auth_key = format!("{}:{}", auth.user.peek(), auth.password.peek());
             let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
@@ -500,14 +500,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -528,16 +528,16 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.get_auth_header(&req.connector_config)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorRequestError> {
+        ) -> CustomResult<String, IntegrationError> {
             let txn_id = req.request.get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingConnectorTransactionID { context: Default::default() })?;
+                .change_context(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?;
             let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
                 .as_ref()
                 .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
@@ -556,7 +556,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_headers(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
@@ -567,14 +567,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_url(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(self.connector_base_url_payments(req).to_string())
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
             router_data: req.clone(),
             connector: self.clone(),
@@ -589,12 +589,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ConnectorResponseError,
+        ConnectorResponseTransformationError,
     > {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseError::response_handling_failed(res.status_code),
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -610,7 +610,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -626,7 +626,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_headers(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
@@ -637,14 +637,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_url(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(self.connector_base_url_payments(req).to_string())
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
             router_data: req.clone(),
             connector: self.clone(),
@@ -659,12 +659,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ConnectorResponseError,
+        ConnectorResponseTransformationError,
     > {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseError::response_handling_failed(res.status_code),
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -680,7 +680,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -705,7 +705,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsCancelPostCaptureData,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
@@ -721,7 +721,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsCancelPostCaptureData,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(self.connector_base_url_payments(req).to_string())
     }
 
@@ -733,7 +733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsCancelPostCaptureData,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
             router_data: req.clone(),
             connector: self.clone(),
@@ -753,12 +753,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
-        ConnectorResponseError,
+        ConnectorResponseTransformationError,
     > {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseError::response_handling_failed(res.status_code),
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -774,7 +774,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -790,7 +790,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_headers(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
@@ -801,14 +801,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_url(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         Ok(self.connector_base_url_refunds(req).to_string())
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
             router_data: req.clone(),
             connector: self.clone(),
@@ -823,12 +823,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ConnectorResponseError,
+        ConnectorResponseTransformationError,
     > {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseError::response_handling_failed(res.status_code),
+            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -844,7 +844,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -860,7 +860,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_headers(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.get_auth_header(&req.connector_config)
     }
 
@@ -871,7 +871,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_url(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorRequestError> {
+    ) -> CustomResult<String, IntegrationError> {
         let refund_id = req.request.connector_refund_id.clone();
         let secondary_base_url = req
             .resource_common_data
@@ -888,7 +888,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_request_body(
         &self,
         _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         // GET request doesn't need a body
         Ok(None)
     }
@@ -900,12 +900,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ConnectorResponseError,
+        ConnectorResponseTransformationError,
     > {
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(ConnectorResponseError::response_handling_failed(
+            .change_context(ConnectorResponseTransformationError::response_handling_failed(
                 res.status_code,
             ))?;
         if let Some(i) = event_builder {
@@ -922,7 +922,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 

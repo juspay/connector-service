@@ -1,7 +1,7 @@
 use common_utils::errors::ErrorSwitch as CommonErrorSwitch;
 use domain_types::errors::{
     combine_error_message_with_context, doc_url_for_error_code, ApiClientError,
-    ApplicationErrorResponse, ConnectorFlowError, ConnectorRequestError, ConnectorResponseError,
+    ApplicationErrorResponse, ConnectorFlowError, IntegrationError, ConnectorResponseTransformationError,
     IntegrationErrorContext, WebhookError,
 };
 use grpc_api_types::payments::PaymentServiceAuthorizeResponse;
@@ -67,13 +67,13 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorFlowError {
     }
 }
 
-impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
+impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
     fn switch(&self) -> ApplicationErrorResponse {
         <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
     }
 }
 
-impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseError {
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseTransformationError {
     fn switch(&self) -> ApplicationErrorResponse {
         <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
     }
@@ -161,7 +161,7 @@ impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
 /// Merge base UCS defaults with optional connector-provided [`IntegrationErrorContext`] on the error.
 fn merge_request_integration_context(
     base_integration_context: IntegrationErrorContext,
-    e: &ConnectorRequestError,
+    e: &IntegrationError,
 ) -> IntegrationErrorContext {
     let v = e.integration_context();
     IntegrationErrorContext {
@@ -179,82 +179,82 @@ fn merge_request_integration_context(
 
 /// Request-phase errors occur before the connector HTTP call; there is no real connector HTTP status.
 fn connector_request_error_details(
-    e: &ConnectorRequestError,
+    e: &IntegrationError,
 ) -> (Option<u16>, String, String, IntegrationErrorContext) {
     let msg = e.to_string();
     let error_code = e.error_code().to_string();
     let suggested_action = match e {
-        ConnectorRequestError::FailedToObtainIntegrationUrl { .. } => {
+        IntegrationError::FailedToObtainIntegrationUrl { .. } => {
             Some("Verify connector configuration and integration URL setup".to_string())
         }
-        ConnectorRequestError::FailedToObtainAuthType { .. } => {
+        IntegrationError::FailedToObtainAuthType { .. } => {
             Some("Verify connector authentication configuration".to_string())
         }
-        ConnectorRequestError::RequestEncodingFailed { .. }
-        | ConnectorRequestError::HeaderMapConstructionFailed { .. }
-        | ConnectorRequestError::BodySerializationFailed { .. }
-        | ConnectorRequestError::UrlParsingFailed { .. }
-        | ConnectorRequestError::UrlEncodingFailed { .. } => {
+        IntegrationError::RequestEncodingFailed { .. }
+        | IntegrationError::HeaderMapConstructionFailed { .. }
+        | IntegrationError::BodySerializationFailed { .. }
+        | IntegrationError::UrlParsingFailed { .. }
+        | IntegrationError::UrlEncodingFailed { .. } => {
             Some("Check request payload format and structure".to_string())
         }
-        ConnectorRequestError::AmountConversionFailed { .. } => {
+        IntegrationError::AmountConversionFailed { .. } => {
             Some("Ensure amount is in the correct format (minor units) and valid numeric range".to_string())
         }
-        ConnectorRequestError::MandatePaymentDataMismatch { .. } => {
+        IntegrationError::MandatePaymentDataMismatch { .. } => {
             Some("Ensure payment data matches the data used during mandate creation".to_string())
         }
-        ConnectorRequestError::InvalidConnectorConfig { .. } => {
+        IntegrationError::InvalidConnectorConfig { .. } => {
             Some("Review and correct connector configuration in merchant account".to_string())
         }
-        ConnectorRequestError::InvalidWallet { .. } | ConnectorRequestError::InvalidWalletToken { .. } => {
+        IntegrationError::InvalidWallet { .. } | IntegrationError::InvalidWalletToken { .. } => {
             Some("Use a valid wallet or wallet token for the selected payment method".to_string())
         }
-        ConnectorRequestError::MissingRequiredField { field_name, .. } => {
+        IntegrationError::MissingRequiredField { field_name, .. } => {
             Some(format!("Provide the required field '{field_name}' in your request"))
         }
-        ConnectorRequestError::MissingRequiredFields { field_names, .. } => {
+        IntegrationError::MissingRequiredFields { field_names, .. } => {
             Some(format!("Provide all required fields: {:?}", field_names))
         }
-        ConnectorRequestError::InvalidDataFormat { field_name, .. } => {
+        IntegrationError::InvalidDataFormat { field_name, .. } => {
             Some(format!("Fix the format of field '{field_name}' to match the expected schema"))
         }
-        ConnectorRequestError::MismatchedPaymentData { .. } => {
+        IntegrationError::MismatchedPaymentData { .. } => {
             Some("Ensure payment method data, type, and experience are consistent".to_string())
         }
-        ConnectorRequestError::MissingPaymentMethodType { .. } => {
+        IntegrationError::MissingPaymentMethodType { .. } => {
             Some("Specify a valid payment method type in your request".to_string())
         }
-        ConnectorRequestError::NotSupported { .. } | ConnectorRequestError::FlowNotSupported { .. } => {
+        IntegrationError::NotSupported { .. } | IntegrationError::FlowNotSupported { .. } => {
             Some("Use a supported payment method or flow for this connector".to_string())
         }
-        ConnectorRequestError::SourceVerificationFailed { .. } => {
+        IntegrationError::SourceVerificationFailed { .. } => {
             Some("Verify signature, webhook secret, or request source configuration".to_string())
         }
-        ConnectorRequestError::MissingApplePayTokenData { .. } => {
+        IntegrationError::MissingApplePayTokenData { .. } => {
             Some("Provide valid Apple Pay tokenization data".to_string())
         }
-        ConnectorRequestError::CurrencyNotSupported { .. } => {
+        IntegrationError::CurrencyNotSupported { .. } => {
             Some("Use a currency supported by the connector or add it to connector configuration".to_string())
         }
-        ConnectorRequestError::NoConnectorMetaData { .. } => {
+        IntegrationError::NoConnectorMetaData { .. } => {
             Some("Ensure connector metadata is configured in merchant account".to_string())
         }
-        ConnectorRequestError::MaxFieldLengthViolated { max_length, .. } => {
+        IntegrationError::MaxFieldLengthViolated { max_length, .. } => {
             Some(format!("Shorten the field value to at most {max_length} characters"))
         }
-        ConnectorRequestError::MissingConnectorMandateID { .. }
-        | ConnectorRequestError::MissingConnectorMandateMetadata { .. } => {
+        IntegrationError::MissingConnectorMandateID { .. }
+        | IntegrationError::MissingConnectorMandateMetadata { .. } => {
             Some("Complete the mandate flow first to obtain mandate ID and metadata".to_string())
         }
-        ConnectorRequestError::MissingConnectorTransactionID { .. }
-        | ConnectorRequestError::MissingConnectorRefundID { .. }
-        | ConnectorRequestError::MissingConnectorRelatedTransactionID { .. } => {
+        IntegrationError::MissingConnectorTransactionID { .. }
+        | IntegrationError::MissingConnectorRefundID { .. }
+        | IntegrationError::MissingConnectorRelatedTransactionID { .. } => {
             Some("Ensure the prior step completed successfully and provided the required ID".to_string())
         }
-        ConnectorRequestError::NotImplemented(..) | ConnectorRequestError::CaptureMethodNotSupported { .. } => {
+        IntegrationError::NotImplemented(..) | IntegrationError::CaptureMethodNotSupported { .. } => {
             Some("Use a supported capture method or check if this feature is available for the connector".to_string())
         }
-        ConnectorRequestError::ConfigurationError { message, .. } => {
+        IntegrationError::ConfigurationError { message, .. } => {
             Some(format!("Fix configuration: {}", message))
         }
     };
@@ -267,7 +267,7 @@ fn connector_request_error_details(
     (None, error_code, msg, merged_integration_context)
 }
 
-impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorRequestError {
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for IntegrationError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
         let (_, error_code, base_message, merged_integration_context) =
             connector_request_error_details(self);
@@ -285,7 +285,7 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorReques
 }
 
 fn connector_response_error_details(
-    e: &ConnectorResponseError,
+    e: &ConnectorResponseTransformationError,
 ) -> (Option<u16>, String, String, Option<String>) {
     let base_msg = e.to_string();
     let error_code = e.as_ref().to_string();
@@ -293,9 +293,9 @@ fn connector_response_error_details(
     let http_status_code = e.http_status_code();
     let error_message = combine_error_message_with_context(&base_msg, e.additional_context());
     let suggested_action = match e {
-        ConnectorResponseError::ResponseDeserializationFailed { .. }
-        | ConnectorResponseError::ResponseHandlingFailed { .. }
-        | ConnectorResponseError::UnexpectedResponseError { .. } => Some(
+        ConnectorResponseTransformationError::ResponseDeserializationFailed { .. }
+        | ConnectorResponseTransformationError::ResponseHandlingFailed { .. }
+        | ConnectorResponseTransformationError::UnexpectedResponseError { .. } => Some(
             "Share the error code with support to verify integration compatibility and configuration."
                 .to_string(),
         ),
@@ -309,7 +309,7 @@ fn connector_response_error_details(
 }
 
 impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
-    for ConnectorResponseError
+    for ConnectorResponseTransformationError
 {
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         let (_, error_code, error_message, _) = connector_response_error_details(self);
@@ -399,12 +399,12 @@ pub fn connector_flow_error_to_error_details(
 
 /// Map a request-phase connector error report to `IntegrationError`.
 pub fn connector_request_error_report_to_integration(
-    report: error_stack::Report<ConnectorRequestError>,
+    report: error_stack::Report<IntegrationError>,
 ) -> grpc_api_types::payments::IntegrationError {
     ErrorSwitch::switch(report.current_context())
 }
 
-/// Map a report (ConnectorRequestError or ApplicationErrorResponse, etc.) into `IntegrationError`.
+/// Map a report (IntegrationError or ApplicationErrorResponse, etc.) into `IntegrationError`.
 pub fn report_connector_context_to_integration<E>(
     report: error_stack::Report<E>,
 ) -> grpc_api_types::payments::IntegrationError
@@ -416,13 +416,13 @@ where
 
 /// Map a connector response error report to `ConnectorResponseTransformationError`.
 pub fn connector_response_error_report_to_response_transformation(
-    report: error_stack::Report<ConnectorResponseError>,
+    report: error_stack::Report<ConnectorResponseTransformationError>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError {
     ErrorSwitch::switch(report.current_context())
 }
 
 /// Map a report into `ConnectorResponseTransformationError` (e.g. `ApplicationErrorResponse`,
-/// `ConnectorResponseError`, `ApiClientError`, `WebhookError`).
+/// `ConnectorResponseTransformationError`, `ApiClientError`, `WebhookError`).
 pub fn report_connector_context_to_response_transformation<E>(
     report: error_stack::Report<E>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError

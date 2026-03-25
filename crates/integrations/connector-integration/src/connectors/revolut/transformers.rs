@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, WebhookDetailsResponse,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -452,7 +452,7 @@ pub struct RevolutThreeDsFingerprintChallenge {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for RevolutAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -464,7 +464,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RevolutAuthType {
                 secret_api_key: secret_api_key.to_owned(),
                 signing_secret: signing_secret.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -485,7 +485,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for RevolutOrderCreateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: RevolutRouterData<
@@ -624,7 +624,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
@@ -673,7 +673,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
@@ -800,7 +800,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for RevolutRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: RevolutRouterData<
@@ -830,7 +830,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<RevolutRefundResponse, Self>,
@@ -858,7 +858,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<RevolutRefundResponse, Self>,
@@ -891,7 +891,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for RevolutCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: RevolutRouterData<
@@ -909,7 +909,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         value: ResponseRouterData<RevolutOrderCreateResponse, Self>,
@@ -990,20 +990,20 @@ pub enum RevolutWebhookEvent {
 /// Maps Revolut webhook event to AttemptStatus for webhook processing
 fn map_webhook_event_to_attempt_status(
     event: RevolutWebhookEvent,
-) -> Result<AttemptStatus, ConnectorRequestError> {
+) -> Result<AttemptStatus, IntegrationError> {
     match event {
         RevolutWebhookEvent::OrderCompleted => Ok(AttemptStatus::Charged),
         RevolutWebhookEvent::OrderAuthorised => Ok(AttemptStatus::Authorized),
         RevolutWebhookEvent::OrderCancelled => Ok(AttemptStatus::Voided),
         RevolutWebhookEvent::OrderFailed => Ok(AttemptStatus::Failure),
-        _ => Err(ConnectorRequestError::not_implemented(
+        _ => Err(IntegrationError::not_implemented(
             "webhook event type not found".to_string(),
         )),
     }
 }
 
 impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(webhook_body: RevolutWebhookBody) -> Result<Self, Self::Error> {
         let status = map_webhook_event_to_attempt_status(webhook_body.event)?;

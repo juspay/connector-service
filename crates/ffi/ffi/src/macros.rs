@@ -87,7 +87,7 @@ macro_rules! req_transformer {
 
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorRequestError>| {
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                     let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
                     ucs_env::error::ErrorSwitch::switch(&app_error)
                 })?;
@@ -199,7 +199,7 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseError>| {
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
                 let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
                 ucs_env::error::ErrorSwitch::switch(&app_error)
             })?;

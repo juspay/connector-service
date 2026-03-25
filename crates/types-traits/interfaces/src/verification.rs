@@ -21,7 +21,7 @@ pub trait SourceVerification {
     fn get_secrets(
         &self,
         _secrets: ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
+    ) -> CustomResult<Vec<u8>, domain_types::errors::IntegrationError> {
         Ok(Vec::new())
     }
 
@@ -30,7 +30,7 @@ pub trait SourceVerification {
         &self,
     ) -> CustomResult<
         Box<dyn crypto::VerifySignature + Send>,
-        domain_types::errors::ConnectorRequestError,
+        domain_types::errors::IntegrationError,
     > {
         Ok(Box::new(crypto::NoAlgorithm))
     }
@@ -40,7 +40,7 @@ pub trait SourceVerification {
         &self,
         _payload: &[u8],
         _secrets: &[u8],
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
+    ) -> CustomResult<Vec<u8>, domain_types::errors::IntegrationError> {
         Ok(Vec::new())
     }
 
@@ -49,7 +49,7 @@ pub trait SourceVerification {
         &self,
         payload: &[u8],
         _secrets: &[u8],
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
+    ) -> CustomResult<Vec<u8>, domain_types::errors::IntegrationError> {
         Ok(payload.to_owned())
     }
 
@@ -58,7 +58,7 @@ pub trait SourceVerification {
         &self,
         secrets: ConnectorSourceVerificationSecrets,
         payload: &[u8],
-    ) -> CustomResult<bool, domain_types::errors::ConnectorRequestError> {
+    ) -> CustomResult<bool, domain_types::errors::IntegrationError> {
         let algorithm = self.get_algorithm()?;
         let extracted_secrets = self.get_secrets(secrets)?;
         let signature = self.get_signature(payload, &extracted_secrets)?;
@@ -68,7 +68,7 @@ pub trait SourceVerification {
         algorithm
             .verify_signature(&extracted_secrets, &signature, &message)
             .change_context(
-                domain_types::errors::ConnectorRequestError::SourceVerificationFailed {
+                domain_types::errors::IntegrationError::SourceVerificationFailed {
                     context: Default::default(),
                 },
             )

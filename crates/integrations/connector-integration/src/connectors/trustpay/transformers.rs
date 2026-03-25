@@ -24,7 +24,7 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
@@ -40,7 +40,7 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-type Error = error_stack::Report<ConnectorRequestError>;
+type Error = error_stack::Report<IntegrationError>;
 
 #[allow(dead_code)]
 pub struct TrustpayAuthType {
@@ -65,7 +65,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustpayAuthType {
                 secret_key: secret_key.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType {
+            Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into())
@@ -184,7 +184,7 @@ impl TryFrom<&BankRedirectData> for TrustpayPaymentMethod {
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::not_implemented(
+            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("trustpay"),
             )
             .into()),
@@ -200,7 +200,7 @@ impl TryFrom<&BankTransferData> for TrustpayBankTransferPaymentMethod {
             BankTransferData::InstantBankTransfer {} => Ok(Self::InstantBankTransfer),
             BankTransferData::InstantBankTransferFinland {} => Ok(Self::InstantBankTransferFI),
             BankTransferData::InstantBankTransferPoland {} => Ok(Self::InstantBankTransferPL),
-            _ => Err(ConnectorRequestError::not_implemented(
+            _ => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("trustpay"),
             )
             .into()),
@@ -431,7 +431,7 @@ fn get_pending_status_based_on_redirect_url(redirect_url: Option<Url>) -> enums:
 fn get_transaction_status(
     payment_status: Option<String>,
     redirect_url: Option<Url>,
-) -> CustomResult<(enums::AttemptStatus, Option<String>), ConnectorResponseError> {
+) -> CustomResult<(enums::AttemptStatus, Option<String>), ConnectorResponseTransformationError> {
     // We don't get payment_status only in case, when the user doesn't complete the authentication step.
     // If we receive status, then return the proper status based on the connector response
     if let Some(payment_status) = payment_status {
@@ -537,7 +537,7 @@ pub enum TrustpayPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<TrustpayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<TrustpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -566,7 +566,7 @@ fn handle_cards_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     let (status, message) = get_transaction_status(
         response.payment_status.to_owned(),
@@ -620,7 +620,7 @@ fn handle_bank_redirects_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     let status = enums::AttemptStatus::AuthenticationPending;
     let error = None;
@@ -650,7 +650,7 @@ fn handle_bank_redirects_error_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     let status = if matches!(response.payment_result_info.result_code, 1132014 | 1132005) {
         previous_attempt_status
@@ -694,7 +694,7 @@ fn handle_bank_redirects_sync_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     let status = enums::AttemptStatus::from(response.payment_information.status);
     let error = if domain_types::utils::is_payment_failure(status) {
@@ -758,7 +758,7 @@ pub fn handle_webhook_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     let status = enums::AttemptStatus::try_from(payment_information.status)?;
     let error = if domain_types::utils::is_payment_failure(status) {
@@ -801,7 +801,7 @@ pub fn handle_webhook_response(
 }
 
 /// Same as [`handle_webhook_response`], but for incoming webhook handling that reports
-/// [`ConnectorRequestError`].
+/// [`IntegrationError`].
 pub fn handle_webhook_response_incoming_webhook(
     payment_information: WebhookPaymentInformation,
     status_code: u16,
@@ -811,13 +811,13 @@ pub fn handle_webhook_response_incoming_webhook(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorRequestError,
+    IntegrationError,
 > {
     let status = match payment_information.status {
         WebhookStatus::Paid => enums::AttemptStatus::Charged,
         WebhookStatus::Rejected => enums::AttemptStatus::AuthorizationFailed,
         WebhookStatus::Refunded | WebhookStatus::Chargebacked | WebhookStatus::Unknown => {
-            return Err(report!(ConnectorRequestError::not_implemented(
+            return Err(report!(IntegrationError::not_implemented(
                 "unsupported webhook status for payment attempt".to_string(),
             )));
         }
@@ -871,7 +871,7 @@ pub fn get_trustpay_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    ConnectorResponseError,
+    ConnectorResponseTransformationError,
 > {
     match response {
         TrustpayPaymentsResponse::CardsPayments(response) => {
@@ -943,24 +943,24 @@ pub enum WebhookStatus {
 }
 
 impl TryFrom<WebhookStatus> for enums::AttemptStatus {
-    type Error = ConnectorResponseError;
+    type Error = ConnectorResponseTransformationError;
     fn try_from(item: WebhookStatus) -> Result<Self, Self::Error> {
         match item {
             WebhookStatus::Paid => Ok(Self::Charged),
             WebhookStatus::Rejected => Ok(Self::AuthorizationFailed),
-            _ => Err(ConnectorResponseError::unexpected_response_error_http_status_unknown()),
+            _ => Err(ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()),
         }
     }
 }
 
 impl TryFrom<WebhookStatus> for enums::RefundStatus {
-    type Error = ConnectorResponseError;
+    type Error = ConnectorResponseTransformationError;
     fn try_from(item: WebhookStatus) -> Result<Self, Self::Error> {
         match item {
             WebhookStatus::Paid => Ok(Self::Success),
             WebhookStatus::Refunded => Ok(Self::Success),
             WebhookStatus::Rejected => Ok(Self::Failure),
-            _ => Err(ConnectorResponseError::unexpected_response_error_http_status_unknown()),
+            _ => Err(ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()),
         }
     }
 }
@@ -1043,7 +1043,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustpayAuthUpdateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: TrustpayRouterData<
@@ -1079,7 +1079,7 @@ impl TryFrom<ResponseRouterData<TrustpayAuthUpdateResponse, Self>>
         AccessTokenResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<TrustpayAuthUpdateResponse, Self>,
@@ -1414,7 +1414,7 @@ fn get_debtor_info<
     item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     pm: TrustpayPaymentMethod,
     params: TrustpayMandatoryParams,
-) -> CustomResult<Option<DebtorInformation>, ConnectorRequestError> {
+) -> CustomResult<Option<DebtorInformation>, IntegrationError> {
     let billing_last_name = item
         .resource_common_data
         .get_billing()?
@@ -1439,7 +1439,7 @@ fn get_bank_transfer_debtor_info<
     item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     pm: TrustpayBankTransferPaymentMethod,
     params: TrustpayMandatoryParams,
-) -> CustomResult<Option<DebtorInformation>, ConnectorRequestError> {
+) -> CustomResult<Option<DebtorInformation>, IntegrationError> {
     let billing_last_name = item
         .resource_common_data
         .get_billing()?
@@ -1485,7 +1485,7 @@ fn get_bank_redirection_request_data<
     params: TrustpayMandatoryParams,
     amount: StringMajorUnit,
     auth: TrustpayAuthType,
-) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<ConnectorRequestError>> {
+) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<IntegrationError>> {
     let pm = TrustpayPaymentMethod::try_from(bank_redirection_data)?;
     let return_url = item.request.get_router_return_url()?;
     let payment_request =
@@ -1524,7 +1524,7 @@ fn get_bank_transfer_request_data<
     params: TrustpayMandatoryParams,
     amount: StringMajorUnit,
     auth: TrustpayAuthType,
-) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<ConnectorRequestError>> {
+) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<IntegrationError>> {
     let pm = TrustpayBankTransferPaymentMethod::try_from(bank_transfer_data)?;
     let return_url = item.request.get_router_return_url()?;
     let payment_request =
@@ -1581,7 +1581,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustpayPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: TrustpayRouterData<
             RouterDataV2<
@@ -1626,11 +1626,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
         let auth = TrustpayAuthType::try_from(&item.router_data.connector_config).change_context(
-            ConnectorRequestError::FailedToObtainAuthType {
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
         )?;
@@ -1675,14 +1675,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         redirect_url: item.router_data.request.get_router_return_url()?,
                         enrollment_status: STATUS,
                         eci: token_data.eci.clone().ok_or(
-                            ConnectorRequestError::MissingRequiredField {
+                            IntegrationError::MissingRequiredField {
                                 field_name: "eci",
                                 context: Default::default(),
                             },
                         )?,
                         authentication_status: STATUS,
                         verification_id: token_data.get_cryptogram().ok_or(
-                            ConnectorRequestError::MissingRequiredField {
+                            IntegrationError::MissingRequiredField {
                                 field_name: "verification_id",
                                 context: Default::default(),
                             },
@@ -1705,7 +1705,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("trustpay"),
                 )
                 .into())
@@ -1755,7 +1755,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustpayRefundRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: TrustpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -1769,13 +1769,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
         match item.router_data.resource_common_data.payment_method {
             Some(enums::PaymentMethod::BankRedirect) => {
                 let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
-                    .change_context(ConnectorRequestError::FailedToObtainAuthType {
+                    .change_context(IntegrationError::FailedToObtainAuthType {
                         context: Default::default(),
                     })?;
                 Ok(Self::BankRedirectRefund(Box::new(
@@ -1836,7 +1836,7 @@ pub struct BankRedirectRefundResponse {
 impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let (error, response) = match item.response {
             RefundResponse::CardsRefund(response) => {
@@ -1865,7 +1865,7 @@ impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
 fn handle_cards_refund_response(
     response: CardsRefundResponse,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError> {
     let (refund_status, message) = get_refund_status(&response.payment_status);
     let error = match message {
         Some(message) => Some(ErrorResponse {
@@ -1892,7 +1892,7 @@ fn handle_cards_refund_response(
 pub fn handle_webhooks_refund_response(
     response: WebhookPaymentInformation,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorResponseTransformationError> {
     let refund_status = enums::RefundStatus::try_from(response.status)?;
     let error = match utils::is_refund_failure(refund_status) {
         true => {
@@ -1924,7 +1924,7 @@ pub fn handle_webhooks_refund_response(
             Some(id) => id,
             None => {
                 return Err(report!(
-                    ConnectorResponseError::response_handling_failed_with_context(
+                    ConnectorResponseTransformationError::response_handling_failed_with_context(
                         status_code,
                         Some("missing connector refund id".to_string()),
                     )
@@ -1938,16 +1938,16 @@ pub fn handle_webhooks_refund_response(
 }
 
 /// Same as [`handle_webhooks_refund_response`], for incoming webhook processing with
-/// [`ConnectorRequestError`].
+/// [`IntegrationError`].
 pub fn handle_webhooks_refund_response_incoming_webhook(
     response: WebhookPaymentInformation,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorRequestError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), IntegrationError> {
     let refund_status = match response.status {
         WebhookStatus::Paid | WebhookStatus::Refunded => enums::RefundStatus::Success,
         WebhookStatus::Rejected => enums::RefundStatus::Failure,
         WebhookStatus::Chargebacked | WebhookStatus::Unknown => {
-            return Err(report!(ConnectorRequestError::not_implemented(
+            return Err(report!(IntegrationError::not_implemented(
                 "unsupported webhook status for refund".to_string(),
             )));
         }
@@ -1979,7 +1979,7 @@ pub fn handle_webhooks_refund_response_incoming_webhook(
     };
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.references.payment_id.ok_or(
-            ConnectorRequestError::MissingConnectorRefundID {
+            IntegrationError::MissingConnectorRefundID {
                 context: Default::default(),
             },
         )?,
@@ -2161,7 +2161,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustpayCreateIntentRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: TrustpayRouterData<
@@ -2181,7 +2181,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -2221,7 +2221,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<TrustpayCreateIntentResponse, Self>,
@@ -2236,7 +2236,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             Some(pmt) => pmt,
             None => {
                 return Err(report!(
-                    ConnectorResponseError::response_handling_failed_with_context(
+                    ConnectorResponseTransformationError::response_handling_failed_with_context(
                         http_code,
                         Some("missing payment_method_type".to_string()),
                     )
@@ -2251,7 +2251,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             ) => match get_apple_pay_session(instance_id, &secrets, apple_pay_response, item) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(
-                    report!(ConnectorResponseError::response_handling_failed(http_code)).attach(e),
+                    report!(ConnectorResponseTransformationError::response_handling_failed(http_code)).attach(e),
                 ),
             },
             (
@@ -2260,11 +2260,11 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             ) => match get_google_pay_session(instance_id, &secrets, google_pay_response, item) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(
-                    report!(ConnectorResponseError::response_handling_failed(http_code)).attach(e),
+                    report!(ConnectorResponseTransformationError::response_handling_failed(http_code)).attach(e),
                 ),
             },
             _ => Err(report!(
-                ConnectorResponseError::response_handling_failed_with_context(
+                ConnectorResponseTransformationError::response_handling_failed_with_context(
                     http_code,
                     Some("invalid wallet configuration for create intent response".to_string()),
                 )
@@ -2307,7 +2307,7 @@ pub(crate) fn get_apple_pay_session(
                     apple_pay_init_result.total.amount.clone(),
                     apple_pay_init_result.currency_code,
                 )
-                .change_context(ConnectorRequestError::InvalidDataFormat {
+                .change_context(IntegrationError::InvalidDataFormat {
                     field_name: "amount",
                     context: Default::default(),
                 })?,

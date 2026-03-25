@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -258,7 +258,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<
@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.minor_amount,
                 data.router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -315,7 +315,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     };
                     let payment_token = payment_token_data
                         .encode_to_string_of_json()
-                        .change_context(ConnectorRequestError::RequestEncodingFailed {
+                        .change_context(IntegrationError::RequestEncodingFailed {
                             context: Default::default(),
                         })?;
 
@@ -356,7 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::RevolutPay(_)
                 | WalletData::MbWay(_)
                 | WalletData::Satispay(_)
-                | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                | WalletData::Wero(_) => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Noon"),
                 )),
             },
@@ -377,7 +377,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("Noon"),
                 ))
             }
@@ -385,7 +385,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let currency = Some(item.request.currency);
         let category = Some(item.request.order_category.clone().ok_or(
-            ConnectorRequestError::MissingRequiredField {
+            IntegrationError::MissingRequiredField {
                 field_name: "order_category",
                 context: Default::default(),
             },
@@ -468,7 +468,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
@@ -497,7 +497,7 @@ pub struct NoonAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for NoonAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Noon {
@@ -510,7 +510,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NoonAuthType {
                 application_identifier: application_identifier.to_owned(),
                 business_identifier: business_identifier.to_owned(),
             }),
-            _ => Err(ConnectorRequestError::FailedToObtainAuthType {
+            _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into()),
@@ -608,7 +608,7 @@ pub struct NoonPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<NoonPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let order = item.response.result.order;
         let status = get_payment_status(order.status);
@@ -693,7 +693,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonPaymentsActionRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -710,13 +710,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorRequestError::MissingRequiredField {
+                .change_context(IntegrationError::MissingRequiredField {
                     field_name: "connector_transaction_id",
                     context: Default::default(),
                 })?,
         };
         let transaction = NoonActionTransaction {
-            amount: amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+            amount: amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?,
             currency: item.request.currency,
@@ -745,7 +745,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonPaymentsCancelRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NoonRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -782,7 +782,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonRevokeMandateRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: NoonRouterData<
             RouterDataV2<
@@ -808,7 +808,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NoonPaymentsActionRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -824,7 +824,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             id: item.request.connector_transaction_id.clone(),
         };
         let transaction = NoonActionTransaction {
-            amount: refund_amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+            amount: refund_amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?,
             currency: item.request.currency,
@@ -865,7 +865,7 @@ impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
         MandateRevokeResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NoonRevokeMandateResponse, Self>,
@@ -926,7 +926,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -984,7 +984,7 @@ pub struct RefundSyncResponse {
 impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         let noon_transaction: &NoonRefundResponseTransactions = item
@@ -993,7 +993,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(ConnectorResponseError::response_handling_failed(
+            .ok_or(ConnectorResponseTransformationError::response_handling_failed(
                 item.http_code,
             ))?;
 
@@ -1118,7 +1118,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for SetupMandateRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<
@@ -1149,7 +1149,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None,
                         )
                     } else {
-                        return Err(ConnectorRequestError::MissingRequiredField {
+                        return Err(IntegrationError::MissingRequiredField {
                             field_name: "connector_mandate_id",
                             context: Default::default(),
                         }
@@ -1157,7 +1157,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }
                 _ => {
-                    return Err(ConnectorRequestError::MissingRequiredField {
+                    return Err(IntegrationError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                         context: Default::default(),
                     }
@@ -1198,7 +1198,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             };
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
-                                .change_context(ConnectorRequestError::RequestEncodingFailed {
+                                .change_context(IntegrationError::RequestEncodingFailed {
                                     context: Default::default(),
                                 })?;
 
@@ -1239,7 +1239,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         | WalletData::RevolutPay(_)
                         | WalletData::MbWay(_)
                         | WalletData::Satispay(_)
-                        | WalletData::Wero(_) => Err(ConnectorRequestError::not_implemented(
+                        | WalletData::Wero(_) => Err(IntegrationError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
                     },
@@ -1260,7 +1260,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | PaymentMethodData::CardToken(_)
                     | PaymentMethodData::NetworkToken(_)
                     | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                        Err(ConnectorRequestError::not_implemented(
+                        Err(IntegrationError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         ))
                     }
@@ -1274,7 +1274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .and_then(|metadata| metadata.peek().get("order_category"))
                         .and_then(|value| value.as_str())
                         .map(|s| s.to_string())
-                        .ok_or(ConnectorRequestError::MissingRequiredField {
+                        .ok_or(IntegrationError::MissingRequiredField {
                             field_name: "order_category in metadata",
                             context: Default::default(),
                         })?,
@@ -1336,14 +1336,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorRequestError::RequestEncodingFailed {
+            .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
-            amount: amount.change_context(ConnectorRequestError::RequestEncodingFailed {
+            amount: amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?,
             currency,
@@ -1399,7 +1399,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let order = item.response.result.order;
         let status = get_payment_status(order.status);
@@ -1478,7 +1478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonRepeatPaymentRequest<T>
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: NoonRouterData<
@@ -1499,7 +1499,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorRequestError::AmountConversionFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -1507,7 +1507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_data = match &router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(mandate_ids) => {
                 let connector_mandate_id = mandate_ids.get_connector_mandate_id().ok_or(
-                    ConnectorRequestError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                         context: Default::default(),
                     },
@@ -1518,7 +1518,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(ConnectorRequestError::not_implemented(
+                return Err(IntegrationError::not_implemented(
                     "Only connector mandate ID is supported for Noon repeat payments".to_string(),
                 )
                 .into())
@@ -1603,7 +1603,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<NoonRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NoonRepeatPaymentResponse, Self>,

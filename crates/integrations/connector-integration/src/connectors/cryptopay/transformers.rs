@@ -4,7 +4,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         WebhookDetailsResponse,
     },
-    errors::{ConnectorRequestError, ConnectorResponseError},
+    errors::{IntegrationError, ConnectorResponseTransformationError},
     payment_method_data::PaymentMethodDataTypes,
 };
 
@@ -56,7 +56,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CryptopayPaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: CryptopayRouterData<
             RouterDataV2<
@@ -110,7 +110,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorRequestError::not_implemented(
+                Err(IntegrationError::not_implemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
                 ))
             }
@@ -126,7 +126,7 @@ pub struct CryptopayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Cryptopay {
             api_key,
@@ -139,7 +139,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorRequestError::FailedToObtainAuthType {
+            Err(IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             }
             .into())
@@ -179,7 +179,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -233,7 +233,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .change_context(ConnectorResponseError::response_handling_failed(http_code))?,
+                .change_context(ConnectorResponseTransformationError::response_handling_failed(http_code))?,
             ),
             None => None,
         };
@@ -320,7 +320,7 @@ pub enum WebhookEvent {
 impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -374,7 +374,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     amount.clone(),
                     router_data.request.currency,
                 )
-                .change_context(ConnectorResponseError::response_handling_failed(http_code))?,
+                .change_context(ConnectorResponseTransformationError::response_handling_failed(http_code))?,
             ),
             None => None,
         };
@@ -405,7 +405,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
 }
 
 impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
-    type Error = error_stack::Report<ConnectorRequestError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(notif: CryptopayWebhookDetails) -> Result<Self, Self::Error> {
         let status = common_enums::AttemptStatus::from(notif.data.status.clone());
@@ -443,7 +443,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 match (notif.data.price_amount, notif.data.price_currency) {
                     (Some(amount), Some(currency)) => Some(
                         CryptopayAmountConvertor::convert_back(amount, currency).change_context(
-                            ConnectorRequestError::AmountConversionFailed {
+                            IntegrationError::AmountConversionFailed {
                                 context: Default::default(),
                             },
                         )?,
