@@ -7,10 +7,9 @@
   - [Extend to More Flows](getting-started/extend-to-more-flows.md)
 
 - [Architecture Overview](architecture/README.md)
-  - [Core Components](architecture/concepts/core-components.md)
   - [PCI Compliance](architecture/compliance/compliance.md)
   - [Connector Settings and Overrides](architecture/concepts/connector-settings-and-overrides.md)
-  - [Connectors, Services and Methods](architecture/concepts/connectors-services-subservices-methods.md)
+  - [Connectors, Services and Methods](architecture/concepts/services-and-methods.md)
   - [Environment Settings](architecture/concepts/environment-settings.md)
   - [Error Handling](architecture/concepts/error-handling.md)
   - [Error Mapping](architecture/concepts/error-mapping.md)
