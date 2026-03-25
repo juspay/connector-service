@@ -623,21 +623,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            ArchipelCaptureResponse,
-            Self,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<ArchipelCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            ArchipelCaptureResponse,
-            Self,
-        >,
+        item: ResponseRouterData<ArchipelCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
             return Ok(Self {
@@ -912,19 +904,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Responses for AUTHORIZATION FLOW
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ResponseRouterData<
-            ArchipelPaymentsResponse,
-            Self,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<ArchipelPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            ArchipelPaymentsResponse,
-            Self,
-        >,
+        item: ResponseRouterData<ArchipelPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.error {
             return Ok(Self {
@@ -1087,22 +1072,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<F>
-    TryFrom<
-        ResponseRouterData<
-            ArchipelVoidResponse,
-            Self,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<ArchipelVoidResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            ArchipelVoidResponse,
-            Self,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<ArchipelVoidResponse, Self>) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
             return Ok(Self {
                 response: Err(ArchipelErrorMessageWithHttpCode::new(error, item.http_code).into()),
@@ -1265,21 +1240,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            ArchipelRefundResponse,
-            Self,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<ArchipelRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            ArchipelRefundResponse,
-            Self,
-        >,
+        item: ResponseRouterData<ArchipelRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.error {
             return Ok(Self {
@@ -1312,21 +1279,13 @@ impl std::ops::Deref for ArchipelRSyncResponse {
     }
 }
 
-impl<F>
-    TryFrom<
-        ResponseRouterData<
-            ArchipelRSyncResponse,
-            Self,
-        >,
-    > for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<F> TryFrom<ResponseRouterData<ArchipelRSyncResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            ArchipelRSyncResponse,
-            Self,
-        >,
+        item: ResponseRouterData<ArchipelRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error.clone() {
             return Ok(Self {
@@ -1522,12 +1481,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ResponseRouterData<
-            ArchipelSetupMandateResponse,
-            Self,
-        >,
-    >
+    TryFrom<ResponseRouterData<ArchipelSetupMandateResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -1537,10 +1491,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            ArchipelSetupMandateResponse,
-            Self,
-        >,
+        item: ResponseRouterData<ArchipelSetupMandateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
             return Ok(Self {
