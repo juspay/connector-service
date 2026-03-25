@@ -26,7 +26,7 @@ use domain_types::{
     errors::ConnectorError,
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
+        self, ApplePayDecryptedData, ApplePayWalletData, BankTransferData, CardDetailsForNetworkTransactionId,
         GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
