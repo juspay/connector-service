@@ -90,6 +90,7 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/create_access_token",
             post(handlers::payments::create_access_token),
         )
+        .route("/payments/transform", post(handlers::payments::transform))
         .route(
             "/payments/verify_redirect_response",
             post(handlers::payments::verify_redirect_response),

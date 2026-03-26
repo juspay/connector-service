@@ -32,6 +32,7 @@ install-deps:
 	@command -v protoc >/dev/null 2>&1 || \
 		(echo "Error: protoc not found. Install via nix or 'apt install protobuf-compiler'." && exit 1)
 	@echo "All required tools present."
+	@cd $(SDK_ROOT) && npm install --silent
 
 # ---------------------------------------------------------------------------
 # install-codegen-deps
