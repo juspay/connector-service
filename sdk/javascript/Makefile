@@ -14,7 +14,7 @@ include $(SDK_ROOT)/../common.mk
 # SDK-specific paths continued
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
-JS_TARBALL       := $(PACKAGE_DIR)/hs-playlib-0.3.0.tgz
+JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-0.3.0.tgz
 
 # ---------------------------------------------------------------------------
 # install-deps

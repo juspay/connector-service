@@ -257,12 +257,12 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
     service_flows = parse_service_flows(FFI_SERVICES_DIR)
     single_flow_names = parse_single_flows(FFI_SERVICES_DIR)
 
+    errors = []
     flows = []
     for flow in sorted(service_flows):
         if flow not in proto_rpcs:
-            print(
-                f"  WARNING: '{flow}_req_transformer' exists in services/*.rs but has no matching RPC in services.proto",
-                file=sys.stderr,
+            errors.append(
+                f"  ERROR: '{flow}_req_transformer' exists in services/*.rs but has no matching RPC in services.proto"
             )
             continue
         flows.append({"name": flow, "module": service_flows[flow], **proto_rpcs[flow]})
@@ -270,12 +270,16 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
     single_flows = []
     for flow in sorted(single_flow_names):
         if flow not in proto_rpcs:
-            print(
-                f"  WARNING: '{flow}_transformer' exists in services/*.rs but has no matching RPC in services.proto",
-                file=sys.stderr,
+            errors.append(
+                f"  ERROR: '{flow}_transformer' exists in services/*.rs but has no matching RPC in services.proto"
             )
             continue
         single_flows.append({"name": flow, "module": single_flow_names[flow], **proto_rpcs[flow]})
+
+    if errors:
+        for e in errors:
+            print(e, file=sys.stderr)
+        sys.exit(1)
 
     implemented = set(service_flows.keys()) | set(single_flow_names.keys())
     unimplemented = sorted(set(proto_rpcs) - implemented)

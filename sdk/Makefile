@@ -229,6 +229,7 @@ _wait-for-server:
 
 test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python + Kotlin) with a combined summary. Use QUIET=0 for verbose output.
 	@{ \
+		set -o pipefail; \
 		RUST_EXIT=0; JS_EXIT=0; PY_EXIT=0; KT_EXIT=0; \
 		\
 		printf "\n\033[1m═══ gRPC Smoke Tests ═══\033[0m\n\n"; \
@@ -249,17 +250,17 @@ test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python + Kotlin) wi
 		\
 		printf "\n\033[1m── JavaScript gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc-no-server \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20; \
 		JS_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Python gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc-no-server \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20; \
 		PY_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Kotlin gRPC ──\033[0m\n"; \
 		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc-no-server \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30 || true; \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30; \
 		KT_EXIT=$$?; \
 		\
 		printf "\nStopping gRPC server...\n"; \
