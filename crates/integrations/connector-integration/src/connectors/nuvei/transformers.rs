@@ -532,18 +532,20 @@ pub struct NuveiErrorResponse {
 // Helper function to build Apple Pay card data
 fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     apple_pay_data: &domain_types::payment_method_data::ApplePayWalletData,
-) -> Result<NuveiCard<T>, error_stack::Report<errors::ConnectorError>> {
+) -> Result<NuveiCardOption<T>, error_stack::Report<errors::ConnectorError>> {
     use domain_types::payment_method_data::ApplePayPaymentData;
 
     match &apple_pay_data.payment_data {
-        // Decrypted Apple Pay: Extract PAN, expiry, cryptogram, ECI
+        // Decrypted Apple Pay: Extract PAN, expiry, brand, last4, cryptogram, ECI
         ApplePayPaymentData::Decrypted(apple_pay_decrypt_data) => {
-            Ok(NuveiCard {
-                card_number: None,
-                card_holder_name: None,
+            Ok(NuveiCardOption::DecryptedWallet(NuveiDecryptedWalletCard {
+                card_number: apple_pay_decrypt_data.application_primary_account_number.clone(),
                 expiration_month: Some(apple_pay_decrypt_data.application_expiration_month.clone()),
                 expiration_year: Some(apple_pay_decrypt_data.application_expiration_year.clone()),
-                cvv: None,
+                last_4_digits: Some(Secret::new(
+                    apple_pay_decrypt_data.application_primary_account_number.get_last4(),
+                )),
+                brand: Some(apple_pay_data.payment_method.network.clone()),
                 external_token: Some(NuveiExternalToken {
                     external_token_provider: NuveiExternalTokenProvider::ApplePay,
                     mobile_token: None,
@@ -555,7 +557,7 @@ fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Sen
                     ),
                     eci_provider: apple_pay_decrypt_data.payment_data.eci_indicator.clone(),
                 }),
-            })
+            }))
         }
         // Encrypted Apple Pay: JSON-encode entire Apple Pay data
         ApplePayPaymentData::Encrypted(encrypted_data) => {
@@ -572,7 +574,7 @@ fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Sen
             let mobile_token_json = serde_json::to_string(&apple_pay_json)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-            Ok(NuveiCard {
+            Ok(NuveiCardOption::Generic(NuveiCard {
                 card_number: None,
                 card_holder_name: None,
                 expiration_month: None,
@@ -584,7 +586,7 @@ fn build_apple_pay_card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Sen
                     cryptogram: None,
                     eci_provider: None,
                 }),
-            })
+            }))
         }
     }
 }
@@ -953,7 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 match wallet_data {
                     WalletData::ApplePay(apple_pay_data) => NuveiPaymentOption {
-                        card: Some(NuveiCardOption::Generic(build_apple_pay_card(apple_pay_data)?)),
+                        card: Some(build_apple_pay_card(apple_pay_data)?),
                         alternative_payment_method: None,
                     },
                     WalletData::GooglePay(google_pay_data) => NuveiPaymentOption {
