@@ -34,9 +34,21 @@ impl EventService for EventServiceImpl {
         name = "EventService::handle_event",
         skip(self, request),
         fields(
+            name = common_utils::consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = FlowName::IncomingWebhook.to_string(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::IncomingWebhook.to_string(),
+            flow_specific_fields.status = tracing::field::Empty,
         )
     )]
     async fn handle_event(
