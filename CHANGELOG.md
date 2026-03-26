@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.04.0-hotfix3
+
+### Features
+
+- **connector:** [Truelayer] Implement webhooks for payments and refunds ([#667](https://github.com/juspay/connector-service/pull/667)) ([`2ec5f8d`](https://github.com/juspay/connector-service/commit/2ec5f8d9cdb3e419457556c87243676411e578a3))
+
+### Refactors
+
+- **connector:** [Fiservcommercehub] send expiry year in 4 digit ([#791](https://github.com/juspay/connector-service/pull/791)) ([`f65d386`](https://github.com/juspay/connector-service/commit/f65d386c8eaa7ad89a27347e7ed0fcba5c017194))
+
+**Full Changelog:** [`2026.03.04.0-hotfix2...2026.03.04.0-hotfix3`](https://github.com/juspay/connector-service/compare/2026.03.04.0-hotfix2...2026.03.04.0-hotfix3)
+
+- - -
+
 ## 2026.03.04.0-hotfix2
 
 ### Features
