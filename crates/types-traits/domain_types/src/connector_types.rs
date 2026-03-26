@@ -122,6 +122,7 @@ pub enum ConnectorEnum {
     Zift,
     Revolv3,
     Ppro,
+    Fiservcommercehub,
     Truelayer,
     Peachpayments,
     Finix,
@@ -206,6 +207,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Ppro => Ok(Self::Ppro),
+            grpc_api_types::payments::Connector::Fiservcommercehub => Ok(Self::Fiservcommercehub),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Peachpayments => Ok(Self::Peachpayments),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
@@ -413,6 +415,7 @@ pub struct PaymentFlowData {
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
     pub minor_amount_capturable: Option<MinorUnit>,
+    pub amount: Option<Money>,
     pub access_token: Option<AccessTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
@@ -1407,6 +1410,22 @@ pub struct MandateReference {
     pub connector_mandate_request_reference_id: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub enum PaymentMethodUpdate {
+    Card(CardDetailUpdate),
+}
+
+#[derive(Debug, Clone)]
+pub struct CardDetailUpdate {
+    pub card_exp_month: Option<String>,
+    pub card_exp_year: Option<String>,
+    pub last4_digits: Option<String>,
+    pub issuer_country: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<String>,
+    pub card_holder_name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CaptureSyncResponse {
     Success {
@@ -1777,6 +1796,7 @@ pub struct WebhookDetailsResponse {
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
+    pub payment_method_update: Option<PaymentMethodUpdate>,
 }
 
 #[derive(Debug, Clone)]
@@ -3708,6 +3728,8 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
+            AuthType::Truelayer(_) => Ok(Self::Truelayer),
+            AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),

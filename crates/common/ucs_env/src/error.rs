@@ -108,7 +108,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::FailedAtConnector { .. }
             | Self::AmountConversionFailed
             | Self::GenericError { .. }
-            | Self::MandatePaymentDataMismatch { .. } => {
+            | Self::MandatePaymentDataMismatch { .. }
+            | Self::ConfigResolutionFailed(_) => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,

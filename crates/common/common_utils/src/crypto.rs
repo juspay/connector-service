@@ -681,6 +681,60 @@ impl EncodeMessage for TripleDesEde3CBC {
     }
 }
 
+/// RSA encryption using OAEP padding with SHA-256
+/// Provides stronger security than PKCS#1 v1.5
+/// This matches the Web Crypto API's RSA-OAEP with SHA-256 hash algorithm
+#[derive(Debug)]
+pub struct RsaOaepSha256;
+
+impl RsaOaepSha256 {
+    /// Encrypts plaintext using RSA public key with OAEP-SHA256 padding.
+    pub fn encrypt(
+        public_key_der: &[u8],
+        plaintext: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+        use openssl::md::Md;
+        use openssl::pkey::PKey;
+        use openssl::pkey_ctx::PkeyCtx;
+        use openssl::rsa::Padding;
+
+        let pkey = PKey::public_key_from_der(public_key_der)
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to parse public key from DER format")?;
+
+        let mut ctx = PkeyCtx::new(&pkey)
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to create PkeyCtx")?;
+
+        ctx.encrypt_init()
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to initialize encryption")?;
+
+        ctx.set_rsa_padding(Padding::PKCS1_OAEP)
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to set OAEP padding")?;
+
+        ctx.set_rsa_oaep_md(Md::sha256())
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to set OAEP hash to SHA-256")?;
+
+        ctx.set_rsa_mgf1_md(Md::sha256())
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("Failed to set MGF1 hash to SHA-256")?;
+
+        let key_size = pkey.size();
+        let mut encrypted = vec![0u8; key_size];
+
+        let encrypted_len = ctx
+            .encrypt(plaintext, Some(&mut encrypted))
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("RSA OAEP-SHA256 encryption failed")?;
+
+        encrypted.truncate(encrypted_len);
+        Ok(encrypted)
+    }
+}
+
 #[cfg(test)]
 mod crypto_tests {
     #![allow(clippy::expect_used)]
