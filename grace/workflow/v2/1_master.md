@@ -12,6 +12,8 @@ You are the **orchestrator** for implementing all 6 core payment flows for a **s
 |-----------|-------------|---------|
 | `{CONNECTOR}` | Connector name (exact casing for display, lowercase for files) | `PAYU` |
 | `{BRANCH}` | Git branch name for all work | `feat/payu-flows` |
+| `{PORT}` | gRPC server port — **HARD GATE**: ALL grpcurl tests MUST run on this port. Do NOT use any other port. | `9000` |
+| `{METRICS_PORT}` | Metrics server port — used alongside `{PORT}` when starting the gRPC server. | `9080` |
 | `{MANDATORY_PAYMENT_METHODS}` | JSON object of mandatory payment methods → payment method types | *(see below)* |
 
 `{MANDATORY_PAYMENT_METHODS}` is a JSON object mapping payment methods to their mandatory PMTs:
@@ -65,9 +67,9 @@ Authorize supports multiple payment methods/PMTs (Card, UPI, Wallet, Net Banking
 # Verify directory
 pwd && ls Cargo.toml crates/ Makefile
 
-# Sync to latest main
+# Sync to latest grace_dev_parallal
 git stash push -m "pre-flight-stash" 2>/dev/null || true
-git checkout main && git pull origin main
+git checkout grace_dev_parallal && git pull origin grace_dev_parallal
 
 # Create the working branch
 git checkout -b {BRANCH}
@@ -294,6 +296,8 @@ Variables:
   CONNECTOR: {connector}
   FLOW_NAME: Authorize
   GRPCURL_SERVICE: types.PaymentService/Authorize
+  PORT: {PORT}
+  METRICS_PORT: {METRICS_PORT}
   ACCUMULATED_IDS: {}
   PREVIOUS_FLOW_GRPCURL: <empty or from previous Authorize PM test>
   MANDATORY_PAYMENT_METHODS: <full JSON object>
@@ -335,6 +339,8 @@ Variables:
   CONNECTOR: {connector}
   FLOW_NAME: {FLOW_NAME}
   GRPCURL_SERVICE: <gRPC service method for this flow>
+  PORT: {PORT}
+  METRICS_PORT: {METRICS_PORT}
   ACCUMULATED_IDS: <JSON with all IDs from prior tests>
   PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from previous test>
   MANDATORY_PAYMENT_METHODS: {}
