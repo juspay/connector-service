@@ -3329,8 +3329,8 @@ pub enum SessionToken {
     Paypal(Box<PaypalSessionTokenResponse>),
     /// The session response structure for Apple Pay
     ApplePay(Box<ApplepaySessionTokenResponse>),
-    /// The session response structure for Stripe
-    Stripe(Box<StripeSessionTokenResponse>),
+    /// The session response structure for connector-specific session tokens (e.g. client_secret)
+    Connector(Box<ConnectorSessionTokenResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3636,10 +3636,10 @@ pub struct PaypalSdkMetaData {
     pub client_id: String,
 }
 
-/// Session token response for Stripe's CreateOrder flow.
+/// Session token response for a connector's CreateOrder flow.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StripeSessionTokenResponse {
-    /// The client_secret of the Stripe PaymentIntent
+pub struct ConnectorSessionTokenResponse {
+    /// The client_secret returned by the connector's CreateOrder response
     pub client_secret: Secret<String>,
 }
 

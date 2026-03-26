@@ -15,13 +15,13 @@ use domain_types::{
         PaymentMethodToken, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SetupMandateRequestData,
-        StripeSessionTokenResponse,
+        ConnectorCustomerData, ConnectorCustomerResponse, ConnectorSessionTokenResponse,
+        MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionToken, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -5400,7 +5400,9 @@ impl TryFrom<ResponseRouterData<StripeCreateOrderResponse, Self>>
             response: Ok(PaymentCreateOrderResponse {
                 order_id: response.id,
                 session_token: response.client_secret.map(|cs| {
-                    SessionToken::Stripe(Box::new(StripeSessionTokenResponse { client_secret: cs }))
+                    SessionToken::Connector(Box::new(ConnectorSessionTokenResponse {
+                        client_secret: cs,
+                    }))
                 }),
             }),
             request: PaymentCreateOrderData {

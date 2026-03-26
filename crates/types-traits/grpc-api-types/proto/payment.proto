@@ -1502,7 +1502,10 @@ message SessionToken {
     GpaySessionTokenResponse google_pay = 1;
     PaypalSessionTokenResponse paypal = 2;
     ApplepaySessionTokenResponse apple_pay = 3;
-    StripeSessionTokenResponse stripe = 4;
+    // TODO: ConnectorSessionTokenResponse is not a wallet session token.
+    // It should be decoupled from this oneof into its own field on
+    // PaymentServiceCreateOrderResponse. See: https://github.com/juspay/hyperswitch-prism/issues/817
+    ConnectorSessionTokenResponse connector = 4;
   }
 }
 
@@ -1695,8 +1698,8 @@ enum PaypalFlow {
   PAYPAL_FLOW_CHECKOUT = 1;
 }
 
-// Stripe Session Token - contains client_secret
-message StripeSessionTokenResponse {
+// Connector Session Token - contains client_secret returned by the connector's CreateOrder flow
+message ConnectorSessionTokenResponse {
   SecretString client_secret = 1;
 }
 
