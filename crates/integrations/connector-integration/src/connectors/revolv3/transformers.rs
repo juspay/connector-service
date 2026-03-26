@@ -781,7 +781,7 @@ impl TryFrom<ResponseRouterData<Revolv3RefundResponse, Self>>
     fn try_from(
         item: ResponseRouterData<Revolv3RefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let refund_status = RefundStatus::Pending; //from(&item.response.invoice.invoice_status);
+        let refund_status = RefundStatus::from(&item.response.invoice.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.refunds);
             let error_message = latest_attempt
