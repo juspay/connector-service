@@ -1007,7 +1007,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Use state code conversion (e.g., "California" -> "CA") for US/CA
         let state = router_data
             .resource_common_data
-            .get_optional_billing_state();
+            .get_optional_billing()
+                    .and_then(|b| b.address.as_ref())
+                    .and_then(|address| address.to_state_code_as_optional().ok().flatten());
 
         // Get address_line3 directly from billing address
         let address_line3 = router_data
