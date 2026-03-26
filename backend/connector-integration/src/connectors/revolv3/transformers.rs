@@ -337,7 +337,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .authentication_data
             .as_ref()
-            .map(|auth_data| Revolv3ThreeDSData::try_from(auth_data))
+            .map(Revolv3ThreeDSData::try_from)
             .transpose()?;
 
         let amount = Revolv3AmountData {
