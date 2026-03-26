@@ -1173,6 +1173,35 @@ pub enum PayoutPriority {
     Internal,
 }
 
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutRecipientType {
+    /// Adyen
+    #[default]
+    Individual,
+    Company,
+    NonProfit,
+    PublicSector,
+    NaturalPerson,
+
+    /// Wise
+    Business,
+    Personal,
+}
+
 /// The status of the attempt
 #[derive(
     Clone,
