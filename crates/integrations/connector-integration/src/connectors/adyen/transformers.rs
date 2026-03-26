@@ -1403,7 +1403,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
         ),
     ) -> Result<Self, Self::Error> {
-        let (wallet_data, item) = value;
+        let (wallet_data, _item) = value;
         match wallet_data {
             WalletData::GooglePay(data) => {
                 let google_pay_wallet_data = match &data.tokenization_data {
@@ -1472,6 +1472,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 Ok(apple_pay_wallet_data)
             }
+            
             WalletData::PaypalRedirect(_)
             | WalletData::AmazonPayRedirect(_)
             | WalletData::Paze(_)
