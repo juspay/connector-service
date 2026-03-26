@@ -304,7 +304,8 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
+        | PaymentMethodData::OpenBanking(_)
+        | PaymentMethodData::Netbanking(_) => Err(errors::ConnectorError::NotImplemented(
             "Only Card payment method is supported for Razorpay".to_string(),
         )),
     }
