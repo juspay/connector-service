@@ -147,6 +147,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Reward
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::Upi(_)
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
@@ -311,6 +312,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Reward
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::Upi(_)
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
