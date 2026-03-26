@@ -218,7 +218,7 @@ except IntegrationError as error:
 
 ### Handling Response Transformation Errors
 
-Response transformation errors occur **after** calling the connector. Handle these carefully because the payment may have succeeded at the connector even if Prism cannot parse the response.
+Response transformation errors occur **after** calling the connector when Prism cannot parse the response (e.g., connector API changes, unexpected response formats, invalid JSON/XML). Handle these carefully because the payment may have succeeded at the connector even if Prism cannot parse the response.
 
 #### **JavaScript/TypeScript**
 
