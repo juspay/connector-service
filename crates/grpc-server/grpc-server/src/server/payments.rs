@@ -701,18 +701,22 @@ impl Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
-                |err| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to resolve connector overrides".to_string()),
-                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                        None,
-                    )
-                },
-            )?;
+        let connectors = utils::get_resolved_connectors(
+            config,
+            &connector,
+            &connector_config,
+            metadata_payload.environment.as_deref(),
+        )
+        .map_err(|e| {
+            tracing::error!("Failed to resolve connector overrides: {:?}", e);
+            let api_error = e.get_api_error();
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(api_error.error_message.clone()),
+                Some(api_error.sub_code.clone()),
+                Some(api_error.error_identifier.into()),
+            )
+        })?;
 
         // Create common request data
         let payment_flow_data =
@@ -1562,11 +1566,13 @@ impl PaymentService for Payments {
                     let payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
-                    let connectors = utils::connectors_with_connector_config_overrides(
-                        &metadata_payload.connector_config,
+                    let connectors = utils::get_resolved_connectors(
                         &config,
+                        &connector,
+                        &metadata_payload.connector_config,
+                        metadata_payload.environment.as_deref(),
                     )
-                    .into_grpc_status()?;
+                    .map_err(|e| error_stack::Report::new(e).into_grpc_status())?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -3484,13 +3490,13 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             config.clone(),
             FlowName::PreAuthenticate,
             |request_data| async move { self.internal_pre_authenticate(request_data).await },
-        )
+        ))
         .await
     }
 

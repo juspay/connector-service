@@ -415,6 +415,7 @@ pub struct PaymentFlowData {
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
     pub minor_amount_capturable: Option<MinorUnit>,
+    pub amount: Option<Money>,
     pub access_token: Option<AccessTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
@@ -3728,6 +3729,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
+            AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
