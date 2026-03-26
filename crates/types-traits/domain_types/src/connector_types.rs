@@ -58,6 +58,7 @@ use url::Url;
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
+    Amazonpay,
     Forte,
     Razorpay,
     RazorpayV2,
