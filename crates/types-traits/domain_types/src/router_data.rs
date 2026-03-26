@@ -250,8 +250,9 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
-    Imerchant {
+    Imerchantsolutions {
         api_key: Secret<String>,
+        base_url: Option<String>,
     },
     Bambora {
         merchant_id: Secret<String>,
@@ -991,6 +992,7 @@ impl ConnectorSpecificConfig {
                 merchant_id,
                 terminal_id
             },
+            Imerchantsolutions { api_key },
         )
     }
 
@@ -1369,7 +1371,8 @@ impl ConnectorSpecificConfig {
                     secret,
                     merchant_id,
                     terminal_id
-                }
+                },
+                Imerchantsolutions { api_key },
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -1974,9 +1977,10 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
-            ConnectorEnum::Imerchant => match auth {
-                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Imerchant {
+            ConnectorEnum::Imerchantsolutions => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Imerchantsolutions {
                     api_key: api_key.clone(),
+                    base_url: None,
                 }),
                 _ => Err(err().into()),
             },

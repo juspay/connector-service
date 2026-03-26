@@ -25,7 +25,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -37,10 +37,12 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as imerchant, ImerchantCaptureRequestData, ImerchantCaptureResponseData,
-    ImerchantPSyncResponseData, ImerchantPaymentsRequestData, ImerchantPaymentsResponseData,
-    ImerchantRefundRequestData, ImerchantRefundResponseData, ImerchantRsyncResponse,
-    ImerchantVoidRequestData, ImerchantVoidResponseData,
+    self as imerchantsolutions, ImerchantsolutionsCaptureRequestData,
+    ImerchantsolutionsCaptureResponseData, ImerchantsolutionsPSyncResponseData,
+    ImerchantsolutionsPaymentsRequestData, ImerchantsolutionsPaymentsResponseData,
+    ImerchantsolutionsRefundRequestData, ImerchantsolutionsRefundResponseData,
+    ImerchantsolutionsRsyncResponse, ImerchantsolutionsVoidRequestData,
+    ImerchantsolutionsVoidResponseData,
 };
 
 use super::macros;
@@ -56,124 +58,124 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Imerchant<T>
+    connector_types::SdkSessionTokenV2 for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Imerchant<T>
+    connector_types::ConnectorServiceTrait<T> for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Imerchant<T>
+    connector_types::PaymentAuthorizeV2<T> for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Imerchant<T>
+    connector_types::PaymentSyncV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Imerchant<T>
+    connector_types::PaymentVoidV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Imerchant<T>
+    connector_types::PaymentVoidPostCaptureV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Imerchant<T>
+    connector_types::RefundSyncV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentIncrementalAuthorization for Imerchant<T>
+    connector_types::PaymentIncrementalAuthorization for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Imerchant<T>
+    connector_types::RefundV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Imerchant<T>
+    connector_types::PaymentCapture for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Imerchant<T>
+    connector_types::ValidationTrait for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Imerchant<T>
+    connector_types::PaymentOrderCreate for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Imerchant<T>
+    connector_types::SetupMandateV2<T> for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Imerchant<T>
+    connector_types::RepeatPaymentV2<T> for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Imerchant<T>
+    connector_types::AcceptDispute for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Imerchant<T>
+    connector_types::SubmitEvidenceV2 for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Imerchant<T>
+    connector_types::DisputeDefend for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Imerchant<T>
+    connector_types::IncomingWebhook for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::VerifyRedirectResponse for Imerchant<T>
+    connector_types::VerifyRedirectResponse for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Imerchant<T>
+    connector_types::PaymentSessionToken for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Imerchant<T>
+    connector_types::PaymentAccessToken for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Imerchant<T>
+    connector_types::CreateConnectorCustomer for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Imerchant<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Imerchant<T>
+    connector_types::PaymentTokenV2<T> for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Imerchant<T>
+    connector_types::PaymentPreAuthenticateV2<T> for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Imerchant<T>
+    connector_types::PaymentAuthenticateV2<T> for Imerchantsolutions<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Imerchantsolutions<T>
 {
 }
 
@@ -183,7 +185,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentsCancelPostCaptureData,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -193,12 +195,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSdkSessionTokenData,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Imerchant<T>
+    connector_types::MandateRevokeV2 for Imerchantsolutions<T>
 {
 }
 
@@ -208,41 +210,41 @@ pub(crate) mod headers {
 }
 
 macros::create_all_prerequisites!(
-    connector_name: Imerchant,
+    connector_name: Imerchantsolutions,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: ImerchantPaymentsRequestData<T>,
-            response_body: ImerchantPaymentsResponseData,
+            request_body: ImerchantsolutionsPaymentsRequestData<T>,
+            response_body: ImerchantsolutionsPaymentsResponseData,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: ImerchantCaptureRequestData,
-            response_body: ImerchantCaptureResponseData,
+            request_body: ImerchantsolutionsCaptureRequestData,
+            response_body: ImerchantsolutionsCaptureResponseData,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            response_body: ImerchantPSyncResponseData,
+            response_body: ImerchantsolutionsPSyncResponseData,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Void,
-            request_body: ImerchantVoidRequestData,
-            response_body: ImerchantVoidResponseData,
+            request_body: ImerchantsolutionsVoidRequestData,
+            response_body: ImerchantsolutionsVoidResponseData,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: ImerchantRefundRequestData,
-            response_body: ImerchantRefundResponseData,
+            request_body: ImerchantsolutionsRefundRequestData,
+            response_body: ImerchantsolutionsRefundResponseData,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            response_body: ImerchantRsyncResponse,
+            response_body: ImerchantsolutionsRsyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
@@ -257,7 +259,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
 
             Ok(header)
@@ -267,23 +269,23 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.imerchant.base_url.to_string()
+            req.resource_common_data.connectors.imerchantsolutions.base_url.to_string()
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.imerchant.base_url
+            &req.resource_common_data.connectors.imerchantsolutions.base_url
         }
     }
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
     fn id(&self) -> &'static str {
-        "imerchant"
+        "imerchantsolutions"
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
@@ -295,14 +297,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.imerchant.base_url
+        &connectors.imerchantsolutions.base_url
     }
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = imerchant::ImerchantAuthType::try_from(auth_type)
+        let auth = imerchantsolutions::ImerchantsolutionsAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
@@ -315,9 +317,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: imerchant::ImerchantErrorResponse = res
+        let response: imerchantsolutions::ImerchantsolutionsErrorResponse = res
             .response
-            .parse_struct("ImerchantErrorResponse")
+            .parse_struct("ImerchantsolutionsErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
@@ -338,9 +340,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_request: Json(ImerchantPaymentsRequestData),
-    curl_response: ImerchantPaymentsResponseData,
+    connector: Imerchantsolutions,
+    curl_request: Json(ImerchantsolutionsPaymentsRequestData),
+    curl_response: ImerchantsolutionsPaymentsResponseData,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -368,8 +370,8 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_response: ImerchantPSyncResponseData,
+    connector: Imerchantsolutions,
+    curl_response: ImerchantsolutionsPSyncResponseData,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -401,9 +403,9 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_request: Json(ImerchantVoidRequestData),
-    curl_response: ImerchantVoidResponseData,
+    connector: Imerchantsolutions,
+    curl_request: Json(ImerchantsolutionsVoidRequestData),
+    curl_response: ImerchantsolutionsVoidResponseData,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
@@ -433,9 +435,9 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_request: Json(ImerchantCaptureRequestData),
-    curl_response: ImerchantCaptureResponseData,
+    connector: Imerchantsolutions,
+    curl_request: Json(ImerchantsolutionsCaptureRequestData),
+    curl_response: ImerchantsolutionsCaptureResponseData,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -465,9 +467,9 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_request: Json(ImerchantRefundRequest),
-    curl_response: ImerchantRefundResponse,
+    connector: Imerchantsolutions,
+    curl_request: Json(ImerchantsolutionsRefundRequest),
+    curl_response: ImerchantsolutionsRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -497,8 +499,8 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Imerchant,
-    curl_response: ImerchantRsyncResponse,
+    connector: Imerchantsolutions,
+    curl_response: ImerchantsolutionsRsyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
@@ -540,25 +542,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Imerchant<T>
+    for Imerchantsolutions<T>
 {
 }
 
@@ -568,7 +570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -578,7 +580,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -588,7 +590,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -598,7 +600,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -608,7 +610,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -618,7 +620,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -628,7 +630,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -638,7 +640,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -648,7 +650,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }
 
@@ -658,6 +660,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Imerchant<T>
+    > for Imerchantsolutions<T>
 {
 }

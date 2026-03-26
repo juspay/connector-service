@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::is_payment_failure,
 };
@@ -17,23 +17,25 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::imerchant::ImerchantRouterData, types::ResponseRouterData, utils};
+use crate::{
+    connectors::imerchantsolutions::ImerchantsolutionsRouterData, types::ResponseRouterData, utils,
+};
 
-pub struct ImerchantAuthType {
+pub struct ImerchantsolutionsAuthType {
     pub(super) api_key: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ImerchantErrorResponse {
+pub struct ImerchantsolutionsErrorResponse {
     pub error: String,
     pub message: String,
     pub code: String,
-    pub details: ImerchantErrorDetails,
+    pub details: ImerchantsolutionsErrorDetails,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantErrorDetails {
+pub struct ImerchantsolutionsErrorDetails {
     pub status: String,
     pub error_code: String,
     pub message: String,
@@ -41,11 +43,11 @@ pub struct ImerchantErrorDetails {
     pub psp_reference: String,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for ImerchantAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for ImerchantsolutionsAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Imerchant { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Imerchantsolutions { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
@@ -55,7 +57,7 @@ impl TryFrom<&ConnectorSpecificAuth> for ImerchantAuthType {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantPaymentsRequestData<T: PaymentMethodDataTypes> {
+pub struct ImerchantsolutionsPaymentsRequestData<T: PaymentMethodDataTypes> {
     amount: MinorUnit,
     currency: Currency,
     reference: String,
@@ -96,7 +98,7 @@ struct AddressDetails {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ImerchantRouterData<
+        ImerchantsolutionsRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -105,11 +107,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for ImerchantPaymentsRequestData<T>
+    > for ImerchantsolutionsPaymentsRequestData<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ImerchantRouterData<
+        item: ImerchantsolutionsRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -224,23 +226,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Imerchant"),
-            ))?,
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Imerchantsolutions"),
+                ))?
+            }
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantPaymentsResponseData {
+pub struct ImerchantsolutionsPaymentsResponseData {
     payment_id: String,
     psp_reference: String,
     reference: Option<String>,
     amount: MinorUnit,
     currency: Currency,
     result_code: ResultCode,
-    status: ImerchantPaymentStatus,
+    status: ImerchantsolutionsPaymentStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -255,7 +260,7 @@ enum ResultCode {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
-enum ImerchantPaymentStatus {
+enum ImerchantsolutionsPaymentStatus {
     Authorised,
     Authorized,
     Captured,
@@ -263,12 +268,12 @@ enum ImerchantPaymentStatus {
     Refused,
 }
 
-impl<F, T> TryFrom<ResponseRouterData<ImerchantPaymentsResponseData, Self>>
+impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantPaymentsResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(item.response.status.clone());
 
@@ -319,7 +324,7 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantPaymentsResponseData, Self>>
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantPSyncResponseData {
+pub struct ImerchantsolutionsPSyncResponseData {
     payment_id: String,
     psp_reference: String,
     merchant_reference: Option<String>,
@@ -328,7 +333,7 @@ pub struct ImerchantPSyncResponseData {
     remaining_amount: Option<MinorUnit>,
     captures: Vec<Captures>,
     currency: Currency,
-    status: ImerchantPaymentStatus,
+    status: ImerchantsolutionsPaymentStatus,
     capture_mode: String,
     captured_at: Option<String>,
     can_capture: bool,
@@ -343,12 +348,12 @@ struct Captures {
     captured_at: Option<String>,
 }
 
-impl<F, T> TryFrom<ResponseRouterData<ImerchantPSyncResponseData, Self>>
+impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantPSyncResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(item.response.status.clone());
 
@@ -399,23 +404,23 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantPSyncResponseData, Self>>
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantVoidRequestData {
+pub struct ImerchantsolutionsVoidRequestData {
     psp_reference: String,
     reason: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ImerchantRouterData<
+        ImerchantsolutionsRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
-    > for ImerchantVoidRequestData
+    > for ImerchantsolutionsVoidRequestData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ImerchantRouterData<
+        item: ImerchantsolutionsRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
@@ -429,7 +434,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantVoidResponseData {
+pub struct ImerchantsolutionsVoidResponseData {
     success: bool,
     psp_reference: String,
     original_reference: String,
@@ -437,13 +442,13 @@ pub struct ImerchantVoidResponseData {
     message: Option<String>,
 }
 
-impl TryFrom<ResponseRouterData<ImerchantVoidResponseData, Self>>
+impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<ImerchantVoidResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let status = if item.response.success {
             AttemptStatus::Voided
@@ -493,7 +498,7 @@ impl TryFrom<ResponseRouterData<ImerchantVoidResponseData, Self>>
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantCaptureRequestData {
+pub struct ImerchantsolutionsCaptureRequestData {
     payment_id: String,
     // psp_reference: String, // need to know how to retrieve connector_response_reference_id in Capture flow
     amount: MinorUnit,
@@ -502,16 +507,16 @@ pub struct ImerchantCaptureRequestData {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ImerchantRouterData<
+        ImerchantsolutionsRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
-    > for ImerchantCaptureRequestData
+    > for ImerchantsolutionsCaptureRequestData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ImerchantRouterData<
+        item: ImerchantsolutionsRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
@@ -534,7 +539,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantCaptureResponseData {
+pub struct ImerchantsolutionsCaptureResponseData {
     success: bool,
     psp_reference: String,
     original_reference: String,
@@ -545,13 +550,13 @@ pub struct ImerchantCaptureResponseData {
     message: Option<String>,
 }
 
-impl TryFrom<ResponseRouterData<ImerchantCaptureResponseData, Self>>
+impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<ImerchantCaptureResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         if item.response.success {
             Ok(Self {
@@ -594,7 +599,7 @@ impl TryFrom<ResponseRouterData<ImerchantCaptureResponseData, Self>>
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantRefundRequestData {
+pub struct ImerchantsolutionsRefundRequestData {
     payment_id: String,
     // psp_reference: String, // need to know how to retrieve connector_response_reference_id in Refunds flow
     amount: MinorUnit,
@@ -605,16 +610,16 @@ pub struct ImerchantRefundRequestData {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ImerchantRouterData<
+        ImerchantsolutionsRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
-    > for ImerchantRefundRequestData
+    > for ImerchantsolutionsRefundRequestData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ImerchantRouterData<
+        item: ImerchantsolutionsRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
@@ -631,7 +636,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantRefundResponseData {
+pub struct ImerchantsolutionsRefundResponseData {
     success: bool,
     psp_reference: String,
     original_reference: String,
@@ -642,13 +647,13 @@ pub struct ImerchantRefundResponseData {
     message: Option<String>,
 }
 
-impl TryFrom<ResponseRouterData<ImerchantRefundResponseData, Self>>
+impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<ImerchantRefundResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = if item.response.success {
             RefundStatus::Success
@@ -685,7 +690,7 @@ impl TryFrom<ResponseRouterData<ImerchantRefundResponseData, Self>>
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantRsyncResponse {
+pub struct ImerchantsolutionsRsyncResponse {
     payment_id: String,
     psp_reference: String,
     merchant_reference: Option<String>,
@@ -709,12 +714,12 @@ struct Refunds {
     created_at: Option<String>,
 }
 
-impl TryFrom<ResponseRouterData<ImerchantRsyncResponse, Self>>
+impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantRsyncResponse, Self>,
+        item: ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_refund_status(item.response.status.clone());
 
@@ -745,14 +750,13 @@ impl TryFrom<ResponseRouterData<ImerchantRsyncResponse, Self>>
     }
 }
 
-fn get_attempt_status(item: ImerchantPaymentStatus) -> AttemptStatus {
+fn get_attempt_status(item: ImerchantsolutionsPaymentStatus) -> AttemptStatus {
     match item {
-        ImerchantPaymentStatus::Authorised | ImerchantPaymentStatus::Authorized => {
-            AttemptStatus::Authorized
-        }
-        ImerchantPaymentStatus::Captured => AttemptStatus::Charged,
-        ImerchantPaymentStatus::Pending => AttemptStatus::Pending,
-        ImerchantPaymentStatus::Refused => AttemptStatus::Failure,
+        ImerchantsolutionsPaymentStatus::Authorised
+        | ImerchantsolutionsPaymentStatus::Authorized => AttemptStatus::Authorized,
+        ImerchantsolutionsPaymentStatus::Captured => AttemptStatus::Charged,
+        ImerchantsolutionsPaymentStatus::Pending => AttemptStatus::Pending,
+        ImerchantsolutionsPaymentStatus::Refused => AttemptStatus::Failure,
     }
 }
 

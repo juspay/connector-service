@@ -82,7 +82,7 @@ default_impl_verify_webhook_source_v2!(
     Hipay,
     Hyperpg,
     Iatapay,
-    Imerchant,
+    Imerchantsolutions,
     Jpmorgan,
     Loonio,
     Mifinity,

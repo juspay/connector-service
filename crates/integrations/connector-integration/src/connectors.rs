@@ -233,5 +233,5 @@ pub use self::peachpayments::Peachpayments;
 pub mod finix;
 pub use self::finix::Finix;
 
-pub mod imerchant;
-pub use self::imerchant::Imerchant;
+pub mod imerchantsolutions;
+pub use self::imerchantsolutions::Imerchantsolutions;

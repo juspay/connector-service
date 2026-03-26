@@ -740,7 +740,7 @@ enum Connector {
   PEACHPAYMENTS = 112;
   PPRO = 113;
   FISERVCOMMERCEHUB = 114;
-  IMERCHANT = 115;
+  IMERCHANTSOLUTIONS = 115;
 }
 
 // Payment method types
