@@ -42,8 +42,8 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
             } => Ok(Self {
                 finix_user_name: api_key.to_owned(),
                 finix_password: api_secret.to_owned(),
-                merchant_id: key2.to_owned(),
-                merchant_identity_id: key1.to_owned(),
+                merchant_id: key1.to_owned(),
+                merchant_identity_id: key2.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
