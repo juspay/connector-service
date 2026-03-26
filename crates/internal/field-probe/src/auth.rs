@@ -525,5 +525,10 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             terminal_id: id(),
             base_url: None,
         },
+        ConnectorEnum::Billdesk => ConnectorSpecificConfig::Billdesk {
+            api_key: k(),
+            key1: None,
+            base_url: None,
+        },
     }
 }

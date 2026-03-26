@@ -65,7 +65,8 @@ message PaymentMethod {
     SamsungWallet samsung_pay = 24;                     //Samsung
     MBWay mb_way = 25;                                  // MB WAY 
     Satispay satispay = 26;                             // Satispay 
-    Wero wero = 27;                                     // Wero 
+    Wero wero = 27;                                     // Wero
+    BillDeskRedirectData bill_desk_redirect = 28;       // BillDesk Redirect
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -521,6 +522,10 @@ message Satispay {
 // Wero - European digital wallet payment solution
 message Wero {
   // Fields will be added as needed for Wero integration
+}
+
+// BillDesk Redirect - BillDesk wallet redirect payment method
+message BillDeskRedirectData {
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK

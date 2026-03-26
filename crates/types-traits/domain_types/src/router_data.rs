@@ -697,6 +697,11 @@ pub enum ConnectorSpecificConfig {
         terminal_id: Secret<String>,
         base_url: Option<String>,
     },
+    Billdesk {
+        api_key: Secret<String>,
+        key1: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -972,6 +977,7 @@ impl ConnectorSpecificConfig {
             Coinbase { api_key },
             Coingate { api_key },
             Revolv3 { api_key },
+            Billdesk { api_key },
             Finix {
                 finix_user_name,
                 finix_password,
@@ -1351,6 +1357,7 @@ impl ConnectorSpecificConfig {
                 Coinbase { api_key },
                 Coingate { api_key },
                 Revolv3 { api_key },
+                Billdesk { api_key },
                 Finix {
                     finix_user_name,
                     finix_password,
@@ -1845,6 +1852,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 merchant_id: fiservcommercehub.merchant_id.ok_or_else(err)?,
                 terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
                 base_url: fiservcommercehub.base_url,
+            }),
+            AuthType::Billdesk(billdesk) => Ok(Self::Billdesk {
+                api_key: billdesk.api_key.ok_or_else(err)?,
+                key1: None,
+                base_url: billdesk.base_url,
             }),
         }
     }
@@ -2765,6 +2777,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
                     api_key: api_key.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Billdesk => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Billdesk {
+                    api_key: api_key.clone(),
+                    key1: None,
+                    base_url: None,
+                }),
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Billdesk {
+                    api_key: api_key.clone(),
+                    key1: Some(key1.clone()),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

@@ -1055,6 +1055,7 @@ pub enum PaymentMethodType {
     RevolutPay,
     SepaGuaranteedDebit,
     IndonesianBankTransfer,
+    BillDeskRedirect,
 }
 
 impl PaymentMethodType {

@@ -785,10 +785,17 @@ EOF
         if [[ "$flow" == "ConnectorCommon" ]]; then
             continue
         fi
-        
+        # Skip payout traits that have blanket implementations in interfaces crate
+        if [[ "$flow" == "PayoutCreateV2" ]] || [[ "$flow" == "PayoutTransferV2" ]] || \
+           [[ "$flow" == "PayoutGetV2" ]] || [[ "$flow" == "PayoutVoidV2" ]] || \
+           [[ "$flow" == "PayoutStageV2" ]] || [[ "$flow" == "PayoutCreateLinkV2" ]] || \
+           [[ "$flow" == "PayoutCreateRecipientV2" ]] || [[ "$flow" == "PayoutEnrollDisburseAccountV2" ]]; then
+            continue
+        fi
+
         generate_trait_impl "$flow" >> "$temp_file"
     done
-    
+
     # Add section for ConnectorIntegrationV2 implementations
     cat >> "$temp_file" <<EOF
 
@@ -800,7 +807,14 @@ EOF
         if [[ "$flow" == "ConnectorCommon" ]] || [[ "$flow" == "IncomingWebhook" ]] || [[ "$flow" == "ValidationTrait" ]] || [[ "$flow" == "VerifyRedirectResponse" ]]; then
             continue
         fi
-        
+        # Skip payout traits that have blanket implementations in interfaces crate
+        if [[ "$flow" == "PayoutCreateV2" ]] || [[ "$flow" == "PayoutTransferV2" ]] || \
+           [[ "$flow" == "PayoutGetV2" ]] || [[ "$flow" == "PayoutVoidV2" ]] || \
+           [[ "$flow" == "PayoutStageV2" ]] || [[ "$flow" == "PayoutCreateLinkV2" ]] || \
+           [[ "$flow" == "PayoutCreateRecipientV2" ]] || [[ "$flow" == "PayoutEnrollDisburseAccountV2" ]]; then
+            continue
+        fi
+
         generate_connector_integration_impl "$flow" >> "$temp_file"
     done
     
@@ -1068,9 +1082,29 @@ update_config() {
 update_field_probe() {
     log_step "Updating field-probe (ConnectorEnum match arm)"
 
-    # Check if already exists
+    local field_probe_auth_file
+    field_probe_auth_file="$(dirname "$FIELD_PROBE_FILE")/auth.rs"
+
+    # Check if already exists in auth.rs
+    if grep -q "ConnectorEnum::$NAME_PASCAL =>" "$field_probe_auth_file" 2>/dev/null; then
+        log_warning "Skipping field-probe auth.rs update - $NAME_PASCAL already exists"
+    else
+        # Add match arm before the closing } of the match in auth.rs
+        # Insert before the last line containing only "    }" (closing brace of match block)
+        sed -i.bak "/ConnectorEnum::Fiservcommercehub => ConnectorSpecificConfig::Fiservcommercehub/,/},/ {
+            /},/ a\\
+\\        ConnectorEnum::$NAME_PASCAL => ConnectorSpecificConfig::$NAME_PASCAL {\\
+            api_key: k(),\\
+            base_url: None,\\
+        },
+        }" "$field_probe_auth_file"
+        rm -f "$field_probe_auth_file.bak"
+        log_success "Updated field-probe auth.rs with $NAME_PASCAL match arm"
+    fi
+
+    # Check if already exists in main.rs
     if grep -q "ConnectorEnum::$NAME_PASCAL =>" "$FIELD_PROBE_FILE" 2>/dev/null; then
-        log_warning "Skipping field-probe update - $NAME_PASCAL already exists"
+        log_warning "Skipping field-probe main.rs update - $NAME_PASCAL already exists"
         return 0
     fi
 

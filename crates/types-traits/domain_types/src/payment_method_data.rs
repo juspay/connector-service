@@ -686,7 +686,11 @@ pub enum WalletData {
     MbWay(MbWayData),
     Satispay(SatispayData),
     Wero(WeroData),
+    BillDeskRedirect(BillDeskRedirectData),
 }
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct BillDeskRedirectData {}
 
 impl WalletData {
     pub fn get_wallet_token(&self) -> Result<Secret<String>, Error> {

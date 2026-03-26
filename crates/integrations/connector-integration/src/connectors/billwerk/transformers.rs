@@ -205,12 +205,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::Netbanking(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("billwerk"),
-                )
-                .into())
-            }
+            | PaymentMethodData::Netbanking(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("billwerk"),
+            )
+            .into()),
         }
     }
 }
