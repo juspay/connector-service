@@ -18,7 +18,7 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 #[cfg(feature = "injector-client")]
 use injector;
 
