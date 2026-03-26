@@ -47,7 +47,8 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "order_details": [],  // List of order details (required, can be empty)
-    })).unwrap_or_default()
+    }))
+    .unwrap_or_default()
 }
 
 pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {

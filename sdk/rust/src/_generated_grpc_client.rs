@@ -6,14 +6,14 @@ use std::{collections::HashMap, sync::Arc};
 use grpc_api_types::payments::{
     // tonic-generated client stubs (one module per service)
     customer_service_client::CustomerServiceClient,
+    direct_payment_service_client::DirectPaymentServiceClient,
     dispute_service_client::DisputeServiceClient,
     event_service_client::EventServiceClient,
     merchant_authentication_service_client::MerchantAuthenticationServiceClient,
     payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
     payment_method_service_client::PaymentMethodServiceClient,
-    payment_service_client::PaymentServiceClient,
     payout_service_client::PayoutServiceClient,
-    proxy_payment_service_client::ProxyPaymentServiceClient,
+    proxied_payment_service_client::ProxiedPaymentServiceClient,
     recurring_payment_service_client::RecurringPaymentServiceClient,
     refund_service_client::RefundServiceClient,
     tokenized_payment_service_client::TokenizedPaymentServiceClient,
@@ -161,6 +161,67 @@ impl_grpc_client!(
     ),
 );
 
+// DirectPaymentService
+impl_grpc_client!(
+    GrpcDirectPaymentClient,
+    DirectPaymentServiceClient,
+    (
+        authorize,
+        authorize,
+        PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse
+    ),
+    (
+        get,
+        get,
+        PaymentServiceGetRequest,
+        PaymentServiceGetResponse
+    ),
+    (
+        void,
+        void,
+        PaymentServiceVoidRequest,
+        PaymentServiceVoidResponse
+    ),
+    (
+        reverse,
+        reverse,
+        PaymentServiceReverseRequest,
+        PaymentServiceReverseResponse
+    ),
+    (
+        capture,
+        capture,
+        PaymentServiceCaptureRequest,
+        PaymentServiceCaptureResponse
+    ),
+    (
+        create_order,
+        create_order,
+        PaymentServiceCreateOrderRequest,
+        PaymentServiceCreateOrderResponse
+    ),
+    (refund, refund, PaymentServiceRefundRequest, RefundResponse),
+    (
+        incremental_authorization,
+        incremental_authorization,
+        PaymentServiceIncrementalAuthorizationRequest,
+        PaymentServiceIncrementalAuthorizationResponse
+    ),
+    (
+        verify_redirect_response,
+        verify_redirect_response,
+        PaymentServiceVerifyRedirectResponseRequest,
+        PaymentServiceVerifyRedirectResponseResponse
+    ),
+    (
+        setup_recurring,
+        setup_recurring,
+        PaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse
+    ),
+);
+
 // DisputeService
 impl_grpc_client!(
     GrpcDisputeClient,
@@ -270,73 +331,6 @@ impl_grpc_client!(
     ),
 );
 
-// PaymentService
-impl_grpc_client!(
-    GrpcPaymentClient,
-    PaymentServiceClient,
-    (
-        authorize,
-        authorize,
-        PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse
-    ),
-    (
-        get,
-        get,
-        PaymentServiceGetRequest,
-        PaymentServiceGetResponse
-    ),
-    (
-        void,
-        void,
-        PaymentServiceVoidRequest,
-        PaymentServiceVoidResponse
-    ),
-    (
-        reverse,
-        reverse,
-        PaymentServiceReverseRequest,
-        PaymentServiceReverseResponse
-    ),
-    (
-        capture,
-        capture,
-        PaymentServiceCaptureRequest,
-        PaymentServiceCaptureResponse
-    ),
-    (
-        create_order,
-        create_order,
-        PaymentServiceCreateOrderRequest,
-        PaymentServiceCreateOrderResponse
-    ),
-    (refund, refund, PaymentServiceRefundRequest, RefundResponse),
-    (
-        incremental_authorization,
-        incremental_authorization,
-        PaymentServiceIncrementalAuthorizationRequest,
-        PaymentServiceIncrementalAuthorizationResponse
-    ),
-    (
-        verify_redirect_response,
-        verify_redirect_response,
-        PaymentServiceVerifyRedirectResponseRequest,
-        PaymentServiceVerifyRedirectResponseResponse
-    ),
-    (
-        setup_recurring,
-        setup_recurring,
-        PaymentServiceSetupRecurringRequest,
-        PaymentServiceSetupRecurringResponse
-    ),
-    (
-        payment_handle_event,
-        handle_event,
-        EventServiceHandleRequest,
-        EventServiceHandleResponse
-    ),
-);
-
 // PayoutService
 impl_grpc_client!(
     GrpcPayoutClient,
@@ -391,36 +385,36 @@ impl_grpc_client!(
     ),
 );
 
-// ProxyPaymentService
+// ProxiedPaymentService
 impl_grpc_client!(
-    GrpcProxyPaymentClient,
-    ProxyPaymentServiceClient,
+    GrpcProxiedPaymentClient,
+    ProxiedPaymentServiceClient,
     (
-        proxy_authorize,
+        proxied_authorize,
         authorize,
         ProxyPaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse
     ),
     (
-        proxy_setup_recurring,
+        proxied_setup_recurring,
         setup_recurring,
         ProxyPaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse
     ),
     (
-        proxy_pre_authenticate,
+        proxied_pre_authenticate,
         pre_authenticate,
         ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
         PaymentMethodAuthenticationServicePreAuthenticateResponse
     ),
     (
-        proxy_authenticate,
+        proxied_authenticate,
         authenticate,
         ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
         PaymentMethodAuthenticationServiceAuthenticateResponse
     ),
     (
-        proxy_post_authenticate,
+        proxied_post_authenticate,
         post_authenticate,
         ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
         PaymentMethodAuthenticationServicePostAuthenticateResponse
@@ -494,21 +488,21 @@ impl_grpc_client!(
 /// }).await?;
 ///
 /// let _ = client.customer.create(Default::default()).await;
+/// let _ = client.direct_payment.authorize(Default::default()).await;
 /// let _ = client.dispute.submit_evidence(Default::default()).await;
 /// let _ = client.event.handle_event(Default::default()).await;
-/// let _ = client.merchant_authentication.create_access_token(Default::default()).await;
 /// # Ok(()) }
 /// ```
 pub struct GrpcClient {
     pub customer: GrpcCustomerClient,
+    pub direct_payment: GrpcDirectPaymentClient,
     pub dispute: GrpcDisputeClient,
     pub event: GrpcEventClient,
     pub merchant_authentication: GrpcMerchantAuthenticationClient,
     pub payment_method_authentication: GrpcPaymentMethodAuthenticationClient,
     pub payment_method: GrpcPaymentMethodClient,
-    pub payment: GrpcPaymentClient,
     pub payout: GrpcPayoutClient,
-    pub proxy_payment: GrpcProxyPaymentClient,
+    pub proxied_payment: GrpcProxiedPaymentClient,
     pub recurring_payment: GrpcRecurringPaymentClient,
     pub refund: GrpcRefundClient,
     pub tokenized_payment: GrpcTokenizedPaymentClient,
@@ -531,6 +525,7 @@ impl GrpcClient {
 
         Ok(Self {
             customer: GrpcCustomerClient::new(channel.clone(), Arc::clone(&headers)),
+            direct_payment: GrpcDirectPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             dispute: GrpcDisputeClient::new(channel.clone(), Arc::clone(&headers)),
             event: GrpcEventClient::new(channel.clone(), Arc::clone(&headers)),
             merchant_authentication: GrpcMerchantAuthenticationClient::new(
@@ -542,9 +537,8 @@ impl GrpcClient {
                 Arc::clone(&headers),
             ),
             payment_method: GrpcPaymentMethodClient::new(channel.clone(), Arc::clone(&headers)),
-            payment: GrpcPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             payout: GrpcPayoutClient::new(channel.clone(), Arc::clone(&headers)),
-            proxy_payment: GrpcProxyPaymentClient::new(channel.clone(), Arc::clone(&headers)),
+            proxied_payment: GrpcProxiedPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             recurring_payment: GrpcRecurringPaymentClient::new(
                 channel.clone(),
                 Arc::clone(&headers),

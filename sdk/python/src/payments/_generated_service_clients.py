@@ -11,6 +11,41 @@ class CustomerClient(_ConnectorClientBase):
         """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
         return self._execute_flow("create", request, _pb2.CustomerServiceCreateResponse, options)
 
+class DirectPaymentClient(_ConnectorClientBase):
+    """DirectPaymentService flows"""
+
+    def authorize(self, request, options=None):
+        """DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing."""
+        return self._execute_flow("authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
+
+    def capture(self, request, options=None):
+        """DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account."""
+        return self._execute_flow("capture", request, _pb2.PaymentServiceCaptureResponse, options)
+
+    def create_order(self, request, options=None):
+        """DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls."""
+        return self._execute_flow("create_order", request, _pb2.PaymentServiceCreateOrderResponse, options)
+
+    def get(self, request, options=None):
+        """DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
+        return self._execute_flow("get", request, _pb2.PaymentServiceGetResponse, options)
+
+    def refund(self, request, options=None):
+        """DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled."""
+        return self._execute_flow("refund", request, _pb2.RefundResponse, options)
+
+    def reverse(self, request, options=None):
+        """DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization."""
+        return self._execute_flow("reverse", request, _pb2.PaymentServiceReverseResponse, options)
+
+    def setup_recurring(self, request, options=None):
+        """DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges."""
+        return self._execute_flow("setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)
+
+    def void(self, request, options=None):
+        """DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed."""
+        return self._execute_flow("void", request, _pb2.PaymentServiceVoidResponse, options)
+
 class DisputeClient(_ConnectorClientBase):
     """DisputeService flows"""
 
@@ -66,41 +101,6 @@ class PaymentMethodClient(_ConnectorClientBase):
         """PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing."""
         return self._execute_flow("tokenize", request, _pb2.PaymentMethodServiceTokenizeResponse, options)
 
-class PaymentClient(_ConnectorClientBase):
-    """PaymentService flows"""
-
-    def authorize(self, request, options=None):
-        """PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing."""
-        return self._execute_flow("authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
-
-    def capture(self, request, options=None):
-        """PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle."""
-        return self._execute_flow("capture", request, _pb2.PaymentServiceCaptureResponse, options)
-
-    def create_order(self, request, options=None):
-        """PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates."""
-        return self._execute_flow("create_order", request, _pb2.PaymentServiceCreateOrderResponse, options)
-
-    def get(self, request, options=None):
-        """PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
-        return self._execute_flow("get", request, _pb2.PaymentServiceGetResponse, options)
-
-    def refund(self, request, options=None):
-        """PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment."""
-        return self._execute_flow("refund", request, _pb2.RefundResponse, options)
-
-    def reverse(self, request, options=None):
-        """PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations."""
-        return self._execute_flow("reverse", request, _pb2.PaymentServiceReverseResponse, options)
-
-    def setup_recurring(self, request, options=None):
-        """PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases."""
-        return self._execute_flow("setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)
-
-    def void(self, request, options=None):
-        """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
-        return self._execute_flow("void", request, _pb2.PaymentServiceVoidResponse, options)
-
 class PayoutClient(_ConnectorClientBase):
     """PayoutService flows"""
 
@@ -108,28 +108,28 @@ class PayoutClient(_ConnectorClientBase):
         """PayoutService.Create — Creates a payout."""
         return self._execute_flow("payout_create", request, _pb2.PayoutServiceCreateResponse, options)
 
-class ProxyPaymentClient(_ConnectorClientBase):
-    """ProxyPaymentService flows"""
+class ProxiedPaymentClient(_ConnectorClientBase):
+    """ProxiedPaymentService flows"""
 
-    def proxy_authenticate(self, request, options=None):
-        """ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
-        return self._execute_flow("proxy_authenticate", request, _pb2.PaymentMethodAuthenticationServiceAuthenticateResponse, options)
+    def proxied_authenticate(self, request, options=None):
+        """ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
+        return self._execute_flow("proxied_authenticate", request, _pb2.PaymentMethodAuthenticationServiceAuthenticateResponse, options)
 
-    def proxy_authorize(self, request, options=None):
-        """ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
-        return self._execute_flow("proxy_authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
+    def proxied_authorize(self, request, options=None):
+        """ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        return self._execute_flow("proxied_authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
 
-    def proxy_post_authenticate(self, request, options=None):
-        """ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
-        return self._execute_flow("proxy_post_authenticate", request, _pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse, options)
+    def proxied_post_authenticate(self, request, options=None):
+        """ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
+        return self._execute_flow("proxied_post_authenticate", request, _pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse, options)
 
-    def proxy_pre_authenticate(self, request, options=None):
-        """ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
-        return self._execute_flow("proxy_pre_authenticate", request, _pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse, options)
+    def proxied_pre_authenticate(self, request, options=None):
+        """ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
+        return self._execute_flow("proxied_pre_authenticate", request, _pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse, options)
 
-    def proxy_setup_recurring(self, request, options=None):
-        """ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
-        return self._execute_flow("proxy_setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)
+    def proxied_setup_recurring(self, request, options=None):
+        """ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        return self._execute_flow("proxied_setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)
 
 class RecurringPaymentClient(_ConnectorClientBase):
     """RecurringPaymentService flows"""

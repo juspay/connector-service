@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient, MerchantAuthenticationClient, types, NetworkError } from "hs-playlib";
+import { DirectPaymentClient, MerchantAuthenticationClient, types, NetworkError } from "hs-playlib";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -61,7 +61,7 @@ async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
   const authClient = new MerchantAuthenticationClient(config, defaults);
-  const paymentClient = new PaymentClient(config, defaults);
+  const paymentClient = new DirectPaymentClient(config, defaults);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");

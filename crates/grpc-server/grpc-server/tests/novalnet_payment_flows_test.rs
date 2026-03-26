@@ -16,7 +16,7 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        payment_method, direct_payment_service_client::DirectPaymentServiceClient, Address, AuthenticationType,
         CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
         PaymentServiceAuthorizeRequest, PaymentStatus,
     },
@@ -170,7 +170,7 @@ async fn test_health() {
 // Test payment authorization with auto capture
 #[tokio::test]
 async fn test_payment_authorization_auto_capture() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
+    grpc_test!(client, DirectPaymentServiceClient<Channel>, {
         // Create the payment authorization request
         let request = create_authorize_request(CaptureMethod::Automatic);
 

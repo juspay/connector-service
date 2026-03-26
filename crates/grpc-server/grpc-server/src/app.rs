@@ -5,10 +5,10 @@ use grpc_api_types::{
     health_check::health_server,
     payments::{
         composite_payment_service_server, composite_refund_service_server, customer_service_server,
-        dispute_service_server, merchant_authentication_service_server,
-        payment_method_authentication_service_server, payment_method_service_server,
-        payment_service_server, proxy_payment_service_server, recurring_payment_service_server,
-        refund_service_server, tokenized_payment_service_server,
+        direct_payment_service_server, dispute_service_server,
+        merchant_authentication_service_server, payment_method_authentication_service_server,
+        payment_method_service_server, proxied_payment_service_server,
+        recurring_payment_service_server, refund_service_server, tokenized_payment_service_server,
     },
     payouts::payout_service_server,
 };
@@ -268,7 +268,7 @@ impl Service {
             .layer(metrics_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
-            .add_service(payment_service_server::PaymentServiceServer::new(
+            .add_service(direct_payment_service_server::DirectPaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
             .add_service(
@@ -311,7 +311,7 @@ impl Service {
             .add_service(tokenized_payment_service_server::TokenizedPaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
-            .add_service(proxy_payment_service_server::ProxyPaymentServiceServer::new(
+            .add_service(proxied_payment_service_server::ProxiedPaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
             .add_service(payout_service_server::PayoutServiceServer::new(

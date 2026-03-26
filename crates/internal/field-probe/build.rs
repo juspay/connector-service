@@ -149,6 +149,8 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "dispute_defend"
             | "proxy_setup_recurring"
             | "proxy_post_authenticate"
+            | "proxied_setup_recurring"
+            | "proxied_post_authenticate"
     );
 
     // Flows whose base request has a connector_transaction_id that some connectors
@@ -239,6 +241,12 @@ fn generate_probe_function(f: &mut fs::File, flow: &FlowInfo) {
         "dispute_submit_evidence" => "base_submit_evidence_request".to_string(),
         "dispute_defend" => "base_defend_dispute_request".to_string(),
         "recurring_charge" => "base_recurring_charge_request".to_string(),
+        // Proxied payment service flows
+        "proxied_authorize" => "base_proxy_authorize_request".to_string(),
+        "proxied_setup_recurring" => "base_proxy_setup_recurring_request".to_string(),
+        "proxied_pre_authenticate" => "base_proxy_pre_authenticate_request".to_string(),
+        "proxied_authenticate" => "base_proxy_authenticate_request".to_string(),
+        "proxied_post_authenticate" => "base_proxy_post_authenticate_request".to_string(),
         _ => format!("base_{}_request", flow.key),
     };
 

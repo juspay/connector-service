@@ -443,36 +443,36 @@ impl ConnectorClient {
         proxy_authorize,
         ProxyPaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse,
-        proxy_authorize_req_handler,
-        proxy_authorize_res_handler
+        proxied_authorize_req_handler,
+        proxied_authorize_res_handler
     );
     impl_flow_method!(
         proxy_setup_recurring,
         ProxyPaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse,
-        proxy_setup_recurring_req_handler,
-        proxy_setup_recurring_res_handler
+        proxied_setup_recurring_req_handler,
+        proxied_setup_recurring_res_handler
     );
     impl_flow_method!(
         proxy_pre_authenticate,
         ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
         PaymentMethodAuthenticationServicePreAuthenticateResponse,
-        proxy_pre_authenticate_req_handler,
-        proxy_pre_authenticate_res_handler
+        proxied_pre_authenticate_req_handler,
+        proxied_pre_authenticate_res_handler
     );
     impl_flow_method!(
         proxy_authenticate,
         ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
         PaymentMethodAuthenticationServiceAuthenticateResponse,
-        proxy_authenticate_req_handler,
-        proxy_authenticate_res_handler
+        proxied_authenticate_req_handler,
+        proxied_authenticate_res_handler
     );
     impl_flow_method!(
         proxy_post_authenticate,
         ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
         PaymentMethodAuthenticationServicePostAuthenticateResponse,
-        proxy_post_authenticate_req_handler,
-        proxy_post_authenticate_res_handler
+        proxied_post_authenticate_req_handler,
+        proxied_post_authenticate_res_handler
     );
 }
 

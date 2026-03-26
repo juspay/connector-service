@@ -242,89 +242,89 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('pre_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxy_authenticate flow. */
-  proxyAuthenticateReq(
+  /** Build connector HTTP request for proxied_authenticate flow. */
+  proxiedAuthenticateReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxy_authenticate', requestBytes, optionsBytes);
+    return this.callReq('proxied_authenticate', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxy_authenticate flow. */
-  proxyAuthenticateRes(
+  /** Parse connector HTTP response for proxied_authenticate flow. */
+  proxiedAuthenticateRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxy_authenticate', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxied_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxy_authorize flow. */
-  proxyAuthorizeReq(
+  /** Build connector HTTP request for proxied_authorize flow. */
+  proxiedAuthorizeReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxy_authorize', requestBytes, optionsBytes);
+    return this.callReq('proxied_authorize', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxy_authorize flow. */
-  proxyAuthorizeRes(
+  /** Parse connector HTTP response for proxied_authorize flow. */
+  proxiedAuthorizeRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxy_authorize', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxied_authorize', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxy_post_authenticate flow. */
-  proxyPostAuthenticateReq(
+  /** Build connector HTTP request for proxied_post_authenticate flow. */
+  proxiedPostAuthenticateReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxy_post_authenticate', requestBytes, optionsBytes);
+    return this.callReq('proxied_post_authenticate', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxy_post_authenticate flow. */
-  proxyPostAuthenticateRes(
+  /** Parse connector HTTP response for proxied_post_authenticate flow. */
+  proxiedPostAuthenticateRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxy_post_authenticate', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxied_post_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxy_pre_authenticate flow. */
-  proxyPreAuthenticateReq(
+  /** Build connector HTTP request for proxied_pre_authenticate flow. */
+  proxiedPreAuthenticateReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxy_pre_authenticate', requestBytes, optionsBytes);
+    return this.callReq('proxied_pre_authenticate', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxy_pre_authenticate flow. */
-  proxyPreAuthenticateRes(
+  /** Parse connector HTTP response for proxied_pre_authenticate flow. */
+  proxiedPreAuthenticateRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxy_pre_authenticate', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxied_pre_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxy_setup_recurring flow. */
-  proxySetupRecurringReq(
+  /** Build connector HTTP request for proxied_setup_recurring flow. */
+  proxiedSetupRecurringReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxy_setup_recurring', requestBytes, optionsBytes);
+    return this.callReq('proxied_setup_recurring', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxy_setup_recurring flow. */
-  proxySetupRecurringRes(
+  /** Parse connector HTTP response for proxied_setup_recurring flow. */
+  proxiedSetupRecurringRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxy_setup_recurring', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxied_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for refund flow. */

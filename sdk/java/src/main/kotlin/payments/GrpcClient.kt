@@ -150,6 +150,74 @@ class GrpcCustomerClient internal constructor(
 }
 
 /**
+ * DirectPaymentService — gRPC sub-client.
+ */
+class GrpcDirectPaymentClient internal constructor(
+    private val config: GrpcConfig,
+) {
+    /**
+     * DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+     */
+    suspend fun authorize(req: PaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
+        callGrpc(config, "direct_payment/authorize", req, PaymentServiceAuthorizeResponse.parser())
+
+    /**
+     * DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+     */
+    suspend fun get(req: PaymentServiceGetRequest): PaymentServiceGetResponse =
+        callGrpc(config, "direct_payment/get", req, PaymentServiceGetResponse.parser())
+
+    /**
+     * DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+     */
+    suspend fun void(req: PaymentServiceVoidRequest): PaymentServiceVoidResponse =
+        callGrpc(config, "direct_payment/void", req, PaymentServiceVoidResponse.parser())
+
+    /**
+     * DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
+     */
+    suspend fun reverse(req: PaymentServiceReverseRequest): PaymentServiceReverseResponse =
+        callGrpc(config, "direct_payment/reverse", req, PaymentServiceReverseResponse.parser())
+
+    /**
+     * DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+     */
+    suspend fun capture(req: PaymentServiceCaptureRequest): PaymentServiceCaptureResponse =
+        callGrpc(config, "direct_payment/capture", req, PaymentServiceCaptureResponse.parser())
+
+    /**
+     * DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
+     */
+    suspend fun create_order(req: PaymentServiceCreateOrderRequest): PaymentServiceCreateOrderResponse =
+        callGrpc(config, "direct_payment/create_order", req, PaymentServiceCreateOrderResponse.parser())
+
+    /**
+     * DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+     */
+    suspend fun refund(req: PaymentServiceRefundRequest): RefundResponse =
+        callGrpc(config, "direct_payment/refund", req, RefundResponse.parser())
+
+    /**
+     * DirectPaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization.
+     */
+    suspend fun incremental_authorization(req: PaymentServiceIncrementalAuthorizationRequest): PaymentServiceIncrementalAuthorizationResponse =
+        callGrpc(config, "direct_payment/incremental_authorization", req, PaymentServiceIncrementalAuthorizationResponse.parser())
+
+    /**
+     * DirectPaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly.
+     */
+    suspend fun verify_redirect_response(req: PaymentServiceVerifyRedirectResponseRequest): PaymentServiceVerifyRedirectResponseResponse =
+        callGrpc(config, "direct_payment/verify_redirect_response", req, PaymentServiceVerifyRedirectResponseResponse.parser())
+
+    /**
+     * DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
+     */
+    suspend fun setup_recurring(req: PaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
+        callGrpc(config, "direct_payment/setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
+
+}
+
+/**
  * DisputeService — gRPC sub-client.
  */
 class GrpcDisputeClient internal constructor(
@@ -274,80 +342,6 @@ class GrpcPaymentMethodClient internal constructor(
 }
 
 /**
- * PaymentService — gRPC sub-client.
- */
-class GrpcPaymentClient internal constructor(
-    private val config: GrpcConfig,
-) {
-    /**
-     * PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-     */
-    suspend fun authorize(req: PaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
-        callGrpc(config, "payment/authorize", req, PaymentServiceAuthorizeResponse.parser())
-
-    /**
-     * PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-     */
-    suspend fun get(req: PaymentServiceGetRequest): PaymentServiceGetResponse =
-        callGrpc(config, "payment/get", req, PaymentServiceGetResponse.parser())
-
-    /**
-     * PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-     */
-    suspend fun void(req: PaymentServiceVoidRequest): PaymentServiceVoidResponse =
-        callGrpc(config, "payment/void", req, PaymentServiceVoidResponse.parser())
-
-    /**
-     * PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
-     */
-    suspend fun reverse(req: PaymentServiceReverseRequest): PaymentServiceReverseResponse =
-        callGrpc(config, "payment/reverse", req, PaymentServiceReverseResponse.parser())
-
-    /**
-     * PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
-     */
-    suspend fun capture(req: PaymentServiceCaptureRequest): PaymentServiceCaptureResponse =
-        callGrpc(config, "payment/capture", req, PaymentServiceCaptureResponse.parser())
-
-    /**
-     * PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
-     */
-    suspend fun create_order(req: PaymentServiceCreateOrderRequest): PaymentServiceCreateOrderResponse =
-        callGrpc(config, "payment/create_order", req, PaymentServiceCreateOrderResponse.parser())
-
-    /**
-     * PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-     */
-    suspend fun refund(req: PaymentServiceRefundRequest): RefundResponse =
-        callGrpc(config, "payment/refund", req, RefundResponse.parser())
-
-    /**
-     * PaymentService.IncrementalAuthorization — Increase authorized amount if still in authorized state. Allows adding charges to existing authorization for hospitality, tips, or incremental services.
-     */
-    suspend fun incremental_authorization(req: PaymentServiceIncrementalAuthorizationRequest): PaymentServiceIncrementalAuthorizationResponse =
-        callGrpc(config, "payment/incremental_authorization", req, PaymentServiceIncrementalAuthorizationResponse.parser())
-
-    /**
-     * PaymentService.VerifyRedirectResponse — Validate redirect-based payment responses. Confirms authenticity of redirect-based payment completions to prevent fraud and tampering.
-     */
-    suspend fun verify_redirect_response(req: PaymentServiceVerifyRedirectResponseRequest): PaymentServiceVerifyRedirectResponseResponse =
-        callGrpc(config, "payment/verify_redirect_response", req, PaymentServiceVerifyRedirectResponseResponse.parser())
-
-    /**
-     * PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-     */
-    suspend fun setup_recurring(req: PaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
-        callGrpc(config, "payment/setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
-
-    /**
-     * PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
-     */
-    suspend fun payment_handle_event(req: EventServiceHandleRequest): EventServiceHandleResponse =
-        callGrpc(config, "payment/payment_handle_event", req, EventServiceHandleResponse.parser())
-
-}
-
-/**
  * PayoutService — gRPC sub-client.
  */
 class GrpcPayoutClient internal constructor(
@@ -404,40 +398,40 @@ class GrpcPayoutClient internal constructor(
 }
 
 /**
- * ProxyPaymentService — gRPC sub-client.
+ * ProxiedPaymentService — gRPC sub-client.
  */
-class GrpcProxyPaymentClient internal constructor(
+class GrpcProxiedPaymentClient internal constructor(
     private val config: GrpcConfig,
 ) {
     /**
-     * ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+     * ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
      */
-    suspend fun proxy_authorize(req: ProxyPaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
-        callGrpc(config, "proxy_payment/proxy_authorize", req, PaymentServiceAuthorizeResponse.parser())
+    suspend fun proxied_authorize(req: ProxyPaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
+        callGrpc(config, "proxied_payment/proxied_authorize", req, PaymentServiceAuthorizeResponse.parser())
 
     /**
-     * ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+     * ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
      */
-    suspend fun proxy_setup_recurring(req: ProxyPaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
-        callGrpc(config, "proxy_payment/proxy_setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
+    suspend fun proxied_setup_recurring(req: ProxyPaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
+        callGrpc(config, "proxied_payment/proxied_setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
 
     /**
-     * ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+     * ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
      */
-    suspend fun proxy_pre_authenticate(req: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest): PaymentMethodAuthenticationServicePreAuthenticateResponse =
-        callGrpc(config, "proxy_payment/proxy_pre_authenticate", req, PaymentMethodAuthenticationServicePreAuthenticateResponse.parser())
+    suspend fun proxied_pre_authenticate(req: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest): PaymentMethodAuthenticationServicePreAuthenticateResponse =
+        callGrpc(config, "proxied_payment/proxied_pre_authenticate", req, PaymentMethodAuthenticationServicePreAuthenticateResponse.parser())
 
     /**
-     * ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+     * ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
      */
-    suspend fun proxy_authenticate(req: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest): PaymentMethodAuthenticationServiceAuthenticateResponse =
-        callGrpc(config, "proxy_payment/proxy_authenticate", req, PaymentMethodAuthenticationServiceAuthenticateResponse.parser())
+    suspend fun proxied_authenticate(req: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest): PaymentMethodAuthenticationServiceAuthenticateResponse =
+        callGrpc(config, "proxied_payment/proxied_authenticate", req, PaymentMethodAuthenticationServiceAuthenticateResponse.parser())
 
     /**
-     * ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+     * ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
      */
-    suspend fun proxy_post_authenticate(req: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest): PaymentMethodAuthenticationServicePostAuthenticateResponse =
-        callGrpc(config, "proxy_payment/proxy_post_authenticate", req, PaymentMethodAuthenticationServicePostAuthenticateResponse.parser())
+    suspend fun proxied_post_authenticate(req: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest): PaymentMethodAuthenticationServicePostAuthenticateResponse =
+        callGrpc(config, "proxied_payment/proxied_post_authenticate", req, PaymentMethodAuthenticationServicePostAuthenticateResponse.parser())
 
 }
 
@@ -521,14 +515,16 @@ class GrpcTokenizedPaymentClient internal constructor(
  *     )
  * ))
  * val res = client.customer.create(...)
+ * val res = client.direct_payment.authorize(...)
  * val res = client.dispute.submit_evidence(...)
  * val res = client.event.handle_event(...)
- * val res = client.merchant_authentication.create_access_token(...)
  * ```
  */
 class GrpcClient(config: GrpcConfig) {
     val customer: GrpcCustomerClient =
         GrpcCustomerClient(config)
+    val direct_payment: GrpcDirectPaymentClient =
+        GrpcDirectPaymentClient(config)
     val dispute: GrpcDisputeClient =
         GrpcDisputeClient(config)
     val event: GrpcEventClient =
@@ -539,12 +535,10 @@ class GrpcClient(config: GrpcConfig) {
         GrpcPaymentMethodAuthenticationClient(config)
     val payment_method: GrpcPaymentMethodClient =
         GrpcPaymentMethodClient(config)
-    val payment: GrpcPaymentClient =
-        GrpcPaymentClient(config)
     val payout: GrpcPayoutClient =
         GrpcPayoutClient(config)
-    val proxy_payment: GrpcProxyPaymentClient =
-        GrpcProxyPaymentClient(config)
+    val proxied_payment: GrpcProxiedPaymentClient =
+        GrpcProxiedPaymentClient(config)
     val recurring_payment: GrpcRecurringPaymentClient =
         GrpcRecurringPaymentClient(config)
     val refund: GrpcRefundClient =

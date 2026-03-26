@@ -132,7 +132,7 @@ fn main() {
     let flow_meta: &[(&str, &str, &str, &str, bool, bool)] = &[
         (
             "authorize",
-            "payment",
+            "direct_payment",
             "authorize",
             "build_authorize_request",
             false,
@@ -140,17 +140,63 @@ fn main() {
         ),
         (
             "capture",
-            "payment",
+            "direct_payment",
+            "capture",
+            "build_capture_request",
+            true,
+            false,
+        ),
+        (
+            "void",
+            "direct_payment",
+            "void",
+            "build_void_request",
+            true,
+            false,
+        ),
+        (
+            "get",
+            "direct_payment",
+            "get",
+            "build_get_request",
+            true,
+            false,
+        ),
+        (
+            "refund",
+            "direct_payment",
+            "refund",
+            "build_refund_request",
+            true,
+            false,
+        ),
+        (
+            "capture",
+            "direct_payment",
             "capture",
             "build_capture_request",
             false,
             true,
         ),
-        ("void", "payment", "void", "build_void_request", false, true),
-        ("get", "payment", "get", "build_get_request", true, false),
+        (
+            "void",
+            "direct_payment",
+            "void",
+            "build_void_request",
+            false,
+            true,
+        ),
+        (
+            "get",
+            "direct_payment",
+            "get",
+            "build_get_request",
+            true,
+            false,
+        ),
         (
             "refund",
-            "payment",
+            "direct_payment",
             "refund",
             "build_refund_request",
             true,
@@ -158,7 +204,7 @@ fn main() {
         ),
         (
             "reverse",
-            "payment",
+            "direct_payment",
             "reverse",
             "build_reverse_request",
             true,
@@ -182,7 +228,7 @@ fn main() {
         ),
         (
             "setup_recurring",
-            "payment",
+            "direct_payment",
             "setup_recurring",
             "build_setup_recurring_request",
             false,
@@ -198,7 +244,7 @@ fn main() {
         ),
         (
             "pre_authenticate",
-            "payment",
+            "direct_payment",
             "pre_authenticate",
             "build_pre_authenticate_request",
             false,
@@ -206,7 +252,7 @@ fn main() {
         ),
         (
             "authenticate",
-            "payment",
+            "direct_payment",
             "authenticate",
             "build_authenticate_request",
             false,
@@ -214,7 +260,7 @@ fn main() {
         ),
         (
             "post_authenticate",
-            "payment",
+            "direct_payment",
             "post_authenticate",
             "build_post_authenticate_request",
             false,
@@ -222,7 +268,7 @@ fn main() {
         ),
         (
             "handle_event",
-            "payment",
+            "direct_payment",
             "handle_event",
             "build_handle_event_request",
             false,
@@ -230,7 +276,7 @@ fn main() {
         ),
         (
             "create_access_token",
-            "payment",
+            "direct_payment",
             "create_access_token",
             "build_create_access_token_request",
             false,
@@ -238,7 +284,7 @@ fn main() {
         ),
         (
             "create_session_token",
-            "payment",
+            "direct_payment",
             "create_session_token",
             "build_create_session_token_request",
             false,
@@ -246,7 +292,7 @@ fn main() {
         ),
         (
             "create_sdk_session_token",
-            "payment",
+            "direct_payment",
             "create_sdk_session_token",
             "build_create_sdk_session_token_request",
             false,
@@ -495,7 +541,7 @@ fn main() {
             // Pre-run AUTOMATIC authorize to obtain the connector txn_id for dependent flows.
             if has_authorize && has_dependents {
                 code.push_str(&format!(
-                    "        let pre_auth_res = client.payment.authorize(connectors::{name}::build_authorize_request(\"AUTOMATIC\")).await;\n"
+                    "        let pre_auth_res = client.direct_payment.authorize(connectors::{name}::build_authorize_request(\"AUTOMATIC\")).await;\n"
                 ));
                 code.push_str("        let authorize_txn_id = pre_auth_res.as_ref().ok()\n");
                 code.push_str("            .and_then(|r| r.connector_transaction_id.as_deref())\n");

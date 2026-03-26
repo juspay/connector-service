@@ -35,16 +35,16 @@ import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
 import uniffi.connector_service_ffi.preAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxyAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxyAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxyAuthorizeReqTransformer
-import uniffi.connector_service_ffi.proxyAuthorizeResTransformer
-import uniffi.connector_service_ffi.proxyPostAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxyPostAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxyPreAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxyPreAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxySetupRecurringReqTransformer
-import uniffi.connector_service_ffi.proxySetupRecurringResTransformer
+import uniffi.connector_service_ffi.proxiedAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxiedAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxiedAuthorizeReqTransformer
+import uniffi.connector_service_ffi.proxiedAuthorizeResTransformer
+import uniffi.connector_service_ffi.proxiedPostAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxiedPostAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxiedPreAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxiedPreAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxiedSetupRecurringReqTransformer
+import uniffi.connector_service_ffi.proxiedSetupRecurringResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
 import uniffi.connector_service_ffi.reverseReqTransformer
@@ -79,11 +79,11 @@ object FlowRegistry {
         "payout_create" to ::payoutCreateReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
-        "proxy_authenticate" to ::proxyAuthenticateReqTransformer,
-        "proxy_authorize" to ::proxyAuthorizeReqTransformer,
-        "proxy_post_authenticate" to ::proxyPostAuthenticateReqTransformer,
-        "proxy_pre_authenticate" to ::proxyPreAuthenticateReqTransformer,
-        "proxy_setup_recurring" to ::proxySetupRecurringReqTransformer,
+        "proxied_authenticate" to ::proxiedAuthenticateReqTransformer,
+        "proxied_authorize" to ::proxiedAuthorizeReqTransformer,
+        "proxied_post_authenticate" to ::proxiedPostAuthenticateReqTransformer,
+        "proxied_pre_authenticate" to ::proxiedPreAuthenticateReqTransformer,
+        "proxied_setup_recurring" to ::proxiedSetupRecurringReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
         "setup_recurring" to ::setupRecurringReqTransformer,
@@ -109,11 +109,11 @@ object FlowRegistry {
         "payout_create" to ::payoutCreateResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
-        "proxy_authenticate" to ::proxyAuthenticateResTransformer,
-        "proxy_authorize" to ::proxyAuthorizeResTransformer,
-        "proxy_post_authenticate" to ::proxyPostAuthenticateResTransformer,
-        "proxy_pre_authenticate" to ::proxyPreAuthenticateResTransformer,
-        "proxy_setup_recurring" to ::proxySetupRecurringResTransformer,
+        "proxied_authenticate" to ::proxiedAuthenticateResTransformer,
+        "proxied_authorize" to ::proxiedAuthorizeResTransformer,
+        "proxied_post_authenticate" to ::proxiedPostAuthenticateResTransformer,
+        "proxied_pre_authenticate" to ::proxiedPreAuthenticateResTransformer,
+        "proxied_setup_recurring" to ::proxiedSetupRecurringResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
         "setup_recurring" to ::setupRecurringResTransformer,
@@ -133,6 +133,10 @@ object FlowRegistry {
 
 // Per-service client classes — typed with concrete proto request/response types.
 
+// Backward compatibility alias for the old PaymentClient name
+@Deprecated("Use DirectPaymentClient instead", ReplaceWith("DirectPaymentClient"))
+typealias PaymentClient = DirectPaymentClient
+
 class CustomerClient(
     config: ConnectorConfig,
     defaults: RequestConfig = RequestConfig.getDefaultInstance(),
@@ -141,6 +145,45 @@ class CustomerClient(
     // create: CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information.
     fun create(request: CustomerServiceCreateRequest, options: RequestConfig? = null): CustomerServiceCreateResponse =
         executeFlow("create", request.toByteArray(), CustomerServiceCreateResponse.parser(), options)
+
+}
+
+class DirectPaymentClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // authorize: DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+    fun authorize(request: PaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+
+    // capture: DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+    fun capture(request: PaymentServiceCaptureRequest, options: RequestConfig? = null): PaymentServiceCaptureResponse =
+        executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), options)
+
+    // create_order: DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
+    fun create_order(request: PaymentServiceCreateOrderRequest, options: RequestConfig? = null): PaymentServiceCreateOrderResponse =
+        executeFlow("create_order", request.toByteArray(), PaymentServiceCreateOrderResponse.parser(), options)
+
+    // get: DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+    fun get(request: PaymentServiceGetRequest, options: RequestConfig? = null): PaymentServiceGetResponse =
+        executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), options)
+
+    // refund: DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+    fun refund(request: PaymentServiceRefundRequest, options: RequestConfig? = null): RefundResponse =
+        executeFlow("refund", request.toByteArray(), RefundResponse.parser(), options)
+
+    // reverse: DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
+    fun reverse(request: PaymentServiceReverseRequest, options: RequestConfig? = null): PaymentServiceReverseResponse =
+        executeFlow("reverse", request.toByteArray(), PaymentServiceReverseResponse.parser(), options)
+
+    // setup_recurring: DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
+    fun setup_recurring(request: PaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
+
+    // void: DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+    fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
+        executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
 
 }
 
@@ -219,45 +262,6 @@ class PaymentMethodClient(
 
 }
 
-class PaymentClient(
-    config: ConnectorConfig,
-    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
-    libPath: String? = null
-) : ConnectorClient(config, defaults, libPath) {
-    // authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-    fun authorize(request: PaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
-        executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
-
-    // capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
-    fun capture(request: PaymentServiceCaptureRequest, options: RequestConfig? = null): PaymentServiceCaptureResponse =
-        executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), options)
-
-    // create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
-    fun create_order(request: PaymentServiceCreateOrderRequest, options: RequestConfig? = null): PaymentServiceCreateOrderResponse =
-        executeFlow("create_order", request.toByteArray(), PaymentServiceCreateOrderResponse.parser(), options)
-
-    // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-    fun get(request: PaymentServiceGetRequest, options: RequestConfig? = null): PaymentServiceGetResponse =
-        executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), options)
-
-    // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-    fun refund(request: PaymentServiceRefundRequest, options: RequestConfig? = null): RefundResponse =
-        executeFlow("refund", request.toByteArray(), RefundResponse.parser(), options)
-
-    // reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
-    fun reverse(request: PaymentServiceReverseRequest, options: RequestConfig? = null): PaymentServiceReverseResponse =
-        executeFlow("reverse", request.toByteArray(), PaymentServiceReverseResponse.parser(), options)
-
-    // setup_recurring: PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-    fun setup_recurring(request: PaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
-        executeFlow("setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
-
-    // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-    fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
-        executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
-
-}
-
 class PayoutClient(
     config: ConnectorConfig,
     defaults: RequestConfig = RequestConfig.getDefaultInstance(),
@@ -269,30 +273,30 @@ class PayoutClient(
 
 }
 
-class ProxyPaymentClient(
+class ProxiedPaymentClient(
     config: ConnectorConfig,
     defaults: RequestConfig = RequestConfig.getDefaultInstance(),
     libPath: String? = null
 ) : ConnectorClient(config, defaults, libPath) {
-    // proxy_authenticate: ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-    fun proxy_authenticate(request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServiceAuthenticateResponse =
-        executeFlow("proxy_authenticate", request.toByteArray(), PaymentMethodAuthenticationServiceAuthenticateResponse.parser(), options)
+    // proxied_authenticate: ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+    fun proxied_authenticate(request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServiceAuthenticateResponse =
+        executeFlow("proxied_authenticate", request.toByteArray(), PaymentMethodAuthenticationServiceAuthenticateResponse.parser(), options)
 
-    // proxy_authorize: ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
-    fun proxy_authorize(request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
-        executeFlow("proxy_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+    // proxied_authorize: ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+    fun proxied_authorize(request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("proxied_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
 
-    // proxy_post_authenticate: ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-    fun proxy_post_authenticate(request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePostAuthenticateResponse =
-        executeFlow("proxy_post_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePostAuthenticateResponse.parser(), options)
+    // proxied_post_authenticate: ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+    fun proxied_post_authenticate(request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePostAuthenticateResponse =
+        executeFlow("proxied_post_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePostAuthenticateResponse.parser(), options)
 
-    // proxy_pre_authenticate: ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-    fun proxy_pre_authenticate(request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePreAuthenticateResponse =
-        executeFlow("proxy_pre_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePreAuthenticateResponse.parser(), options)
+    // proxied_pre_authenticate: ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+    fun proxied_pre_authenticate(request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePreAuthenticateResponse =
+        executeFlow("proxied_pre_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePreAuthenticateResponse.parser(), options)
 
-    // proxy_setup_recurring: ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
-    fun proxy_setup_recurring(request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
-        executeFlow("proxy_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
+    // proxied_setup_recurring: ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+    fun proxied_setup_recurring(request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("proxied_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
 
 }
 

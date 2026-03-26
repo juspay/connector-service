@@ -435,6 +435,7 @@ sdk/tests/client_sanity/artifacts/
 
 .claude
 CLAUDE.md
+opencode.json
 
 # Generated proto descriptor files
 scripts/generators/code/services.desc

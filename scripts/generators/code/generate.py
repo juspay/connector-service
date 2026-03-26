@@ -78,11 +78,11 @@ def to_snake_case(name: str) -> str:
 def _service_flow_prefix(service_name: str) -> str | None:
     """
     Derive the transformer name prefix for services whose RPCs collide with
-    PaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
+    DirectPaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
     prefix — e.g. ``TokenizedPaymentService`` → ``"tokenized"``,
-    ``ProxyPaymentService`` → ``"proxy"``.
+    ``ProxiedPaymentService`` → ``"proxied"``.
 
-    Base services (``PaymentService``, ``RecurringPaymentService``,
+    Base services (``DirectPaymentService``, ``RecurringPaymentService``,
     ``PaymentMethodAuthenticationService``, etc.) return ``None``.
     
     Also handles standalone services like ``PayoutService`` → ``"payout"``.

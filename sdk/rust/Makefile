@@ -4,6 +4,9 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
 
@@ -29,7 +32,13 @@ dist: package ## Build distribution package (alias for package)
 
 test-package: build-ffi-lib ## Build FFI → Run Rust smoke test
 	@echo "Running Rust smoke test..."
-	@cd $(REPO_ROOT) && cargo test -p hyperswitch-smoke-test --release-fast 2>&1 | tail -20
+	@cd $(REPO_ROOT) && CONNECTORS=$(CONNECTORS) cargo run --profile $(PROFILE) -p hyperswitch-smoke-test -- --connectors $(CONNECTORS) 2>&1 | tail -30
+
+# test-grpc
+# Builds the grpc-server binary, starts it in background, runs gRPC smoke test binary.
+test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib
+	@echo "Running gRPC smoke test..."
+	@cd $(REPO_ROOT) && cargo run --profile $(PROFILE) -p hyperswitch-smoke-test --bin grpc-smoke-test -- --connectors $(GRPC_CONNECTOR) 2>&1 | tail -30
 
 # test-grpc
 # Builds the grpc-server binary, starts it as a background process, runs
@@ -46,20 +55,6 @@ GRPC_API_KEY    ?=
 GRPC_ENDPOINT   ?= http://localhost:8000
 GRPC_PROFILE    ?= release-fast
 GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
-
-# Run test assuming server is already running (used by top-level test-grpc)
-test-grpc-no-server: ## Run gRPC smoke test only (assumes server is already running)
-	@echo "Running gRPC smoke test (connector: $(GRPC_CONNECTOR))…"
-	@if [ -f $(REPO_ROOT)/creds.json ]; then \
-		CREDS_ARGS="--creds-file $(REPO_ROOT)/creds.json --connector $(GRPC_CONNECTOR) --endpoint $(GRPC_ENDPOINT) --auth-type $(GRPC_AUTH_TYPE)"; \
-	elif [ -n "$(GRPC_API_KEY)" ]; then \
-		CREDS_ARGS="--endpoint $(GRPC_ENDPOINT) --connector $(GRPC_CONNECTOR) --auth-type $(GRPC_AUTH_TYPE) --api-key $(GRPC_API_KEY)"; \
-	else \
-		echo "  Note: no creds.json found and no GRPC_API_KEY set."; \
-		echo "  Add credentials to creds.json at the repo root."; \
-		exit 1; \
-	fi; \
-	cd $(SDK_ROOT)/smoke-test && CONNECTORS=$(GRPC_CONNECTOR) cargo run --profile $(GRPC_PROFILE) --bin grpc-smoke-test -- $$CREDS_ARGS
 
 test-grpc: ## Build grpc-server → start in background → run gRPC smoke test → stop
 	@echo "Building grpc-server ($(GRPC_PROFILE))…"

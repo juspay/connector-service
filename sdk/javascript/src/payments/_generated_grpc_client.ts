@@ -489,6 +489,72 @@ export class GrpcCustomerClient {
 
 }
 
+// DirectPaymentService
+export class GrpcDirectPaymentClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing. */
+  async authorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/authorize",
+      req, types.PaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+
+  /** DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking. */
+  async get(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/get",
+      req, types.PaymentServiceGetRequest, types.PaymentServiceGetResponse);
+  }
+
+  /** DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed. */
+  async void(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/void",
+      req, types.PaymentServiceVoidRequest, types.PaymentServiceVoidResponse);
+  }
+
+  /** DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization. */
+  async reverse(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/reverse",
+      req, types.PaymentServiceReverseRequest, types.PaymentServiceReverseResponse);
+  }
+
+  /** DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account. */
+  async capture(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/capture",
+      req, types.PaymentServiceCaptureRequest, types.PaymentServiceCaptureResponse);
+  }
+
+  /** DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls. */
+  async createOrder(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/create_order",
+      req, types.PaymentServiceCreateOrderRequest, types.PaymentServiceCreateOrderResponse);
+  }
+
+  /** DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled. */
+  async refund(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/refund",
+      req, types.PaymentServiceRefundRequest, types.RefundResponse);
+  }
+
+  /** DirectPaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization. */
+  async incrementalAuthorization(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/incremental_authorization",
+      req, types.PaymentServiceIncrementalAuthorizationRequest, types.PaymentServiceIncrementalAuthorizationResponse);
+  }
+
+  /** DirectPaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly. */
+  async verifyRedirectResponse(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/verify_redirect_response",
+      req, types.PaymentServiceVerifyRedirectResponseRequest, types.PaymentServiceVerifyRedirectResponseResponse);
+  }
+
+  /** DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges. */
+  async setupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "direct_payment/setup_recurring",
+      req, types.PaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
+
+}
+
 // DisputeService
 export class GrpcDisputeClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
@@ -603,78 +669,6 @@ export class GrpcPaymentMethodClient {
 
 }
 
-// PaymentService
-export class GrpcPaymentClient {
-  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
-
-  /** PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing. */
-  async authorize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/authorize",
-      req, types.PaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
-  }
-
-  /** PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking. */
-  async get(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/get",
-      req, types.PaymentServiceGetRequest, types.PaymentServiceGetResponse);
-  }
-
-  /** PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned. */
-  async void(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/void",
-      req, types.PaymentServiceVoidRequest, types.PaymentServiceVoidResponse);
-  }
-
-  /** PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations. */
-  async reverse(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/reverse",
-      req, types.PaymentServiceReverseRequest, types.PaymentServiceReverseResponse);
-  }
-
-  /** PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle. */
-  async capture(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/capture",
-      req, types.PaymentServiceCaptureRequest, types.PaymentServiceCaptureResponse);
-  }
-
-  /** PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates. */
-  async createOrder(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/create_order",
-      req, types.PaymentServiceCreateOrderRequest, types.PaymentServiceCreateOrderResponse);
-  }
-
-  /** PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment. */
-  async refund(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/refund",
-      req, types.PaymentServiceRefundRequest, types.RefundResponse);
-  }
-
-  /** PaymentService.IncrementalAuthorization — Increase authorized amount if still in authorized state. Allows adding charges to existing authorization for hospitality, tips, or incremental services. */
-  async incrementalAuthorization(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/incremental_authorization",
-      req, types.PaymentServiceIncrementalAuthorizationRequest, types.PaymentServiceIncrementalAuthorizationResponse);
-  }
-
-  /** PaymentService.VerifyRedirectResponse — Validate redirect-based payment responses. Confirms authenticity of redirect-based payment completions to prevent fraud and tampering. */
-  async verifyRedirectResponse(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/verify_redirect_response",
-      req, types.PaymentServiceVerifyRedirectResponseRequest, types.PaymentServiceVerifyRedirectResponseResponse);
-  }
-
-  /** PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases. */
-  async setupRecurring(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/setup_recurring",
-      req, types.PaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
-  }
-
-  /** PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type. */
-  async paymentHandleEvent(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment/payment_handle_event",
-      req, types.EventServiceHandleRequest, types.EventServiceHandleResponse);
-  }
-
-}
-
 // PayoutService
 export class GrpcPayoutClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
@@ -729,37 +723,37 @@ export class GrpcPayoutClient {
 
 }
 
-// ProxyPaymentService
-export class GrpcProxyPaymentClient {
+// ProxiedPaymentService
+export class GrpcProxiedPaymentClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
 
-  /** ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
-  async proxyAuthorize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_authorize",
+  /** ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
+  async proxiedAuthorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_authorize",
       req, types.ProxyPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
   }
 
-  /** ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
-  async proxySetupRecurring(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_setup_recurring",
+  /** ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
+  async proxiedSetupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_setup_recurring",
       req, types.ProxyPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
   }
 
-  /** ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
-  async proxyPreAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_pre_authenticate",
+  /** ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
+  async proxiedPreAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_pre_authenticate",
       req, types.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, types.PaymentMethodAuthenticationServicePreAuthenticateResponse);
   }
 
-  /** ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
-  async proxyAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_authenticate",
+  /** ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
+  async proxiedAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_authenticate",
       req, types.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, types.PaymentMethodAuthenticationServiceAuthenticateResponse);
   }
 
-  /** ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
-  async proxyPostAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_post_authenticate",
+  /** ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
+  async proxiedPostAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_post_authenticate",
       req, types.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, types.PaymentMethodAuthenticationServicePostAuthenticateResponse);
   }
 
@@ -835,21 +829,21 @@ export class GrpcTokenizedPaymentClient {
  *   connector_config: {"config": {"Stripe": {"api_key": "sk_test_..."}}},
  * });
  * const res = await client.customer.create({ ... });
+ * const res = await client.directPayment.authorize({ ... });
  * const res = await client.dispute.submitEvidence({ ... });
  * const res = await client.event.handleEvent({ ... });
- * const res = await client.merchantAuthentication.createAccessToken({ ... });
  * ```
  */
 export class GrpcClient {
   public customer: GrpcCustomerClient;
+  public directPayment: GrpcDirectPaymentClient;
   public dispute: GrpcDisputeClient;
   public event: GrpcEventClient;
   public merchantAuthentication: GrpcMerchantAuthenticationClient;
   public paymentMethodAuthentication: GrpcPaymentMethodAuthenticationClient;
   public paymentMethod: GrpcPaymentMethodClient;
-  public payment: GrpcPaymentClient;
   public payout: GrpcPayoutClient;
-  public proxyPayment: GrpcProxyPaymentClient;
+  public proxiedPayment: GrpcProxiedPaymentClient;
   public recurringPayment: GrpcRecurringPaymentClient;
   public refund: GrpcRefundClient;
   public tokenizedPayment: GrpcTokenizedPaymentClient;
@@ -857,14 +851,14 @@ export class GrpcClient {
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
     this.customer = new GrpcCustomerClient(ffi, config);
+    this.directPayment = new GrpcDirectPaymentClient(ffi, config);
     this.dispute = new GrpcDisputeClient(ffi, config);
     this.event = new GrpcEventClient(ffi, config);
     this.merchantAuthentication = new GrpcMerchantAuthenticationClient(ffi, config);
     this.paymentMethodAuthentication = new GrpcPaymentMethodAuthenticationClient(ffi, config);
     this.paymentMethod = new GrpcPaymentMethodClient(ffi, config);
-    this.payment = new GrpcPaymentClient(ffi, config);
     this.payout = new GrpcPayoutClient(ffi, config);
-    this.proxyPayment = new GrpcProxyPaymentClient(ffi, config);
+    this.proxiedPayment = new GrpcProxiedPaymentClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
     this.refund = new GrpcRefundClient(ffi, config);
     this.tokenizedPayment = new GrpcTokenizedPaymentClient(ffi, config);

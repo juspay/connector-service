@@ -596,7 +596,7 @@ res_transformer!(
 
 // proxy authorize
 req_transformer!(
-    fn_name: proxy_authorize_req_transformer,
+    fn_name: proxied_authorize_req_transformer,
     request_type: ProxyPaymentServiceAuthorizeRequest,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
@@ -605,7 +605,7 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxy_authorize_res_transformer,
+    fn_name: proxied_authorize_res_transformer,
     request_type: ProxyPaymentServiceAuthorizeRequest,
     response_type: PaymentServiceAuthorizeResponse,
     flow_marker: Authorize,
@@ -617,7 +617,7 @@ res_transformer!(
 
 // proxy setup_recurring
 req_transformer!(
-    fn_name: proxy_setup_recurring_req_transformer,
+    fn_name: proxied_setup_recurring_req_transformer,
     request_type: ProxyPaymentServiceSetupRecurringRequest,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
@@ -626,7 +626,7 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxy_setup_recurring_res_transformer,
+    fn_name: proxied_setup_recurring_res_transformer,
     request_type: ProxyPaymentServiceSetupRecurringRequest,
     response_type: PaymentServiceSetupRecurringResponse,
     flow_marker: SetupMandate,
@@ -638,7 +638,7 @@ res_transformer!(
 
 // proxy pre_authenticate
 req_transformer!(
-    fn_name: proxy_pre_authenticate_req_transformer,
+    fn_name: proxied_pre_authenticate_req_transformer,
     request_type: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
     flow_marker: PreAuthenticate,
     resource_common_data_type: PaymentFlowData,
@@ -647,7 +647,7 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxy_pre_authenticate_res_transformer,
+    fn_name: proxied_pre_authenticate_res_transformer,
     request_type: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServicePreAuthenticateResponse,
     flow_marker: PreAuthenticate,
@@ -659,7 +659,7 @@ res_transformer!(
 
 // proxy authenticate
 req_transformer!(
-    fn_name: proxy_authenticate_req_transformer,
+    fn_name: proxied_authenticate_req_transformer,
     request_type: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
     flow_marker: Authenticate,
     resource_common_data_type: PaymentFlowData,
@@ -668,7 +668,7 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxy_authenticate_res_transformer,
+    fn_name: proxied_authenticate_res_transformer,
     request_type: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServiceAuthenticateResponse,
     flow_marker: Authenticate,
@@ -680,7 +680,7 @@ res_transformer!(
 
 // proxy post_authenticate
 req_transformer!(
-    fn_name: proxy_post_authenticate_req_transformer,
+    fn_name: proxied_post_authenticate_req_transformer,
     request_type: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
     flow_marker: PostAuthenticate,
     resource_common_data_type: PaymentFlowData,
@@ -689,7 +689,7 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxy_post_authenticate_res_transformer,
+    fn_name: proxied_post_authenticate_res_transformer,
     request_type: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServicePostAuthenticateResponse,
     flow_marker: PostAuthenticate,

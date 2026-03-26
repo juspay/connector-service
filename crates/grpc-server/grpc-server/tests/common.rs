@@ -8,7 +8,7 @@ use grpc_api_types::{
         merchant_authentication_service_client::MerchantAuthenticationServiceClient,
         payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
         payment_method_service_client::PaymentMethodServiceClient,
-        payment_service_client::PaymentServiceClient,
+        direct_payment_service_client::DirectPaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient,
         refund_service_client::RefundServiceClient,
     },
@@ -47,7 +47,7 @@ impl tonic::service::Interceptor for ConfigInterceptor {
 pub trait AutoClient {
     fn new(channel: Channel) -> Self;
 }
-impl AutoClient for PaymentServiceClient<Channel> {
+impl AutoClient for DirectPaymentServiceClient<Channel> {
     fn new(channel: Channel) -> Self {
         Self::new(channel)
     }
@@ -116,7 +116,7 @@ fn build_server(
             service.health_check_service,
         ))
         .add_service(
-            grpc_api_types::payments::payment_service_server::PaymentServiceServer::with_interceptor(
+            grpc_api_types::payments::direct_payment_service_server::DirectPaymentServiceServer::with_interceptor(
                 service.payments_service,
                 interceptor.clone(),
             ),

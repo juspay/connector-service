@@ -51,12 +51,12 @@ use domain_types::{
 };
 use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
-    customer_service_server::CustomerService,
+    customer_service_server::CustomerService, direct_payment_service_server::DirectPaymentService,
     merchant_authentication_service_server::MerchantAuthenticationService, payment_method,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
-    payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
-    recurring_payment_service_server::RecurringPaymentService, EventServiceHandleRequest,
-    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    payment_method_service_server::PaymentMethodService,
+    recurring_payment_service_server::RecurringPaymentService,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse,
@@ -1381,7 +1381,7 @@ impl PaymentOperationsInternal for Payments {
 }
 
 #[tonic::async_trait]
-impl PaymentService for Payments {
+impl DirectPaymentService for Payments {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
@@ -1913,127 +1913,6 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::VoidPostCapture,
             |request_data| async move { self.internal_void_post_capture(request_data).await },
-        )
-        .await
-    }
-
-    #[tracing::instrument(
-        name = "incoming_webhook",
-        fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::IncomingWebhook.as_str(),
-            request_body = tracing::field::Empty,
-            response_body = tracing::field::Empty,
-            error_message = tracing::field::Empty,
-            merchant_id = tracing::field::Empty,
-            gateway = tracing::field::Empty,
-            request_id = tracing::field::Empty,
-            status_code = tracing::field::Empty,
-            message_ = "Golden Log Line (incoming)",
-            response_time = tracing::field::Empty,
-            tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.as_str(),
-            flow_specific_fields.status = tracing::field::Empty,
-        )
-        skip(self, request)
-    )]
-    async fn handle_event(
-        &self,
-        request: tonic::Request<EventServiceHandleRequest>,
-    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
-        let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
-            request,
-            &service_name,
-            config.clone(),
-            FlowName::IncomingWebhook,
-            |request_data| {
-                let service_name_clone = service_name.clone();
-                async move {
-                    let payload = request_data.payload;
-                    let metadata_payload = request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
-                    let _request_id = &metadata_payload.request_id;
-                    let connector_config = &metadata_payload.connector_config;
-                    let request_details = payload
-                        .request_details
-                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
-                        })?
-                        .map_err(|e| e.into_grpc_status())?;
-                    let webhook_secrets = payload
-                        .webhook_secrets
-                        .clone()
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
-                    //get connector data
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    let requires_external_verification = connector_data
-                        .connector
-                        .requires_external_webhook_verification(config
-                            .webhook_source_verification_call
-                            .connectors_with_webhook_source_verification_call
-                            .as_ref());
-
-                    let source_verified = if requires_external_verification {
-                        verify_webhook_source_external(
-                            config.as_ref(),
-                            &connector_data,
-                            &request_details,
-                            webhook_secrets.clone(),
-                            connector_config,
-                            &metadata_payload,
-                            &service_name_clone,
-                        )
-                        .await?
-                     } else {
-                        match connector_data
-                            .connector
-                            .verify_webhook_source(
-                                request_details.clone(),
-                                webhook_secrets.clone(),
-                                Some(connector_config.clone()),
-                            )
-                        {
-                            Ok(result) => result,
-                            Err(err) => {
-                                tracing::warn!(
-                                    target: "webhook",
-                                    "{:?}",
-                                    err
-                                );
-                                false
-                            }
-                        }
-                    };
-
-                    let response =
-                        connector_integration::webhook_utils::process_webhook_event(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_config.clone()),
-                            source_verified,
-                        )
-                        .into_grpc_status()?;
-
-                    Ok(tonic::Response::new(response))
-                }
-            },
         )
         .await
     }
@@ -3717,6 +3596,7 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
 
 /// For connectors requiring external webhook source verification (e.g., PayPal).
 /// Executes the VerifyWebhookSource flow via the connector integration.
+#[allow(dead_code)]
 async fn verify_webhook_source_external(
     config: &Config,
     connector_data: &ConnectorData<DefaultPCIHolder>,
@@ -3728,6 +3608,7 @@ async fn verify_webhook_source_external(
 ) -> Result<bool, tonic::Status> {
     let connectors = utils::connectors_with_connector_config_overrides(connector_config, config)
         .into_grpc_status()?;
+    echo "this is not valid rust"
 
     let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
         connectors,
@@ -3896,7 +3777,7 @@ pub fn generate_mandate_revoke_response(
 // ============================================================================
 
 use grpc_api_types::payments::{
-    proxy_payment_service_server::ProxyPaymentService,
+    proxied_payment_service_server::ProxiedPaymentService,
     tokenized_payment_service_server::TokenizedPaymentService,
     ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
     ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
@@ -3961,7 +3842,7 @@ impl TokenizedPaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::authorize(self, inner_request).await
+                    <Self as DirectPaymentService>::authorize(self, inner_request).await
                 })
             },
         )
@@ -4023,7 +3904,7 @@ impl TokenizedPaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                    <Self as DirectPaymentService>::setup_recurring(self, inner_request).await
                 })
             },
         )
@@ -4032,11 +3913,11 @@ impl TokenizedPaymentService for Payments {
 }
 
 // ============================================================================
-// NON-PCI SDK CLIENTS — ProxyPaymentService Implementation
+// NON-PCI SDK CLIENTS — ProxiedPaymentService Implementation
 // ============================================================================
 
 #[tonic::async_trait]
-impl ProxyPaymentService for Payments {
+impl ProxiedPaymentService for Payments {
     #[tracing::instrument(
         name = "proxy_payment_authorize",
         fields(
@@ -4092,7 +3973,7 @@ impl ProxyPaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::authorize(self, inner_request).await
+                    <Self as DirectPaymentService>::authorize(self, inner_request).await
                 })
             },
         )
@@ -4155,7 +4036,7 @@ impl ProxyPaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                    <Self as DirectPaymentService>::setup_recurring(self, inner_request).await
                 })
             },
         )
