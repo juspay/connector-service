@@ -1,16 +1,49 @@
-[
-"PAYU",
-"PHONEPE",
-"RAZORPAY",
-"PINELABS_ONLINE",
-"EASEBUZZ",
-"BILLDESK",
-"KOTAK_BIZ",
-"AMAZONPAY",
-"GOCASHFREE",
-"CRED",
-"LAZYPAY",
-"SODEXO",
-"YES_BIZ",
-"PINELABS"
-]
+{
+  "PAYU": {
+    "UPI": ["UPI_PAY", "UPI_QR", "UPI_COLLECT"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "PHONEPE": {
+    "UPI": ["UPI_PAY", "UPI_QR", "UPI_COLLECT"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"]
+  },
+  "RAZORPAY": {
+    "UPI": ["UPI_PAY", "UPI_COLLECT", "UPI_QR"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "EASEBUZZ": {
+    "UPI": ["UPI_PAY", "UPI_COLLECT", "UPI_QR"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "BILLDESK": {
+    "UPI": ["UPI_PAY", "UPI_COLLECT", "UPI_QR"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "PINELABS_ONLINE": {
+    "UPI": ["UPI_PAY", "UPI_COLLECT", "UPI_QR"]
+  },
+  "KOTAK_BIZ": {
+    "UPI": ["UPI_PAY", "UPI_QR"]
+  },
+  "YES_BIZ": {
+    "UPI": ["UPI_INAPP"]
+  },
+  "GOCASHFREE": {
+    "UPI": ["UPI_PAY", "UPI_COLLECT", "UPI_QR"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "AMAZONPAY": {
+    "WALLET": ["REDIRECT_WALLET_DEBIT", "DIRECT_WALLET_DEBIT"]
+  },
+  "CRED": {
+    "WALLET": ["CRED_INTENT"]
+  },
+  "LAZYPAY": {
+    "WALLET": ["REDIRECT_WALLET_DEBIT"]
+  }
+}

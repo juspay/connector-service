@@ -19,6 +19,7 @@ You coordinate by **spawning subagents via the Task tool** for all heavy work. Y
 | `{CONNECTOR}` | Connector name (exact casing from JSON) | `Adyen` |
 | `{CONNECTORS_FILE}` | JSON file with connector names | `connectors.json` |
 | `{BRANCH}` | Git branch all work happens on | `feat/all-flows` |
+| `{MANDATORY_PAYMENT_METHODS}` | JSON object of mandatory payment methods → PMTs from `connectors.json`. These MUST be implemented. | `{"UPI": ["UPI_PAY", "UPI_QR"], "WALLET": ["REDIRECT_WALLET_DEBIT"]}` |
 
 ---
 
@@ -37,6 +38,7 @@ You coordinate by **spawning subagents via the Task tool** for all heavy work. Y
    - Do NOT run `cargo build` or `grpcurl` yourself
    - Do NOT read `2.1_flow_decider.md`, `2.2_flow.md`, `2.2.1_testing.md`, or `2.3_pr.md` to execute them yourself
    - Your ONLY subagents are: Flow Decider, Flow Agent, Testing Agent, and PR Agent
+10. **MANDATORY PAYMENT METHODS ARE NON-NEGOTIABLE**: The payment methods and PMTs listed in `{MANDATORY_PAYMENT_METHODS}` MUST be implemented. If the Flow Decider or Flow Agent cannot implement a mandatory payment method, the connector status is PARTIAL at best (never SUCCESS). The Flow Decider may discover additional (optional) payment methods from the techspec — those are best-effort.
 
 ---
 
@@ -103,7 +105,8 @@ Task(
 Variables:
   CONNECTOR: <connector name, exact casing>
   TECHSPEC_PATH: <path to techspec>
-  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>"
+  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>
+  MANDATORY_PAYMENT_METHODS: <JSON object of mandatory payment methods from connectors.json>"
 )
 ```
 
@@ -194,7 +197,8 @@ Variables:
   FLOW_NAME: <flow name from the ordered list>
   TECHSPEC_PATH: <path to techspec>
   TECHSPEC_SECTION: <section identifier from flow plan>
-  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>"
+  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>
+  MANDATORY_PAYMENT_METHODS: <JSON object of mandatory payment methods — pass ONLY for Authorize/SetupMandate/RepeatPayment flows that handle payment method data, otherwise empty {}>"
 )
 ```
 
@@ -299,7 +303,8 @@ Variables:
   FLOW_NAME: {FLOW_NAME}
   GRPCURL_SERVICE: <gRPC service method for this flow>
   ACCUMULATED_IDS: <JSON with all IDs from prior tests>
-  PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from previous test, or empty>"
+  PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from previous test, or empty>
+  MANDATORY_PAYMENT_METHODS: <JSON object of mandatory payment methods — pass for Authorize/SetupMandate/RepeatPayment flows, otherwise empty {}>"
 )
 ```
 
@@ -356,6 +361,24 @@ for each flow in ORDERED_FLOWS:
 - **FAILED**: build_status is BUILD_FAILED, OR test_status is FAIL
 - **SKIPPED**: build_status is SKIPPED, OR test was SKIPPED due to unmet dependency
 
+### 4e: Validate mandatory payment method coverage
+
+After merging results, check that ALL mandatory payment methods from `{MANDATORY_PAYMENT_METHODS}` were covered:
+
+1. The Flow Decider's plan marks each payment method as `MANDATORY` or `OPTIONAL`
+2. For each mandatory payment method + PMT pair:
+   - Check if the Authorize flow (or relevant flow handling that PM) has status SUCCESS
+   - If the flow that covers a mandatory PM has FAILED or SKIPPED → record it as `MANDATORY_UNCOVERED`
+
+```
+MANDATORY_COVERAGE = {
+  covered: [list of mandatory PM:PMT pairs with SUCCESS],
+  uncovered: [list of mandatory PM:PMT pairs that FAILED or were SKIPPED]
+}
+```
+
+**If any mandatory payment methods are uncovered**, the connector status CANNOT be SUCCESS — it is PARTIAL at best.
+
 ---
 
 ## Phase 5: Commit & PR (SPAWN SUBAGENT)
@@ -393,7 +416,9 @@ Variables:
   CONNECTOR_STATUS: <SUCCESS | PARTIAL | FAILED>
   FLOW_RESULTS: <JSON array of all per-flow results from Phase 4d>
   CONNECTOR_SOURCE_FILES: <paths to modified files>
-  TEST_REPORT_PATHS: <paths to test report MDs>"
+  TEST_REPORT_PATHS: <paths to test report MDs>
+  MANDATORY_PAYMENT_METHODS: <JSON object of mandatory payment methods from connectors.json>
+  MANDATORY_COVERAGE: <JSON with covered/uncovered mandatory PM:PMT lists from Phase 4e>"
 )
 ```
 
@@ -422,13 +447,16 @@ FLOWS:
 FLOWS_SUCCEEDED: <count>
 FLOWS_FAILED: <count>
 FLOWS_SKIPPED: <count>
+MANDATORY_PAYMENT_METHODS:
+  COVERED: [list of mandatory PM:PMT pairs implemented successfully]
+  UNCOVERED: [list of mandatory PM:PMT pairs that failed or were skipped]
 PR: <PR_URL or "not created">
 REASON: <if not SUCCESS, primary reason>
 ```
 
 **STATUS definitions:**
-- **SUCCESS**: ALL planned flows passed (build + grpcurl) AND PR created. No exceptions.
-- **PARTIAL**: At least one planned flow succeeded, but others failed or were skipped.
+- **SUCCESS**: ALL planned flows passed (build + grpcurl) AND ALL mandatory payment methods are covered AND PR created. No exceptions.
+- **PARTIAL**: At least one planned flow succeeded, but others failed or were skipped, OR some mandatory payment methods are uncovered.
 - **FAILED**: No planned flows succeeded, OR Authorize failed (which cascades to all).
 - **SKIPPED**: Connector was skipped before any implementation (no techspec, no source files, no credentials).
 

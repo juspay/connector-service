@@ -13,12 +13,27 @@ You are the **top-level orchestrator** for implementing all payment flows across
 | `{CONNECTORS_FILE}` | JSON file with connector names (simple array) | `connectors.json` |
 | `{BRANCH}` | Git branch name for all work | `feat/all-flows` |
 
-`{CONNECTORS_FILE}` is a **simple JSON array of connector names**, e.g.:
+`{CONNECTORS_FILE}` is a **JSON object** mapping connector names to their **mandatory payment methods and payment method types**, e.g.:
 ```json
-["Adyen", "Stripe", "Checkout", "Braintree"]
+{
+  "PAYU": {
+    "UPI": ["UPI_PAY", "UPI_QR", "UPI_COLLECT"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"],
+    "NET BANKING": []
+  },
+  "PHONEPE": {
+    "UPI": ["UPI_PAY", "UPI_QR", "UPI_COLLECT"],
+    "WALLET": ["REDIRECT_WALLET_DEBIT"]
+  }
+}
 ```
 
-No URLs, no integration details — just names. The techspecs are pre-generated at `/home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/{CONNECTOR_UPPER}_spec.md` (e.g., `RAZORPAY_spec.md`, `PHONEPE_spec.md`).
+- **Keys** = connector names
+- **Values** = object of mandatory payment methods → mandatory payment method types
+- An empty array (`[]`) means the payment method is mandatory but any PMTs the techspec/flow decider discovers are acceptable
+- These payment methods and PMTs **MUST** be implemented. The Flow Decider may discover additional (optional) ones from the techspec, but the ones listed here are non-negotiable.
+
+The techspecs are pre-generated at `/home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/{CONNECTOR_UPPER}_spec.md` (e.g., `RAZORPAY_spec.md`, `PHONEPE_spec.md`).
 
 ---
 
@@ -42,13 +57,20 @@ No URLs, no integration details — just names. The techspecs are pre-generated 
 
 ## STEP 0: DISCOVER CONNECTORS (once, before anything else)
 
-Extract the connector names from the JSON array:
+Extract the connector names (keys) and their mandatory payment methods from the JSON object:
 
 ```bash
-cat {CONNECTORS_FILE} | jq '.[]' -r
+cat {CONNECTORS_FILE} | jq 'keys[]' -r
 ```
 
 Store the returned list as `CONNECTOR_LIST`. This is the authoritative list — every connector must be covered.
+
+For each connector, also extract its mandatory payment methods:
+```bash
+cat {CONNECTORS_FILE} | jq '."{CONNECTOR}"' 
+```
+
+Store as `MANDATORY_PAYMENT_METHODS[{CONNECTOR}]` — a JSON object mapping payment methods to arrays of PMTs. This will be passed to the Connector Agent for each connector.
 
 ---
 
@@ -94,7 +116,8 @@ Task(
 Variables:
   CONNECTOR: <connector name, exact casing from JSON>
   CONNECTORS_FILE: <path to the connectors JSON file>
-  BRANCH: <the branch name>"
+  BRANCH: <the branch name>
+  MANDATORY_PAYMENT_METHODS: <JSON object of mandatory payment methods for this connector, extracted from connectors.json>"
 )
 ```
 
@@ -123,8 +146,8 @@ Total Connectors: <count from original CONNECTOR_LIST>
 Successful: M | Partial: P | Failed: K | Skipped: S
 
 Per-connector results:
-- {Connector1}: STATUS | Flows: X succeeded, Y failed, Z skipped | PR: <url or "not created"> | Reason: <if applicable>
-- {Connector2}: STATUS | Flows: X succeeded, Y failed, Z skipped | PR: <url or "not created"> | Reason: <if applicable>
+- {Connector1}: STATUS | Flows: X succeeded, Y failed, Z skipped | Mandatory PMs: A/B covered | PR: <url or "not created"> | Reason: <if applicable>
+- {Connector2}: STATUS | Flows: X succeeded, Y failed, Z skipped | Mandatory PMs: A/B covered | PR: <url or "not created"> | Reason: <if applicable>
 ...
 ```
 
