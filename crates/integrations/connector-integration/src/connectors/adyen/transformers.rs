@@ -287,62 +287,12 @@ pub enum AdyenPaymentMethod<
     Seicomart(Box<JCSVoucherData>),
     #[serde(rename = "econtext_stores")]
     PayEasy(Box<JCSVoucherData>),
-    // Wallet redirect payment methods
-    #[serde(rename = "alipay")]
-    AliPay,
-    #[serde(rename = "alipay_hk")]
-    AliPayHk,
-    #[serde(rename = "dana")]
-    Dana,
-    #[serde(rename = "gcash")]
-    Gcash(Box<GcashData>),
-    #[serde(rename = "gopay_wallet")]
-    GoPay(Box<GoPayData>),
-    #[serde(rename = "kakaopay")]
-    Kakaopay(Box<KakaoPayData>),
-    #[serde(rename = "mbway")]
-    Mbway(Box<MbwayData>),
-    #[serde(rename = "momo_wallet")]
-    Momo(Box<MomoData>),
-    #[serde(rename = "touchngo")]
-    TouchNGo(Box<TouchNGoData>),
-    #[serde(rename = "wechatpayWeb")]
-    WeChatPayWeb,
-    #[serde(rename = "twint")]
-    Twint,
-    #[serde(rename = "vipps")]
-    Vipps,
-    #[serde(rename = "swish")]
-    Swish,
-    #[serde(rename = "paypal")]
-    AdyenPaypal,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlikRedirectionData {
     blik_code: Secret<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoPayData {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KakaoPayData {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GcashData {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MomoData {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TouchNGoData {}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MbwayData {
-    telephone_number: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1522,27 +1472,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 Ok(apple_pay_wallet_data)
             }
-            WalletData::AliPayRedirect(_) => Ok(Self::AliPay),
-            WalletData::AliPayHkRedirect(_) => Ok(Self::AliPayHk),
-            WalletData::DanaRedirect { .. } => Ok(Self::Dana),
-            WalletData::GcashRedirect(_) => Ok(Self::Gcash(Box::new(GcashData {}))),
-            WalletData::GoPayRedirect(_) => Ok(Self::GoPay(Box::new(GoPayData {}))),
-            WalletData::KakaoPayRedirect(_) => Ok(Self::Kakaopay(Box::new(KakaoPayData {}))),
-            WalletData::MbWayRedirect(_) => Ok(Self::Mbway(Box::new(MbwayData {
-                telephone_number: item.resource_common_data.get_billing_phone_number()?,
-            }))),
-            WalletData::MomoRedirect(_) => Ok(Self::Momo(Box::new(MomoData {}))),
-            WalletData::TouchNGoRedirect(_) => Ok(Self::TouchNGo(Box::new(TouchNGoData {}))),
-            WalletData::WeChatPayRedirect(_) => Ok(Self::WeChatPayWeb),
-            WalletData::TwintRedirect { .. } => Ok(Self::Twint),
-            WalletData::VippsRedirect { .. } => Ok(Self::Vipps),
-            WalletData::SwishQr(_) => Ok(Self::Swish),
-            WalletData::PaypalRedirect(_) => Ok(Self::AdyenPaypal),
-            WalletData::AmazonPayRedirect(_)
+            WalletData::PaypalRedirect(_)
+            | WalletData::AmazonPayRedirect(_)
             | WalletData::Paze(_)
             | WalletData::RevolutPay(_)
+            | WalletData::AliPayRedirect(_)
+            | WalletData::AliPayHkRedirect(_)
+            | WalletData::GoPayRedirect(_)
+            | WalletData::KakaoPayRedirect(_)
+            | WalletData::GcashRedirect(_)
+            | WalletData::MomoRedirect(_)
+            | WalletData::TouchNGoRedirect(_)
+            | WalletData::MbWayRedirect(_)
             | WalletData::MobilePayRedirect(_)
+            | WalletData::WeChatPayRedirect(_)
             | WalletData::SamsungPay(_)
+            | WalletData::TwintRedirect { .. }
+            | WalletData::VippsRedirect { .. }
+            | WalletData::DanaRedirect { .. }
+            | WalletData::SwishQr(_)
             | WalletData::AliPayQr(_)
             | WalletData::ApplePayRedirect(_)
             | WalletData::ApplePayThirdPartySdk(_)
@@ -2335,7 +2283,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            shopper_name: None,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
             shopper_email: item
                 .router_data
                 .resource_common_data
@@ -2355,7 +2308,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_optional_shipping(),
             )
             .and_then(Result::ok),
-            country_code: None,
+            country_code,
             line_items: None,
             shopper_reference,
             store_payment_method,
