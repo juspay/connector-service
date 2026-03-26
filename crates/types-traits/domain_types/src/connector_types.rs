@@ -3007,6 +3007,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                     Self::DirectCarrierBilling
                 }
             },
+            PaymentMethodData::Netbanking(_) => Self::Netbanking,
         }
     }
 }

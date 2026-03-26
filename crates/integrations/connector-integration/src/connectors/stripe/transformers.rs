@@ -916,7 +916,8 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
             | common_enums::PaymentMethodType::Satispay
-            | common_enums::PaymentMethodType::Wero => Err(ConnectorError::NotImplemented(
+            | common_enums::PaymentMethodType::Wero
+            | common_enums::PaymentMethodType::Netbanking => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1502,6 +1503,7 @@ fn create_stripe_payment_method<
         PaymentMethodData::Upi(_)
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
@@ -4568,6 +4570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::Reward
             | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Netbanking(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::Upi(_)
             | PaymentMethodData::CardRedirect(_)
@@ -4960,6 +4963,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::Reward
                         | PaymentMethodData::RealTimePayment(_)
                         | PaymentMethodData::MobilePayment(_)
+                        | PaymentMethodData::Netbanking(_)
                         | PaymentMethodData::Upi(_)
                         | PaymentMethodData::Voucher(_)
                         | PaymentMethodData::GiftCard(_)
