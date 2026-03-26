@@ -85,7 +85,7 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
       accessTokenValue = accessTokenResponse.accessToken.value;
       tokenTypeValue = accessTokenResponse.tokenType ?? "Bearer";
       expiresInSeconds = Number(accessTokenResponse.expiresInSeconds) || 3600;
-      console.log(`  Access token received: ${accessTokenValue.substring(0, 20)}...`);
+      console.log("  Access token received");
     } else {
       console.log("  No access token in response");
       return true;
@@ -127,7 +127,7 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
 
     if (response.status === PaymentStatus.CHARGED) {
       console.log("  PASSED: Payment charged");
-      return true;
+      return false;
     } else {
       console.log(`  FAILED: Expected CHARGED, got ${response.status}`);
       return false;

@@ -154,7 +154,7 @@ async def test_paypal_authorize(creds_file: str) -> bool:
             access_token_value = access_token_response.access_token.value
             token_type_value = access_token_response.token_type or "Bearer"
             expires_in_seconds = access_token_response.expires_in_seconds or 3600
-            print(f"  Access token received: {access_token_value[:20]}...")
+            print("  Access token received")
         else:
             print("  No access token in response")
             return True
