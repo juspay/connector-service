@@ -15,7 +15,7 @@ use common_utils::{
     crypto::{self, SignMessage},
     errors::CustomResult,
     events,
-    ext_traits::ByteSliceExt,
+    ext_traits::{ByteSliceExt, OptionExt},
     pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
