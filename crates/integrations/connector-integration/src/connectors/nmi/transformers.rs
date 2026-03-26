@@ -2,14 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
-    },
+    connector_flow::{Authorize, Capture, PSync, PreAuthenticate, RSync, Refund, Void},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{
@@ -200,6 +197,48 @@ impl NmiMerchantDefinedField {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct NmiBillingDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    address1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    address2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    state: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    zip: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    country: Option<common_enums::CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    phone: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    email: Option<common_utils::pii::Email>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NmiShippingDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_firstname: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_lastname: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_address1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_address2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_state: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_zip: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_country: Option<common_enums::CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_email: Option<common_utils::pii::Email>,
+}
+
 // ===== PAYMENT REQUEST =====
 
 #[derive(Debug, Serialize)]
@@ -211,9 +250,36 @@ pub struct NmiPaymentsRequest<T: PaymentMethodDataTypes> {
     currency: common_enums::Currency,
     orderid: String,
     #[serde(flatten)]
-    payment_method: NmiPaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    payment_method: Option<NmiPaymentMethod<T>>,
     #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_field: Option<NmiMerchantDefinedField>,
+    #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    billing_details: Option<NmiBillingDetails>,
+    #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shipping_details: Option<NmiShippingDetails>,
+    // Fields for 3DS completion (when redirect_response is present)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    customer_vault_id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    email: Option<common_utils::pii::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cardholder_auth: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cavv: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    xid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    eci: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cvv: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    three_ds_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    directory_server_id: Option<Secret<String>>,
 }
 
 // Implementation for NmiRouterData wrapper (needed by macros)
@@ -246,56 +312,215 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
-        // Extract payment method data
-        // Handle ACH Bank Debit separately to access billing info for account holder name fallback
-        let (payment_method, transaction_type) = match &router_data.request.payment_method_data {
-            PaymentMethodData::BankDebit(bank_debit_data) => {
-                let ach_data = create_ach_data(bank_debit_data, router_data)?;
-                // ACH only supports "sale" transaction type, not "auth"
-                (
-                    NmiPaymentMethod::Ach(Box::new(ach_data)),
-                    TransactionType::Sale,
-                )
-            }
-            _ => {
-                // Determine transaction type based on auto_capture for card payments
-                let txn_type = if router_data.request.is_auto_capture()? {
-                    TransactionType::Sale
-                } else {
-                    TransactionType::Auth
-                };
-                (
-                    NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?,
-                    txn_type,
-                )
-            }
-        };
-
-        // Convert amount from minor units to major units using framework converter
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        Ok(Self {
-            security_key: auth.api_key,
-            transaction_type,
-            amount,
-            currency: router_data.request.currency,
-            orderid: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            payment_method,
-            merchant_defined_field: router_data
-                .request
-                .metadata
-                .as_ref()
-                .map(|m| NmiMerchantDefinedField::new(m.peek())),
+        Self::try_from(&NmiAuthorizeRouterData {
+            router_data: router_data.clone(),
+            auth,
         })
+    }
+}
+
+/// Wrapper struct to distinguish 3DS completion from regular authorize
+struct NmiAuthorizeRouterData<T: PaymentMethodDataTypes> {
+    router_data:
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    auth: NmiAuthType,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<&NmiAuthorizeRouterData<T>> for NmiPaymentsRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(data: &NmiAuthorizeRouterData<T>) -> Result<Self, Self::Error> {
+        let router_data = &data.router_data;
+        let auth = &data.auth;
+
+        if router_data.request.redirect_response.is_some() {
+            // 3DS completion flow
+            let redirect_response =
+                router_data
+                    .request
+                    .redirect_response
+                    .as_ref()
+                    .ok_or_else(|| {
+                        error_stack::report!(
+                            errors::ConnectorError::MissingConnectorRedirectionPayload {
+                                field_name: "redirect_response",
+                            }
+                        )
+                    })?;
+
+            let payload_data = redirect_response.payload.clone().ok_or_else(|| {
+                error_stack::report!(errors::ConnectorError::MissingConnectorRedirectionPayload {
+                    field_name: "redirect_response.payload",
+                })
+            })?;
+
+            let three_ds_data: NmiRedirectResponseData =
+                serde_json::from_value(payload_data.expose()).change_context(
+                    errors::ConnectorError::MissingConnectorRedirectionPayload {
+                        field_name: "three_ds_data",
+                    },
+                )?;
+
+            let cvv = match &router_data.request.payment_method_data {
+                PaymentMethodData::Card(card_data) => Some(card_data.card_cvc.clone()),
+                _ => None,
+            };
+
+            let converter = FloatMajorUnitForConnector;
+            let amount = converter
+                .convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            let transaction_type = if router_data.request.is_auto_capture()? {
+                TransactionType::Sale
+            } else {
+                TransactionType::Auth
+            };
+
+            Ok(Self {
+                security_key: auth.api_key.clone(),
+                transaction_type,
+                amount,
+                currency: router_data.request.currency,
+                orderid: three_ds_data.order_id.ok_or_else(|| {
+                    error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                        field_name: "order_id",
+                    })
+                })?,
+                payment_method: None,
+                merchant_defined_field: router_data
+                    .request
+                    .metadata
+                    .as_ref()
+                    .map(|m| NmiMerchantDefinedField::new(m.peek())),
+                billing_details: None,
+                shipping_details: None,
+                customer_vault_id: Some(three_ds_data.customer_vault_id),
+                email: router_data.request.email.clone(),
+                cardholder_auth: three_ds_data.card_holder_auth,
+                cavv: three_ds_data.cavv,
+                xid: three_ds_data.xid,
+                eci: three_ds_data.eci,
+                cvv,
+                three_ds_version: three_ds_data.three_ds_version,
+                directory_server_id: three_ds_data.directory_server_id,
+            })
+        } else {
+            // Regular authorization flow
+            let (payment_method, transaction_type) = match &router_data.request.payment_method_data
+            {
+                PaymentMethodData::BankDebit(bank_debit_data) => {
+                    let ach_data = create_ach_data(bank_debit_data, router_data)?;
+                    (
+                        NmiPaymentMethod::Ach(Box::new(ach_data)),
+                        TransactionType::Sale,
+                    )
+                }
+                _ => {
+                    let txn_type = if router_data.request.is_auto_capture()? {
+                        TransactionType::Sale
+                    } else {
+                        TransactionType::Auth
+                    };
+                    (
+                        NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?,
+                        txn_type,
+                    )
+                }
+            };
+
+            let converter = FloatMajorUnitForConnector;
+            let amount = converter
+                .convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            Ok(Self {
+                security_key: auth.api_key.clone(),
+                transaction_type,
+                amount,
+                currency: router_data.request.currency,
+                orderid: router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+                payment_method: Some(payment_method),
+                merchant_defined_field: router_data
+                    .request
+                    .metadata
+                    .as_ref()
+                    .map(|m| NmiMerchantDefinedField::new(m.peek())),
+                billing_details: Some(NmiBillingDetails {
+                    address1: router_data
+                        .resource_common_data
+                        .get_optional_billing_line1(),
+                    address2: router_data
+                        .resource_common_data
+                        .get_optional_billing_line2(),
+                    city: router_data
+                        .resource_common_data
+                        .get_optional_billing_city()
+                        .map(|s: Secret<String>| s.peek().to_string()),
+                    state: router_data
+                        .resource_common_data
+                        .get_optional_billing_state(),
+                    zip: router_data.resource_common_data.get_optional_billing_zip(),
+                    country: router_data
+                        .resource_common_data
+                        .get_optional_billing_country(),
+                    phone: router_data
+                        .resource_common_data
+                        .get_optional_billing_phone_number(),
+                    email: router_data
+                        .resource_common_data
+                        .get_optional_billing_email(),
+                }),
+                shipping_details: Some(NmiShippingDetails {
+                    shipping_firstname: router_data
+                        .resource_common_data
+                        .get_optional_shipping_first_name(),
+                    shipping_lastname: router_data
+                        .resource_common_data
+                        .get_optional_shipping_last_name(),
+                    shipping_address1: router_data
+                        .resource_common_data
+                        .get_optional_shipping_line1(),
+                    shipping_address2: router_data
+                        .resource_common_data
+                        .get_optional_shipping_line2(),
+                    shipping_city: router_data
+                        .resource_common_data
+                        .get_optional_shipping_city()
+                        .map(|s| s.peek().to_string()),
+                    shipping_state: router_data
+                        .resource_common_data
+                        .get_optional_shipping_state(),
+                    shipping_zip: router_data.resource_common_data.get_optional_shipping_zip(),
+                    shipping_country: router_data
+                        .resource_common_data
+                        .get_optional_shipping_country(),
+                    shipping_email: router_data
+                        .resource_common_data
+                        .get_optional_shipping_email(),
+                }),
+                customer_vault_id: None,
+                email: None,
+                cardholder_auth: None,
+                cavv: None,
+                xid: None,
+                eci: None,
+                cvv: None,
+                three_ds_version: None,
+                directory_server_id: None,
+            })
+        }
     }
 }
 
@@ -977,8 +1202,6 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
 
 pub type NmiVaultResponse = NmiVaultResponseStruct;
 pub type NmiPreAuthenticateResponse = NmiVaultResponse;
-pub type NmiPostAuthenticateResponse = NmiPostAuthResponseStruct;
-pub type NmiPostAuthResponse = NmiPostAuthResponseStruct;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum Response {
@@ -1057,45 +1280,6 @@ pub struct NmiRedirectResponseData {
     order_id: Option<String>,
     directory_server_id: Option<Secret<String>>,
     customer_vault_id: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct NmiPostAuthenticateRequest {
-    amount: FloatMajorUnit,
-    #[serde(rename = "type")]
-    transaction_type: TransactionType,
-    security_key: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    orderid: Option<String>,
-    customer_vault_id: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    email: Option<common_utils::pii::Email>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cardholder_auth: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cavv: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    xid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    eci: Option<String>,
-    cvv: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    three_ds_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    directory_server_id: Option<Secret<String>>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct NmiPostAuthResponseStruct {
-    pub response: Response,
-    pub responsetext: String,
-    pub authcode: Option<String>,
-    pub transactionid: String,
-    pub avsresponse: Option<String>,
-    pub cvvresponse: Option<String>,
-    pub orderid: String,
-    pub response_code: String,
-    customer_vault_id: Option<Secret<String>>,
 }
 
 type CardDetails<T> = common_utils::CustomResult<
@@ -1203,10 +1387,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
 
                 (
                     AttemptStatus::AuthenticationPending,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            response.transactionid.clone(),
-                        ),
+                    Ok(PaymentsResponseData::PreAuthenticateResponse {
+                        authentication_data: None,
                         redirection_data: Some(Box::new(RedirectForm::Nmi {
                             amount: to_currency_base_unit(amount_data, currency_data)?,
                             currency: currency_data,
@@ -1221,152 +1403,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .resource_common_data
                                 .connector_request_reference_id
                                 .clone(),
+                            continue_redirection_url: item
+                                .router_data
+                                .request
+                                .continue_redirection_url
+                                .as_ref()
+                                .map(|url| url.to_string())
+                                .unwrap_or_default(),
                         })),
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
                         connector_response_reference_id: Some(response.transactionid.clone()),
-                        incremental_authorization_allowed: None,
                         status_code: item.http_code,
                     }),
                 )
             }
-            Response::Declined | Response::Error => (
-                AttemptStatus::Failure,
-                Err(domain_types::router_data::ErrorResponse {
-                    code: response.response_code.clone(),
-                    message: response.responsetext.clone(),
-                    reason: Some(response.responsetext.clone()),
-                    status_code: item.http_code,
-                    attempt_status: Some(AttemptStatus::Failure),
-                    connector_transaction_id: Some(response.transactionid.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                }),
-            ),
-        };
-
-        Ok(Self {
-            response: payment_response,
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for NmiPostAuthenticateRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: super::NmiRouterData<
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
-        let auth_type = NmiAuthType::try_from(&router_data.connector_config)?;
-
-        let payload_data = router_data
-            .request
-            .get_redirect_response_payload()?
-            .expose();
-
-        let three_ds_data: NmiRedirectResponseData = serde_json::from_value(payload_data)
-            .change_context(errors::ConnectorError::MissingConnectorRedirectionPayload {
-                field_name: "three_ds_data",
-            })?;
-
-        let (_, _, cvv) = get_card_details(item.router_data.request.payment_method_data.as_ref())?;
-
-        let transaction_type = match item.router_data.request.is_auto_capture()? {
-            true => TransactionType::Sale,
-            false => TransactionType::Auth,
-        };
-
-        let converter = FloatMajorUnitForConnector;
-        let currency = router_data.request.currency.ok_or_else(|| {
-            error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                field_name: "currency",
-            })
-        })?;
-        let amount = converter
-            .convert(router_data.request.amount, currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        Ok(Self {
-            amount,
-            transaction_type,
-            security_key: auth_type.api_key,
-            orderid: three_ds_data.order_id,
-            customer_vault_id: three_ds_data.customer_vault_id,
-            email: router_data.request.email.clone(),
-            cvv,
-            cardholder_auth: three_ds_data.card_holder_auth,
-            cavv: three_ds_data.cavv,
-            xid: three_ds_data.xid,
-            eci: three_ds_data.eci,
-            three_ds_version: three_ds_data.three_ds_version,
-            directory_server_id: three_ds_data.directory_server_id,
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiPostAuthenticateResponse, Self>>
-    for RouterDataV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<NmiPostAuthenticateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let response = &item.response;
-
-        let (status, payment_response) = match response.response {
-            Response::Approved => (
-                AttemptStatus::Charged,
-                Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(response.transactionid.clone()),
-                    redirection_data: None,
-                    mandate_reference: response.customer_vault_id.as_ref().map(|vault_id| {
-                        Box::new(MandateReference {
-                            connector_mandate_id: Some(vault_id.clone().expose()),
-                            payment_method_id: None,
-                            connector_mandate_request_reference_id: None,
-                        })
-                    }),
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: Some(response.orderid.clone()),
-                    incremental_authorization_allowed: None,
-                    status_code: item.http_code,
-                }),
-            ),
             Response::Declined | Response::Error => (
                 AttemptStatus::Failure,
                 Err(domain_types::router_data::ErrorResponse {

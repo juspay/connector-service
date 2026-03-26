@@ -39,9 +39,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    NmiCaptureRequest, NmiPaymentsRequest, NmiPostAuthenticateRequest, NmiPostAuthenticateResponse,
-    NmiRefundRequest, NmiRefundSyncRequest, NmiSyncRequest, NmiVaultRequest, NmiVaultResponse,
-    NmiVoidRequest, StandardResponse, SyncResponse,
+    NmiCaptureRequest, NmiPaymentsRequest, NmiRefundRequest, NmiRefundSyncRequest, NmiSyncRequest,
+    NmiVaultRequest, NmiVaultResponse, NmiVoidRequest, StandardResponse, SyncResponse,
 };
 
 // Type aliases to avoid duplicate templating in macros
@@ -51,7 +50,6 @@ pub type NmiRefundResponse = StandardResponse;
 pub type NmiPSyncResponse = SyncResponse;
 pub type NmiRSyncResponse = SyncResponse;
 pub type NmiPreAuthenticateResponse = NmiVaultResponse;
-pub type NmiPostAuthResponse = NmiPostAuthenticateResponse;
 
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -241,12 +239,6 @@ macros::create_all_prerequisites!(
             request_body: NmiVaultRequest<T>,
             response_body: NmiPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PostAuthenticate,
-            request_body: NmiPostAuthenticateRequest,
-            response_body: NmiPostAuthResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -583,38 +575,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nmi,
-    curl_request: FormUrlEncoded(NmiPostAuthenticateRequest),
-    curl_response: NmiPostAuthResponse,
-    flow_name: PostAuthenticate,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsPostAuthenticateData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_response: true,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::TRANSACT))
-        }
-    }
-);
-
 // ===== EMPTY CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -697,6 +657,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Nmi<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Nmi<T>
 {
@@ -743,5 +713,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Nmi<T>
 {
 }
-
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
