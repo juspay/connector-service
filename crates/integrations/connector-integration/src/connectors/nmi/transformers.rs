@@ -204,7 +204,7 @@ pub struct NmiBillingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     address2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    city: Option<String>,
+    city: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     state: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -228,7 +228,7 @@ pub struct NmiShippingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    shipping_city: Option<String>,
+    shipping_city: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     shipping_state: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -464,10 +464,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     address2: router_data
                         .resource_common_data
                         .get_optional_billing_line2(),
-                    city: router_data
-                        .resource_common_data
-                        .get_optional_billing_city()
-                        .map(|s: Secret<String>| s.peek().to_string()),
+                    city: router_data.resource_common_data.get_optional_billing_city(),
                     state: router_data
                         .resource_common_data
                         .get_optional_billing_state(),
@@ -497,8 +494,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_optional_shipping_line2(),
                     shipping_city: router_data
                         .resource_common_data
-                        .get_optional_shipping_city()
-                        .map(|s| s.peek().to_string()),
+                        .get_optional_shipping_city(),
                     shipping_state: router_data
                         .resource_common_data
                         .get_optional_shipping_state(),
