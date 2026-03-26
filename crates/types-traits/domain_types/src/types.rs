@@ -869,15 +869,14 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone,
-    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T>
+    > PaymentMethodData<T>
 {
-    type Error = ApplicationErrorResponse;
-
-    //rename this other payment_method conversion
-    fn foreign_try_from(
+    /// Converts a gRPC PaymentMethod to PaymentMethodData, supporting ONLY non-card payment methods.
+    /// Card flow variants (`Card`, `CardProxy`) are rejected with an explicit error.
+    pub fn convert_to_domain_model_for_non_card_payment_methods(
         value: grpc_api_types::payments::PaymentMethod,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        tracing::info!("PaymentMethod data received: {:?}", value);
+    ) -> Result<Self, error_stack::Report<ApplicationErrorResponse>> {
+        tracing::info!("Non-card PaymentMethod data received: {:?}", value);
 
         match value.payment_method {
             Some(data) => match data {

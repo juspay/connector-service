@@ -661,7 +661,7 @@ macro_rules! implement_connector_operation {
                     Ok(domain_types::payment_method_data::PaymentMethodData::Card(card))
                 }
                 domain_types::types::PaymentMethodDataAction::Default => {
-                    let pm_data = domain_types::payment_method_data::PaymentMethodData::foreign_try_from(
+                    let pm_data = domain_types::payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(
                         payload.payment_method.clone()
                             .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method in the payload"))?
                     )
