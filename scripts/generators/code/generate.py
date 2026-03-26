@@ -113,7 +113,7 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
     RPC collides with an existing plain key (e.g. ``TokenizedPaymentService.
     Authorize`` collides with ``PaymentService.Authorize``), the entry is
     *also* stored under ``{service_prefix}_{rpc_snake}`` so that transformer
-    names like ``proxy_authorize`` or ``tokenized_setup_recurring`` can be
+    names like ``proxied_authorize`` or ``tokenized_setup_recurring`` can be
     matched by ``discover_flows()``.
     """
     from google.protobuf.descriptor_pb2 import FileDescriptorSet
@@ -196,7 +196,7 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                 else:
                     # Collision: the RPC name is shared across services.
                     # Also store under "{service_prefix}_{rpc_snake}" so that
-                    # transformers like "proxy_authorize" can be discovered.
+                    # transformers like "proxied_authorize" can be discovered.
                     if prefix:
                         prefixed = f"{prefix}_{snake}"
                         if prefixed not in rpcs:
@@ -214,7 +214,7 @@ def parse_service_flows(services_dir: Path) -> dict[str, str]:
        invocation (the standard codegen path).
     2. ``pub fn {flow}_req_transformer`` — an explicit wrapper function used when
        a pre-conversion step is needed before delegating to the standard transformer
-       (e.g. TokenizedPaymentService, ProxyPaymentService).
+       (e.g. TokenizedPaymentService, ProxiedPaymentService).
     """
     flows = {}
     for service_file in services_dir.glob("*.rs"):
@@ -584,7 +584,7 @@ def _grpc_groups() -> tuple[list[str], dict[str, list[dict]]]:
     
     Returns all RPCs grouped by service. For services where the simple RPC name
     is already taken by another service (e.g., PaymentService.Authorize), uses
-    the prefixed name (e.g., tokenized_authorize, proxy_authorize).
+    the prefixed name (e.g., tokenized_authorize, proxied_authorize).
     """
     all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
     

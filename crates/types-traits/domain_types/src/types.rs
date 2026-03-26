@@ -11640,7 +11640,7 @@ impl<
 // ProxiedPaymentServiceAuthorizeRequest
 // ---------------------------------------------------------------------------
 
-pub fn proxy_authorize_to_base(
+pub fn proxied_authorize_to_base(
     v: grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
 ) -> Result<PaymentServiceAuthorizeRequest, error_stack::Report<ApplicationErrorResponse>> {
     let card = unwrap_vault_card(v.vault_card, "proxy authorization")?;
@@ -11685,7 +11685,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        ForeignTryFrom::foreign_try_from((proxy_authorize_to_base(v)?, connectors, meta))
+        ForeignTryFrom::foreign_try_from((proxied_authorize_to_base(v)?, connectors, meta))
     }
 }
 
@@ -11708,7 +11708,7 @@ impl<
     fn foreign_try_from(
         v: grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        ForeignTryFrom::foreign_try_from(proxy_authorize_to_base(v)?)
+        ForeignTryFrom::foreign_try_from(proxied_authorize_to_base(v)?)
     }
 }
 
@@ -11716,7 +11716,7 @@ impl<
 // ProxiedPaymentServiceSetupRecurringRequest
 // ---------------------------------------------------------------------------
 
-pub fn proxy_setup_recurring_to_base(
+pub fn proxied_setup_recurring_to_base(
     v: grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
 ) -> Result<PaymentServiceSetupRecurringRequest, error_stack::Report<ApplicationErrorResponse>> {
     let card = unwrap_vault_card(v.vault_card, "proxy setup recurring")?;
@@ -11752,7 +11752,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        ForeignTryFrom::foreign_try_from((proxy_setup_recurring_to_base(v)?, connectors, meta))
+        ForeignTryFrom::foreign_try_from((proxied_setup_recurring_to_base(v)?, connectors, meta))
     }
 }
 
@@ -11775,6 +11775,6 @@ impl<
     fn foreign_try_from(
         v: grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        ForeignTryFrom::foreign_try_from(proxy_setup_recurring_to_base(v)?)
+        ForeignTryFrom::foreign_try_from(proxied_setup_recurring_to_base(v)?)
     }
 }

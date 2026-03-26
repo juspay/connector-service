@@ -40,8 +40,8 @@ use domain_types::{
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response, proxy_authorize_to_base,
-        proxy_setup_recurring_to_base, tokenized_authorize_to_base,
+        generate_setup_mandate_response, proxied_authorize_to_base,
+        proxied_setup_recurring_to_base, tokenized_authorize_to_base,
         tokenized_setup_recurring_to_base,
     },
     utils::ForeignTryFrom,
@@ -3802,7 +3802,7 @@ impl ProxiedPaymentService for Payments {
         name = "proxy_payment_authorize",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "ProxyPaymentService",
+            service_name = "ProxiedPaymentService",
             service_method = FlowName::Authorize.as_str(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -3828,7 +3828,7 @@ impl ProxiedPaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+            .unwrap_or_else(|| "ProxiedPaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
         // Extract metadata to preserve it for the inner request
@@ -3845,7 +3845,7 @@ impl ProxiedPaymentService for Payments {
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let authorize_request = proxy_authorize_to_base(request_data.payload)
+                    let authorize_request = proxied_authorize_to_base(request_data.payload)
                         .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
                     let mut inner_request = tonic::Request::new(authorize_request);
@@ -3864,7 +3864,7 @@ impl ProxiedPaymentService for Payments {
         name = "proxy_payment_setup_recurring",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "ProxyPaymentService",
+            service_name = "ProxiedPaymentService",
             service_method = FlowName::SetupMandate.as_str(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -3890,7 +3890,7 @@ impl ProxiedPaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+            .unwrap_or_else(|| "ProxiedPaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
         // Extract metadata to preserve it for the inner request
@@ -3908,7 +3908,7 @@ impl ProxiedPaymentService for Payments {
                 let metadata = metadata.clone();
                 Box::pin(async move {
                     let setup_recurring_request =
-                        proxy_setup_recurring_to_base(request_data.payload)
+                        proxied_setup_recurring_to_base(request_data.payload)
                             .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
                     let mut inner_request = tonic::Request::new(setup_recurring_request);

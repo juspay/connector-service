@@ -21,8 +21,8 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, mandate_reference::MandateIdType, payment_method,
-        direct_payment_service_client::DirectPaymentServiceClient,
+        direct_payment_service_client::DirectPaymentServiceClient, identifier::IdType,
+        mandate_reference::MandateIdType, payment_method,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
         ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,

@@ -74,11 +74,8 @@ fn load_supported_flows(examples_dir: &Path, connector: &str) -> Option<HashSet<
         "create_sdk_session_token",
         "tokenized_authorize",
         "tokenized_setup_recurring",
-        "proxy_authorize",
-        "proxy_setup_recurring",
-        "proxy_pre_authenticate",
-        "proxy_authenticate",
-        "proxy_post_authenticate",
+        "proxied_authorize",
+        "proxied_setup_recurring",
     ];
     let mut supported = HashSet::new();
     for flow_key in all_flow_keys {
@@ -315,42 +312,18 @@ fn main() {
             false,
         ),
         (
-            "proxy_authorize",
+            "proxied_authorize",
             "proxy_payment",
-            "proxy_authorize",
-            "build_proxy_authorize_request",
+            "proxied_authorize",
+            "build_proxied_authorize_request",
             false,
             false,
         ),
         (
-            "proxy_setup_recurring",
+            "proxied_setup_recurring",
             "proxy_payment",
-            "proxy_setup_recurring",
-            "build_proxy_setup_recurring_request",
-            false,
-            false,
-        ),
-        (
-            "proxy_pre_authenticate",
-            "proxy_payment",
-            "proxy_pre_authenticate",
-            "build_proxy_pre_authenticate_request",
-            false,
-            false,
-        ),
-        (
-            "proxy_authenticate",
-            "proxy_payment",
-            "proxy_authenticate",
-            "build_proxy_authenticate_request",
-            false,
-            false,
-        ),
-        (
-            "proxy_post_authenticate",
-            "proxy_payment",
-            "proxy_post_authenticate",
-            "build_proxy_post_authenticate_request",
+            "proxied_setup_recurring",
+            "build_proxied_setup_recurring_request",
             false,
             false,
         ),
@@ -595,7 +568,7 @@ fn main() {
                     };
 
                     let ret = match flow_key {
-                        "authorize" | "tokenized_authorize" | "proxy_authorize" =>
+                        "authorize" | "tokenized_authorize" | "proxied_authorize" =>
                             "format!(\"txn_id: {}, status_code: {}, error: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code, r.error.as_deref().unwrap_or(\"-\"))",
                         "get" | "reverse" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id, r.status_code)",
@@ -605,7 +578,7 @@ fn main() {
                             "format!(\"token: {}\", r.payment_method_token)",
                         "create_customer" =>
                             "format!(\"customer_id: {}, status_code: {}\", r.connector_customer_id, r.status_code)",
-                        "setup_recurring" | "tokenized_setup_recurring" | "proxy_setup_recurring" =>
+                        "setup_recurring" | "tokenized_setup_recurring" | "proxied_setup_recurring" =>
                             "format!(\"recurring_id: {}, status_code: {}\", r.connector_recurring_payment_id.as_deref().unwrap_or(\"-\"), r.status_code)",
                         "recurring_charge" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code)",

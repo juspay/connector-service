@@ -16,8 +16,8 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_method, direct_payment_service_client::DirectPaymentServiceClient, Address, AuthenticationType,
-        CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
+        direct_payment_service_client::DirectPaymentServiceClient, payment_method, Address,
+        AuthenticationType, CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
         PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };

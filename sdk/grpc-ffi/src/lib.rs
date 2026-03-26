@@ -36,8 +36,8 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
-    PaymentServiceGetRequest, PaymentServiceIncrementalAuthorizationRequest, PaymentServiceRefundRequest,
-    PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
+    PaymentServiceGetRequest, PaymentServiceIncrementalAuthorizationRequest,
+    PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
     ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
@@ -161,11 +161,27 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
             authorize,
             PaymentServiceAuthorizeRequest
         ),
-        "payment/capture" | "direct_payment/capture" => call!(DirectPaymentServiceClient, capture, PaymentServiceCaptureRequest),
-        "payment/void" | "direct_payment/void" => call!(DirectPaymentServiceClient, void, PaymentServiceVoidRequest),
-        "payment/get" | "direct_payment/get" => call!(DirectPaymentServiceClient, get, PaymentServiceGetRequest),
-        "payment/refund" | "direct_payment/refund" => call!(DirectPaymentServiceClient, refund, PaymentServiceRefundRequest),
-        "payment/reverse" | "direct_payment/reverse" => call!(DirectPaymentServiceClient, reverse, PaymentServiceReverseRequest),
+        "payment/capture" | "direct_payment/capture" => call!(
+            DirectPaymentServiceClient,
+            capture,
+            PaymentServiceCaptureRequest
+        ),
+        "payment/void" | "direct_payment/void" => {
+            call!(DirectPaymentServiceClient, void, PaymentServiceVoidRequest)
+        }
+        "payment/get" | "direct_payment/get" => {
+            call!(DirectPaymentServiceClient, get, PaymentServiceGetRequest)
+        }
+        "payment/refund" | "direct_payment/refund" => call!(
+            DirectPaymentServiceClient,
+            refund,
+            PaymentServiceRefundRequest
+        ),
+        "payment/reverse" | "direct_payment/reverse" => call!(
+            DirectPaymentServiceClient,
+            reverse,
+            PaymentServiceReverseRequest
+        ),
         "payment/setup_recurring" | "direct_payment/setup_recurring" => call!(
             DirectPaymentServiceClient,
             setup_recurring,
@@ -239,7 +255,7 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
             setup_recurring,
             TokenizedPaymentServiceSetupRecurringRequest
         ),
-        // ProxyPaymentService
+        // ProxiedPaymentService
         "proxy_payment/authorize" => call!(
             ProxiedPaymentServiceClient,
             authorize,

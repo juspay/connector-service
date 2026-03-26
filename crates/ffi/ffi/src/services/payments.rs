@@ -544,7 +544,7 @@ pub fn handle_event_transformer(
 }
 
 // ============================================================================
-// NON-PCI SDK CLIENTS — TokenizedPaymentService and ProxyPaymentService
+// NON-PCI SDK CLIENTS — TokenizedPaymentService and ProxiedPaymentService
 // transformers (generated via req_transformer! / res_transformer! macros;
 // type conversions live in domain_types::types)
 // ============================================================================
@@ -632,4 +632,3 @@ res_transformer!(
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_setup_mandate_response,
 );
-

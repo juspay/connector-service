@@ -4062,12 +4062,12 @@ message ConnectorSpecificConfig {
 // ============================================================================
 // NON-PCI SDK CLIENTS - TOKENIZED AND PROXY PAYMENT MESSAGES
 // ============================================================================
-// These messages are used by TokenizedPaymentService and ProxyPaymentService
+// These messages are used by TokenizedPaymentService and ProxiedPaymentService
 // for merchants who do not hold raw card data.
 // ============================================================================
 
 // ── VaultAliasCard ────────────────────────────────────────────────────────────
-// Used by ProxyPaymentService. Every field is a vault alias token or plain
+// Used by ProxiedPaymentService. Every field is a vault alias token or plain
 // metadata — no real PAN, CVV, or sensitive card data.
 // VGS / Basis Theory / Spreedly substitutes aliases with real values in-flight.
 message VaultAliasCard {
@@ -4133,7 +4133,7 @@ message TokenizedPaymentServiceSetupRecurringRequest {
   optional string locale = 14;
 }
 
-// ── ProxyPaymentService messages ──────────────────────────────────────────────
+// ── ProxiedPaymentService messages ──────────────────────────────────────────────
 
 message ProxiedPaymentServiceAuthorizeRequest {
   optional string merchant_transaction_id = 1;

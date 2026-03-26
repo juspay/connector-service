@@ -8,9 +8,9 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    payment_method, direct_payment_service_client::DirectPaymentServiceClient, Address, AuthenticationType,
-    BrowserInformation, CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
-    PaymentServiceAuthorizeRequest, PaymentStatus,
+    direct_payment_service_client::DirectPaymentServiceClient, payment_method, Address,
+    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, PaymentAddress,
+    PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
 };
 use grpc_server::app;
 use hyperswitch_masking::Secret;

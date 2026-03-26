@@ -18,11 +18,11 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_method, direct_payment_service_client::DirectPaymentServiceClient, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2, Currency, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
-        PaymentStatus,
+        direct_payment_service_client::DirectPaymentServiceClient, payment_method, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
+        Currency, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceVoidRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};

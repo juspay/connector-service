@@ -17,16 +17,16 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
+        direct_payment_service_client::DirectPaymentServiceClient,
         mandate_reference::MandateIdType, mandate_type::MandateType as MandateTypeInner,
-        payment_method, direct_payment_service_client::DirectPaymentServiceClient,
-        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
-        AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, MandateAmountData, MandateReference,
-        MandateType, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest,
-        RefundStatus, SetupMandateDetails,
+        payment_method, recurring_payment_service_client::RecurringPaymentServiceClient,
+        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails,
+        ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
+        MandateAmountData, MandateReference, MandateType, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RefundStatus, SetupMandateDetails,
     },
 };
 use rand::Rng;

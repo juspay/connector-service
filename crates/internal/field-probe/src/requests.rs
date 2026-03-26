@@ -30,9 +30,6 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,
-    ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest,
     ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest, VaultAliasCard,
@@ -357,7 +354,7 @@ pub(crate) fn base_tokenized_setup_recurring_request(
     }
 }
 
-pub(crate) fn base_proxy_authorize_request() -> ProxiedPaymentServiceAuthorizeRequest {
+pub(crate) fn base_proxied_authorize_request() -> ProxiedPaymentServiceAuthorizeRequest {
     ProxiedPaymentServiceAuthorizeRequest {
         merchant_transaction_id: Some("probe_proxy_txn_001".to_string()),
         amount: Some(usd_money(1000)),
@@ -373,7 +370,7 @@ pub(crate) fn base_proxy_authorize_request() -> ProxiedPaymentServiceAuthorizeRe
     }
 }
 
-pub(crate) fn base_proxy_setup_recurring_request() -> ProxiedPaymentServiceSetupRecurringRequest {
+pub(crate) fn base_proxied_setup_recurring_request() -> ProxiedPaymentServiceSetupRecurringRequest {
     ProxiedPaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_proxy_mandate_001".to_string(),
         amount: Some(usd_money(0)),
@@ -383,37 +380,6 @@ pub(crate) fn base_proxy_setup_recurring_request() -> ProxiedPaymentServiceSetup
             billing_address: Some(Address::default()),
             ..Default::default()
         }),
-        ..Default::default()
-    }
-}
-
-pub(crate) fn base_proxy_pre_authenticate_request(
-) -> ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest {
-    ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest {
-        merchant_order_id: Some("probe_proxy_order_001".to_string()),
-        amount: Some(usd_money(1000)),
-        vault_card: Some(base_vault_alias_card()),
-        return_url: Some("https://example.com/3ds-return".to_string()),
-        ..Default::default()
-    }
-}
-
-pub(crate) fn base_proxy_authenticate_request(
-) -> ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest {
-    ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest {
-        merchant_order_id: Some("probe_proxy_order_001".to_string()),
-        amount: Some(usd_money(1000)),
-        vault_card: Some(base_vault_alias_card()),
-        return_url: Some("https://example.com/3ds-return".to_string()),
-        ..Default::default()
-    }
-}
-
-pub(crate) fn base_proxy_post_authenticate_request(
-) -> PaymentMethodAuthenticationServicePostAuthenticateRequest {
-    PaymentMethodAuthenticationServicePostAuthenticateRequest {
-        merchant_order_id: Some("probe_proxy_order_001".to_string()),
-        vault_card: Some(base_vault_alias_card()),
         ..Default::default()
     }
 }

@@ -189,11 +189,8 @@ _STEP_DESCRIPTIONS: dict[str, str] = {
     "recurring_charge": "Recurring Charge — charge against the stored mandate",
     "tokenized_authorize":        "Tokenized Authorize — reserve funds using a connector-issued payment method token",
     "tokenized_setup_recurring":  "Tokenized Setup Recurring — store a mandate using a connector token",
-    "proxy_authorize":            "Proxy Authorize — reserve funds using vault alias tokens routed through a proxy",
-    "proxy_setup_recurring":      "Proxy Setup Recurring — store a mandate using vault alias tokens via proxy",
-    "proxy_pre_authenticate":     "Proxy Pre-Authenticate — initiate 3DS using vault aliases (proxy substitutes before Netcetera)",
-    "proxy_authenticate":         "Proxy Authenticate — execute 3DS challenge using vault aliases via proxy",
-    "proxy_post_authenticate":    "Proxy Post-Authenticate — validate 3DS result using vault aliases via proxy",
+    "proxied_authorize":            "Proxy Authorize — reserve funds using vault alias tokens routed through a proxy",
+    "proxied_setup_recurring":      "Proxy Setup Recurring — store a mandate using vault alias tokens via proxy",
 }
 
 # JavaScript reserved words — flow functions whose flow key is reserved get a "Payment" suffix.
@@ -220,11 +217,8 @@ _FLOW_VAR_NAME: dict[str, str] = {
     "recurring_charge":        "recurring_response",
     "tokenized_authorize":     "authorize_response",
     "tokenized_setup_recurring": "setup_response",
-    "proxy_authorize":         "authorize_response",
-    "proxy_setup_recurring":   "setup_response",
-    "proxy_pre_authenticate":  "pre_authenticate_response",
-    "proxy_authenticate":      "authenticate_response",
-    "proxy_post_authenticate": "post_authenticate_response",
+    "proxied_authorize":         "authorize_response",
+    "proxied_setup_recurring":   "setup_response",
 }
 
 # Fields that must reference the response of a previous flow step
@@ -1069,15 +1063,15 @@ def _scenario_return_kotlin(scenario: "ScenarioSpec") -> str:
 def _rust_status_check_lines(flow_key: str, var_name: str, pad: str = "    ") -> list[str]:
     """Return Rust status-check lines for a flow response variable (used in both scenarios and builders)."""
     lines: list[str] = []
-    if flow_key in ("authorize", "tokenized_authorize", "proxy_authorize"):
-        label = "Tokenized authorize" if flow_key == "tokenized_authorize" else ("Proxy authorize" if flow_key == "proxy_authorize" else "Payment")
+    if flow_key in ("authorize", "tokenized_authorize", "proxied_authorize"):
+        label = "Tokenized authorize" if flow_key == "tokenized_authorize" else ("Proxy authorize" if flow_key == "proxied_authorize" else "Payment")
         lines.append(f'{pad}match {var_name}.status() {{')
         lines.append(f'{pad}    PaymentStatus::Failure | PaymentStatus::AuthorizationFailed => return Err(format!("{label} failed: {{:?}}", {var_name}.error).into()),')
         lines.append(f'{pad}    PaymentStatus::Pending => return Ok("pending — awaiting webhook".to_string()),')
         lines.append(f'{pad}    _                      => {{}},')
         lines.append(f'{pad}}}')
         lines.append("")
-    elif flow_key in ("setup_recurring", "tokenized_setup_recurring", "proxy_setup_recurring"):
+    elif flow_key in ("setup_recurring", "tokenized_setup_recurring", "proxied_setup_recurring"):
         label = flow_key.replace("_", " ").title()
         lines.append(f'{pad}if {var_name}.status() == PaymentStatus::Failure {{')
         lines.append(f'{pad}    return Err(format!("{label} failed: {{:?}}", {var_name}.error).into());')
@@ -1094,8 +1088,7 @@ def _rust_status_check_lines(flow_key: str, var_name: str, pad: str = "    ") ->
         lines.append(f'{pad}    return Err(format!("Refund failed: {{:?}}", {var_name}.error).into());')
         lines.append(f'{pad}}}')
         lines.append("")
-    elif flow_key in ("pre_authenticate", "authenticate", "post_authenticate",
-                      "proxy_pre_authenticate", "proxy_authenticate", "proxy_post_authenticate"):
+    elif flow_key in ("pre_authenticate", "authenticate", "post_authenticate"):
         label = flow_key.replace("_", " ").title()
         lines.append(f'{pad}if {var_name}.status_code >= 400 {{')
         lines.append(f'{pad}    return Err(format!("{label} failed (status_code={{}})", {var_name}.status_code).into());')

@@ -31,9 +31,6 @@ use grpc_api_types::payments::{
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest,
     ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
     RequestConfig, TokenizedPaymentServiceAuthorizeRequest,
@@ -452,27 +449,6 @@ impl ConnectorClient {
         PaymentServiceSetupRecurringResponse,
         proxied_setup_recurring_req_handler,
         proxied_setup_recurring_res_handler
-    );
-    impl_flow_method!(
-        proxy_pre_authenticate,
-        ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest,
-        PaymentMethodAuthenticationServicePreAuthenticateResponse,
-        proxied_pre_authenticate_req_handler,
-        proxied_pre_authenticate_res_handler
-    );
-    impl_flow_method!(
-        proxy_authenticate,
-        ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest,
-        PaymentMethodAuthenticationServiceAuthenticateResponse,
-        proxied_authenticate_req_handler,
-        proxied_authenticate_res_handler
-    );
-    impl_flow_method!(
-        proxy_post_authenticate,
-        PaymentMethodAuthenticationServicePostAuthenticateRequest,
-        PaymentMethodAuthenticationServicePostAuthenticateResponse,
-        proxied_post_authenticate_req_handler,
-        proxied_post_authenticate_res_handler
     );
 }
 

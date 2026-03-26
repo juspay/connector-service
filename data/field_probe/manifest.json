@@ -281,54 +281,24 @@
       "grpc_response": "PaymentServiceSetupRecurringResponse"
     },
     {
-      "flow_key": "proxy_authorize",
-      "service_rpc": "ProxyPaymentService.Authorize",
+      "flow_key": "proxied_authorize",
+      "service_rpc": "ProxiedPaymentService.Authorize",
       "description": "Authorize using vault alias tokens (VGS / Basis Theory / Spreedly). The proxy substitutes aliases with real card values before forwarding to the connector.",
-      "service_name": "ProxyPaymentService",
+      "service_name": "ProxiedPaymentService",
       "rpc_name": "Authorize",
       "category": "Non-PCI Payments",
       "grpc_request": "ProxiedPaymentServiceAuthorizeRequest",
       "grpc_response": "PaymentServiceAuthorizeResponse"
     },
     {
-      "flow_key": "proxy_setup_recurring",
-      "service_rpc": "ProxyPaymentService.SetupRecurring",
+      "flow_key": "proxied_setup_recurring",
+      "service_rpc": "ProxiedPaymentService.SetupRecurring",
       "description": "Store a payment mandate using vault alias tokens routed through an outbound proxy.",
-      "service_name": "ProxyPaymentService",
+      "service_name": "ProxiedPaymentService",
       "rpc_name": "SetupRecurring",
       "category": "Non-PCI Payments",
       "grpc_request": "ProxiedPaymentServiceSetupRecurringRequest",
       "grpc_response": "PaymentServiceSetupRecurringResponse"
-    },
-    {
-      "flow_key": "proxy_pre_authenticate",
-      "service_rpc": "ProxyPaymentService.PreAuthenticate",
-      "description": "Initiate 3DS flow using vault alias tokens. The proxy substitutes aliases before forwarding to the 3DS server (e.g. Netcetera).",
-      "service_name": "ProxyPaymentService",
-      "rpc_name": "PreAuthenticate",
-      "category": "Non-PCI Authentication",
-      "grpc_request": "ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest",
-      "grpc_response": "PaymentMethodAuthenticationServicePreAuthenticateResponse"
-    },
-    {
-      "flow_key": "proxy_authenticate",
-      "service_rpc": "ProxyPaymentService.Authenticate",
-      "description": "Execute 3DS challenge or frictionless verification using vault alias tokens routed through a proxy.",
-      "service_name": "ProxyPaymentService",
-      "rpc_name": "Authenticate",
-      "category": "Non-PCI Authentication",
-      "grpc_request": "ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest",
-      "grpc_response": "PaymentMethodAuthenticationServiceAuthenticateResponse"
-    },
-    {
-      "flow_key": "proxy_post_authenticate",
-      "service_rpc": "ProxyPaymentService.PostAuthenticate",
-      "description": "Validate 3DS authentication result with the issuing bank using vault alias tokens routed through a proxy.",
-      "service_name": "ProxyPaymentService",
-      "rpc_name": "PostAuthenticate",
-      "category": "Non-PCI Authentication",
-      "grpc_request": "PaymentMethodAuthenticationServicePostAuthenticateRequest",
-      "grpc_response": "PaymentMethodAuthenticationServicePostAuthenticateResponse"
     }
   ],
   "connectors": [
@@ -3484,23 +3454,10 @@
       "key": "proxy_checkout",
       "title": "Proxy Payment via Vault (VGS / Basis Theory)",
       "description": "Authorize using vault alias tokens. Configure an outbound proxy URL in RequestConfig — the proxy substitutes aliases with real card values before the request reaches the connector. Card data never touches your server.",
-      "flows": ["proxy_authorize"],
+      "flows": ["proxied_authorize"],
       "pm_key": null,
       "required_flows": [
-        {"flow_key": "proxy_authorize"}
-      ]
-    },
-    {
-      "key": "proxy_3ds_checkout",
-      "title": "Proxy Payment with 3DS (VGS + Proxy 3DS)",
-      "description": "Full 3DS flow using vault alias tokens routed through an outbound proxy. The proxy substitutes aliases before forwarding to Netcetera (3DS server). Authorize after successful authentication using the same vault aliases.",
-      "flows": ["proxy_pre_authenticate", "proxy_authenticate", "proxy_post_authenticate", "proxy_authorize"],
-      "pm_key": null,
-      "required_flows": [
-        {"flow_key": "proxy_pre_authenticate"},
-        {"flow_key": "proxy_authenticate"},
-        {"flow_key": "proxy_post_authenticate"},
-        {"flow_key": "proxy_authorize"}
+        {"flow_key": "proxied_authorize"}
       ]
     }
   ],

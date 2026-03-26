@@ -595,31 +595,13 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authenticate": {
-      "default": {
-        "status": "error",
-        "error": "Address is required"
-      }
-    },
-    "proxy_authorize": {
+    "proxied_authorize": {
       "default": {
         "status": "error",
         "error": "Missing card number"
       }
     },
-    "proxy_post_authenticate": {
-      "default": {
-        "status": "error",
-        "error": "Address is required"
-      }
-    },
-    "proxy_pre_authenticate": {
-      "default": {
-        "status": "error",
-        "error": "Address is required"
-      }
-    },
-    "proxy_setup_recurring": {
+    "proxied_setup_recurring": {
       "default": {
         "status": "error",
         "error": "Customer acceptance is missing"
