@@ -2,12 +2,13 @@
 # This file controls what appears in the published GitBook at docs.hyperswitch.io
 
 # Root directory for Prism documentation
-root: .
+# Set to parent directory so we can include both docs/ and docs-generated/
+root: ..
 
 # Structure: This defines the sidebar navigation
 structure:
-  readme: README.md
-  summary: SUMMARY.md
+  readme: docs/README.md
+  summary: docs/SUMMARY.md
 
 # Ignore patterns - these files/directories won't appear in GitBook
 ignore:
