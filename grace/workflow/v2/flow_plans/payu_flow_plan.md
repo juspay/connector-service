@@ -3,7 +3,7 @@
 ## Summary
 
 - **Connector**: PAYU
-- **Techspec**: /home/kanikachaudhary/Kanika/euler-techspec-output/PAYU_spec.md
+- **Techspec**: /home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/PAYU_spec.md
 - **Total Flows Analyzed**: 19
 - **Flows to Implement**: 6
 - **Existing (skip)**: [Authorize, PSync]

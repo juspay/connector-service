@@ -53,22 +53,22 @@ If not on `{BRANCH}`, something is wrong — report FAILED.
 
 ### 1b: Find the techspec
 
-Techspecs are located at `/home/kanikachaudhary/Kanika/euler-techspec-output/` with naming pattern `{CONNECTOR_UPPER}_spec.md`.
+Techspecs are located at `/home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/` with naming pattern `{CONNECTOR_UPPER}_spec.md`.
 
 ```bash
 # Try uppercase connector name (primary pattern)
 CONNECTOR_UPPER=$(echo "{CONNECTOR}" | tr '[:lower:]' '[:upper:]')
-ls /home/kanikachaudhary/Kanika/euler-techspec-output/${CONNECTOR_UPPER}_spec.md
+ls /home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/${CONNECTOR_UPPER}_spec.md
 ```
 
 If not found, try variations (spaces/hyphens may become underscores):
 ```bash
-ls /home/kanikachaudhary/Kanika/euler-techspec-output/ | grep -i {connector}
+ls /home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/ | grep -i {connector}
 ```
 
-If no techspec found → report FAILED with reason "No techspec found at /home/kanikachaudhary/Kanika/euler-techspec-output/{CONNECTOR_UPPER}_spec.md".
+If no techspec found → report FAILED with reason "No techspec found at /home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/{CONNECTOR_UPPER}_spec.md".
 
-Store `{TECHSPEC_PATH}` (e.g., `/home/kanikachaudhary/Kanika/euler-techspec-output/RAZORPAY_spec.md`).
+Store `{TECHSPEC_PATH}` (e.g., `/home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/RAZORPAY_spec.md`).
 
 ### 1c: Find connector source files
 

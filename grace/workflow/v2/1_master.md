@@ -18,7 +18,7 @@ You are the **top-level orchestrator** for implementing all payment flows across
 ["Adyen", "Stripe", "Checkout", "Braintree"]
 ```
 
-No URLs, no integration details — just names. The techspecs are pre-generated at `/home/kanikachaudhary/Kanika/euler-techspec-output/{CONNECTOR_UPPER}_spec.md` (e.g., `RAZORPAY_spec.md`, `PHONEPE_spec.md`).
+No URLs, no integration details — just names. The techspecs are pre-generated at `/home/kanikachaudhary/workflow/hyperswitch-prism/euler-techspec-output/{CONNECTOR_UPPER}_spec.md` (e.g., `RAZORPAY_spec.md`, `PHONEPE_spec.md`).
 
 ---
 
