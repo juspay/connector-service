@@ -2,8 +2,8 @@ use common_enums;
 use domain_types::{
     connector_flow::{Authorize, CreateOrder},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, ResponseId,
+        CancelRecurringData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -618,4 +618,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ..item.router_data
         })
     }
+}
+
+// ============================================================================
+// CancelRecurring Flow
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeCancelRecurringRequest {
+    pub payment_id: String,
+    pub action: String,
+}
+
+impl TryFrom<&CancelRecurringData> for CashfreeCancelRecurringRequest {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(data: &CancelRecurringData) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_id: data.payment_id.clone(),
+            action: "CANCEL".to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeCancelRecurringResponse {
+    pub payment_status: String,
+    pub subscription_id: Option<String>,
+    pub cf_payment_id: Option<String>,
+    pub payment_id: Option<String>,
+    pub payment_amount: Option<f64>,
+    pub payment_type: Option<String>,
+    pub payment_method: Option<String>,
+    pub payment_time: Option<String>,
+    pub currency: Option<String>,
+    pub cf_subscription_id: Option<String>,
+    pub retry_attempts: Option<i32>,
+    pub failure_details: Option<serde_json::Value>,
 }

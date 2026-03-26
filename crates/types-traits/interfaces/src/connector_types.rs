@@ -6,10 +6,11 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, CancelRecurringData,
+        CancelRecurringResponseData, ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
@@ -69,6 +70,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + SdkSessionTokenV2
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
+    + CancelRecurringV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
     + PayoutCreateV2
@@ -267,6 +269,16 @@ pub trait MandateRevokeV2:
     PaymentFlowData,
     MandateRevokeRequestData,
     MandateRevokeResponseData,
+>
+{
+}
+
+pub trait CancelRecurringV2:
+    ConnectorIntegrationV2<
+    connector_flow::CancelRecurring,
+    PaymentFlowData,
+    CancelRecurringData,
+    CancelRecurringResponseData,
 >
 {
 }
