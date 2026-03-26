@@ -6,7 +6,7 @@ You are the **sole owner** of implementing **all payment flows** for **{CONNECTO
 
 You coordinate by **spawning subagents via the Task tool** for all heavy work. You handle lightweight phases yourself (setup, file discovery, ID accumulation, dependency enforcement).
 
-**HARD GUARDRAIL — MANDATORY SUBAGENT DELEGATION**: You MUST use the Task tool to spawn separate subagents for Phases 2, 3, and 4. Do NOT read the subagent workflow files (`2.1_flow_decider.md`, `2.2_flow.md`, `2.2.1_testing.md`, `2.3_pr.md`) yourself — each subagent reads its own file.
+**HARD GUARDRAIL — MANDATORY SUBAGENT DELEGATION**: You MUST use the Task tool to spawn separate subagents for Phases 2, 3, 4, and 5. Do NOT read the subagent workflow files (`2.1_flow_decider.md`, `2.2_flow.md`, `2.2.1_testing.md`, `2.3_pr.md`) yourself — each subagent reads its own file.
 
 **HARD GUARDRAIL — SEQUENTIAL FLOW IMPLEMENTATION**: You MUST spawn Flow Agents ONE AT A TIME. One Task call per message. Wait for the result. ONLY THEN spawn the next. NEVER send a single message with multiple Task calls for different flows. This is a hard architectural constraint — parallel execution will cause build conflicts and test interference.
 
@@ -26,8 +26,8 @@ You coordinate by **spawning subagents via the Task tool** for all heavy work. Y
 
 1. **Working directory**: ALL commands use the `connector-service` repo root. Never `cd`.
 2. **STRICTLY SEQUENTIAL FLOWS**: Process ONE flow at a time. One Task call per message. Wait for result. Only then spawn the next.
-3. **No `cargo test`**: Testing is done via grpcurl through the Testing Agent (inside the Flow Agent). Never run `cargo test`.
-4. **MANDATORY: Do NOT move to the next flow until the current flow's Testing Agent completes.** The grpcurl test must either PASS or be reported as FAILED.
+3. **No `cargo test`**: Testing is done via grpcurl through the Testing Agent (Phase 4). Never run `cargo test`.
+4. **MANDATORY: Do NOT move to the next flow until the current Flow Agent completes its build.** Do NOT move to the next test until the current Testing Agent completes.
 5. **Scoped git**: Only stage connector-specific files. Never `git add -A`. Never force push.
 6. **Credentials**: Read from `creds.json` at the repo root. If connector is missing, report SKIPPED.
 7. **Only do what's listed**: Do not invent steps. Do not add features. Do not write tests.
@@ -36,7 +36,7 @@ You coordinate by **spawning subagents via the Task tool** for all heavy work. Y
    - Do NOT read or write connector code yourself
    - Do NOT run `cargo build` or `grpcurl` yourself
    - Do NOT read `2.1_flow_decider.md`, `2.2_flow.md`, `2.2.1_testing.md`, or `2.3_pr.md` to execute them yourself
-   - Your ONLY subagents are: Flow Decider, Flow Agent, and PR Agent
+   - Your ONLY subagents are: Flow Decider, Flow Agent, Testing Agent, and PR Agent
 
 ---
 
@@ -107,7 +107,7 @@ Variables:
 )
 ```
 
-**Gate**: If the Flow Decider returns FAILED (no implementable flows), report this connector as FAILED and go directly to Phase 5.
+**Gate**: If the Flow Decider returns FAILED (no implementable flows), report this connector as FAILED and go directly to Phase 6.
 
 Parse the returned flow plan to extract:
 - `ORDERED_FLOWS` — the ordered list of flow names with status PLAN
@@ -119,18 +119,18 @@ Parse the returned flow plan to extract:
 
 **HARD GUARDRAIL — ONE TASK CALL PER MESSAGE**: Spawn exactly ONE Flow Agent per message. Wait for the result. Only after receiving the result, spawn the next flow in a NEW message.
 
+**NOTE**: Flow Agents only implement and build. Testing is deferred to Phase 4 after ALL flows are built.
+
 Initialize tracking state:
 ```
-ACCUMULATED_IDS = {}           # grows as flows complete
-PREVIOUS_FLOW_GRPCURL = ""     # raw grpcurl+output from the last completed flow
-FLOW_RESULTS = []              # array of per-flow results
+BUILD_RESULTS = []             # array of per-flow build results
 ```
 
 For each flow in `ORDERED_FLOWS`, in order:
 
-### 3a: Check dependency gates
+### 3a: Check build dependency gates
 
-Before spawning the Flow Agent, check if this flow's dependencies are met. The Flow Decider determines the full flow list and order — it may include flows beyond the 6 core ones. Apply these dependency rules:
+Before spawning the Flow Agent, check if this flow's build dependencies are met. Since flows share code (e.g., post-Authorize flows reference structs from Authorize), a flow cannot be built if its code dependency failed to build.
 
 **Pre-Authorize flows (no Authorize dependency):**
 
@@ -149,27 +149,27 @@ Before spawning the Flow Agent, check if this flow's dependencies are met. The F
 | Flow | Dependency | Gate |
 |------|-----------|------|
 | Authorize | Pre-Authorize flows if any (as ordered by decider) | Proceed after pre-flows complete |
-| Authenticate | PreAuthenticate must have succeeded | If PreAuthenticate FAILED → SKIP |
-| PostAuthenticate | Authenticate must have succeeded | If Authenticate FAILED → SKIP |
-| PSync | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| Capture | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP |
-| IncrementalAuthorization | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| Refund | Authorize must have succeeded (need `connector_transaction_id`) | If Authorize FAILED → SKIP |
-| RSync | Refund must have succeeded (need `connector_refund_id`) | If Refund FAILED/SKIPPED → SKIP |
-| Void | Authorize must exist (EXISTING or SUCCESS) | If Authorize FAILED → SKIP |
-| VoidPC | Capture must have succeeded | If Capture FAILED → SKIP |
-| SetupMandate | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| RepeatPayment | SetupMandate must have succeeded | If SetupMandate FAILED → SKIP |
-| MandateRevoke | SetupMandate must have succeeded | If SetupMandate FAILED → SKIP |
+| Authenticate | PreAuthenticate must have built | If PreAuthenticate BUILD_FAILED → SKIP |
+| PostAuthenticate | Authenticate must have built | If Authenticate BUILD_FAILED → SKIP |
+| PSync | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| Capture | Authorize must exist (EXISTING or BUILD_SUCCESS) | If Authorize BUILD_FAILED → SKIP |
+| IncrementalAuthorization | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| Refund | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| RSync | Refund must have built | If Refund BUILD_FAILED/SKIPPED → SKIP |
+| Void | Authorize must exist (EXISTING or BUILD_SUCCESS) | If Authorize BUILD_FAILED → SKIP |
+| VoidPC | Capture must have built | If Capture BUILD_FAILED → SKIP |
+| SetupMandate | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| RepeatPayment | SetupMandate must have built | If SetupMandate BUILD_FAILED → SKIP |
+| MandateRevoke | SetupMandate must have built | If SetupMandate BUILD_FAILED → SKIP |
 
-**Dispute flows (independent of payment lifecycle — need a charged payment):**
+**Dispute flows (independent of payment lifecycle):**
 
 | Flow | Dependency | Gate |
 |------|-----------|------|
-| DSync | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| AcceptDispute | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| SubmitEvidence | Authorize must have succeeded | If Authorize FAILED → SKIP |
-| DefendDispute | Authorize must have succeeded | If Authorize FAILED → SKIP |
+| DSync | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| AcceptDispute | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| SubmitEvidence | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
+| DefendDispute | Authorize must have built | If Authorize BUILD_FAILED → SKIP |
 
 **Webhook flow:**
 
@@ -177,9 +177,9 @@ Before spawning the Flow Agent, check if this flow's dependencies are met. The F
 |------|-----------|------|
 | IncomingWebhook | None, but typically implemented last | Always proceed |
 
-**General rule**: The Flow Decider determines the order. If you encounter a flow not listed above, check if it needs a `connector_transaction_id` (depends on Authorize) or `connector_refund_id` (depends on Refund). If unclear, proceed — the Testing Agent will catch dependency issues at runtime.
+**General rule**: The Flow Decider determines the order. If you encounter a flow not listed above, check if it shares code with Authorize or Refund. If unclear, proceed — build errors will surface naturally.
 
-If a dependency is not met, mark the flow as SKIPPED with reason "Prerequisite {dependency} not met" and continue to the next flow.
+If a dependency is not met, mark the flow as SKIPPED with reason "Prerequisite {dependency} build not met" and continue to the next flow.
 
 ### 3b: Spawn Flow Agent
 
@@ -194,44 +194,171 @@ Variables:
   FLOW_NAME: <flow name from the ordered list>
   TECHSPEC_PATH: <path to techspec>
   TECHSPEC_SECTION: <section identifier from flow plan>
-  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>
-  PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from the previous flow, or empty for first flow>
-  ACCUMULATED_IDS: <JSON with all extracted IDs so far>"
+  CONNECTOR_SOURCE_FILES: <paths to connector .rs files, or NEW_CONNECTOR>"
 )
 ```
 
-### 3c: Collect result and update state
+### 3c: Collect build result and update state
 
 After the Flow Agent returns:
 
-1. **Record the flow result** in `FLOW_RESULTS`:
+1. **Record the build result** in `BUILD_RESULTS`:
    ```
    {
      flow_name: <name>,
-     status: SUCCESS | FAILED | SKIPPED,
-     grpcurl_command: <raw command>,
-     grpcurl_output: <raw output>,
-     extracted_ids: {connector_transaction_id: ..., connector_refund_id: ...},
+     build_status: BUILD_SUCCESS | BUILD_FAILED | SKIPPED,
      files_modified: [...],
      reason: <if failed>
    }
    ```
 
-2. **Merge extracted IDs** into `ACCUMULATED_IDS`:
-   - If the flow returned `connector_transaction_id`, add/update it in `ACCUMULATED_IDS`
-   - If the flow returned `connector_refund_id`, add/update it in `ACCUMULATED_IDS`
+2. **Update `CONNECTOR_SOURCE_FILES`**: If this was the first flow for a NEW_CONNECTOR, the Flow Agent will have created the connector files. Update `CONNECTOR_SOURCE_FILES` from `"NEW_CONNECTOR"` to the actual paths reported in `files_modified` so subsequent Flow Agents get the real paths.
 
-3. **Update `PREVIOUS_FLOW_GRPCURL`** with this flow's raw grpcurl command + output (for the next flow to use as reference)
-
-4. **Update `CONNECTOR_SOURCE_FILES`**: If this was the first flow for a NEW_CONNECTOR, the Flow Agent will have created the connector files. Update `CONNECTOR_SOURCE_FILES` from `"NEW_CONNECTOR"` to the actual paths reported in `files_modified` so subsequent Flow Agents get the real paths.
-
-5. **Apply dependency enforcement** for subsequent flows (see gate table in 3a)
+3. **Apply dependency enforcement** for subsequent flows (see gate table in 3a)
 
 **WAIT** for this result before spawning the next flow. The next flow MUST be in a SEPARATE, SUBSEQUENT message.
 
 ---
 
-## Phase 4: Commit & PR (SPAWN SUBAGENT)
+## Phase 4: Testing (SPAWN SUBAGENTS — SEQUENTIAL, ONE AT A TIME)
+
+After ALL flows have been built in Phase 3, test each successfully-built flow via the Testing SubAgent.
+
+**HARD GUARDRAIL — ONE TASK CALL PER MESSAGE**: Spawn exactly ONE Testing Agent per message. Wait for the result. Only after receiving the result, spawn the next test in a NEW message.
+
+Initialize testing state:
+```
+ACCUMULATED_IDS = {}           # grows as tests complete
+PREVIOUS_FLOW_GRPCURL = ""     # raw grpcurl+output from the last completed test
+TEST_RESULTS = []              # array of per-flow test results
+```
+
+For each flow in `ORDERED_FLOWS` that has `build_status: BUILD_SUCCESS` in `BUILD_RESULTS` (skip BUILD_FAILED and SKIPPED flows):
+
+### 4a: Check testing dependency gates
+
+Before spawning the Testing Agent, check if this flow's **testing dependencies** are met. Testing dependencies are about runtime data (IDs extracted from prior test responses), not build artifacts.
+
+**Pre-Authorize flows (no testing dependency):**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| CreateOrder | None | Always proceed |
+| CreateAccessToken | None | Always proceed |
+| CreateConnectorCustomer | None | Always proceed |
+| SessionToken | None | Always proceed |
+| SdkSessionToken | None | Always proceed |
+| PaymentMethodToken | None | Always proceed |
+| PreAuthenticate | None | Always proceed |
+
+**Authorize and post-Authorize flows:**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| Authorize | Pre-Authorize flows if any | Proceed after pre-flow tests complete |
+| Authenticate | PreAuthenticate test must have PASSED | If PreAuthenticate test FAILED → SKIP |
+| PostAuthenticate | Authenticate test must have PASSED | If Authenticate test FAILED → SKIP |
+| PSync | Authorize test must have PASSED (need `connector_transaction_id`) | If Authorize test FAILED → SKIP |
+| Capture | Authorize build exists (runs its OWN prerequisite Authorize) | Always proceed if Authorize was built |
+| IncrementalAuthorization | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+| Refund | Authorize test must have PASSED (need `connector_transaction_id` from a CHARGED payment) | If Authorize test FAILED → SKIP |
+| RSync | Refund test must have PASSED (need `connector_refund_id`) | If Refund test FAILED/SKIPPED → SKIP |
+| Void | Authorize build exists (runs its OWN prerequisite Authorize) | Always proceed if Authorize was built |
+| VoidPC | Capture test must have PASSED | If Capture test FAILED → SKIP |
+| SetupMandate | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+| RepeatPayment | SetupMandate test must have PASSED | If SetupMandate test FAILED → SKIP |
+| MandateRevoke | SetupMandate test must have PASSED | If SetupMandate test FAILED → SKIP |
+
+**Dispute flows:**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| DSync | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+| AcceptDispute | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+| SubmitEvidence | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+| DefendDispute | Authorize test must have PASSED | If Authorize test FAILED → SKIP |
+
+**Webhook flow:**
+
+| Flow | Dependency | Gate |
+|------|-----------|------|
+| IncomingWebhook | None | Always proceed |
+
+If a testing dependency is not met, mark the flow's test as SKIPPED with reason "Prerequisite {dependency} test not passed" and continue to the next flow.
+
+### 4b: Spawn Testing Agent
+
+```
+Task(
+  subagent_type="general",
+  description="Test {FLOW_NAME} grpcurl for {CONNECTOR}",
+  prompt="Read and follow the workflow defined in grace/workflow/v2/2.2.1_testing.md
+
+Variables:
+  CONNECTOR: {connector}
+  FLOW_NAME: {FLOW_NAME}
+  GRPCURL_SERVICE: <gRPC service method for this flow>
+  ACCUMULATED_IDS: <JSON with all IDs from prior tests>
+  PREVIOUS_FLOW_GRPCURL: <raw grpcurl+output from previous test, or empty>"
+)
+```
+
+**Do NOT read `grace/workflow/v2/2.2.1_testing.md` yourself.** The Testing Agent reads its own workflow file.
+
+### 4c: Collect test result and update state
+
+After the Testing Agent returns:
+
+1. **Record the test result** in `TEST_RESULTS`:
+   ```
+   {
+     flow_name: <name>,
+     test_status: PASS | FAIL | SKIPPED,
+     grpcurl_command: <raw command>,
+     grpcurl_output: <raw output>,
+     extracted_ids: {connector_transaction_id: ..., connector_refund_id: ...},
+     reason: <if failed>
+   }
+   ```
+
+2. **Merge extracted IDs** into `ACCUMULATED_IDS`:
+   - If the test returned `connector_transaction_id`, add/update it in `ACCUMULATED_IDS`
+   - If the test returned `connector_refund_id`, add/update it in `ACCUMULATED_IDS`
+
+3. **Update `PREVIOUS_FLOW_GRPCURL`** with this test's raw grpcurl command + output (for the next test to use as reference)
+
+4. **Apply testing dependency enforcement** for subsequent tests (see gate table in 4a)
+
+**WAIT** for this result before spawning the next test. The next test MUST be in a SEPARATE, SUBSEQUENT message.
+
+### 4d: Merge build and test results
+
+After all tests complete, produce the final `FLOW_RESULTS` by merging `BUILD_RESULTS` and `TEST_RESULTS`:
+
+```
+FLOW_RESULTS = []
+for each flow in ORDERED_FLOWS:
+  {
+    flow_name: <name>,
+    status: SUCCESS | FAILED | SKIPPED,
+    build_status: BUILD_SUCCESS | BUILD_FAILED | SKIPPED,
+    test_status: PASS | FAIL | SKIPPED | NOT_RUN,
+    grpcurl_command: <from TEST_RESULTS or empty>,
+    grpcurl_output: <from TEST_RESULTS or empty>,
+    extracted_ids: <from TEST_RESULTS or empty>,
+    files_modified: <from BUILD_RESULTS>,
+    reason: <if not SUCCESS>
+  }
+```
+
+**Final status per flow:**
+- **SUCCESS**: build_status is BUILD_SUCCESS AND test_status is PASS
+- **FAILED**: build_status is BUILD_FAILED, OR test_status is FAIL
+- **SKIPPED**: build_status is SKIPPED, OR test was SKIPPED due to unmet dependency
+
+---
+
+## Phase 5: Commit & PR (SPAWN SUBAGENT)
 
 **GUARDRAIL: You MUST spawn a subagent. Do NOT run git commands yourself.**
 
@@ -240,7 +367,7 @@ First, check if there are any file changes to commit:
 git status -- crates/integrations/connector-integration/src/connectors/{connector}*
 ```
 
-If no changes (all flows were SKIPPED or EXISTING), skip to Phase 5.
+If no changes (all flows were SKIPPED or EXISTING), skip to Phase 6.
 
 Determine overall connector status:
 - **SUCCESS**: ALL planned flows have status SUCCESS
@@ -264,7 +391,7 @@ Variables:
   CONNECTOR: <connector name, lowercase for branches, original casing for display>
   DEV_BRANCH: <the shared dev branch>
   CONNECTOR_STATUS: <SUCCESS | PARTIAL | FAILED>
-  FLOW_RESULTS: <JSON array of all per-flow results from Phase 3>
+  FLOW_RESULTS: <JSON array of all per-flow results from Phase 4d>
   CONNECTOR_SOURCE_FILES: <paths to modified files>
   TEST_REPORT_PATHS: <paths to test report MDs>"
 )
@@ -282,7 +409,7 @@ git checkout {BRANCH}
 
 ---
 
-## Phase 5: Report
+## Phase 6: Report
 
 Return the final result:
 
@@ -312,5 +439,6 @@ REASON: <if not SUCCESS, primary reason>
 | Agent | File | Purpose |
 |-------|------|---------|
 | Flow Decider Agent | `2.1_flow_decider.md` | Analyze techspec, determine flows to implement and their order |
-| Flow Agent | `2.2_flow.md` | Implement, build, and test ONE flow (spawns Testing Agent internally) |
+| Flow Agent | `2.2_flow.md` | Implement and build ONE flow (code + cargo build only) |
+| Testing Agent | `2.2.1_testing.md` | Test ONE flow via grpcurl (spawned by Connector Agent after all flows are built) |
 | PR Agent | `2.3_pr.md` | Commit, cherry-pick, push, and create cross-fork PR |
