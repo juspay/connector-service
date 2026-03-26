@@ -1114,6 +1114,93 @@ pub enum RefundStatus {
     TransactionFailure,
 }
 
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    Hash,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutStatus {
+    Success,
+    Failure,
+    Cancelled,
+    Initiated,
+    Expired,
+    Reversed,
+    #[default]
+    Pending,
+    Ineligible,
+    RequiresCreation,
+    RequiresConfirmation,
+    RequiresPayoutMethodData,
+    RequiresFulfillment,
+    RequiresVendorAccountCreation,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Hash,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutPriority {
+    Instant,
+    Fast,
+    #[default]
+    Regular,
+    Wire,
+    CrossBorder,
+    Internal,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutRecipientType {
+    /// Adyen
+    #[default]
+    Individual,
+    Company,
+    NonProfit,
+    PublicSector,
+    NaturalPerson,
+
+    /// Wise
+    Business,
+    Personal,
+}
+
 /// The status of the attempt
 #[derive(
     Clone,
