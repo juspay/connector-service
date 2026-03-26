@@ -17,7 +17,7 @@ use domain_types::{
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{base64_decode, convert_amount},
+    utils::base64_decode,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -55,23 +55,6 @@ impl TryFrom<&ConnectorSpecificAuth> for TrustlyAuthType {
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
-    }
-}
-
-//Metadata
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct TrustlyMetadata {
-    private_key: Secret<String>,
-}
-
-impl TryFrom<&Option<pii::SecretSerdeValue>> for TrustlyMetadata {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
-        Ok(metadata)
     }
 }
 
@@ -276,11 +259,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?;
                 let uuid = uuid::Uuid::new_v4().to_string();
                 let attributes = TrustlyPaymentRequestAttributes {
-                    amount: convert_amount(
-                        item.connector.amount_converter,
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )?,
+                    amount: item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_amount,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     country: item
                         .router_data
                         .resource_common_data
@@ -564,11 +550,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?,
         });
         let data = TrustlyRefundRequestData {
-            amount: convert_amount(
-                item.connector.amount_converter,
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )?,
+            amount: item
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::AmountConversionFailed)?,
             attributes,
             currency: item.router_data.request.currency,
             order_i_d: item.router_data.request.connector_transaction_id.clone(),
