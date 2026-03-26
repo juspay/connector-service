@@ -20,17 +20,21 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest,
     PaymentServiceSetupRecurringRequest,
     PaymentServiceVoidRequest,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest,
-    ProxyPaymentServiceSetupRecurringRequest,
+    ProxiedPaymentServiceAuthorizeRequest,
+    ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest,
 };
 use grpc_api_types::payouts::{
+    PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateRecipientRequest,
     PayoutServiceCreateRequest,
+    PayoutServiceEnrollDisburseAccountRequest,
+    PayoutServiceGetRequest,
+    PayoutServiceStageRequest,
+    PayoutServiceTransferRequest,
+    PayoutServiceVoidRequest,
 };
 
 use crate::handlers::payments::{
@@ -46,12 +50,16 @@ use crate::handlers::payments::{
     defend_req_handler, defend_res_handler,
     get_req_handler, get_res_handler,
     payout_create_req_handler, payout_create_res_handler,
+    payout_create_link_req_handler, payout_create_link_res_handler,
+    payout_create_recipient_req_handler, payout_create_recipient_res_handler,
+    payout_enroll_disburse_account_req_handler, payout_enroll_disburse_account_res_handler,
+    payout_get_req_handler, payout_get_res_handler,
+    payout_stage_req_handler, payout_stage_res_handler,
+    payout_transfer_req_handler, payout_transfer_res_handler,
+    payout_void_req_handler, payout_void_res_handler,
     post_authenticate_req_handler, post_authenticate_res_handler,
     pre_authenticate_req_handler, pre_authenticate_res_handler,
-    proxied_authenticate_req_handler, proxied_authenticate_res_handler,
     proxied_authorize_req_handler, proxied_authorize_res_handler,
-    proxied_post_authenticate_req_handler, proxied_post_authenticate_res_handler,
-    proxied_pre_authenticate_req_handler, proxied_pre_authenticate_res_handler,
     proxied_setup_recurring_req_handler, proxied_setup_recurring_res_handler,
     refund_req_handler, refund_res_handler,
     reverse_req_handler, reverse_res_handler,
@@ -87,20 +95,28 @@ define_ffi_flow!(defend, DisputeServiceDefendRequest, defend_req_handler, defend
 define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler);
 // payout_create: PayoutService.Create — Creates a payout.
 define_ffi_flow!(payout_create, PayoutServiceCreateRequest, payout_create_req_handler, payout_create_res_handler);
+// payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+define_ffi_flow!(payout_create_link, PayoutServiceCreateLinkRequest, payout_create_link_req_handler, payout_create_link_res_handler);
+// payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+define_ffi_flow!(payout_create_recipient, PayoutServiceCreateRecipientRequest, payout_create_recipient_req_handler, payout_create_recipient_res_handler);
+// payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+define_ffi_flow!(payout_enroll_disburse_account, PayoutServiceEnrollDisburseAccountRequest, payout_enroll_disburse_account_req_handler, payout_enroll_disburse_account_res_handler);
+// payout_get: PayoutService.Get — Retrieve payout details.
+define_ffi_flow!(payout_get, PayoutServiceGetRequest, payout_get_req_handler, payout_get_res_handler);
+// payout_stage: PayoutService.Stage — Stage the payout.
+define_ffi_flow!(payout_stage, PayoutServiceStageRequest, payout_stage_req_handler, payout_stage_res_handler);
+// payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+define_ffi_flow!(payout_transfer, PayoutServiceTransferRequest, payout_transfer_req_handler, payout_transfer_res_handler);
+// payout_void: PayoutService.Void — Void a payout.
+define_ffi_flow!(payout_void, PayoutServiceVoidRequest, payout_void_req_handler, payout_void_res_handler);
 // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
 define_ffi_flow!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, post_authenticate_req_handler, post_authenticate_res_handler);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
 define_ffi_flow!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, pre_authenticate_req_handler, pre_authenticate_res_handler);
-// proxied_authenticate: ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-define_ffi_flow!(proxied_authenticate, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, proxied_authenticate_req_handler, proxied_authenticate_res_handler);
 // proxied_authorize: ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
-define_ffi_flow!(proxied_authorize, ProxyPaymentServiceAuthorizeRequest, proxied_authorize_req_handler, proxied_authorize_res_handler);
-// proxied_post_authenticate: ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-define_ffi_flow!(proxied_post_authenticate, ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, proxied_post_authenticate_req_handler, proxied_post_authenticate_res_handler);
-// proxied_pre_authenticate: ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-define_ffi_flow!(proxied_pre_authenticate, ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, proxied_pre_authenticate_req_handler, proxied_pre_authenticate_res_handler);
+define_ffi_flow!(proxied_authorize, ProxiedPaymentServiceAuthorizeRequest, proxied_authorize_req_handler, proxied_authorize_res_handler);
 // proxied_setup_recurring: ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
-define_ffi_flow!(proxied_setup_recurring, ProxyPaymentServiceSetupRecurringRequest, proxied_setup_recurring_req_handler, proxied_setup_recurring_res_handler);
+define_ffi_flow!(proxied_setup_recurring, ProxiedPaymentServiceSetupRecurringRequest, proxied_setup_recurring_req_handler, proxied_setup_recurring_res_handler);
 // refund: DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 define_ffi_flow!(refund, PaymentServiceRefundRequest, refund_req_handler, refund_res_handler);
 // reverse: DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.

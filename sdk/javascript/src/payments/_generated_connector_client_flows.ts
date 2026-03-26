@@ -187,47 +187,79 @@ export class PayoutClient extends _ConnectorClientBase {
     return this._executeFlow('payout_create', requestMsg, options, 'PayoutServiceCreateRequest', 'PayoutServiceCreateResponse') as Promise<types.PayoutServiceCreateResponse>;
   }
 
+  /** PayoutService.CreateLink — Creates a link between the recipient and the payout. */
+  async payoutCreateLink(
+    requestMsg: types.IPayoutServiceCreateLinkRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceCreateLinkResponse> {
+    return this._executeFlow('payout_create_link', requestMsg, options, 'PayoutServiceCreateLinkRequest', 'PayoutServiceCreateLinkResponse') as Promise<types.PayoutServiceCreateLinkResponse>;
+  }
+
+  /** PayoutService.CreateRecipient — Create payout recipient. */
+  async payoutCreateRecipient(
+    requestMsg: types.IPayoutServiceCreateRecipientRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceCreateRecipientResponse> {
+    return this._executeFlow('payout_create_recipient', requestMsg, options, 'PayoutServiceCreateRecipientRequest', 'PayoutServiceCreateRecipientResponse') as Promise<types.PayoutServiceCreateRecipientResponse>;
+  }
+
+  /** PayoutService.EnrollDisburseAccount — Enroll disburse account. */
+  async payoutEnrollDisburseAccount(
+    requestMsg: types.IPayoutServiceEnrollDisburseAccountRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceEnrollDisburseAccountResponse> {
+    return this._executeFlow('payout_enroll_disburse_account', requestMsg, options, 'PayoutServiceEnrollDisburseAccountRequest', 'PayoutServiceEnrollDisburseAccountResponse') as Promise<types.PayoutServiceEnrollDisburseAccountResponse>;
+  }
+
+  /** PayoutService.Get — Retrieve payout details. */
+  async payoutGet(
+    requestMsg: types.IPayoutServiceGetRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceGetResponse> {
+    return this._executeFlow('payout_get', requestMsg, options, 'PayoutServiceGetRequest', 'PayoutServiceGetResponse') as Promise<types.PayoutServiceGetResponse>;
+  }
+
+  /** PayoutService.Stage — Stage the payout. */
+  async payoutStage(
+    requestMsg: types.IPayoutServiceStageRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceStageResponse> {
+    return this._executeFlow('payout_stage', requestMsg, options, 'PayoutServiceStageRequest', 'PayoutServiceStageResponse') as Promise<types.PayoutServiceStageResponse>;
+  }
+
+  /** PayoutService.Transfer — Creates a payout fund transfer. */
+  async payoutTransfer(
+    requestMsg: types.IPayoutServiceTransferRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceTransferResponse> {
+    return this._executeFlow('payout_transfer', requestMsg, options, 'PayoutServiceTransferRequest', 'PayoutServiceTransferResponse') as Promise<types.PayoutServiceTransferResponse>;
+  }
+
+  /** PayoutService.Void — Void a payout. */
+  async payoutVoid(
+    requestMsg: types.IPayoutServiceVoidRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceVoidResponse> {
+    return this._executeFlow('payout_void', requestMsg, options, 'PayoutServiceVoidRequest', 'PayoutServiceVoidResponse') as Promise<types.PayoutServiceVoidResponse>;
+  }
+
 }
 
 export class ProxiedPaymentClient extends _ConnectorClientBase {
-  /** ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
-  async proxiedAuthenticate(
-    requestMsg: types.IProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    options?: types.IRequestConfig | null
-  ): Promise<types.PaymentMethodAuthenticationServiceAuthenticateResponse> {
-    return this._executeFlow('proxied_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServiceAuthenticateRequest', 'PaymentMethodAuthenticationServiceAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServiceAuthenticateResponse>;
-  }
-
   /** ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
   async proxiedAuthorize(
-    requestMsg: types.IProxyPaymentServiceAuthorizeRequest,
+    requestMsg: types.IProxiedPaymentServiceAuthorizeRequest,
     options?: types.IRequestConfig | null
   ): Promise<types.PaymentServiceAuthorizeResponse> {
-    return this._executeFlow('proxied_authorize', requestMsg, options, 'ProxyPaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
-  }
-
-  /** ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
-  async proxiedPostAuthenticate(
-    requestMsg: types.IProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    options?: types.IRequestConfig | null
-  ): Promise<types.PaymentMethodAuthenticationServicePostAuthenticateResponse> {
-    return this._executeFlow('proxied_post_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest', 'PaymentMethodAuthenticationServicePostAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServicePostAuthenticateResponse>;
-  }
-
-  /** ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
-  async proxiedPreAuthenticate(
-    requestMsg: types.IProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    options?: types.IRequestConfig | null
-  ): Promise<types.PaymentMethodAuthenticationServicePreAuthenticateResponse> {
-    return this._executeFlow('proxied_pre_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest', 'PaymentMethodAuthenticationServicePreAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServicePreAuthenticateResponse>;
+    return this._executeFlow('proxied_authorize', requestMsg, options, 'ProxiedPaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
   }
 
   /** ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
   async proxiedSetupRecurring(
-    requestMsg: types.IProxyPaymentServiceSetupRecurringRequest,
+    requestMsg: types.IProxiedPaymentServiceSetupRecurringRequest,
     options?: types.IRequestConfig | null
   ): Promise<types.PaymentServiceSetupRecurringResponse> {
-    return this._executeFlow('proxied_setup_recurring', requestMsg, options, 'ProxyPaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
+    return this._executeFlow('proxied_setup_recurring', requestMsg, options, 'ProxiedPaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
   }
 
 }

@@ -31,10 +31,10 @@ use grpc_api_types::payments::{
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest, ProxyPaymentServiceSetupRecurringRequest,
+    ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
     RequestConfig, TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest,
@@ -441,35 +441,35 @@ impl ConnectorClient {
     // aliases with the real PAN before forwarding to the 3DS server.
     impl_flow_method!(
         proxy_authorize,
-        ProxyPaymentServiceAuthorizeRequest,
+        ProxiedPaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse,
         proxied_authorize_req_handler,
         proxied_authorize_res_handler
     );
     impl_flow_method!(
         proxy_setup_recurring,
-        ProxyPaymentServiceSetupRecurringRequest,
+        ProxiedPaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse,
         proxied_setup_recurring_req_handler,
         proxied_setup_recurring_res_handler
     );
     impl_flow_method!(
         proxy_pre_authenticate,
-        ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+        ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest,
         PaymentMethodAuthenticationServicePreAuthenticateResponse,
         proxied_pre_authenticate_req_handler,
         proxied_pre_authenticate_res_handler
     );
     impl_flow_method!(
         proxy_authenticate,
-        ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+        ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest,
         PaymentMethodAuthenticationServiceAuthenticateResponse,
         proxied_authenticate_req_handler,
         proxied_authenticate_res_handler
     );
     impl_flow_method!(
         proxy_post_authenticate,
-        ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+        PaymentMethodAuthenticationServicePostAuthenticateRequest,
         PaymentMethodAuthenticationServicePostAuthenticateResponse,
         proxied_post_authenticate_req_handler,
         proxied_post_authenticate_res_handler

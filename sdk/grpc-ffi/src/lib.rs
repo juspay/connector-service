@@ -38,10 +38,8 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest, PaymentServiceIncrementalAuthorizationRequest, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest, ProxyPaymentServiceSetupRecurringRequest,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
+    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
     TokenizedPaymentServiceSetupRecurringRequest,
 };
@@ -245,27 +243,12 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
         "proxy_payment/authorize" => call!(
             ProxiedPaymentServiceClient,
             authorize,
-            ProxyPaymentServiceAuthorizeRequest
+            ProxiedPaymentServiceAuthorizeRequest
         ),
         "proxy_payment/setup_recurring" => call!(
             ProxiedPaymentServiceClient,
             setup_recurring,
-            ProxyPaymentServiceSetupRecurringRequest
-        ),
-        "proxy_payment/pre_authenticate" => call!(
-            ProxiedPaymentServiceClient,
-            pre_authenticate,
-            ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest
-        ),
-        "proxy_payment/authenticate" => call!(
-            ProxiedPaymentServiceClient,
-            authenticate,
-            ProxyPaymentMethodAuthenticationServiceAuthenticateRequest
-        ),
-        "proxy_payment/post_authenticate" => call!(
-            ProxiedPaymentServiceClient,
-            post_authenticate,
-            ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest
+            ProxiedPaymentServiceSetupRecurringRequest
         ),
         other => Err(format!("unknown gRPC method: \"{other}\"")),
     }

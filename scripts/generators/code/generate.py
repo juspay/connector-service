@@ -24,6 +24,7 @@ Usage:
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -181,14 +182,21 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                     "description": comment,
                 }
 
+                prefix = _service_flow_prefix(service.name)
                 if snake not in rpcs:
                     # First occurrence — store under plain snake key.
                     rpcs[snake] = entry
+                    # Also store under "{prefix}_{snake}" so that transformers
+                    # like "payout_stage" or "payout_transfer" can be discovered
+                    # even when they don't collide with another service's RPC.
+                    if prefix:
+                        prefixed = f"{prefix}_{snake}"
+                        if prefixed not in rpcs:
+                            rpcs[prefixed] = entry
                 else:
                     # Collision: the RPC name is shared across services.
                     # Also store under "{service_prefix}_{rpc_snake}" so that
                     # transformers like "proxy_authorize" can be discovered.
-                    prefix = _service_flow_prefix(service.name)
                     if prefix:
                         prefixed = f"{prefix}_{snake}"
                         if prefixed not in rpcs:
@@ -459,7 +467,7 @@ def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
 KOTLIN_UNIFFI_BINDINGS = SDK_ROOT / "java/src/main/kotlin/generated/uniffi/connector_service_ffi/connector_service_ffi.kt"
 
 
-def _available_uniffi_transformers() -> set[str] | None:
+def _available_uniffi_transformers() -> Optional[set[str]]:
     """
     Parse the generated uniffi Kotlin bindings to find which transformer
     functions are actually available. Returns None if the file doesn't exist

@@ -128,8 +128,8 @@ generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
 generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
 	@$(MAKE) -C $(MAKEFILE_DIR)javascript generate-flows
 
-generate-kotlin: ## Regenerate Kotlin SDK client (flows)
-	@$(MAKE) -C $(MAKEFILE_DIR)java generate-flows
+generate-kotlin: ## Regenerate Kotlin SDK client (flows + bindings)
+	@$(MAKE) -C $(MAKEFILE_DIR)java generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-descriptor
@@ -179,6 +179,7 @@ generate-client-java: generate-descriptor
 generate: install-deps generate-descriptor generate-rust generate-grpc-client generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
 	@echo
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
+	@mkdir -p $(REPO_ROOT)/sdk/python/src/payments/generated
 	@MYPY_BIN="$$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts', 'posix_user'))")" && \
 		PATH="$$MYPY_BIN:$$PATH" python3 -m grpc_tools.protoc \
 		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \

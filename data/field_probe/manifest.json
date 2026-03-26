@@ -287,7 +287,7 @@
       "service_name": "ProxyPaymentService",
       "rpc_name": "Authorize",
       "category": "Non-PCI Payments",
-      "grpc_request": "ProxyPaymentServiceAuthorizeRequest",
+      "grpc_request": "ProxiedPaymentServiceAuthorizeRequest",
       "grpc_response": "PaymentServiceAuthorizeResponse"
     },
     {
@@ -297,7 +297,7 @@
       "service_name": "ProxyPaymentService",
       "rpc_name": "SetupRecurring",
       "category": "Non-PCI Payments",
-      "grpc_request": "ProxyPaymentServiceSetupRecurringRequest",
+      "grpc_request": "ProxiedPaymentServiceSetupRecurringRequest",
       "grpc_response": "PaymentServiceSetupRecurringResponse"
     },
     {
@@ -307,7 +307,7 @@
       "service_name": "ProxyPaymentService",
       "rpc_name": "PreAuthenticate",
       "category": "Non-PCI Authentication",
-      "grpc_request": "ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest",
+      "grpc_request": "ProxiedPaymentMethodAuthenticationServicePreAuthenticateRequest",
       "grpc_response": "PaymentMethodAuthenticationServicePreAuthenticateResponse"
     },
     {
@@ -317,7 +317,7 @@
       "service_name": "ProxyPaymentService",
       "rpc_name": "Authenticate",
       "category": "Non-PCI Authentication",
-      "grpc_request": "ProxyPaymentMethodAuthenticationServiceAuthenticateRequest",
+      "grpc_request": "ProxiedPaymentMethodAuthenticationServiceAuthenticateRequest",
       "grpc_response": "PaymentMethodAuthenticationServiceAuthenticateResponse"
     },
     {
@@ -327,7 +327,7 @@
       "service_name": "ProxyPaymentService",
       "rpc_name": "PostAuthenticate",
       "category": "Non-PCI Authentication",
-      "grpc_request": "ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest",
+      "grpc_request": "PaymentMethodAuthenticationServicePostAuthenticateRequest",
       "grpc_response": "PaymentMethodAuthenticationServicePostAuthenticateResponse"
     }
   ],

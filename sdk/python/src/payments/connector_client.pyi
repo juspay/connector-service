@@ -42,13 +42,24 @@ from payments.generated.payment_pb2 import (
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateLinkResponse,
+    PayoutServiceCreateRecipientRequest,
+    PayoutServiceCreateRecipientResponse,
     PayoutServiceCreateRequest,
     PayoutServiceCreateResponse,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest,
-    ProxyPaymentServiceSetupRecurringRequest,
+    PayoutServiceEnrollDisburseAccountRequest,
+    PayoutServiceEnrollDisburseAccountResponse,
+    PayoutServiceGetRequest,
+    PayoutServiceGetResponse,
+    PayoutServiceStageRequest,
+    PayoutServiceStageResponse,
+    PayoutServiceTransferRequest,
+    PayoutServiceTransferResponse,
+    PayoutServiceVoidRequest,
+    PayoutServiceVoidResponse,
+    ProxiedPaymentServiceAuthorizeRequest,
+    ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
@@ -154,25 +165,41 @@ class PayoutClient(_ConnectorClientBase):
         """PayoutService.Create — Creates a payout."""
         ...
 
-
-class ProxiedPaymentClient(_ConnectorClientBase):
-    def proxied_authenticate(self, request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServiceAuthenticateResponse:
-        """ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
+    def payout_create_link(self, request: PayoutServiceCreateLinkRequest, options: RequestConfig | None = ...) -> PayoutServiceCreateLinkResponse:
+        """PayoutService.CreateLink — Creates a link between the recipient and the payout."""
         ...
 
-    def proxied_authorize(self, request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
+    def payout_create_recipient(self, request: PayoutServiceCreateRecipientRequest, options: RequestConfig | None = ...) -> PayoutServiceCreateRecipientResponse:
+        """PayoutService.CreateRecipient — Create payout recipient."""
+        ...
+
+    def payout_enroll_disburse_account(self, request: PayoutServiceEnrollDisburseAccountRequest, options: RequestConfig | None = ...) -> PayoutServiceEnrollDisburseAccountResponse:
+        """PayoutService.EnrollDisburseAccount — Enroll disburse account."""
+        ...
+
+    def payout_get(self, request: PayoutServiceGetRequest, options: RequestConfig | None = ...) -> PayoutServiceGetResponse:
+        """PayoutService.Get — Retrieve payout details."""
+        ...
+
+    def payout_stage(self, request: PayoutServiceStageRequest, options: RequestConfig | None = ...) -> PayoutServiceStageResponse:
+        """PayoutService.Stage — Stage the payout."""
+        ...
+
+    def payout_transfer(self, request: PayoutServiceTransferRequest, options: RequestConfig | None = ...) -> PayoutServiceTransferResponse:
+        """PayoutService.Transfer — Creates a payout fund transfer."""
+        ...
+
+    def payout_void(self, request: PayoutServiceVoidRequest, options: RequestConfig | None = ...) -> PayoutServiceVoidResponse:
+        """PayoutService.Void — Void a payout."""
+        ...
+
+
+class ProxiedPaymentClient(_ConnectorClientBase):
+    def proxied_authorize(self, request: ProxiedPaymentServiceAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
         """ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
         ...
 
-    def proxied_post_authenticate(self, request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServicePostAuthenticateResponse:
-        """ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
-        ...
-
-    def proxied_pre_authenticate(self, request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServicePreAuthenticateResponse:
-        """ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
-        ...
-
-    def proxied_setup_recurring(self, request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
+    def proxied_setup_recurring(self, request: ProxiedPaymentServiceSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
         """ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
         ...
 

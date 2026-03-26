@@ -216,6 +216,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   WorldpayvantivConfig: ["user", "password", "merchantId"],
   WorldpayxmlConfig: ["apiUsername", "apiPassword", "merchantCode"],
   ZiftConfig: ["userName", "password", "accountId"],
+  FiservcommercehubConfig: ["apiKey", "secret", "merchantId", "terminalId"],
   GigadatConfig: ["campaignId", "accessToken", "securityToken"],
   PhonepeConfig: ["merchantId", "saltKey", "saltIndex"],
   ForteConfig: ["apiAccessId", "organizationId", "locationId", "apiSecretKey"],
@@ -238,11 +239,8 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   VaultAliasCard: ["cardNumberAlias", "cvcAlias"],
   TokenizedPaymentServiceAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   TokenizedPaymentServiceSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
-  ProxyPaymentServiceAuthorizeRequest: ["metadata", "connectorFeatureData"],
-  ProxyPaymentServiceSetupRecurringRequest: ["metadata"],
-  ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest: ["metadata", "connectorFeatureData"],
-  ProxyPaymentMethodAuthenticationServiceAuthenticateRequest: ["metadata", "connectorFeatureData"],
-  ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest: ["metadata"],
+  ProxiedPaymentServiceAuthorizeRequest: ["metadata", "connectorFeatureData"],
+  ProxiedPaymentServiceSetupRecurringRequest: ["metadata"],
   CardPayout: ["cardNumber", "cardExpMonth", "cardExpYear", "cardHolderName"],
   AchBankTransferPayout: ["bankAccountNumber", "bankRoutingNumber"],
   BacsBankTransferPayout: ["bankAccountNumber", "bankSortCode"],
@@ -295,12 +293,14 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   RedirectForm: { "form": "FormData", "html": "HtmlData", "uri": "UriData", "braintree": "BraintreeData", "mifinity": "MifinityData" },
   FormData: { "formFields": "FormFieldsEntry" },
   RequestDetails: { "headers": "HeadersEntry" },
-  EventServiceHandleResponse: { "eventResponse": "EventResponse" },
-  EventResponse: { "paymentsResponse": "PaymentServiceGetResponse", "refundsResponse": "RefundResponse", "disputesResponse": "DisputeResponse", "incompleteTransformation": "IncompleteTransformationResponse" },
+  EventServiceHandleResponse: { "eventContent": "EventContent", "eventAckResponse": "EventAckResponse" },
+  EventAckResponse: { "headers": "HeadersEntry" },
+  EventContent: { "paymentsResponse": "PaymentServiceGetResponse", "refundsResponse": "RefundResponse", "disputesResponse": "DisputeResponse", "incompleteTransformation": "IncompleteTransformationResponse" },
   InteracCustomerInfo: { "customerInfo": "CustomerInfo" },
   BankRedirectConnectorResponse: { "interac": "InteracCustomerInfo" },
   AdditionalPaymentMethodConnectorResponse: { "card": "CardConnectorResponse", "upi": "UpiConnectorResponse", "googlePay": "GooglePayConnectorResponse", "applePay": "ApplePayConnectorResponse", "bankRedirect": "BankRedirectConnectorResponse" },
   ConnectorResponseData: { "additionalPaymentMethodData": "AdditionalPaymentMethodConnectorResponse", "extendedAuthorizationResponseData": "ExtendedAuthorizationResponseData" },
+  PaymentMethodUpdate: { "card": "CardDetailUpdate" },
   SessionToken: { "googlePay": "GpaySessionTokenResponse", "paypal": "PaypalSessionTokenResponse", "applePay": "ApplepaySessionTokenResponse" },
   GpaySessionTokenResponse: { "googlePaySession": "GooglePaySessionResponse" },
   GooglePaySessionResponse: { "merchantInfo": "GpayMerchantInfo", "shippingAddressParameters": "GpayShippingAddressParameters", "allowedPaymentMethods": "GpayAllowedPaymentMethods", "transactionInfo": "GpayTransactionInfo", "secrets": "SecretInfoToInitiateSdk" },
@@ -316,7 +316,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   PaymentServiceAuthorizeRequest: { "amount": "Money", "paymentMethod": "PaymentMethod", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "customerAcceptance": "CustomerAcceptance", "browserInfo": "BrowserInformation", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "state": "ConnectorState", "orderDetails": "OrderDetailsWithAmount", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data" },
   PaymentServiceAuthorizeResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "redirectionData": "RedirectForm", "state": "ConnectorState", "mandateReference": "MandateReference", "connectorResponse": "ConnectorResponseData" },
   PaymentServiceGetRequest: { "amount": "Money", "state": "ConnectorState" },
-  PaymentServiceGetResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "mandateReference": "MandateReference", "amount": "Money", "connectorResponse": "ConnectorResponseData", "state": "ConnectorState", "redirectionData": "RedirectForm" },
+  PaymentServiceGetResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "mandateReference": "MandateReference", "amount": "Money", "connectorResponse": "ConnectorResponseData", "state": "ConnectorState", "redirectionData": "RedirectForm", "paymentMethodUpdate": "PaymentMethodUpdate" },
   PaymentServiceVoidRequest: { "browserInfo": "BrowserInformation", "amount": "Money", "state": "ConnectorState" },
   PaymentServiceVoidResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "state": "ConnectorState", "mandateReference": "MandateReference" },
   PaymentServiceReverseRequest: { "browserInfo": "BrowserInformation" },
@@ -372,14 +372,11 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   CashtocodeConfig: { "authKeyMap": "AuthKeyMapEntry" },
   AuthKeyMapEntry: { "value": "PayloadCurrencyAuthData" },
   PayloadConfig: { "authKeyMap": "AuthKeyMapEntry" },
-  ConnectorSpecificConfig: { "adyen": "AdyenConfig", "airwallex": "AirwallexConfig", "bambora": "BamboraConfig", "bankofamerica": "BankOfAmericaConfig", "billwerk": "BillwerkConfig", "bluesnap": "BluesnapConfig", "braintree": "BraintreeConfig", "cashtocode": "CashtocodeConfig", "cryptopay": "CryptopayConfig", "cybersource": "CybersourceConfig", "datatrans": "DatatransConfig", "dlocal": "DlocalConfig", "elavon": "ElavonConfig", "fiserv": "FiservConfig", "fiservemea": "FiservemeaConfig", "forte": "ForteConfig", "getnet": "GetnetConfig", "globalpay": "GlobalpayConfig", "hipay": "HipayConfig", "helcim": "HelcimConfig", "iatapay": "IatapayConfig", "jpmorgan": "JpmorganConfig", "mifinity": "MifinityConfig", "mollie": "MollieConfig", "multisafepay": "MultisafepayConfig", "nexinets": "NexinetsConfig", "nexixpay": "NexixpayConfig", "nmi": "NmiConfig", "noon": "NoonConfig", "novalnet": "NovalnetConfig", "nuvei": "NuveiConfig", "paybox": "PayboxConfig", "payme": "PaymeConfig", "payu": "PayuConfig", "powertranz": "PowertranzConfig", "rapyd": "RapydConfig", "redsys": "RedsysConfig", "shift4": "Shift4Config", "stax": "StaxConfig", "stripe": "StripeConfig", "trustpay": "TrustpayConfig", "tsys": "TsysConfig", "volt": "VoltConfig", "wellsfargo": "WellsfargoConfig", "worldpay": "WorldpayConfig", "worldpayvantiv": "WorldpayvantivConfig", "xendit": "XenditConfig", "phonepe": "PhonepeConfig", "cashfree": "CashfreeConfig", "paytm": "PaytmConfig", "calida": "CalidaConfig", "payload": "PayloadConfig", "authipay": "AuthipayConfig", "silverflow": "SilverflowConfig", "celero": "CeleroConfig", "trustpayments": "TrustpaymentsConfig", "paysafe": "PaysafeConfig", "barclaycard": "BarclaycardConfig", "worldpayxml": "WorldpayxmlConfig", "revolut": "RevolutConfig", "loonio": "LoonioConfig", "gigadat": "GigadatConfig", "hyperpg": "HyperpgConfig", "zift": "ZiftConfig", "screenstream": "ScreenstreamConfig", "ebanx": "EbanxConfig", "fiuu": "FiuuConfig", "globepay": "GlobepayConfig", "coinbase": "CoinbaseConfig", "coingate": "CoingateConfig", "revolv3": "Revolv3Config", "authorizedotnet": "AuthorizedotnetConfig", "peachpayments": "PeachpaymentsConfig", "paypal": "PaypalConfig", "truelayer": "TruelayerConfig" },
+  ConnectorSpecificConfig: { "adyen": "AdyenConfig", "airwallex": "AirwallexConfig", "bambora": "BamboraConfig", "bankofamerica": "BankOfAmericaConfig", "billwerk": "BillwerkConfig", "bluesnap": "BluesnapConfig", "braintree": "BraintreeConfig", "cashtocode": "CashtocodeConfig", "cryptopay": "CryptopayConfig", "cybersource": "CybersourceConfig", "datatrans": "DatatransConfig", "dlocal": "DlocalConfig", "elavon": "ElavonConfig", "fiserv": "FiservConfig", "fiservemea": "FiservemeaConfig", "forte": "ForteConfig", "getnet": "GetnetConfig", "globalpay": "GlobalpayConfig", "hipay": "HipayConfig", "helcim": "HelcimConfig", "iatapay": "IatapayConfig", "jpmorgan": "JpmorganConfig", "mifinity": "MifinityConfig", "mollie": "MollieConfig", "multisafepay": "MultisafepayConfig", "nexinets": "NexinetsConfig", "nexixpay": "NexixpayConfig", "nmi": "NmiConfig", "noon": "NoonConfig", "novalnet": "NovalnetConfig", "nuvei": "NuveiConfig", "paybox": "PayboxConfig", "payme": "PaymeConfig", "payu": "PayuConfig", "powertranz": "PowertranzConfig", "rapyd": "RapydConfig", "redsys": "RedsysConfig", "shift4": "Shift4Config", "stax": "StaxConfig", "stripe": "StripeConfig", "trustpay": "TrustpayConfig", "tsys": "TsysConfig", "volt": "VoltConfig", "wellsfargo": "WellsfargoConfig", "worldpay": "WorldpayConfig", "worldpayvantiv": "WorldpayvantivConfig", "xendit": "XenditConfig", "phonepe": "PhonepeConfig", "cashfree": "CashfreeConfig", "paytm": "PaytmConfig", "calida": "CalidaConfig", "payload": "PayloadConfig", "authipay": "AuthipayConfig", "silverflow": "SilverflowConfig", "celero": "CeleroConfig", "trustpayments": "TrustpaymentsConfig", "paysafe": "PaysafeConfig", "barclaycard": "BarclaycardConfig", "worldpayxml": "WorldpayxmlConfig", "revolut": "RevolutConfig", "loonio": "LoonioConfig", "gigadat": "GigadatConfig", "hyperpg": "HyperpgConfig", "zift": "ZiftConfig", "screenstream": "ScreenstreamConfig", "ebanx": "EbanxConfig", "fiuu": "FiuuConfig", "globepay": "GlobepayConfig", "coinbase": "CoinbaseConfig", "coingate": "CoingateConfig", "revolv3": "Revolv3Config", "authorizedotnet": "AuthorizedotnetConfig", "peachpayments": "PeachpaymentsConfig", "paypal": "PaypalConfig", "truelayer": "TruelayerConfig", "fiservcommercehub": "FiservcommercehubConfig" },
   TokenizedPaymentServiceAuthorizeRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState", "billingDescriptor": "BillingDescriptor", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
   TokenizedPaymentServiceSetupRecurringRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "customerAcceptance": "CustomerAcceptance", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor" },
-  ProxyPaymentServiceAuthorizeRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
-  ProxyPaymentServiceSetupRecurringRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "customerAcceptance": "CustomerAcceptance", "authenticationData": "AuthenticationData" },
-  ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState" },
-  ProxyPaymentMethodAuthenticationServiceAuthenticateRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "redirectionResponse": "RedirectionResponse" },
-  ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest: { "vaultCard": "VaultAliasCard", "state": "ConnectorState", "authenticationData": "AuthenticationData" },
+  ProxiedPaymentServiceAuthorizeRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
+  ProxiedPaymentServiceSetupRecurringRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "customerAcceptance": "CustomerAcceptance", "authenticationData": "AuthenticationData" },
   PayoutAddress: { "shippingAddress": "Address", "billingAddress": "Address" },
   PayoutMethod: { "card": "CardPayout", "ach": "AchBankTransferPayout", "bacs": "BacsBankTransferPayout", "sepa": "SepaBankTransferPayout", "pix": "PixBankTransferPayout", "applePayDecrypt": "ApplePayDecrypt", "paypal": "Paypal", "venmo": "Venmo", "interac": "InteracPayout", "openBankingUk": "OpenBankingUkPayout", "passthrough": "Passthrough" },
   PayoutServiceCreateRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation" },
@@ -583,12 +580,6 @@ export class GrpcDisputeClient {
       req, types.DisputeServiceAcceptRequest, types.DisputeServiceAcceptResponse);
   }
 
-  /** DisputeService.HandleEvent — Handle incoming webhooks from connectors. */
-  async disputeHandleEvent(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "dispute/dispute_handle_event",
-      req, types.EventServiceHandleRequest, types.EventServiceHandleResponse);
-  }
-
 }
 
 // EventService
@@ -730,31 +721,13 @@ export class GrpcProxiedPaymentClient {
   /** ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
   async proxiedAuthorize(req: unknown): Promise<unknown> {
     return callGrpc(this.ffi, this.config, "proxied_payment/proxied_authorize",
-      req, types.ProxyPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+      req, types.ProxiedPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
   }
 
   /** ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
   async proxiedSetupRecurring(req: unknown): Promise<unknown> {
     return callGrpc(this.ffi, this.config, "proxied_payment/proxied_setup_recurring",
-      req, types.ProxyPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
-  }
-
-  /** ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
-  async proxiedPreAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_pre_authenticate",
-      req, types.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, types.PaymentMethodAuthenticationServicePreAuthenticateResponse);
-  }
-
-  /** ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
-  async proxiedAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_authenticate",
-      req, types.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, types.PaymentMethodAuthenticationServiceAuthenticateResponse);
-  }
-
-  /** ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
-  async proxiedPostAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_post_authenticate",
-      req, types.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, types.PaymentMethodAuthenticationServicePostAuthenticateResponse);
+      req, types.ProxiedPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
   }
 
 }
@@ -785,12 +758,6 @@ export class GrpcRefundClient {
   async refundGet(req: unknown): Promise<unknown> {
     return callGrpc(this.ffi, this.config, "refund/refund_get",
       req, types.RefundServiceGetRequest, types.RefundResponse);
-  }
-
-  /** RefundService.HandleEvent — Handle incoming webhooks from payment processor for refund-specific events. This delegates to EventService internally but provides a service-specific endpoint. */
-  async refundHandleEvent(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "refund/refund_handle_event",
-      req, types.EventServiceHandleRequest, types.EventServiceHandleResponse);
   }
 
 }

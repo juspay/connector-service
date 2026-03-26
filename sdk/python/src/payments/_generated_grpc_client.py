@@ -259,14 +259,6 @@ class GrpcDisputeClient:
             req, payment_pb2.DisputeServiceAcceptResponse,
         )
 
-    def dispute_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
-        """DisputeService.HandleEvent — Handle incoming webhooks from connectors."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "dispute/dispute_handle_event",
-            req, payment_pb2.EventServiceHandleResponse,
-        )
-
 
 class GrpcEventClient:
     """EventService — gRPC sub-client."""
@@ -451,7 +443,7 @@ class GrpcProxiedPaymentClient:
         self._ffi    = ffi
         self._config = config
 
-    def proxied_authorize(self, req: payment_pb2.ProxyPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+    def proxied_authorize(self, req: payment_pb2.ProxiedPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
         """ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
         return _call_grpc(
             self._ffi, self._config,
@@ -459,36 +451,12 @@ class GrpcProxiedPaymentClient:
             req, payment_pb2.PaymentServiceAuthorizeResponse,
         )
 
-    def proxied_setup_recurring(self, req: payment_pb2.ProxyPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+    def proxied_setup_recurring(self, req: payment_pb2.ProxiedPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
         """ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
         return _call_grpc(
             self._ffi, self._config,
             "proxied_payment/proxied_setup_recurring",
             req, payment_pb2.PaymentServiceSetupRecurringResponse,
-        )
-
-    def proxied_pre_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse:
-        """ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "proxied_payment/proxied_pre_authenticate",
-            req, payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse,
-        )
-
-    def proxied_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse:
-        """ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "proxied_payment/proxied_authenticate",
-            req, payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse,
-        )
-
-    def proxied_post_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse:
-        """ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "proxied_payment/proxied_post_authenticate",
-            req, payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse,
         )
 
 
@@ -529,14 +497,6 @@ class GrpcRefundClient:
             self._ffi, self._config,
             "refund/refund_get",
             req, payment_pb2.RefundResponse,
-        )
-
-    def refund_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
-        """RefundService.HandleEvent — Handle incoming webhooks from payment processor for refund-specific events. This delegates to EventService internally but provides a service-specific endpoint."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "refund/refund_handle_event",
-            req, payment_pb2.EventServiceHandleResponse,
         )
 
 

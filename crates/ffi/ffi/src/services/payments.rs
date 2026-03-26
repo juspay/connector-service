@@ -22,10 +22,7 @@ use grpc_api_types::payments::{
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest, ProxyPaymentServiceSetupRecurringRequest,
+    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
     TokenizedPaymentServiceAuthorizeRequest, TokenizedPaymentServiceSetupRecurringRequest,
 };
@@ -597,7 +594,7 @@ res_transformer!(
 // proxy authorize
 req_transformer!(
     fn_name: proxied_authorize_req_transformer,
-    request_type: ProxyPaymentServiceAuthorizeRequest,
+    request_type: ProxiedPaymentServiceAuthorizeRequest,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<T>,
@@ -606,7 +603,7 @@ req_transformer!(
 
 res_transformer!(
     fn_name: proxied_authorize_res_transformer,
-    request_type: ProxyPaymentServiceAuthorizeRequest,
+    request_type: ProxiedPaymentServiceAuthorizeRequest,
     response_type: PaymentServiceAuthorizeResponse,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
@@ -618,7 +615,7 @@ res_transformer!(
 // proxy setup_recurring
 req_transformer!(
     fn_name: proxied_setup_recurring_req_transformer,
-    request_type: ProxyPaymentServiceSetupRecurringRequest,
+    request_type: ProxiedPaymentServiceSetupRecurringRequest,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<T>,
@@ -627,7 +624,7 @@ req_transformer!(
 
 res_transformer!(
     fn_name: proxied_setup_recurring_res_transformer,
-    request_type: ProxyPaymentServiceSetupRecurringRequest,
+    request_type: ProxiedPaymentServiceSetupRecurringRequest,
     response_type: PaymentServiceSetupRecurringResponse,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
@@ -636,65 +633,3 @@ res_transformer!(
     generate_response_fn: generate_setup_mandate_response,
 );
 
-// proxy pre_authenticate
-req_transformer!(
-    fn_name: proxied_pre_authenticate_req_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    flow_marker: PreAuthenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsPreAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-);
-
-res_transformer!(
-    fn_name: proxied_pre_authenticate_res_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    response_type: PaymentMethodAuthenticationServicePreAuthenticateResponse,
-    flow_marker: PreAuthenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsPreAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-    generate_response_fn: generate_payment_pre_authenticate_response,
-);
-
-// proxy authenticate
-req_transformer!(
-    fn_name: proxied_authenticate_req_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    flow_marker: Authenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-);
-
-res_transformer!(
-    fn_name: proxied_authenticate_res_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    response_type: PaymentMethodAuthenticationServiceAuthenticateResponse,
-    flow_marker: Authenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-    generate_response_fn: generate_payment_authenticate_response,
-);
-
-// proxy post_authenticate
-req_transformer!(
-    fn_name: proxied_post_authenticate_req_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    flow_marker: PostAuthenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsPostAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-);
-
-res_transformer!(
-    fn_name: proxied_post_authenticate_res_transformer,
-    request_type: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    response_type: PaymentMethodAuthenticationServicePostAuthenticateResponse,
-    flow_marker: PostAuthenticate,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsPostAuthenticateData<T>,
-    response_data_type: PaymentsResponseData,
-    generate_response_fn: generate_payment_post_authenticate_response,
-);

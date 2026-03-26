@@ -52,16 +52,24 @@ SERVICE_FLOWS = {
     "PayoutClient": {
         # payout_create: PayoutService.Create — Creates a payout.
         "payout_create": "PayoutServiceCreateResponse",
+        # payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+        "payout_create_link": "PayoutServiceCreateLinkResponse",
+        # payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+        "payout_create_recipient": "PayoutServiceCreateRecipientResponse",
+        # payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+        "payout_enroll_disburse_account": "PayoutServiceEnrollDisburseAccountResponse",
+        # payout_get: PayoutService.Get — Retrieve payout details.
+        "payout_get": "PayoutServiceGetResponse",
+        # payout_stage: PayoutService.Stage — Stage the payout.
+        "payout_stage": "PayoutServiceStageResponse",
+        # payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+        "payout_transfer": "PayoutServiceTransferResponse",
+        # payout_void: PayoutService.Void — Void a payout.
+        "payout_void": "PayoutServiceVoidResponse",
     },
     "ProxiedPaymentClient": {
-        # proxied_authenticate: ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-        "proxied_authenticate": "PaymentMethodAuthenticationServiceAuthenticateResponse",
         # proxied_authorize: ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
         "proxied_authorize": "PaymentServiceAuthorizeResponse",
-        # proxied_post_authenticate: ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-        "proxied_post_authenticate": "PaymentMethodAuthenticationServicePostAuthenticateResponse",
-        # proxied_pre_authenticate: ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-        "proxied_pre_authenticate": "PaymentMethodAuthenticationServicePreAuthenticateResponse",
         # proxied_setup_recurring: ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
         "proxied_setup_recurring": "PaymentServiceSetupRecurringResponse",
     },

@@ -247,12 +247,6 @@ class GrpcDisputeClient internal constructor(
     suspend fun accept(req: DisputeServiceAcceptRequest): DisputeServiceAcceptResponse =
         callGrpc(config, "dispute/accept", req, DisputeServiceAcceptResponse.parser())
 
-    /**
-     * DisputeService.HandleEvent — Handle incoming webhooks from connectors.
-     */
-    suspend fun dispute_handle_event(req: EventServiceHandleRequest): EventServiceHandleResponse =
-        callGrpc(config, "dispute/dispute_handle_event", req, EventServiceHandleResponse.parser())
-
 }
 
 /**
@@ -406,32 +400,14 @@ class GrpcProxiedPaymentClient internal constructor(
     /**
      * ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
      */
-    suspend fun proxied_authorize(req: ProxyPaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
+    suspend fun proxied_authorize(req: ProxiedPaymentServiceAuthorizeRequest): PaymentServiceAuthorizeResponse =
         callGrpc(config, "proxied_payment/proxied_authorize", req, PaymentServiceAuthorizeResponse.parser())
 
     /**
      * ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
      */
-    suspend fun proxied_setup_recurring(req: ProxyPaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
+    suspend fun proxied_setup_recurring(req: ProxiedPaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
         callGrpc(config, "proxied_payment/proxied_setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
-
-    /**
-     * ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-     */
-    suspend fun proxied_pre_authenticate(req: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest): PaymentMethodAuthenticationServicePreAuthenticateResponse =
-        callGrpc(config, "proxied_payment/proxied_pre_authenticate", req, PaymentMethodAuthenticationServicePreAuthenticateResponse.parser())
-
-    /**
-     * ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-     */
-    suspend fun proxied_authenticate(req: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest): PaymentMethodAuthenticationServiceAuthenticateResponse =
-        callGrpc(config, "proxied_payment/proxied_authenticate", req, PaymentMethodAuthenticationServiceAuthenticateResponse.parser())
-
-    /**
-     * ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-     */
-    suspend fun proxied_post_authenticate(req: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest): PaymentMethodAuthenticationServicePostAuthenticateResponse =
-        callGrpc(config, "proxied_payment/proxied_post_authenticate", req, PaymentMethodAuthenticationServicePostAuthenticateResponse.parser())
 
 }
 
@@ -466,12 +442,6 @@ class GrpcRefundClient internal constructor(
      */
     suspend fun refund_get(req: RefundServiceGetRequest): RefundResponse =
         callGrpc(config, "refund/refund_get", req, RefundResponse.parser())
-
-    /**
-     * RefundService.HandleEvent — Handle incoming webhooks from payment processor for refund-specific events. This delegates to EventService internally but provides a service-specific endpoint.
-     */
-    suspend fun refund_handle_event(req: EventServiceHandleRequest): EventServiceHandleResponse =
-        callGrpc(config, "refund/refund_handle_event", req, EventServiceHandleResponse.parser())
 
 }
 

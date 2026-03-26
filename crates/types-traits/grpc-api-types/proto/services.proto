@@ -155,11 +155,6 @@ service RefundService {
   // Retrieve refund status from the payment processor. Tracks refund progress
   // through processor settlement for accurate customer communication.
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
-
-  // Handle incoming webhooks from payment processor for refund-specific events.
-  // This delegates to EventService internally but provides a service-specific endpoint.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
-
 }
 
 // ============================================================================
@@ -184,9 +179,6 @@ service DisputeService {
   // Concede dispute and accepts chargeback loss. Acknowledges liability
   // and stops dispute defense process when evidence is insufficient.
   rpc Accept(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
-
-  // Handle incoming webhooks from connectors.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================
@@ -263,6 +255,10 @@ service PaymentMethodAuthenticationService {
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
 }
 
+// ============================================================================
+// PAYOUT SERVICE — Manages payout lifecycle operations.
+// ============================================================================
+
 service PayoutService {
   // Creates a payout.
   rpc Create(PayoutServiceCreateRequest) returns (PayoutServiceCreateResponse);
@@ -278,7 +274,7 @@ service PayoutService {
 
   // Stage the payout.
   rpc Stage(PayoutServiceStageRequest) returns (PayoutServiceStageResponse);
-  
+
   // Creates a link between the recipient and the payout.
   rpc CreateLink(PayoutServiceCreateLinkRequest) returns (PayoutServiceCreateLinkResponse);
 
@@ -322,17 +318,9 @@ service TokenizedPaymentService {
 
 service ProxiedPaymentService {
   // Authorize using vault-aliased card data. Proxy substitutes before connector.
-  rpc Authorize(ProxyPaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+  rpc Authorize(ProxiedPaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
 
   // Setup recurring mandate using vault-aliased card data.
-  rpc SetupRecurring(ProxyPaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
+  rpc SetupRecurring(ProxiedPaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
 
-  // Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-  rpc PreAuthenticate(ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest) returns (PaymentMethodAuthenticationServicePreAuthenticateResponse);
-
-  // Execute 3DS challenge/frictionless step via vault proxy.
-  rpc Authenticate(ProxyPaymentMethodAuthenticationServiceAuthenticateRequest) returns (PaymentMethodAuthenticationServiceAuthenticateResponse);
-
-  // Post-authenticate via vault proxy.
-  rpc PostAuthenticate(ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
 }

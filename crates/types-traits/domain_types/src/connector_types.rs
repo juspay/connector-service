@@ -1410,6 +1410,22 @@ pub struct MandateReference {
     pub connector_mandate_request_reference_id: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub enum PaymentMethodUpdate {
+    Card(CardDetailUpdate),
+}
+
+#[derive(Debug, Clone)]
+pub struct CardDetailUpdate {
+    pub card_exp_month: Option<String>,
+    pub card_exp_year: Option<String>,
+    pub last4_digits: Option<String>,
+    pub issuer_country: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<String>,
+    pub card_holder_name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CaptureSyncResponse {
     Success {
@@ -1780,6 +1796,7 @@ pub struct WebhookDetailsResponse {
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
+    pub payment_method_update: Option<PaymentMethodUpdate>,
 }
 
 #[derive(Debug, Clone)]
@@ -3712,6 +3729,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
+            AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),

@@ -81,11 +81,8 @@ use grpc_api_types::payments::{
     PayoutServiceTransferResponse,
     PayoutServiceVoidRequest,
     PayoutServiceVoidResponse,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest,
-    ProxyPaymentServiceSetupRecurringRequest,
+    ProxiedPaymentServiceAuthorizeRequest,
+    ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RecurringPaymentServiceRevokeRequest,
@@ -245,12 +242,6 @@ impl_grpc_client!(
         DisputeServiceAcceptRequest,
         DisputeServiceAcceptResponse
     ),
-    (
-        dispute_handle_event,
-        handle_event,
-        EventServiceHandleRequest,
-        EventServiceHandleResponse
-    ),
 );
 
 // EventService
@@ -392,32 +383,14 @@ impl_grpc_client!(
     (
         proxied_authorize,
         authorize,
-        ProxyPaymentServiceAuthorizeRequest,
+        ProxiedPaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse
     ),
     (
         proxied_setup_recurring,
         setup_recurring,
-        ProxyPaymentServiceSetupRecurringRequest,
+        ProxiedPaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse
-    ),
-    (
-        proxied_pre_authenticate,
-        pre_authenticate,
-        ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-        PaymentMethodAuthenticationServicePreAuthenticateResponse
-    ),
-    (
-        proxied_authenticate,
-        authenticate,
-        ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-        PaymentMethodAuthenticationServiceAuthenticateResponse
-    ),
-    (
-        proxied_post_authenticate,
-        post_authenticate,
-        ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-        PaymentMethodAuthenticationServicePostAuthenticateResponse
     ),
 );
 
@@ -444,12 +417,6 @@ impl_grpc_client!(
     GrpcRefundClient,
     RefundServiceClient,
     (refund_get, get, RefundServiceGetRequest, RefundResponse),
-    (
-        refund_handle_event,
-        handle_event,
-        EventServiceHandleRequest,
-        EventServiceHandleResponse
-    ),
 );
 
 // TokenizedPaymentService

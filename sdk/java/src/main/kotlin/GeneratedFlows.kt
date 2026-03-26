@@ -31,18 +31,26 @@ import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
 import uniffi.connector_service_ffi.payoutCreateReqTransformer
 import uniffi.connector_service_ffi.payoutCreateResTransformer
+import uniffi.connector_service_ffi.payoutCreateLinkReqTransformer
+import uniffi.connector_service_ffi.payoutCreateLinkResTransformer
+import uniffi.connector_service_ffi.payoutCreateRecipientReqTransformer
+import uniffi.connector_service_ffi.payoutCreateRecipientResTransformer
+import uniffi.connector_service_ffi.payoutEnrollDisburseAccountReqTransformer
+import uniffi.connector_service_ffi.payoutEnrollDisburseAccountResTransformer
+import uniffi.connector_service_ffi.payoutGetReqTransformer
+import uniffi.connector_service_ffi.payoutGetResTransformer
+import uniffi.connector_service_ffi.payoutStageReqTransformer
+import uniffi.connector_service_ffi.payoutStageResTransformer
+import uniffi.connector_service_ffi.payoutTransferReqTransformer
+import uniffi.connector_service_ffi.payoutTransferResTransformer
+import uniffi.connector_service_ffi.payoutVoidReqTransformer
+import uniffi.connector_service_ffi.payoutVoidResTransformer
 import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
 import uniffi.connector_service_ffi.preAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxiedAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxiedAuthenticateResTransformer
 import uniffi.connector_service_ffi.proxiedAuthorizeReqTransformer
 import uniffi.connector_service_ffi.proxiedAuthorizeResTransformer
-import uniffi.connector_service_ffi.proxiedPostAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxiedPostAuthenticateResTransformer
-import uniffi.connector_service_ffi.proxiedPreAuthenticateReqTransformer
-import uniffi.connector_service_ffi.proxiedPreAuthenticateResTransformer
 import uniffi.connector_service_ffi.proxiedSetupRecurringReqTransformer
 import uniffi.connector_service_ffi.proxiedSetupRecurringResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
@@ -77,12 +85,16 @@ object FlowRegistry {
         "defend" to ::defendReqTransformer,
         "get" to ::getReqTransformer,
         "payout_create" to ::payoutCreateReqTransformer,
+        "payout_create_link" to ::payoutCreateLinkReqTransformer,
+        "payout_create_recipient" to ::payoutCreateRecipientReqTransformer,
+        "payout_enroll_disburse_account" to ::payoutEnrollDisburseAccountReqTransformer,
+        "payout_get" to ::payoutGetReqTransformer,
+        "payout_stage" to ::payoutStageReqTransformer,
+        "payout_transfer" to ::payoutTransferReqTransformer,
+        "payout_void" to ::payoutVoidReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
-        "proxied_authenticate" to ::proxiedAuthenticateReqTransformer,
         "proxied_authorize" to ::proxiedAuthorizeReqTransformer,
-        "proxied_post_authenticate" to ::proxiedPostAuthenticateReqTransformer,
-        "proxied_pre_authenticate" to ::proxiedPreAuthenticateReqTransformer,
         "proxied_setup_recurring" to ::proxiedSetupRecurringReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
@@ -107,12 +119,16 @@ object FlowRegistry {
         "defend" to ::defendResTransformer,
         "get" to ::getResTransformer,
         "payout_create" to ::payoutCreateResTransformer,
+        "payout_create_link" to ::payoutCreateLinkResTransformer,
+        "payout_create_recipient" to ::payoutCreateRecipientResTransformer,
+        "payout_enroll_disburse_account" to ::payoutEnrollDisburseAccountResTransformer,
+        "payout_get" to ::payoutGetResTransformer,
+        "payout_stage" to ::payoutStageResTransformer,
+        "payout_transfer" to ::payoutTransferResTransformer,
+        "payout_void" to ::payoutVoidResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
-        "proxied_authenticate" to ::proxiedAuthenticateResTransformer,
         "proxied_authorize" to ::proxiedAuthorizeResTransformer,
-        "proxied_post_authenticate" to ::proxiedPostAuthenticateResTransformer,
-        "proxied_pre_authenticate" to ::proxiedPreAuthenticateResTransformer,
         "proxied_setup_recurring" to ::proxiedSetupRecurringResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
@@ -132,10 +148,6 @@ object FlowRegistry {
 }
 
 // Per-service client classes — typed with concrete proto request/response types.
-
-// Backward compatibility alias for the old PaymentClient name
-@Deprecated("Use DirectPaymentClient instead", ReplaceWith("DirectPaymentClient"))
-typealias PaymentClient = DirectPaymentClient
 
 class CustomerClient(
     config: ConnectorConfig,
@@ -271,6 +283,34 @@ class PayoutClient(
     fun payout_create(request: PayoutServiceCreateRequest, options: RequestConfig? = null): PayoutServiceCreateResponse =
         executeFlow("payout_create", request.toByteArray(), PayoutServiceCreateResponse.parser(), options)
 
+    // payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+    fun payout_create_link(request: PayoutServiceCreateLinkRequest, options: RequestConfig? = null): PayoutServiceCreateLinkResponse =
+        executeFlow("payout_create_link", request.toByteArray(), PayoutServiceCreateLinkResponse.parser(), options)
+
+    // payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+    fun payout_create_recipient(request: PayoutServiceCreateRecipientRequest, options: RequestConfig? = null): PayoutServiceCreateRecipientResponse =
+        executeFlow("payout_create_recipient", request.toByteArray(), PayoutServiceCreateRecipientResponse.parser(), options)
+
+    // payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+    fun payout_enroll_disburse_account(request: PayoutServiceEnrollDisburseAccountRequest, options: RequestConfig? = null): PayoutServiceEnrollDisburseAccountResponse =
+        executeFlow("payout_enroll_disburse_account", request.toByteArray(), PayoutServiceEnrollDisburseAccountResponse.parser(), options)
+
+    // payout_get: PayoutService.Get — Retrieve payout details.
+    fun payout_get(request: PayoutServiceGetRequest, options: RequestConfig? = null): PayoutServiceGetResponse =
+        executeFlow("payout_get", request.toByteArray(), PayoutServiceGetResponse.parser(), options)
+
+    // payout_stage: PayoutService.Stage — Stage the payout.
+    fun payout_stage(request: PayoutServiceStageRequest, options: RequestConfig? = null): PayoutServiceStageResponse =
+        executeFlow("payout_stage", request.toByteArray(), PayoutServiceStageResponse.parser(), options)
+
+    // payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+    fun payout_transfer(request: PayoutServiceTransferRequest, options: RequestConfig? = null): PayoutServiceTransferResponse =
+        executeFlow("payout_transfer", request.toByteArray(), PayoutServiceTransferResponse.parser(), options)
+
+    // payout_void: PayoutService.Void — Void a payout.
+    fun payout_void(request: PayoutServiceVoidRequest, options: RequestConfig? = null): PayoutServiceVoidResponse =
+        executeFlow("payout_void", request.toByteArray(), PayoutServiceVoidResponse.parser(), options)
+
 }
 
 class ProxiedPaymentClient(
@@ -278,24 +318,12 @@ class ProxiedPaymentClient(
     defaults: RequestConfig = RequestConfig.getDefaultInstance(),
     libPath: String? = null
 ) : ConnectorClient(config, defaults, libPath) {
-    // proxied_authenticate: ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-    fun proxied_authenticate(request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServiceAuthenticateResponse =
-        executeFlow("proxied_authenticate", request.toByteArray(), PaymentMethodAuthenticationServiceAuthenticateResponse.parser(), options)
-
     // proxied_authorize: ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
-    fun proxied_authorize(request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+    fun proxied_authorize(request: ProxiedPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
         executeFlow("proxied_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
 
-    // proxied_post_authenticate: ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-    fun proxied_post_authenticate(request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePostAuthenticateResponse =
-        executeFlow("proxied_post_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePostAuthenticateResponse.parser(), options)
-
-    // proxied_pre_authenticate: ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-    fun proxied_pre_authenticate(request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePreAuthenticateResponse =
-        executeFlow("proxied_pre_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePreAuthenticateResponse.parser(), options)
-
     // proxied_setup_recurring: ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
-    fun proxied_setup_recurring(request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+    fun proxied_setup_recurring(request: ProxiedPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
         executeFlow("proxied_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
 
 }

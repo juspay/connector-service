@@ -37,11 +37,8 @@ use grpc_api_types::payments::{
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
-    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
-    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
-    ProxyPaymentServiceAuthorizeRequest,
-    ProxyPaymentServiceSetupRecurringRequest,
+    ProxiedPaymentServiceAuthorizeRequest,
+    ProxiedPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
@@ -49,8 +46,22 @@ use grpc_api_types::payments::{
     TokenizedPaymentServiceSetupRecurringRequest,
 };
 use grpc_api_types::payouts::{
+    PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateLinkResponse,
+    PayoutServiceCreateRecipientRequest,
+    PayoutServiceCreateRecipientResponse,
     PayoutServiceCreateRequest,
     PayoutServiceCreateResponse,
+    PayoutServiceEnrollDisburseAccountRequest,
+    PayoutServiceEnrollDisburseAccountResponse,
+    PayoutServiceGetRequest,
+    PayoutServiceGetResponse,
+    PayoutServiceStageRequest,
+    PayoutServiceStageResponse,
+    PayoutServiceTransferRequest,
+    PayoutServiceTransferResponse,
+    PayoutServiceVoidRequest,
+    PayoutServiceVoidResponse,
 };
 
 use crate::services::payments::{
@@ -67,10 +78,7 @@ use crate::services::payments::{
     get_req_transformer, get_res_transformer,
     post_authenticate_req_transformer, post_authenticate_res_transformer,
     pre_authenticate_req_transformer, pre_authenticate_res_transformer,
-    proxied_authenticate_req_transformer, proxied_authenticate_res_transformer,
     proxied_authorize_req_transformer, proxied_authorize_res_transformer,
-    proxied_post_authenticate_req_transformer, proxied_post_authenticate_res_transformer,
-    proxied_pre_authenticate_req_transformer, proxied_pre_authenticate_res_transformer,
     proxied_setup_recurring_req_transformer, proxied_setup_recurring_res_transformer,
     refund_req_transformer, refund_res_transformer,
     reverse_req_transformer, reverse_res_transformer,
@@ -83,6 +91,13 @@ use crate::services::payments::{
 };
 use crate::services::payouts::{
     payout_create_req_transformer, payout_create_res_transformer,
+    payout_create_link_req_transformer, payout_create_link_res_transformer,
+    payout_create_recipient_req_transformer, payout_create_recipient_res_transformer,
+    payout_enroll_disburse_account_req_transformer, payout_enroll_disburse_account_res_transformer,
+    payout_get_req_transformer, payout_get_res_transformer,
+    payout_stage_req_transformer, payout_stage_res_transformer,
+    payout_transfer_req_transformer, payout_transfer_res_transformer,
+    payout_void_req_transformer, payout_void_res_transformer,
 };
 
 // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
@@ -109,20 +124,28 @@ impl_flow_handlers!(defend, DisputeServiceDefendRequest, DisputeServiceDefendRes
 impl_flow_handlers!(get, PaymentServiceGetRequest, PaymentServiceGetResponse, get_req_transformer, get_res_transformer);
 // payout_create: PayoutService.Create — Creates a payout.
 impl_flow_handlers!(payout_create, PayoutServiceCreateRequest, PayoutServiceCreateResponse, payout_create_req_transformer, payout_create_res_transformer);
+// payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+impl_flow_handlers!(payout_create_link, PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse, payout_create_link_req_transformer, payout_create_link_res_transformer);
+// payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+impl_flow_handlers!(payout_create_recipient, PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse, payout_create_recipient_req_transformer, payout_create_recipient_res_transformer);
+// payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+impl_flow_handlers!(payout_enroll_disburse_account, PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse, payout_enroll_disburse_account_req_transformer, payout_enroll_disburse_account_res_transformer);
+// payout_get: PayoutService.Get — Retrieve payout details.
+impl_flow_handlers!(payout_get, PayoutServiceGetRequest, PayoutServiceGetResponse, payout_get_req_transformer, payout_get_res_transformer);
+// payout_stage: PayoutService.Stage — Stage the payout.
+impl_flow_handlers!(payout_stage, PayoutServiceStageRequest, PayoutServiceStageResponse, payout_stage_req_transformer, payout_stage_res_transformer);
+// payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+impl_flow_handlers!(payout_transfer, PayoutServiceTransferRequest, PayoutServiceTransferResponse, payout_transfer_req_transformer, payout_transfer_res_transformer);
+// payout_void: PayoutService.Void — Void a payout.
+impl_flow_handlers!(payout_void, PayoutServiceVoidRequest, PayoutServiceVoidResponse, payout_void_req_transformer, payout_void_res_transformer);
 // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
 impl_flow_handlers!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, post_authenticate_req_transformer, post_authenticate_res_transformer);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
 impl_flow_handlers!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, pre_authenticate_req_transformer, pre_authenticate_res_transformer);
-// proxied_authenticate: ProxiedPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
-impl_flow_handlers!(proxied_authenticate, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse, proxied_authenticate_req_transformer, proxied_authenticate_res_transformer);
 // proxied_authorize: ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
-impl_flow_handlers!(proxied_authorize, ProxyPaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, proxied_authorize_req_transformer, proxied_authorize_res_transformer);
-// proxied_post_authenticate: ProxiedPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
-impl_flow_handlers!(proxied_post_authenticate, ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, proxied_post_authenticate_req_transformer, proxied_post_authenticate_res_transformer);
-// proxied_pre_authenticate: ProxiedPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
-impl_flow_handlers!(proxied_pre_authenticate, ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, proxied_pre_authenticate_req_transformer, proxied_pre_authenticate_res_transformer);
+impl_flow_handlers!(proxied_authorize, ProxiedPaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, proxied_authorize_req_transformer, proxied_authorize_res_transformer);
 // proxied_setup_recurring: ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
-impl_flow_handlers!(proxied_setup_recurring, ProxyPaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, proxied_setup_recurring_req_transformer, proxied_setup_recurring_res_transformer);
+impl_flow_handlers!(proxied_setup_recurring, ProxiedPaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, proxied_setup_recurring_req_transformer, proxied_setup_recurring_res_transformer);
 // refund: DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 impl_flow_handlers!(refund, PaymentServiceRefundRequest, RefundResponse, refund_req_transformer, refund_res_transformer);
 // reverse: DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
