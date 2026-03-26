@@ -127,7 +127,7 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
 
     if (response.status === PaymentStatus.CHARGED) {
       console.log("  PASSED: Payment charged");
-      return false;
+      return true;
     } else {
       console.log(`  FAILED: Expected CHARGED, got ${response.status}`);
       return false;
