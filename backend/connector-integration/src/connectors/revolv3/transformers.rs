@@ -1487,10 +1487,9 @@ impl WebhookInvoiceStatus {
             | Self::Recycle
             | Self::OneTimePaymentPending
             | Self::BatchPending
-            | Self::CapturePending
-            | Self::RefundPending => Ok(AttemptStatus::Pending),
+            | Self::CapturePending => Ok(AttemptStatus::Pending),
             Self::Noncollectable | Self::Failed => Ok(AttemptStatus::Failure),
-            Self::Refund | Self::PartialRefund | Self::RefundDeclined | Self::RefundFailed => {
+            Self::Refund | Self::PartialRefund | Self::RefundDeclined | Self::RefundFailed | Self::RefundPending => {
                 Err(errors::ConnectorError::UnexpectedResponseError(
                     bytes::Bytes::from("received refund status in payments webhook".to_string()),
                 ))
