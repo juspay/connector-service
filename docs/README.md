@@ -207,8 +207,8 @@ You can learn more about [intelligent routing](https://docs.hyperswitch.io/explo
 
 ```bash
 # Clone the repository
-git clone https://github.com/manojradhakrishnan/connector-service.git
-cd connector-service
+git clone https://github.com/juspay/hyperswitch-prism.git
+cd hyperswitch-prism
 
 # Build
 cargo build --release
