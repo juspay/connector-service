@@ -113,7 +113,8 @@ Variables:
 **Gate**: If the Flow Decider returns FAILED (no implementable flows), report this connector as FAILED and go directly to Phase 6.
 
 Parse the returned flow plan to extract:
-- `ORDERED_FLOWS` — the ordered list of flow names with status PLAN
+- `ORDERED_FLOWS` — the ordered list of flow names with status PLAN or EXISTING_PM_PENDING
+- `EXISTING_PM_PENDING_FLOWS` — flows that exist but need PM additions (status EXISTING_PM_PENDING). These ARE included in `ORDERED_FLOWS` for implementation.
 - For each flow: its `TECHSPEC_SECTION` and `GRPCURL_SERVICE`
 
 ---
@@ -179,6 +180,8 @@ Before spawning the Flow Agent, check if this flow's build dependencies are met.
 | Flow | Dependency | Gate |
 |------|-----------|------|
 | IncomingWebhook | None, but typically implemented last | Always proceed |
+
+**EXISTING_PM_PENDING flows**: When a flow (e.g., Authorize) has status EXISTING_PM_PENDING, it IS included in `ORDERED_FLOWS` and IS spawned as a Flow Agent task. The Flow Agent receives the flow name with the additional context that it is adding PMs to an existing flow, not building from scratch. The `MANDATORY_PAYMENT_METHODS` parameter tells the Flow Agent which PMs to add. The flow plan's EXISTING_PM_PENDING entry lists which PMs are already implemented and which are pending.
 
 **General rule**: The Flow Decider determines the order. If you encounter a flow not listed above, check if it shares code with Authorize or Refund. If unclear, proceed — build errors will surface naturally.
 
