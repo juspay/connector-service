@@ -1,8 +1,8 @@
 import { ProxyAgent, Agent, Dispatcher } from "undici";
 // @ts-ignore
-import { ucs } from "./payments/generated/proto";
+import { types } from "./payments/generated/proto";
 
-const Defaults = ucs.v2.SdkDefault;
+const Defaults = types.HttpDefault;
 
 /**
  * Normalized HTTP Request structure for the Connector Service.
@@ -11,7 +11,7 @@ export interface HttpRequest {
   url: string;
   method: string;
   headers?: Record<string, string>;
-  body?: string | Uint8Array;
+  body?: Uint8Array;
 }
 
 /**
@@ -24,35 +24,38 @@ export interface HttpResponse {
   latencyMs: number; // Flat field for cross-language parity
 }
 
-/**
- * HTTP client configuration options.
- * Uses proto-generated IHttpOptions as the base, with extended caCert type
- * for better developer experience (accepts string, Buffer, or Uint8Array).
- */
-export type HttpOptions = Omit<ucs.v2.IHttpOptions, 'caCert'> & {
-  caCert?: string | Buffer | Uint8Array;
-};
+/** Network error codes from proto (single source of truth). */
+export const NetworkErrorCode = types.NetworkErrorCode;
 
 /**
- * Specialized error class for HTTP failures in the Connector Service.
+ * Network error for HTTP transport failures (timeouts, connection errors, config).
+ * Uses proto-generated NetworkErrorCode for cross-SDK parity with IntegrationError/ConnectorResponseTransformationError.
  */
-export class ConnectorError extends Error {
+export class NetworkError extends Error {
   constructor(
-    public message: string,
+    message: string,
+    public code: types.NetworkErrorCode = types.NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
     public statusCode?: number,
-    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | 'CLIENT_INITIALIZATION' | string,
     public body?: string,
     public headers?: Record<string, string>
   ) {
     super(message);
-    this.name = "ConnectorError";
+    this.name = "NetworkError";
+  }
+
+  /**
+   * String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. "CONNECT_TIMEOUT").
+   * Use for logging, display, and simple comparisons.
+   */
+  get errorCode(): string {
+    return types.NetworkErrorCode[this.code as number] ?? "NETWORK_ERROR_CODE_UNSPECIFIED";
   }
 }
 
 /**
  * Resolve proxy URL, honoring bypass rules.
  */
-export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): string | null {
+export function resolveProxyUrl(url: string, proxy?: types.IProxyOptions | null): string | null {
   if (!proxy) return null;
   const shouldBypass = Array.isArray(proxy.bypassUrls) && proxy.bypassUrls.includes(url);
   if (shouldBypass) return null;
@@ -63,40 +66,34 @@ export function resolveProxyUrl(url: string, proxy?: HttpOptions["proxy"]): stri
  * Creates a high-performance dispatcher with specialized fintech timeouts.
  * (The instance-level connection pool)
  */
-export function createDispatcher(config: HttpOptions): Dispatcher {
-  // Convert caCert to Uint8Array if provided as string or Buffer
-  let caCert: Uint8Array | undefined;
-  if (config.caCert !== undefined) {
-    if (typeof config.caCert === 'string') {
-      caCert = new TextEncoder().encode(config.caCert);
-    } else if (Buffer.isBuffer(config.caCert)) {
-      caCert = new Uint8Array(config.caCert);
-    } else {
-      caCert = config.caCert;
+export function createDispatcher(config: types.IHttpConfig): Dispatcher {
+  let ca: string | Uint8Array | undefined;
+  if (config.caCert) {
+    if (config.caCert.pem) {
+      ca = config.caCert.pem;
+    } else if (config.caCert.der) {
+      ca = config.caCert.der;
     }
   }
 
   const dispatcherOptions: any = {
     connect: {
       timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
-      ca: caCert,
+      ca,
     },
     headersTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     bodyTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     keepAliveTimeout: config.keepAliveTimeoutMs ?? Defaults.KEEP_ALIVE_TIMEOUT_MS,
   };
 
+  const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
   try {
-    const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
     return proxyUrl
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
-    throw new ConnectorError(
-      `Internal HTTP setup failed: ${error.message}`,
-      500,
-      'CLIENT_INITIALIZATION'
-    );
+    const code = proxyUrl ? types.NetworkErrorCode.INVALID_PROXY_CONFIGURATION : types.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE;
+    throw new NetworkError(`Internal HTTP setup failed: ${error.message}`, code, 500);
   }
 }
 
@@ -105,12 +102,17 @@ export function createDispatcher(config: HttpOptions): Dispatcher {
  */
 export async function execute(
   request: HttpRequest,
-  options: HttpOptions = {},
+  options: types.IHttpConfig = {},
   dispatcher?: Dispatcher // Pass the instance-owned pool here
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
 
-  // Lifecycle Management
+  try {
+    new URL(url);
+  } catch {
+    throw new NetworkError(`Invalid URL: ${url}`, types.NetworkErrorCode.URL_PARSING_FAILED);
+  }
+
   const totalTimeout = options.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
@@ -121,7 +123,7 @@ export async function execute(
     const response = await fetch(url, {
       method: method.toUpperCase(),
       headers: headers || {},
-      body: body ?? undefined,
+      body: body ? Buffer.from(body) : undefined,
       redirect: "manual",
       signal: controller.signal,
       // @ts-ignore
@@ -131,40 +133,48 @@ export async function execute(
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((v, k) => { responseHeaders[k.toLowerCase()] = v; });
 
+    let responseBody: Uint8Array;
+    try {
+      responseBody = new Uint8Array(await response.arrayBuffer());
+    } catch (e: any) {
+      throw new NetworkError(`Failed to read response body: ${e?.message || e}`, types.NetworkErrorCode.RESPONSE_DECODING_FAILED, response.status);
+    }
+
     return {
       statusCode: response.status,
       headers: responseHeaders,
-      body: new Uint8Array(await response.arrayBuffer()),
+      body: responseBody,
       latencyMs: Date.now() - startTime
     };
   } catch (error: any) {
+    if (error instanceof NetworkError) throw error;
     if (error.name === 'AbortError') {
-      throw new ConnectorError(
+      throw new NetworkError(
         `Total Request Timeout: ${method} ${url} exceeded ${totalTimeout}ms`,
-        504,
-        'TOTAL_TIMEOUT'
+        types.NetworkErrorCode.TOTAL_TIMEOUT_EXCEEDED,
+        504
       );
     }
 
     const cause = error.cause;
     if (cause) {
       if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
-        throw new ConnectorError(
+        throw new NetworkError(
           `Connection Timeout: Failed to connect to ${url}`,
-          504,
-          'CONNECT_TIMEOUT'
+          types.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED,
+          504
         );
       }
       if (cause.code === 'UND_ERR_BODY_TIMEOUT' || cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
-        throw new ConnectorError(
+        throw new NetworkError(
           `Response Timeout: Gateway ${url} accepted connection but failed to respond`,
-          504,
-          'RESPONSE_TIMEOUT'
+          types.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED,
+          504
         );
       }
     }
 
-    throw new ConnectorError(`Network Error: ${error.message}`, 500, error.code || 'NETWORK_FAILURE');
+    throw new NetworkError(`Network Error: ${error.message}`, types.NetworkErrorCode.NETWORK_FAILURE, 500);
   } finally {
     clearTimeout(timeoutId);
   }

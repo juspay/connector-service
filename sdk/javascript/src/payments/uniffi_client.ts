@@ -13,6 +13,8 @@ import koffi from "koffi";
 import path from "path";
 // @ts-ignore - generated CommonJS module
 import { FLOWS, SINGLE_FLOWS } from "./_generated_flows.js";
+// @ts-ignore - generated protobuf types
+import { types } from "./generated/proto.js";
 
 // Standard Node.js __dirname
 declare const __dirname: string;
@@ -81,12 +83,12 @@ function loadLib(libPath?: string): FfiFunctions {
     fns[`${flow}_req`] = lib.func(
       `uniffi_connector_service_ffi_fn_func_${flow}_req_transformer`,
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
     fns[`${flow}_res`] = lib.func(
       `uniffi_connector_service_ffi_fn_func_${flow}_res_transformer`,
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
   }
 
@@ -95,7 +97,7 @@ function loadLib(libPath?: string): FfiFunctions {
     fns[`${flow}_direct`] = lib.func(
       `uniffi_connector_service_ffi_fn_func_${flow}_transformer`,
       RustBufferStruct,
-      [RustBufferStruct, RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+      [RustBufferStruct, RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
     );
   }
 
@@ -111,12 +113,8 @@ function makeCallStatus(): RustCallStatus {
 function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   if (status.code === 0) return;
 
-  if (status.code === 1) {
-    const errMsg = liftError(status.error_buf);
-    freeRustBuffer(ffi, status.error_buf);
-    throw new Error(errMsg);
-  }
-
+  // Only Rust panics should reach here now (status.code === 2)
+  // Normal errors are encoded as protobuf IntegrationError/ConnectorResponseTransformationError in returned bytes
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
@@ -124,28 +122,6 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   }
 
   throw new Error("Unknown Rust panic");
-}
-
-function liftError(buf: RustBuffer): string {
-  if (!buf.data || buf.len === 0n) return "Unknown error";
-  const raw = Buffer.from(koffi.decode(buf.data, "uint8", Number(buf.len)));
-  let offset = 0;
-
-  // UniFFI Error layout: [i32 variant] + [i32 len] + [bytes]
-  const variant = raw.readInt32BE(offset); offset += 4;
-  const variantNames: Record<number, string> = {
-    1: "DecodeError",
-    2: "MissingMetadata",
-    3: "MetadataParseError",
-    4: "HandlerError",
-    5: "NoConnectorRequest",
-  };
-
-  if (variant === 5) return "NoConnectorRequest";
-
-  const strLen = raw.readInt32BE(offset); offset += 4;
-  const msg = raw.subarray(offset, offset + strLen).toString("utf-8");
-  return `${variantNames[variant] || "UniffiError"}: ${msg}`;
 }
 
 /**
@@ -196,34 +172,6 @@ function lowerBytes(ffi: FfiFunctions, data: Buffer | Uint8Array): RustBuffer {
   return allocRustBuffer(ffi, buf);
 }
 
-/**
- * Lowers a Map into a UniFFI-compliant serialized buffer.
- * Protocol: [i32 count] + [ [i32 key_len]+[key_bytes] + [i32 val_len]+[val_bytes] ] * count
- */
-function lowerMap(ffi: FfiFunctions, map: Record<string, string>): RustBuffer {
-  const entries = Object.entries(map);
-  let totalSize = 4; // count
-  const encoded = entries.map(([k, v]) => {
-    const kBuf = Buffer.from(k, "utf-8");
-    const vBuf = Buffer.from(v, "utf-8");
-    totalSize += 4 + kBuf.length + 4 + vBuf.length;
-    return { kBuf, vBuf };
-  });
-
-  const buf = Buffer.alloc(totalSize);
-  let offset = 0;
-  buf.writeInt32BE(entries.length, offset); offset += 4;
-
-  for (const { kBuf, vBuf } of encoded) {
-    buf.writeInt32BE(kBuf.length, offset); offset += 4;
-    kBuf.copy(buf, offset); offset += kBuf.length;
-    buf.writeInt32BE(vBuf.length, offset); offset += 4;
-    vBuf.copy(buf, offset); offset += vBuf.length;
-  }
-
-  return allocRustBuffer(ffi, buf);
-}
-
 export class UniffiClient {
   private _ffi: FfiFunctions;
 
@@ -238,22 +186,42 @@ export class UniffiClient {
   callReq(
     flow: string,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const fn = this._ffi[`${flow}_req`];
     if (!fn) throw new Error(`Unknown flow: '${flow}'. Supported: ${FLOW_NAMES.join(", ")}`);
 
     const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
 
-    const result = fn(rbReq, rbMeta, rbOpts, status);
+    const result = fn(rbReq, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftBytes(result);
+      const bytes = liftBytes(result);
+      const resultMsg = types.FfiResult.decode(bytes);
+      
+      // Enum-based type checking
+      switch (resultMsg.type) {
+        case types.FfiResult.Type.HTTP_REQUEST:
+          if (!resultMsg.httpRequest) {
+            throw new Error("Expected httpRequest in FfiResult, but got null/undefined");
+          }
+          return Buffer.from(types.FfiConnectorHttpRequest.encode(resultMsg.httpRequest).finish());
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.integrationError;
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.connectorResponseTransformationError;
+        default:
+          throw new Error(`Unknown result type: ${resultMsg.type}`);
+      }
     } finally {
       freeRustBuffer(this._ffi, result);
     }
@@ -268,7 +236,6 @@ export class UniffiClient {
     flow: string,
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const fn = this._ffi[`${flow}_res`];
@@ -276,15 +243,36 @@ export class UniffiClient {
 
     const rbRes = lowerBytes(this._ffi, responseBytes);
     const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
 
-    const result = fn(rbRes, rbReq, rbMeta, rbOpts, status);
+    const result = fn(rbRes, rbReq, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftBytes(result);
+      const bytes = liftBytes(result);
+      const resultMsg = types.FfiResult.decode(bytes);
+      
+      // Enum-based type checking
+      switch (resultMsg.type) {
+        case types.FfiResult.Type.HTTP_RESPONSE:
+          if (!resultMsg.httpResponse) {
+            throw new Error("Expected httpResponse in FfiResult, but got null/undefined");
+          }
+          return Buffer.from(types.FfiConnectorHttpResponse.encode(resultMsg.httpResponse).finish());
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.connectorResponseTransformationError;
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.integrationError;
+        default:
+          throw new Error(`Unknown result type: ${resultMsg.type}`);
+      }
     } finally {
       freeRustBuffer(this._ffi, result);
     }
@@ -298,22 +286,42 @@ export class UniffiClient {
   callDirect(
     flow: string,
     requestBytes: Buffer | Uint8Array,
-    metadata: Record<string, string>,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     const fn = this._ffi[`${flow}_direct`];
     if (!fn) throw new Error(`Unknown single-step flow: '${flow}'. Supported: ${SINGLE_FLOW_NAMES.join(", ")}`);
 
     const rbReq = lowerBytes(this._ffi, requestBytes);
-    const rbMeta = lowerMap(this._ffi, metadata);
     const rbOpts = lowerBytes(this._ffi, optionsBytes);
     const status = makeCallStatus();
 
-    const result = fn(rbReq, rbMeta, rbOpts, status);
+    const result = fn(rbReq, rbOpts, status);
 
     try {
       checkCallStatus(this._ffi, status);
-      return liftBytes(result);
+      const bytes = liftBytes(result);
+      const resultMsg = types.FfiResult.decode(bytes);
+      
+      // Enum-based type checking
+      switch (resultMsg.type) {
+        case types.FfiResult.Type.HTTP_RESPONSE:
+          if (!resultMsg.httpResponse) {
+            throw new Error("Expected httpResponse in FfiResult, but got null/undefined");
+          }
+          return Buffer.from(types.FfiConnectorHttpResponse.encode(resultMsg.httpResponse).finish());
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.connectorResponseTransformationError;
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
+          }
+          throw resultMsg.integrationError;
+        default:
+          throw new Error(`Unknown result type: ${resultMsg.type}`);
+      }
     } finally {
       freeRustBuffer(this._ffi, result);
     }

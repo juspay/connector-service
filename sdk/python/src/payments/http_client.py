@@ -1,23 +1,31 @@
 import time
-import requests
-from typing import Optional, Dict, Union, Any
+import httpx
+import ssl
+from typing import Optional, Dict, Union
 from dataclasses import dataclass
-from urllib.parse import urlparse
-from .generated import sdk_options_pb2
+from .generated import sdk_config_pb2
 
 # Centralized defaults from Protobuf Single Source of Truth
-Defaults = sdk_options_pb2.SdkDefault
+Defaults = sdk_config_pb2.HttpDefault
 
-# Type alias for proto-generated HttpOptions
-HttpOptions = sdk_options_pb2.HttpOptions
-ProxyOptions = sdk_options_pb2.ProxyOptions
+# Type alias for proto-generated HttpConfig and sub-configs
+HttpConfig = sdk_config_pb2.HttpConfig
+
+# Proto-default HttpConfig; use as base when no client config exists
+DEFAULT_HTTP_CONFIG = HttpConfig(
+    total_timeout_ms=Defaults.TOTAL_TIMEOUT_MS,
+    connect_timeout_ms=Defaults.CONNECT_TIMEOUT_MS,
+    response_timeout_ms=Defaults.RESPONSE_TIMEOUT_MS,
+)
+ProxyOptions = sdk_config_pb2.ProxyOptions
+NetworkErrorCode = sdk_config_pb2.NetworkErrorCode
 
 @dataclass
 class HttpRequest:
     url: str
     method: str
     headers: Optional[Dict[str, str]] = None
-    body: Optional[Union[str, bytes]] = None
+    body: Optional[bytes] = None # Strictly bytes from UCS transformation
 
 @dataclass
 class HttpResponse:
@@ -26,112 +34,166 @@ class HttpResponse:
     body: bytes
     latency_ms: float
 
-class ConnectorError(Exception):
-    def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[str] = None):
-        super().__init__(message)
-        self.status_code = status_code
-        self.error_code = error_code
+class NetworkError(Exception):
+    """Network error for HTTP transport failures. Uses proto NetworkErrorCode for cross-SDK parity."""
 
-def resolve_proxy_config(url: str, proxy_options: Optional[ProxyOptions] = None) -> Optional[Dict[str, str]]:
+    def __init__(
+        self,
+        message: str,
+        code: int = sdk_config_pb2.NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
+        status_code: Optional[int] = None,
+    ):
+        super().__init__(message)
+        self.code = code
+        self.status_code = status_code
+
+    @property
+    def error_code(self) -> str:
+        """String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. 'CONNECT_TIMEOUT')."""
+        names = {
+            sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED: "CONNECT_TIMEOUT_EXCEEDED",
+            sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED: "RESPONSE_TIMEOUT_EXCEEDED",
+            sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT_EXCEEDED: "TOTAL_TIMEOUT_EXCEEDED",
+            sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE: "NETWORK_FAILURE",
+            sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE: "CLIENT_INITIALIZATION_FAILURE",
+            sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED: "URL_PARSING_FAILED",
+            sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED: "RESPONSE_DECODING_FAILED",
+            sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION: "INVALID_PROXY_CONFIGURATION",
+            sdk_config_pb2.NetworkErrorCode.INVALID_CA_CERT: "INVALID_CA_CERT",
+        }
+        return names.get(self.code, "NETWORK_ERROR_CODE_UNSPECIFIED")
+
+def merge_http_config(base: HttpConfig, override: Optional[HttpConfig]) -> HttpConfig:
     """
-    Decides the proxy configuration for a specific URL.
-    Uses proto-generated ProxyOptions directly.
-    
-    Returns:
-        - dict: Explicit proxy map (e.g. {'https': '...'}) or {} for explicit bypass.
-        - None: No proxy configured; use system/session defaults.
+    Merge override onto base (field-wise; override wins).
+    base is always provided (use DEFAULT_HTTP_CONFIG when no client config).
+    """
+    result = HttpConfig()
+    result.CopyFrom(base)
+    if override:
+        result.MergeFrom(override)
+    return result
+
+
+def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str, Optional[str]]]:
+    """
+    Builds the native httpx proxy dictionary with bypass support.
     """
     if not proxy_options:
         return None
-
-    # Hostname matching for bypass (Fintech Standard)
-    # Checks if the target hostname ends with any string in bypass_urls.
-    target_host = urlparse(url).hostname or ""
-    for bypass in list(proxy_options.bypass_urls):
-        if target_host.endswith(bypass):
-            return {} # Explicit bypass (direct connection)
-
-    # Protocol-specific selection
-    proxies = {}
-    if url.startswith("https") and proxy_options.https_url:
-        proxies["https"] = proxy_options.https_url
-    elif proxy_options.http_url:
-        proxies["http"] = proxy_options.http_url
         
-    return proxies if proxies else None
+    proxy_url = proxy_options.https_url or proxy_options.http_url
+    if not proxy_url:
+        return None
 
-def create_session(http_options: Optional[HttpOptions] = None) -> requests.Session:
+    proxies = {"all://": proxy_url}
+    for bypass in list(proxy_options.bypass_urls):
+        clean_domain = bypass.replace("http://", "").replace("https://", "").split("/")[0]
+        if clean_domain:
+            proxies[f"all://{clean_domain}"] = None
+        
+    return proxies
+
+def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient:
     """
-    Creates a high-performance connection pool (Session).
-    The ConnectorClient instance will own this.
-    Uses proto-generated HttpOptions directly.
+    Creates a high-performance asynchronous connection pool.
+    Merges http_config with proto defaults; optional http_config uses defaults only.
     """
-    session = requests.Session()
-    
-    if http_options:
-        # Set session-level default proxies if provided
-        proxies = {}
-        if http_options.proxy:
-            if http_options.proxy.http_url:
-                proxies["http"] = http_options.proxy.http_url
-            if http_options.proxy.https_url:
-                proxies["https"] = http_options.proxy.https_url
+    merged = merge_http_config(DEFAULT_HTTP_CONFIG, http_config)
+    total_sec = merged.total_timeout_ms / 1000.0
+    connect_sec = merged.connect_timeout_ms / 1000.0
+    read_sec = merged.response_timeout_ms / 1000.0
+
+    verify: Union[bool, ssl.SSLContext] = True
+    mounts = None
+    if merged.HasField("ca_cert"):
+        ca = merged.ca_cert
+        context = ssl.create_default_context()
+        if ca.HasField("pem"):
+            context.load_verify_locations(cadata=ca.pem)
+        elif ca.HasField("der"):
+            context.load_verify_locations(cadata=ca.der)
+        verify = context
+
+    if merged.HasField("proxy"):
+        proxies = resolve_proxies(merged.proxy)
         if proxies:
-            session.proxies = proxies
+            mounts = {k: httpx.AsyncHTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
 
-        # Certificate Pinning / CA Bundle
-        if http_options.ca_cert:
-            session.verify = http_options.ca_cert
+    try:
+        client = httpx.AsyncClient(
+            verify=verify,
+            mounts=mounts,
+            http2=True,
+            timeout=httpx.Timeout(total_sec, connect=connect_sec, read=read_sec),
+        )
+        return client
+    except NetworkError:
+        raise  # already classified, pass through
+    except Exception as e:
+        code = sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION if "proxy" in str(e).lower() else sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE
+        raise NetworkError(f"Internal HTTP setup failed: {e}", code, 500)
 
-    return session
 
-def execute(
-    request: HttpRequest, 
-    session: requests.Session,
-    connect_timeout_ms: float,
-    response_timeout_ms: float,
-    total_timeout_ms: float,
-    proxy_config: Optional[Dict[str, str]] = None
+async def execute(
+    request: HttpRequest,
+    client: httpx.AsyncClient,
+    resolved_timeouts_ms: Optional[tuple[int, int, int]] = None,
 ) -> HttpResponse:
     """
-    Standardized stateless execution engine. 
-    Accepts primitive types only to ensure decoupling from Business Protos.
+    Standardized stateless execution engine using httpx AsyncClient.
+    resolved_timeouts_ms: (total_ms, connect_ms, read_ms) — matches proto; convert to sec internally.
+    When None, uses client default.
     """
-    
-    start_time = time.time()
+    # Validate URL: httpx.URL() does not raise for missing scheme (e.g. "not-a-valid-url").
     try:
-        response = session.request(
+        parsed_url = httpx.URL(request.url)
+        if parsed_url.scheme not in ('http', 'https'):
+            raise NetworkError(f"Invalid URL (missing or unsupported scheme): {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
+    except NetworkError:
+        raise
+    except Exception:
+        raise NetworkError(f"Invalid URL: {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
+    start_time = time.time()
+
+    timeout = (
+        httpx.Timeout(
+            resolved_timeouts_ms[0] / 1000.0,
+            connect=resolved_timeouts_ms[1] / 1000.0,
+            read=resolved_timeouts_ms[2] / 1000.0,
+        )
+        if resolved_timeouts_ms is not None
+        else httpx.USE_CLIENT_DEFAULT
+    )
+
+    try:
+        response = await client.request(
             method=request.method.upper(),
             url=request.url,
             headers=request.headers or {},
-            data=request.body,
-            # (Connect Timeout, Read Timeout)
-            timeout=(connect_timeout_ms / 1000.0, response_timeout_ms / 1000.0),
-            proxies=proxy_config, # Overrides session defaults if provided
-            allow_redirects=False
+            content=request.body if request.body else None,
+            timeout=timeout,
+            follow_redirects=False
         )
-        
-        latency = (time.time() - start_time) * 1000
-        
-        # Post-call SLA enforcement (Hard Gate)
-        if (time.time() - start_time) * 1000 > total_timeout_ms:
-            raise requests.exceptions.Timeout("Total request timeout exceeded")
 
-        # Normalize headers to lowercase for global parity
+        latency = (time.time() - start_time) * 1000
         response_headers = {k.lower(): v for k, v in response.headers.items()}
+
+        try:
+            body = response.content
+        except Exception as e:
+            raise NetworkError(f"Failed to read response body: {e}", sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED, response.status_code)
 
         return HttpResponse(
             status_code=response.status_code,
             headers=response_headers,
-            body=response.content,
+            body=body,
             latency_ms=latency
         )
 
-    except requests.exceptions.ConnectTimeout:
-        raise ConnectorError(f"Connection Timeout: {request.url}", 504, "CONNECT_TIMEOUT")
-    except requests.exceptions.ReadTimeout:
-        raise ConnectorError(f"Response Timeout: {request.url}", 504, "RESPONSE_TIMEOUT")
-    except requests.exceptions.Timeout:
-        raise ConnectorError(f"Total Request Timeout: {request.url}", 504, "TOTAL_TIMEOUT")
+    except httpx.ConnectTimeout:
+        raise NetworkError(f"Connection Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED, 504)
+    except (httpx.ReadTimeout, httpx.WriteTimeout):
+        raise NetworkError(f"Response Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED, 504)
     except Exception as e:
-        raise ConnectorError(f"Network Error: {str(e)}", 500, "NETWORK_FAILURE")
+        raise NetworkError(f"Network Error: {str(e)}", sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE, 500)

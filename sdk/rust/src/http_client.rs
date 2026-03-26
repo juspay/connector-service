@@ -1,9 +1,10 @@
 use common_utils::request::Method;
-use grpc_api_types::payments::SdkDefault;
+use grpc_api_types::payments::{CaCert, HttpConfig, HttpDefault, NetworkErrorCode};
 use std::collections::HashMap;
+use std::fmt;
 use std::time::{Duration, Instant};
 
-// Native options for decoupling
+// Native options for decoupling the SDK from the Protobuf-generated transport types.
 #[derive(Clone, Debug, Default)]
 pub struct ProxyConfig {
     pub http_url: Option<String>,
@@ -18,7 +19,49 @@ pub struct HttpOptions {
     pub response_timeout_ms: Option<u32>,
     pub keep_alive_timeout_ms: Option<u32>,
     pub proxy: Option<ProxyConfig>,
-    pub ca_cert: Option<Vec<u8>>,
+    pub ca_cert: Option<CaCert>,
+}
+
+// ---------------------------------------------------------------------------
+// Converters: Map from Protobuf types to Native Transport types
+// ---------------------------------------------------------------------------
+
+impl From<&HttpConfig> for HttpOptions {
+    fn from(proto: &HttpConfig) -> Self {
+        let proxy = proto.proxy.as_ref().map(|p| ProxyConfig {
+            http_url: p.http_url.clone(),
+            https_url: p.https_url.clone(),
+            bypass_urls: p.bypass_urls.clone(),
+        });
+
+        Self {
+            total_timeout_ms: proto.total_timeout_ms,
+            connect_timeout_ms: proto.connect_timeout_ms,
+            response_timeout_ms: proto.response_timeout_ms,
+            keep_alive_timeout_ms: proto.keep_alive_timeout_ms,
+            proxy,
+            ca_cert: proto.ca_cert.clone(),
+        }
+    }
+}
+
+/// Merges client defaults with per-request overrides. Per-request values take precedence.
+pub fn merge_http_options(base: &HttpOptions, override_opts: &HttpOptions) -> HttpOptions {
+    HttpOptions {
+        total_timeout_ms: override_opts.total_timeout_ms.or(base.total_timeout_ms),
+        connect_timeout_ms: override_opts.connect_timeout_ms.or(base.connect_timeout_ms),
+        response_timeout_ms: override_opts
+            .response_timeout_ms
+            .or(base.response_timeout_ms),
+        keep_alive_timeout_ms: override_opts
+            .keep_alive_timeout_ms
+            .or(base.keep_alive_timeout_ms),
+        proxy: override_opts.proxy.clone().or_else(|| base.proxy.clone()),
+        ca_cert: override_opts
+            .ca_cert
+            .clone()
+            .or_else(|| base.ca_cert.clone()),
+    }
 }
 
 pub struct HttpRequest {
@@ -35,40 +78,36 @@ pub struct HttpResponse {
     pub latency_ms: u128,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum HttpClientError {
-    #[error("Connection Timeout: {0}")]
-    ConnectTimeout(String),
-    #[error("Response Timeout: {0}")]
-    ResponseTimeout(String),
-    #[error("Total Request Timeout: {0}")]
-    TotalTimeout(String),
-    #[error("Network Error: {0}")]
-    NetworkFailure(String),
-    #[error("Invalid Configuration: {0}")]
-    InvalidConfiguration(String),
-    #[error("Client Initialization Failure: {0}")]
-    ClientInitialization(String),
+/// Network error for HTTP transport failures. Uses proto NetworkErrorCode for cross-SDK parity.
+#[derive(Debug)]
+pub struct NetworkError {
+    pub code: NetworkErrorCode,
+    pub message: String,
+    pub status_code: Option<u32>,
 }
 
-impl HttpClientError {
-    pub fn status_code(&self) -> u16 {
-        match self {
-            Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
-            Self::NetworkFailure(_)
-            | Self::InvalidConfiguration(_)
-            | Self::ClientInitialization(_) => 500,
-        }
+impl fmt::Display for NetworkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
     }
+}
 
+impl std::error::Error for NetworkError {}
+
+impl NetworkError {
+    /// Returns the error code as string (e.g. "CONNECT_TIMEOUT") for parity with other SDKs.
     pub fn error_code(&self) -> &'static str {
-        match self {
-            Self::ConnectTimeout(_) => "CONNECT_TIMEOUT",
-            Self::ResponseTimeout(_) => "RESPONSE_TIMEOUT",
-            Self::TotalTimeout(_) => "TOTAL_TIMEOUT",
-            Self::NetworkFailure(_) => "NETWORK_FAILURE",
-            Self::InvalidConfiguration(_) => "INVALID_CONFIGURATION",
-            Self::ClientInitialization(_) => "CLIENT_INITIALIZATION_FAILURE",
+        match self.code {
+            NetworkErrorCode::ConnectTimeoutExceeded => "CONNECT_TIMEOUT_EXCEEDED",
+            NetworkErrorCode::ResponseTimeoutExceeded => "RESPONSE_TIMEOUT_EXCEEDED",
+            NetworkErrorCode::TotalTimeoutExceeded => "TOTAL_TIMEOUT_EXCEEDED",
+            NetworkErrorCode::NetworkFailure => "NETWORK_FAILURE",
+            NetworkErrorCode::InvalidCaCert => "INVALID_CA_CERT",
+            NetworkErrorCode::ClientInitializationFailure => "CLIENT_INITIALIZATION_FAILURE",
+            NetworkErrorCode::UrlParsingFailed => "URL_PARSING_FAILED",
+            NetworkErrorCode::ResponseDecodingFailed => "RESPONSE_DECODING_FAILED",
+            NetworkErrorCode::InvalidProxyConfiguration => "INVALID_PROXY_CONFIGURATION",
+            _ => "NETWORK_ERROR_CODE_UNSPECIFIED",
         }
     }
 }
@@ -79,16 +118,19 @@ pub struct HttpClient {
 }
 
 impl HttpClient {
-    pub fn new(options: HttpOptions) -> Result<Self, HttpClientError> {
+    /// Initialize a new HttpClient with fixed infrastructure settings.
+    pub fn new(options: HttpOptions) -> Result<Self, NetworkError> {
         let connect_timeout = options
             .connect_timeout_ms
-            .unwrap_or(SdkDefault::ConnectTimeoutMs as u32);
+            .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
+
         let total_timeout = options
             .total_timeout_ms
-            .unwrap_or(SdkDefault::TotalTimeoutMs as u32);
+            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+
         let keep_alive_timeout = options
             .keep_alive_timeout_ms
-            .unwrap_or(SdkDefault::KeepAliveTimeoutMs as u32);
+            .unwrap_or(HttpDefault::KeepAliveTimeoutMs as u32);
 
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_millis(connect_timeout as u64))
@@ -96,10 +138,28 @@ impl HttpClient {
             .pool_idle_timeout(Duration::from_millis(keep_alive_timeout as u64))
             .redirect(reqwest::redirect::Policy::none());
 
-        if let Some(ca_cert_bytes) = &options.ca_cert {
-            let cert = reqwest::Certificate::from_pem(ca_cert_bytes).map_err(|e| {
-                HttpClientError::InvalidConfiguration(format!("Invalid CA Certificate: {}", e))
-            })?;
+        if let Some(ca) = &options.ca_cert {
+            let cert = match &ca.format {
+                Some(grpc_api_types::payments::ca_cert::Format::Pem(pem)) => {
+                    reqwest::Certificate::from_pem(pem.as_bytes()).map_err(|e| NetworkError {
+                        code: NetworkErrorCode::InvalidCaCert,
+                        message: format!("Invalid PEM: {}", e),
+                        status_code: Some(500),
+                    })
+                }
+                Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => {
+                    reqwest::Certificate::from_der(der).map_err(|e| NetworkError {
+                        code: NetworkErrorCode::InvalidCaCert,
+                        message: format!("Invalid DER: {}", e),
+                        status_code: Some(500),
+                    })
+                }
+                None => Err(NetworkError {
+                    code: NetworkErrorCode::InvalidCaCert,
+                    message: "Missing cert format".to_string(),
+                    status_code: Some(500),
+                }),
+            }?;
             builder = builder.add_root_certificate(cert);
         }
 
@@ -109,23 +169,55 @@ impl HttpClient {
                 .as_ref()
                 .or(proxy_config.http_url.as_ref())
             {
-                if let Ok(mut proxy) = reqwest::Proxy::all(url) {
-                    for bypass in &proxy_config.bypass_urls {
-                        proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
+                match reqwest::Proxy::all(url) {
+                    Ok(mut proxy) => {
+                        for bypass in &proxy_config.bypass_urls {
+                            proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
+                        }
+                        builder = builder.proxy(proxy);
                     }
-                    builder = builder.proxy(proxy);
+                    Err(e) => {
+                        return Err(NetworkError {
+                            code: NetworkErrorCode::InvalidProxyConfiguration,
+                            message: e.to_string(),
+                            status_code: Some(500),
+                        });
+                    }
                 }
             }
         }
 
         let client = builder.build().map_err(|e| {
-            HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e))
+            let msg = e.to_string();
+            let code = if msg.to_lowercase().contains("proxy") {
+                NetworkErrorCode::InvalidProxyConfiguration
+            } else {
+                NetworkErrorCode::ClientInitializationFailure
+            };
+            NetworkError {
+                code,
+                message: format!("Failed to build HTTP client: {}", e),
+                status_code: Some(500),
+            }
         })?;
 
         Ok(Self { client, options })
     }
 
-    pub async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError> {
+    /// Execute an HTTP request, applying per-call behavioral overrides if provided.
+    pub async fn execute(
+        &self,
+        request: HttpRequest,
+        override_options: Option<HttpOptions>,
+    ) -> Result<HttpResponse, NetworkError> {
+        if reqwest::Url::parse(&request.url).is_err() {
+            return Err(NetworkError {
+                code: NetworkErrorCode::UrlParsingFailed,
+                message: format!("Invalid URL: {}", request.url),
+                status_code: None,
+            });
+        }
+
         let start_time = Instant::now();
 
         let mut req_builder = match request.method {
@@ -136,6 +228,15 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
+        // Resolve and apply effective total timeout for this request.
+        // reqwest 0.11 supports only total timeout (.timeout()) at request level.
+        let effective_total_timeout = override_options
+            .as_ref()
+            .and_then(|o| o.total_timeout_ms)
+            .or(self.options.total_timeout_ms)
+            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+        req_builder = req_builder.timeout(Duration::from_millis(effective_total_timeout as u64));
+
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
         }
@@ -145,21 +246,28 @@ impl HttpClient {
         }
 
         let response = req_builder.send().await.map_err(|e| {
-            let elapsed = start_time.elapsed().as_millis() as u64;
-            let total_timeout =
-                self.options
-                    .total_timeout_ms
-                    .unwrap_or(SdkDefault::TotalTimeoutMs as u32) as u64;
-            if e.is_timeout() {
+            let (code, message) = if e.is_timeout() {
                 if e.is_connect() {
-                    HttpClientError::ConnectTimeout(request.url.clone())
-                } else if elapsed >= total_timeout {
-                    HttpClientError::TotalTimeout(request.url.clone())
+                    (
+                        NetworkErrorCode::ConnectTimeoutExceeded,
+                        format!("Connection Timeout: {}", request.url),
+                    )
                 } else {
-                    HttpClientError::ResponseTimeout(request.url.clone())
+                    (
+                        NetworkErrorCode::TotalTimeoutExceeded,
+                        format!("Total Request Timeout: {}", request.url),
+                    )
                 }
             } else {
-                HttpClientError::NetworkFailure(e.to_string())
+                (
+                    NetworkErrorCode::NetworkFailure,
+                    format!("Network Error: {}", e),
+                )
+            };
+            NetworkError {
+                code,
+                message,
+                status_code: Some(504),
             }
         })?;
 
@@ -176,7 +284,11 @@ impl HttpClient {
         let body = response
             .bytes()
             .await
-            .map_err(|e| HttpClientError::NetworkFailure(e.to_string()))?
+            .map_err(|e| NetworkError {
+                code: NetworkErrorCode::ResponseDecodingFailed,
+                message: format!("Failed to read response body: {}", e),
+                status_code: Some(status_code as u32),
+            })?
             .to_vec();
 
         Ok(HttpResponse {
@@ -188,11 +300,7 @@ impl HttpClient {
     }
 }
 
-pub fn resolve_proxy_url(url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
+pub fn resolve_proxy_url(_url: &str, proxy: &Option<ProxyConfig>) -> Option<String> {
     let proxy = proxy.as_ref()?;
-    let should_bypass = proxy.bypass_urls.iter().any(|b| b == url);
-    if should_bypass {
-        return None;
-    }
     proxy.https_url.clone().or_else(|| proxy.http_url.clone())
 }

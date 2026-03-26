@@ -2,102 +2,219 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::http_client::{
-    HttpClient, HttpClientError, HttpOptions as NativeHttpOptions,
-    HttpRequest as ClientHttpRequest, ProxyConfig,
+    merge_http_options, HttpClient, HttpOptions as NativeHttpOptions,
+    HttpRequest as ClientHttpRequest, NetworkError,
 };
-use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
+use domain_types::utils::ForeignTryFrom;
 use grpc_api_types::payments::{
-    FfiOptions, Options, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    ConnectorConfig, CustomerServiceCreateRequest, CustomerServiceCreateResponse,
+    DisputeServiceAcceptRequest, DisputeServiceAcceptResponse, DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, FfiOptions,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
+    RequestConfig,
 };
 
-/// A Rust-native connector client that calls handler functions directly.
-/// Owns its primary connection pool (http_client).
+/// ConnectorClient — high-level Rust wrapper for the Connector Service.
+///
+/// Handles the full round-trip for any payment flow:
+///   1. Build connector HTTP request via Rust core handlers
+///   2. Execute the HTTP request via our standardized HttpClient (reqwest)
+///   3. Parse the connector response via Rust core handlers
+///
+/// This client owns its primary connection pool (http_client).
 pub struct ConnectorClient {
     http_client: HttpClient,
-    options: Options,
+    config: ConnectorConfig,
+    defaults: RequestConfig,
+}
+
+// ── Internal macro: generate a ConnectorClient method for a payment flow ──────
+//
+// Each generated method follows the same round-trip pattern:
+//   1. Build FfiRequestData from caller inputs
+//   2. Call the flow-specific req_handler to build the connector HTTP request
+//   3. Execute HTTP via the shared HttpClient
+//   4. Call the flow-specific res_handler to parse the response
+//
+// Usage: impl_flow_method!(method_name, ReqType, ResType, req_handler_fn, res_handler_fn);
+macro_rules! impl_flow_method {
+    ($method:ident, $req_type:ty, $res_type:ty, $req_handler:ident, $res_handler:ident) => {
+        pub async fn $method(
+            &self,
+            request: $req_type,
+            metadata: &HashMap<String, String>,
+            options: Option<RequestConfig>,
+        ) -> Result<$res_type, Box<dyn Error>> {
+            use connector_service_ffi::handlers::payments::{$req_handler, $res_handler};
+
+            let ffi_options = self.resolve_ffi_options(&options);
+            let override_opts = options
+                .as_ref()
+                .and_then(|o| o.http.as_ref())
+                .map(NativeHttpOptions::from);
+
+            let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
+            let environment = Some(grpc_api_types::payments::Environment::try_from(
+                ffi_options.environment,
+            )?);
+
+            let connector_request = $req_handler(ffi_request, environment)
+                .map_err(|e| format!("{} req_handler failed: {:?}", stringify!($method), e))?
+                .ok_or("No connector request generated")?;
+
+            let (body, boundary) = connector_request
+                .body
+                .as_ref()
+                .map(|b| b.get_body_bytes())
+                .transpose()
+                .map_err(|e| format!("Body extraction failed: {e}"))?
+                .unwrap_or((None, None));
+            let mut headers = connector_request.get_headers_map();
+            if let Some(boundary) = boundary {
+                headers.insert(
+                    "content-type".to_string(),
+                    format!("multipart/form-data; boundary={}", boundary),
+                );
+            }
+            let http_req = ClientHttpRequest {
+                url: connector_request.url.clone(),
+                method: connector_request.method,
+                headers,
+                body,
+            };
+            let http_response = self.http_client.execute(http_req, override_opts).await?;
+
+            let mut header_map = http::HeaderMap::new();
+            for (key, value) in &http_response.headers {
+                if let Ok(name) = http::header::HeaderName::from_bytes(key.as_bytes()) {
+                    if let Ok(val) = http::header::HeaderValue::from_bytes(value.as_bytes()) {
+                        header_map.insert(name, val);
+                    }
+                }
+            }
+            let response = Response {
+                headers: Some(header_map),
+                response: bytes::Bytes::from(http_response.body),
+                status_code: http_response.status_code,
+            };
+
+            let ffi_request_for_res = build_ffi_request(request, metadata, &ffi_options)?;
+            match $res_handler(ffi_request_for_res, response, environment) {
+                Ok(resp) => Ok(resp),
+                Err(e) => Err(format!("{} failed: {:?}", stringify!($method), e).into()),
+            }
+        }
+    };
 }
 
 impl ConnectorClient {
-    /**
-     * @param options - unified SDK configuration (http, ffi)
-     */
-    pub fn new(options: Options) -> Result<Self, HttpClientError> {
-        // Map the Protobuf options to native transport options
-        let native_opts = Self::get_native_http_options(&options.http);
+    /// Initialize a new ConnectorClient.
+    ///
+    /// # Arguments
+    /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
+    /// * `options` - Optional RequestConfig for default http/vault settings.
+    pub fn new(
+        config: ConnectorConfig,
+        options: Option<RequestConfig>,
+    ) -> Result<Self, NetworkError> {
+        let defaults = options.unwrap_or_default();
 
-        // Initialize the connection pool.
+        // Map the Protobuf options to native transport options
+        let native_opts = match defaults.http.as_ref() {
+            Some(http_proto) => NativeHttpOptions::from(http_proto),
+            None => NativeHttpOptions::default(),
+        };
+
         let http_client = HttpClient::new(native_opts)?;
 
         Ok(Self {
             http_client,
-            options,
+            config,
+            defaults,
         })
     }
 
-    /// Internal helper to map Protobuf HttpOptions to Native HttpClient options.
-    fn get_native_http_options(
-        proto: &Option<grpc_api_types::payments::HttpOptions>,
-    ) -> NativeHttpOptions {
-        // If the user provided no HTTP options, we return a blank native struct.
-        // The HttpClient::new() method will then use SdkDefault values for any missing fields.
-        match proto {
-            None => NativeHttpOptions::default(),
-            Some(http) => NativeHttpOptions {
-                total_timeout_ms: http.total_timeout_ms,
-                connect_timeout_ms: http.connect_timeout_ms,
-                response_timeout_ms: http.response_timeout_ms,
-                keep_alive_timeout_ms: http.keep_alive_timeout_ms,
-                proxy: http.proxy.as_ref().map(|p| ProxyConfig {
-                    http_url: p.http_url.clone(),
-                    https_url: p.https_url.clone(),
-                    bypass_urls: p.bypass_urls.clone(),
-                }),
-                ca_cert: http.ca_cert.clone(),
-            },
+    /// Builds FfiOptions from config. Environment comes from SdkOptions (immutable).
+    fn resolve_ffi_options(&self, _options: &Option<RequestConfig>) -> FfiOptions {
+        let environment = self
+            .config
+            .options
+            .as_ref()
+            .map(|o| o.environment)
+            .unwrap_or(0);
+        FfiOptions {
+            environment,
+            connector_config: self.config.connector_config.clone(),
         }
     }
 
-    /// Authorize a payment by:
-    /// 1. Building the connector HTTP request via `authorize_req_handler`
-    /// 2. Making the HTTP call with HttpClient
-    /// 3. Parsing the response via `authorize_res_handler`
+    /// Merges client defaults with per-request HTTP overrides. Per-request wins per field.
+    fn resolve_http_options(&self, options: Option<&RequestConfig>) -> NativeHttpOptions {
+        let base = self
+            .defaults
+            .http
+            .as_ref()
+            .map(NativeHttpOptions::from)
+            .unwrap_or_default();
+        let override_opts = options
+            .and_then(|o| o.http.as_ref())
+            .map(NativeHttpOptions::from)
+            .unwrap_or_default();
+        merge_http_options(&base, &override_opts)
+    }
+
+    /// Authorize a payment flow.
     ///
     /// # Arguments
     /// * `request` - The PaymentServiceAuthorizeRequest protobuf message.
-    /// * `metadata` - Metadata map containing connector routing and auth info.
-    ///   Must contain:
-    ///   - `"connector"`: connector name (e.g. `"Stripe"`)
-    ///   - `"connector_auth_type"`: JSON string of the auth config
-    ///     (e.g. `{"auth_type":"HeaderKey","api_key":"sk_test_xxx"}`)
-    ///   - `x-*` headers for MaskedMetadata
-    /// * `ffi_options` - Optional FfiOptions message override for this specific call.
+    /// * `metadata` - Metadata map containing x-* headers for MaskedMetadata.
+    /// * `options` - Optional RequestConfig for per-call overrides (http, vault).
     pub async fn authorize(
         &self,
         request: PaymentServiceAuthorizeRequest,
         metadata: &HashMap<String, String>,
-        ffi_options: Option<FfiOptions>,
+        options: Option<RequestConfig>,
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
-        let ffi_request = build_ffi_request(request.clone(), metadata)?;
+        use connector_service_ffi::handlers::payments::{
+            authorize_req_handler, authorize_res_handler,
+        };
 
-        // Resolve FFI options (prefer call-specific override)
-        let ffi = ffi_options.or(self.options.ffi);
-        let test_mode = ffi
-            .as_ref()
-            .and_then(|f| f.env.as_ref())
-            .map(|e| e.test_mode);
+        // 1. Resolve final configuration
+        let ffi_options = self.resolve_ffi_options(&options);
+        let merged_http = self.resolve_http_options(options.as_ref());
 
-        // 1. Build the connector HTTP request
-        let connector_request = authorize_req_handler(ffi_request, test_mode)
+        let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
+        let environment = Some(grpc_api_types::payments::Environment::try_from(
+            ffi_options.environment,
+        )?);
+
+        // 2. Build the connector HTTP request via core handler
+        let connector_request = authorize_req_handler(ffi_request, environment)
             .map_err(|e| format!("authorize_req_handler failed: {:?}", e))?
             .ok_or("No connector request generated")?;
 
-        // 2. Resolve the client
-        let client = &self.http_client;
-
-        // 3. Execute HTTP
+        // 3. Execute HTTP using the instance-owned client and potential overrides
         let (body, boundary) = connector_request
             .body
             .as_ref()
@@ -121,60 +238,212 @@ impl ConnectorClient {
             body,
         };
 
-        let http_response = client.execute(http_req).await?;
+        let http_response = self
+            .http_client
+            .execute(http_req, Some(merged_http))
+            .await?;
 
         // 4. Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();
         for (key, value) in &http_response.headers {
-            if let Ok(name) = http::header::HeaderName::from_bytes(key.as_bytes()) {
-                if let Ok(val) = http::header::HeaderValue::from_bytes(value.as_bytes()) {
+            let key_bytes: &[u8] = key.as_bytes();
+            let val_bytes: &[u8] = value.as_bytes();
+            if let Ok(name) = http::header::HeaderName::from_bytes(key_bytes) {
+                if let Ok(val) = http::header::HeaderValue::from_bytes(val_bytes) {
                     header_map.insert(name, val);
                 }
             }
         }
 
         let response = Response {
-            headers: if header_map.is_empty() {
-                None
-            } else {
-                Some(header_map)
-            },
+            headers: Some(header_map),
             response: bytes::Bytes::from(http_response.body),
             status_code: http_response.status_code,
         };
 
-        // 5. Parse response via authorize_res_handler
-        let ffi_request_for_res = build_ffi_request(request, metadata)?;
-        match authorize_res_handler(ffi_request_for_res, response, test_mode) {
+        // 5. Parse response via core handler
+        let ffi_request_for_res = build_ffi_request(request, metadata, &ffi_options)?;
+        match authorize_res_handler(ffi_request_for_res, response, environment) {
             Ok(auth_response) => Ok(auth_response),
             Err(error_response) => {
                 Err(format!("Authorization failed: {:?}", error_response).into())
             }
         }
     }
+
+    // ── Payment flows (generated via impl_flow_method!) ──────────────────────
+
+    impl_flow_method!(
+        capture,
+        PaymentServiceCaptureRequest,
+        PaymentServiceCaptureResponse,
+        capture_req_handler,
+        capture_res_handler
+    );
+    impl_flow_method!(
+        refund,
+        PaymentServiceRefundRequest,
+        RefundResponse,
+        refund_req_handler,
+        refund_res_handler
+    );
+    impl_flow_method!(
+        void,
+        PaymentServiceVoidRequest,
+        PaymentServiceVoidResponse,
+        void_req_handler,
+        void_res_handler
+    );
+    impl_flow_method!(
+        get,
+        PaymentServiceGetRequest,
+        PaymentServiceGetResponse,
+        get_req_handler,
+        get_res_handler
+    );
+    impl_flow_method!(
+        setup_recurring,
+        PaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse,
+        setup_recurring_req_handler,
+        setup_recurring_res_handler
+    );
+    impl_flow_method!(
+        reverse,
+        PaymentServiceReverseRequest,
+        PaymentServiceReverseResponse,
+        reverse_req_handler,
+        reverse_res_handler
+    );
+    impl_flow_method!(
+        create_order,
+        PaymentServiceCreateOrderRequest,
+        PaymentServiceCreateOrderResponse,
+        create_order_req_handler,
+        create_order_res_handler
+    );
+
+    // ── Recurring / tokenization ──────────────────────────────────────────────
+    // Note: the probe data uses "recurring_charge" as the flow key; the FFI handler is "charge".
+    impl_flow_method!(
+        recurring_charge,
+        RecurringPaymentServiceChargeRequest,
+        RecurringPaymentServiceChargeResponse,
+        charge_req_handler,
+        charge_res_handler
+    );
+    impl_flow_method!(
+        tokenize,
+        PaymentMethodServiceTokenizeRequest,
+        PaymentMethodServiceTokenizeResponse,
+        tokenize_req_handler,
+        tokenize_res_handler
+    );
+
+    // ── Customer management ───────────────────────────────────────────────────
+    // Note: the probe data uses "create_customer" as the flow key; the FFI handler is "create".
+    impl_flow_method!(
+        create_customer,
+        CustomerServiceCreateRequest,
+        CustomerServiceCreateResponse,
+        create_req_handler,
+        create_res_handler
+    );
+
+    // ── Dispute flows ─────────────────────────────────────────────────────────
+    // Note: probe data keys are "dispute_accept", "dispute_defend", "dispute_submit_evidence".
+    impl_flow_method!(
+        dispute_accept,
+        DisputeServiceAcceptRequest,
+        DisputeServiceAcceptResponse,
+        accept_req_handler,
+        accept_res_handler
+    );
+    impl_flow_method!(
+        dispute_defend,
+        DisputeServiceDefendRequest,
+        DisputeServiceDefendResponse,
+        defend_req_handler,
+        defend_res_handler
+    );
+    impl_flow_method!(
+        dispute_submit_evidence,
+        DisputeServiceSubmitEvidenceRequest,
+        DisputeServiceSubmitEvidenceResponse,
+        submit_evidence_req_handler,
+        submit_evidence_res_handler
+    );
+
+    // ── Authentication flows ──────────────────────────────────────────────────
+    impl_flow_method!(
+        create_access_token,
+        MerchantAuthenticationServiceCreateAccessTokenRequest,
+        MerchantAuthenticationServiceCreateAccessTokenResponse,
+        create_access_token_req_handler,
+        create_access_token_res_handler
+    );
+    impl_flow_method!(
+        create_session_token,
+        MerchantAuthenticationServiceCreateSessionTokenRequest,
+        MerchantAuthenticationServiceCreateSessionTokenResponse,
+        create_session_token_req_handler,
+        create_session_token_res_handler
+    );
+    impl_flow_method!(
+        pre_authenticate,
+        PaymentMethodAuthenticationServicePreAuthenticateRequest,
+        PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        pre_authenticate_req_handler,
+        pre_authenticate_res_handler
+    );
+    impl_flow_method!(
+        authenticate,
+        PaymentMethodAuthenticationServiceAuthenticateRequest,
+        PaymentMethodAuthenticationServiceAuthenticateResponse,
+        authenticate_req_handler,
+        authenticate_res_handler
+    );
+    impl_flow_method!(
+        post_authenticate,
+        PaymentMethodAuthenticationServicePostAuthenticateRequest,
+        PaymentMethodAuthenticationServicePostAuthenticateResponse,
+        post_authenticate_req_handler,
+        post_authenticate_res_handler
+    );
 }
 
-pub fn build_ffi_request(
-    payload: PaymentServiceAuthorizeRequest,
+/// Internal helper to build the context-heavy FfiRequestData from raw inputs.
+pub fn build_ffi_request<T>(
+    payload: T,
     metadata: &HashMap<String, String>,
-) -> Result<FfiRequestData<PaymentServiceAuthorizeRequest>, Box<dyn Error>> {
-    let connector_val = metadata.get("connector").ok_or("Missing 'connector'")?;
-    let auth_type_json = metadata
-        .get("connector_auth_type")
-        .ok_or("Missing 'connector_auth_type'")?;
-    let auth_json: serde_json::Value = serde_json::from_str(auth_type_json)?;
+    options: &FfiOptions,
+) -> Result<FfiRequestData<T>, Box<dyn Error>> {
+    let proto_config = options
+        .connector_config
+        .as_ref()
+        .ok_or("Missing connector_config in FfiOptions")?;
 
-    let obj = serde_json::json!({
-        "connector": connector_val,
-        "connector_auth_type": auth_json,
-    });
+    let config_variant = proto_config
+        .config
+        .as_ref()
+        .ok_or("Missing config variant in ConnectorSpecificConfig")?;
 
-    let extracted_metadata: FfiMetadataPayload = serde_json::from_value(obj)?;
-    let masked_metadata = ffi_headers_to_masked_metadata(metadata)?;
+    let connector =
+        domain_types::connector_types::ConnectorEnum::foreign_try_from(config_variant.clone())
+            .map_err(|e| format!("Connector mapping failed: {e}"))?;
+
+    let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
+        .map_err(|e| format!("Connector config mapping failed: {e}"))?;
+
+    let masked_metadata = ffi_headers_to_masked_metadata(metadata)
+        .map_err(|e| format!("Metadata mapping failed: {:?}", e))?;
 
     Ok(FfiRequestData {
         payload,
-        extracted_metadata,
+        extracted_metadata: FfiMetadataPayload {
+            connector,
+            connector_config,
+        },
         masked_metadata: Some(masked_metadata),
     })
 }
