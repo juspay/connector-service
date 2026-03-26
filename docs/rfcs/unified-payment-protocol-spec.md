@@ -10,7 +10,7 @@
 
 ## 1. Abstract
 
-The Unified Payment Protocol (UPP) defines a standardized, connector-agnostic interface for processing payments across 110+ payment processors and 100+ payment method types. It provides a single gRPC-based API surface that normalizes the lifecycle of payments — from authorization through capture, refund, dispute, and recurring billing — while abstracting away connector-specific behaviors behind a consistent set of services, messages, and state machines.
+The Unified Payment Protocol (UPP) defines a standardized, connector-agnostic interface for processing payments across 76 payment processors and 25+ payment method types. It provides a single gRPC-based API surface that normalizes the lifecycle of payments — from authorization through capture, refund, dispute, and recurring billing — while abstracting away connector-specific behaviors behind a consistent set of services, messages, and state machines.
 
 This document specifies the protocol's architecture, service contracts, message schemas, state models, and behavioral semantics.
 
@@ -100,7 +100,7 @@ UPP is structured as a set of gRPC services that collectively manage the full pa
                               │
                     ┌─────────┴──────────┐
                     │  Connector Layer   │
-                    │  (110+ connectors) │
+                    │  (76 connectors) │
                     └────────────────────┘
 ```
 
@@ -828,7 +828,7 @@ message L2L3Data {
 
 ## 14. Supported Connectors
 
-UPP supports 110+ payment connectors including:
+UPP supports 76 payment connectors including:
 
 **Global processors:** Stripe, Adyen, Braintree, PayPal, Square, Worldpay, CyberSource, Fiserv, JP Morgan, Wells Fargo, Bank of America, TSYS, Elavon, Barclaycard
 
@@ -877,7 +877,7 @@ Each connector implements a subset of UPP services based on its capabilities. Th
 
 3. **State Round-Tripping**: `ConnectorState` enables multi-step flows by carrying session-scoped data (tokens, IDs) between requests without server-side session storage.
 
-4. **Exhaustive Payment Coverage**: 100+ payment method types organized into a structured taxonomy, from traditional cards to crypto and regional vouchers.
+4. **Exhaustive Payment Coverage**: 25+ payment method types organized into a structured taxonomy, from traditional cards to crypto and regional vouchers.
 
 5. **Secure by Default**: Sensitive data is structurally protected via `SecretString`, not by convention.
 
@@ -892,7 +892,7 @@ Each connector implements a subset of UPP services based on its capabilities. Th
 ## Appendix A: Connector List
 
 <details>
-<summary>Full connector enum (110+ connectors)</summary>
+<summary>Full connector enum (76 connectors)</summary>
 
 ACH, ADYEN, AIRWALLEX, AUTHIPAY, AUTHORIZED_DOT_NET, BAMBORA, BANK_OF_AMERICA, BARCLAYCARD, BILLWERK, BLUESNAP, BOA, BRAINTREE, CALIDA, CASHFREE, CASHTOCODE, CELERO, CHECKOUT, COINBASE, COINGATE, CRYPTOPAY, CYBERSOURCE, DATATRANS, DLOCAL, EBANX, ELAVON, EWAY, FISERV, FISERV_EMEA, FORTE, GETNET, GIGADAT, GLOBALPAY, GLOBEPAY, GOCARDLESS, HELCIM, HIPAY, IATAPAY, ITAU_BANK, JPMORGAN, KLARNA, LOONIO, MERCADOPAGO, MIFINITY, MOLLIE, MULTISAFEPAY, NEXIXPAY, NOMUPAY, NOON, NOVALNET, NUVEI, PAYBOX, PAYEEZY, PAYME, PAYONEER, PAYPAL, PAYSAFE, PAYU, PHONEPE, PLAID, POWERTRANZ, PROPHETPAY, RAPYD, RAZORPAY, REDSYS, REVOLV3, REVOLUT, SCREENSTREAM, SHIFT4, SILVERFLOW, SQUARE, STAX, STRIPE, TAXJAR, THREEDSECUREIO, TRUSTPAY, TRUSTPAYMENTS, TSYS, UNIFIED_AUTHENTICATION, VOLT, WELLSFARGO, WELLSFARGO_VANTIV, WISE, WORLDPAY, WORLDPAY_XML, XENDIT, ZIFT, and more.
 

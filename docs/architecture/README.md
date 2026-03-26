@@ -17,7 +17,7 @@ This problem exists in other domains too, but solved with well maintained develo
 
 **But for payments, no such equivalent exists for developers.**
 
-Prism is the unified abstraction layer for payment processors—giving you one API, one set of types, and one mental model for 100+ payment connectors.
+Prism is the unified abstraction layer for payment processors—giving you one API, one set of types, and one mental model for 76 payment connectors.
 
 ## Architecture Components
 
@@ -50,7 +50,7 @@ The Prism supports a three layered architecture, each solving a purpose. The arc
 │                                                                            │
 │  ┌────────────────────────────────────┐    ┌────────────────────────────┐  │
 │  │           gRPC Server              │    │    Connector Adapters      │  │
-│  │                                    │    │    (100+ connectors)       │  │
+│  │                                    │    │    (76 connectors)       │  │
 │  │  ┌─────────┐ ┌─────────┐           │    │                            │  │
 │  │  │ Payment │ │ Refund  │           │───▶│  ┌─────────┐  ┌─────────┐  │  │
 │  │  │ Service │ │ Service │           │    │  │ Stripe  │  │  Adyen  │  │  │
@@ -82,7 +82,7 @@ The Prism supports a three layered architecture, each solving a purpose. The arc
 |-----------|-------------------|--------------|
 | **Interface Layer** | Developers can think in their language's patterns while using the unified payments grammar. You use `client.payments.authorize()` with idiomatic types in your codebase | Node.js, Python, Java, .NET, Go, Haskell |
 | **Binding Layer** | Each language needs native-performance gRPC with seamless transport without language bridges; handles serialization | tonic, grpcio, grpc-dotnet, go-grpc |
-| **Core Layer** | Single source of truth for payment logic with freedom to use Prism as a separate microservice. One implementation serves all languages; also include connector adapters maintaining the request response mapping to 100+ processors from the Proto | Rust, tonic, protocol buffers |
+| **Core Layer** | Single source of truth for payment logic with freedom to use Prism as a separate microservice. One implementation serves all languages; also include connector adapters maintaining the request response mapping to 76 processors from the Proto | Rust, tonic, protocol buffers |
 
 ### Data Flow
 
