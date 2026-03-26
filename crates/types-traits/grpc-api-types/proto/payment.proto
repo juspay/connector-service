@@ -1502,9 +1502,6 @@ message SessionToken {
     GpaySessionTokenResponse google_pay = 1;
     PaypalSessionTokenResponse paypal = 2;
     ApplepaySessionTokenResponse apple_pay = 3;
-    // TODO: ConnectorSessionTokenResponse is not a wallet session token.
-    // It should be decoupled from this oneof into its own field on
-    // PaymentServiceCreateOrderResponse. See: https://github.com/juspay/hyperswitch-prism/issues/817
     ConnectorSessionTokenResponse connector = 4;
   }
 }

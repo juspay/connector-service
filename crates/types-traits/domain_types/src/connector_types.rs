@@ -3329,7 +3329,10 @@ pub enum SessionToken {
     Paypal(Box<PaypalSessionTokenResponse>),
     /// The session response structure for Apple Pay
     ApplePay(Box<ApplepaySessionTokenResponse>),
-    /// The session response structure for connector-specific session tokens (e.g. client_secret)
+    /// The session response structure for connector-specific session tokens (e.g. client_secret).
+    /// TODO: This is not a wallet session token and should be decoupled from SessionToken
+    /// into its own field on PaymentCreateOrderResponse.
+    /// See: https://github.com/juspay/hyperswitch-prism/issues/817
     Connector(Box<ConnectorSessionTokenResponse>),
 }
 
