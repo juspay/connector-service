@@ -1472,7 +1472,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 Ok(apple_pay_wallet_data)
             }
-            
+
             WalletData::PaypalRedirect(_)
             | WalletData::AmazonPayRedirect(_)
             | WalletData::Paze(_)
