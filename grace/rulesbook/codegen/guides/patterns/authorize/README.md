@@ -29,6 +29,8 @@ authorize/
 │   └── pattern_authorize_reward.md    # Reward/loyalty points
 ├── mobile_payment/
 │   └── pattern_authorize_mobile_payment.md # Mobile carrier billing
+├── net_banking/
+│   └── pattern_authorize_net_banking.md   # Net banking / Internet banking (India)
 ├── format_specific/
 │   └── (reserved for format-specific patterns: XML, Form-encoded, etc.)
 └── generic/
@@ -50,6 +52,7 @@ authorize/
 | `crypto/` | `pattern_authorize_crypto.md` | Cryptocurrency | Coinbase, etc. |
 | `reward/` | `pattern_authorize_reward.md` | Loyalty points, rewards | Various |
 | `mobile_payment/` | `pattern_authorize_mobile_payment.md` | Carrier billing, mobile wallets | Various |
+| `net_banking/` | `pattern_authorize_net_banking.md` | Net banking / Internet banking (India) | Razorpay, Cashfree, PhonePe, Paytm |
 | `generic/` | `pattern_authorize.md` | Legacy reference pattern | N/A |
 
 ## 🎯 Usage Guide
@@ -96,6 +99,9 @@ implement authorize flow for [ConnectorName] using authorize/reward/pattern_auth
 
 # Mobile payment
 implement authorize flow for [ConnectorName] using authorize/mobile_payment/pattern_authorize_mobile_payment.md
+
+# Net banking
+implement authorize flow for [ConnectorName] using authorize/net_banking/pattern_authorize_net_banking.md
 ```
 
 ## 🔄 Cross-Cutting Concerns
@@ -123,6 +129,7 @@ Based on `payment_methods.proto` categorization:
 | Bank Transfer | 90-99 | `bank_transfer/` |
 | Direct Debit | 100-109 | `bank_debit/` |
 | BNPL | 110-119 | `bnpl/` |
+| Net Banking | 120-129 | `net_banking/` |
 | Gift Cards | 130-139 | `gift_card/` |
 
 ## 🔗 Related Patterns
