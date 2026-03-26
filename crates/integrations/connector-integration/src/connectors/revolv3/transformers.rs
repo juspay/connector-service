@@ -9,7 +9,6 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    router_request_types::AuthenticationData,
     errors,
     payment_method_data::{
         Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes,
@@ -17,6 +16,7 @@ use domain_types::{
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    router_request_types::AuthenticationData,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -273,30 +273,26 @@ impl From<BillingDescriptor> for Revolv3DynamicDescriptor {
     }
 }
 
-
-
-impl
-    TryFrom<
-        &AuthenticationData
-    > for Revolv3ThreeDSData
-{
+impl TryFrom<&AuthenticationData> for Revolv3ThreeDSData {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: &AuthenticationData,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: &AuthenticationData) -> Result<Self, Self::Error> {
         Ok(Self {
-            cavv: item.cavv.clone().ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "authentication_data.cavv",
-            })?,
+            cavv: item
+                .cavv
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "authentication_data.cavv",
+                })?,
             xid: item.acs_transaction_id.clone(),
             ds_transaction_id: item.ds_trans_id.clone(),
-            three_ds_version: item.message_version.clone().map(|version| version.to_string()),
+            three_ds_version: item
+                .message_version
+                .clone()
+                .map(|version| version.to_string()),
         })
     }
 }
-
-
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -336,9 +332,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?,
         };
 
-        let three_ds =  item.router_data
+        let three_ds = item
+            .router_data
             .request
-            .authentication_data.as_ref().map(|auth_data| Revolv3ThreeDSData::try_from(auth_data)).transpose()?;
+            .authentication_data
+            .as_ref()
+            .map(Revolv3ThreeDSData::try_from)
+            .transpose()?;
 
         let amount = Revolv3AmountData {
             value: item
