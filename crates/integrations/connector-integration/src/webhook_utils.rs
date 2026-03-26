@@ -2,7 +2,7 @@ use common_enums::WebhookTransformationStatus;
 use domain_types::{
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;

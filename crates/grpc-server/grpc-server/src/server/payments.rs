@@ -1471,7 +1471,7 @@ impl PaymentService for Payments {
                             &config,
                             payload.clone(),
                             metadata_payload.connector,
-                            metadata_payload.connector_auth_type.clone(),
+                            metadata_payload.connector_config.clone(),
                             metadata,
                             &metadata_payload,
                             &service_name,
