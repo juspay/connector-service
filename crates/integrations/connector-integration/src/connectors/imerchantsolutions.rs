@@ -3,7 +3,12 @@ pub mod transformers;
 use std::{self, fmt::Debug};
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    events,
+    ext_traits::ByteSliceExt,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -326,11 +331,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code,
-            message: response.message.clone(),
-            reason: Some(response.message),
+            code: response.code.unwrap_or(NO_ERROR_CODE.to_string()),
+            message: response
+                .message
+                .clone()
+                .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+            reason: response.message,
             attempt_status: None,
-            connector_transaction_id: Some(response.details.psp_reference),
+            connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
@@ -391,12 +399,12 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            let connector_payment_id = req
+            let psp_reference = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{base_url}/payments/capture?paymentId={connector_payment_id}"))
+            Ok(format!("{base_url}/payments/capture?pspReference={psp_reference}"))
         }
     }
 );
@@ -529,7 +537,7 @@ macros::macro_connector_implementation!(
                 .into());
             }
             Ok(format!(
-                "{base_url}/refunds?paymentId={transaction_id}",
+                "{base_url}/refunds?pspReference={transaction_id}",
             ))
         }
     }

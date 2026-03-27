@@ -28,19 +28,9 @@ pub struct ImerchantsolutionsAuthType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ImerchantsolutionsErrorResponse {
     pub error: String,
-    pub message: String,
-    pub code: String,
-    pub details: ImerchantsolutionsErrorDetails,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ImerchantsolutionsErrorDetails {
-    pub status: String,
-    pub error_code: String,
-    pub message: String,
-    pub error_type: String,
-    pub psp_reference: String,
+    pub message: Option<String>,
+    pub code: Option<String>,
+    pub suggestion: Option<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for ImerchantsolutionsAuthType {
@@ -67,7 +57,6 @@ pub struct ImerchantsolutionsPaymentsRequestData<T: PaymentMethodDataTypes> {
     telephone_number: Option<Secret<String>>,
     billing: Option<AddressDetails>,
     delivery_address: Option<AddressDetails>,
-    store_payment_method: Option<bool>,
     manual_capture: bool,
 }
 
@@ -77,6 +66,7 @@ struct CardDetails<T: PaymentMethodDataTypes> {
     cvv: Secret<String>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
+    holder: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -128,6 +118,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     cvv: card_data.card_cvc.clone(),
                     expiry_month: card_data.get_card_expiry_month_2_digit()?,
                     expiry_year: card_data.get_expiry_year_4_digit(),
+                    holder: card_data.get_optional_cardholder_name(),
                 };
                 let shopper_email = item.router_data.request.get_optional_email().or_else(|| {
                     item.router_data
@@ -205,7 +196,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_optional_billing_phone_number(),
                     billing,
                     delivery_address,
-                    store_payment_method: None,
                     manual_capture: !item.router_data.request.is_auto_capture()?,
                 })
             }
@@ -259,13 +249,15 @@ enum ResultCode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 enum ImerchantsolutionsPaymentStatus {
     Authorised,
     Authorized,
     Captured,
     Pending,
     Refused,
+    PartiallyRefunded,
+    Refunded,
 }
 
 impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
@@ -284,7 +276,7 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Se
                 reason: None,
                 status_code: item.http_code,
                 attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.payment_id),
+                connector_transaction_id: Some(item.response.psp_reference),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
@@ -306,13 +298,13 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Se
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
-                        item.response.payment_id.clone(),
+                        item.response.psp_reference.clone(),
                     ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.psp_reference.clone()),
+                    connector_response_reference_id: Some(item.response.payment_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
@@ -364,7 +356,7 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>
                 reason: None,
                 status_code: item.http_code,
                 attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.payment_id),
+                connector_transaction_id: Some(item.response.psp_reference),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
@@ -386,13 +378,13 @@ impl<F, T> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
-                        item.response.payment_id.clone(),
+                        item.response.psp_reference.clone(),
                     ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.psp_reference.clone()),
+                    connector_response_reference_id: Some(item.response.payment_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
@@ -426,7 +418,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            psp_reference: "".to_string(), // need to know how to retrieve connector_response_reference_id in Void flow
+            psp_reference: item.router_data.request.connector_transaction_id,
             reason: item.router_data.request.cancellation_reason.clone(),
         })
     }
@@ -438,7 +430,7 @@ pub struct ImerchantsolutionsVoidResponseData {
     success: bool,
     psp_reference: String,
     original_reference: String,
-    status: String, // need to know the enum variats
+    status: String, // need to know the enum variants
     message: Option<String>,
 }
 
@@ -499,8 +491,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ImerchantsolutionsCaptureRequestData {
-    payment_id: String,
-    // psp_reference: String, // need to know how to retrieve connector_response_reference_id in Capture flow
+    psp_reference: String,
     amount: MinorUnit,
     currency: Currency,
 }
@@ -521,7 +512,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_id = item
+        let psp_reference = item
             .router_data
             .request
             .connector_transaction_id
@@ -529,8 +520,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            payment_id,
-            // psp_reference:
+            psp_reference,
             amount: item.router_data.request.minor_amount_to_capture,
             currency: item.router_data.request.currency,
         })
@@ -600,8 +590,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ImerchantsolutionsRefundRequestData {
-    payment_id: String,
-    // psp_reference: String, // need to know how to retrieve connector_response_reference_id in Refunds flow
+    psp_reference: String,
     amount: MinorUnit,
     currency: Currency,
     reference: String,
@@ -625,7 +614,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            payment_id: item.router_data.request.connector_transaction_id.clone(),
+            psp_reference: item.router_data.request.connector_transaction_id.clone(),
             amount: item.router_data.request.minor_refund_amount,
             currency: item.router_data.request.currency,
             reference: item.router_data.request.refund_id.clone(),
@@ -668,14 +657,14 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
                 reason: None,
                 status_code: item.http_code,
                 attempt_status: None,
-                connector_transaction_id: Some(item.response.psp_reference.clone()), // need to check
+                connector_transaction_id: Some(item.response.original_reference.clone()),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
             })
         } else {
             Ok(RefundsResponseData {
-                connector_refund_id: item.response.psp_reference.to_string(), // need to check
+                connector_refund_id: item.response.original_reference.to_string(), // this psp_reference is each refund's id
                 refund_status,
                 status_code: item.http_code,
             })
@@ -730,14 +719,14 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
                 reason: None,
                 status_code: item.http_code,
                 attempt_status: None,
-                connector_transaction_id: Some(item.response.payment_id.clone()),
+                connector_transaction_id: Some(item.response.psp_reference.clone()),
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
             })
         } else {
             Ok(RefundsResponseData {
-                connector_refund_id: item.response.payment_id.clone(),
+                connector_refund_id: item.response.psp_reference.clone(), // this psp_reference is original psp reference that we got in payments response
                 refund_status: status,
                 status_code: item.http_code,
             })
@@ -754,7 +743,9 @@ fn get_attempt_status(item: ImerchantsolutionsPaymentStatus) -> AttemptStatus {
     match item {
         ImerchantsolutionsPaymentStatus::Authorised
         | ImerchantsolutionsPaymentStatus::Authorized => AttemptStatus::Authorized,
-        ImerchantsolutionsPaymentStatus::Captured => AttemptStatus::Charged,
+        ImerchantsolutionsPaymentStatus::Captured
+        | ImerchantsolutionsPaymentStatus::PartiallyRefunded
+        | ImerchantsolutionsPaymentStatus::Refunded => AttemptStatus::Charged,
         ImerchantsolutionsPaymentStatus::Pending => AttemptStatus::Pending,
         ImerchantsolutionsPaymentStatus::Refused => AttemptStatus::Failure,
     }
