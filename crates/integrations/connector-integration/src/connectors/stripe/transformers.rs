@@ -2918,7 +2918,7 @@ pub fn get_connector_metadata(
         })
         .transpose()
         .change_context(
-            crate::utils::response_handling_fail(http_status, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(http_status, "stripe"),
         )?;
     Ok(next_action_response)
 }
@@ -3053,7 +3053,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
                 .change_context(
-                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
                 )?;
 
         let response_integrity_object = PaymentSynIntegrityObject {
@@ -4068,7 +4068,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)
                 .change_context(
-                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
                 )?;
 
         let response_integrity_object = AuthoriseIntegrityObject {
@@ -4082,7 +4082,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: item.http_code,
         })
         .change_context(
-            crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
         );
 
         new_router_data.map(|mut router_data| {
@@ -4117,7 +4117,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             .map(|amount| StripeAmountConvertor::convert_back(amount, currency_enum))
             .transpose()
             .change_context(
-                crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
             )?;
 
         let response_integrity_object =
@@ -4132,7 +4132,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             http_code: item.http_code,
         })
         .change_context(
-            crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
         );
 
         new_router_data.map(|mut router_data| {
@@ -4372,7 +4372,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
                 .change_context(
-                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
                 )?;
 
         let response_integrity_object = RefundIntegrityObject {

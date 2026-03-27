@@ -154,7 +154,7 @@ pub trait BridgeRequestResponse: Send + Sync {
         >,
     {
         RouterDataType::<Self::ConnectorInputData>::try_from(response).change_context(
-            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
         )
     }
 }
@@ -328,9 +328,9 @@ macro_rules! expand_fn_handle_response {
             let response_bytes = self
                 .preprocess_response_bytes(data, res.response, res.status_code)
                 .change_context(
-                    crate::utils::response_handling_fail(
+                    crate::utils::response_handling_fail_for_connector(
                         res.status_code,
-                    "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    "macros"),
                 )?;
 
             let response_body = bridge.response(response_bytes, res.status_code)?;
@@ -873,14 +873,14 @@ macro_rules! impl_templating_mixed {
 
                     if bytes.is_empty() {
                         return Err(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -888,7 +888,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
                         )
                         .attach_printable("Failed to parse XML response")
                 }
@@ -924,14 +924,14 @@ macro_rules! impl_templating_mixed {
 
                     if bytes.is_empty() {
                         return Err(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -939,7 +939,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            crate::utils::response_handling_fail(status_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
                         )
                         .attach_printable("Failed to parse XML response")
                 }
@@ -1210,7 +1210,7 @@ macro_rules! create_amount_converter_wrapper {
                             ).change_context(domain_types::errors::IntegrationError::InvalidDataFormat {
                                 field_name: "amount",
                                 context: Default::default()
-        })
+                          })
                         }
 
                         /// Convert connector amount back to MinorUnit.
@@ -1219,7 +1219,7 @@ macro_rules! create_amount_converter_wrapper {
                         /// ```
                         /// // In response transformation:
                         /// let amount = Convertor::convert_back(response.amount, currency)
-                        ///     .change_context(crate::utils::response_handling_fail(http_code, "macros: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?;
+                        ///     .change_context(crate::utils::response_handling_fail_for_connector(http_code, "macros"))?;
                         pub fn convert_back(
                             amount: common_utils::types::$amount_type,
                             currency: common_enums::Currency,

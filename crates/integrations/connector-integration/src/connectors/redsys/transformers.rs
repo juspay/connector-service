@@ -422,7 +422,7 @@ fn get_redsys_attempt_status(
                 Ok(common_enums::AttemptStatus::Failure)
             }
             error => Err(Report::from(
-                utils::response_handling_fail(http_status, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(http_status, "redsys"),
             )
             .attach_printable(format!("Received Unknown Status:{error}"))),
         }
@@ -438,7 +438,7 @@ fn refund_status_from_ds_response(
         "9999" => Ok(common_enums::RefundStatus::Pending),
         "0950" | "0172" | "174" => Ok(common_enums::RefundStatus::Failure),
         unknown_status => Err(Report::from(
-            utils::response_handling_fail(http_status, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(http_status, "redsys"),
         )
         .attach_printable(format!("Received unknown refund status:{unknown_status}"))),
     }
@@ -569,7 +569,7 @@ fn build_threeds_invoke_response(
     let three_ds_data_string = threeds_invoke_request
         .encode_to_string_of_json()
         .change_context(
-            utils::response_handling_fail(http_status, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(http_status, "redsys"),
         )?;
 
     let three_ds_method_data = BASE64_ENGINE.encode(&three_ds_data_string);
@@ -584,11 +584,11 @@ fn build_threeds_invoke_response(
 
     // Serialize to JSON, then deserialize to HashMap<String, String>
     let json = serde_json::to_value(&three_ds_invoke_data).change_context(
-        utils::response_handling_fail(http_status, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+        utils::response_handling_fail_for_connector(http_status, "redsys"),
     )?;
     let form_fields: std::collections::HashMap<String, String> = serde_json::from_value(json)
         .change_context(
-            utils::response_handling_fail(http_status, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(http_status, "redsys"),
         )?;
 
     let redirect_form = Some(Box::new(router_response_types::RedirectForm::Form {
@@ -1791,7 +1791,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                 (item.router_data.resource_common_data.status, response)
             }
             (Some(_), Some(_)) | (None, None) => {
-                Err(utils::response_handling_fail(item.http_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?
+                Err(utils::response_handling_fail_for_connector(item.http_code, "redsys"))?
             }
         };
 
@@ -1963,7 +1963,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                 })
             }
             (Some(_), Some(_)) | (None, None) => {
-                Err(utils::response_handling_fail(item.http_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?
+                Err(utils::response_handling_fail_for_connector(item.http_code, "redsys"))?
             }
         };
 

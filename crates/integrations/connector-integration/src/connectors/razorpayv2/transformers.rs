@@ -593,7 +593,7 @@ impl
             RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
                 // Get the first (and typically only) payment from the collection
                 collection.items.into_iter().next().ok_or(
-                    crate::utils::response_handling_fail(_status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(_status_code, "razorpayv2"),
                 )?
             }
         };
@@ -685,7 +685,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
                 return Err(
-                    crate::utils::response_handling_fail(_status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(_status_code, "razorpayv2"),
                 );
             }
         };

@@ -316,7 +316,7 @@ macros::macro_connector_implementation!(
             let response: PayuSyncResponse = res
                 .response
                 .parse_struct("PayU Sync ErrorResponse")
-                .change_context(crate::utils::response_handling_fail(res.status_code, "payu: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?;
+                .change_context(crate::utils::response_handling_fail_for_connector(res.status_code, "payu"))?;
 
             // Check if PayU returned error status (0 = error)
             if response.status == Some(0) {
@@ -394,7 +394,7 @@ macros::macro_connector_implementation!(
             let response: PayuPaymentResponse = res
                 .response
                 .parse_struct("PayU ErrorResponse")
-                        .change_context(crate::utils::response_handling_fail(res.status_code, "payu: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?;
+                        .change_context(crate::utils::response_handling_fail_for_connector(res.status_code, "payu"))?;
 
             // Check if this is an error response
             if response.error.is_some() {

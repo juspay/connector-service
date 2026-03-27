@@ -926,12 +926,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             notif.additional_data.dispute_status,
         );
 
-        let amount = utils::convert_amount(
+        let amount = utils::convert_amount_for_webhook(
             self.amount_converter_webhooks,
             notif.amount.value,
             notif.amount.currency,
-        )
-        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+        )?;
 
         Ok(
             domain_types::connector_types::DisputeWebhookDetailsResponse {

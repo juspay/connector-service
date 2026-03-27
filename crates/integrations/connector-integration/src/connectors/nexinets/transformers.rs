@@ -374,7 +374,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         let transaction = match item.response.transactions.first() {
             Some(order) => order,
             _ => {
-                Err(crate::utils::response_handling_fail(item.http_code, "nexinets: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?
+                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"))?
             }
         };
         let nexinets_metadata = NexinetsPaymentsMetadata {
@@ -383,7 +383,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             psync_flow: item.response.transaction_type.clone(),
         };
         let connector_metadata = serde_json::to_value(&nexinets_metadata).change_context(
-            crate::utils::response_handling_fail(item.http_code, "nexinets: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"),
         )?;
 
         let redirection_data = item
@@ -397,7 +397,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 ResponseId::ConnectorTransactionId(transaction.transaction_id.clone())
             }
             _ => {
-                Err(crate::utils::response_handling_fail(item.http_code, "nexinets: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?
+                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"))?
             }
         };
         let mandate_reference = item
@@ -527,7 +527,7 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
             psync_flow: item.response.transaction_type.clone(),
         })
         .change_context(
-            crate::utils::response_handling_fail(item.http_code, "nexinets: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"),
         )?;
         let resource_id = match item.response.transaction_type.clone() {
             NexinetsTransactionType::Preauth

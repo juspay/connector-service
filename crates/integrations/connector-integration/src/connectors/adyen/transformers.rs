@@ -4757,7 +4757,7 @@ pub fn get_webhook_response(
     if is_multiple_capture_psync_flow {
         let capture_sync_response_list =
             utils::construct_captures_response_hashmap(vec![response.clone()]).change_context(
-                utils::response_handling_fail(status_code, "adyen: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(status_code, "adyen"),
             )?;
         Ok(AdyenPaymentsResponseData {
             status,

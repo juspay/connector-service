@@ -1014,7 +1014,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             // If http_code != 204 || http_code != 4xx, we dont know any other response scenario yet.
             let response_value: serde_json::Value = serde_json::from_slice(&res.response)
                 .change_context(
-                    crate::utils::response_handling_fail(res.status_code, "cybersource: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(res.status_code, "cybersource"),
                 )?;
             let response_string = response_value.to_string();
 

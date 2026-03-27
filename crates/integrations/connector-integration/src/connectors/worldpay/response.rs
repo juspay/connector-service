@@ -303,7 +303,7 @@ where
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
                 .change_context(
-                    crate::utils::response_handling_fail(http_status, "worldpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(http_status, "worldpay"),
                 )
         })
         .transpose()?;
@@ -312,7 +312,7 @@ where
         .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
             error_stack::Report::new(
-                crate::utils::response_handling_fail(http_status, "worldpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(http_status, "worldpay"),
             )
         })
 }

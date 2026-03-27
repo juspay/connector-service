@@ -334,12 +334,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             dispute.dispute_amount.currency_code,
         )
         .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
-        let amount = domain_types::utils::convert_amount(
+        let amount = domain_types::utils::convert_amount_for_webhook(
             &common_utils::types::StringMinorUnitForConnector,
             amount_minor,
             dispute.dispute_amount.currency_code,
-        )
-        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+        )?;
 
         let status = match details.event_type {
             paypal::PaypalWebhookEventType::CustomerDisputeCreated => {
@@ -639,7 +638,7 @@ macros::create_all_prerequisites!(
         let response: paypal::PaypalOrderErrorResponse = res
             .response
             .parse_struct("Paypal ErrorResponse")
-            .change_context(utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))
+            .change_context(utils::response_handling_fail_for_connector(res.status_code, "paypal"))
             ?;
 
         with_error_response_body!(event_builder, response);
@@ -821,7 +820,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .parse_struct("PaypalAuthResponse")
             .change_context(
-                utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(res.status_code, "paypal"),
             )?;
 
         if let Some(event) = event_builder {
@@ -834,7 +833,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(res.status_code, "paypal"),
         )
     }
 
@@ -890,7 +889,7 @@ macros::macro_connector_implementation!(
                 let response: paypal::PaypalAccessTokenErrorResponse = res
                 .response
                 .parse_struct("Paypal AccessTokenErrorResponse")
-                .change_context(utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?;
+                .change_context(utils::response_handling_fail_for_connector(res.status_code, "paypal"))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -1433,7 +1432,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .parse_struct("PaypalPostAuthenticateResponse")
             .change_context(
-                utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(res.status_code, "paypal"),
             )?;
 
         if let Some(event) = event_builder {
@@ -1446,7 +1445,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(res.status_code, "paypal"),
         )
     }
 
@@ -1571,7 +1570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .parse_struct("PaypalSourceVerificationResponse")
             .change_context(
-                utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(res.status_code, "paypal"),
             )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&verification_response)
@@ -1583,7 +1582,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            utils::response_handling_fail_for_connector(res.status_code, "paypal"),
         )
     }
 
@@ -1755,7 +1754,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("Paypal ErrorResponse")
             .change_context(
-                utils::response_handling_fail(res.status_code, "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                utils::response_handling_fail_for_connector(res.status_code, "paypal"),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -1770,9 +1769,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                         if let Some(description) = &error.description {
                             write!(acc, "description - {description} ;")
                                 .change_context(
-                                    utils::response_handling_fail(
+                                    utils::response_handling_fail_for_connector(
                                         res.status_code,
-                                    "paypal: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                                    "paypal"),
                                 )
                                 .attach_printable("Failed to concatenate error details")
                                 .map(|_| acc)

@@ -235,7 +235,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     router_data.request.currency,
                 )
                 .change_context(
-                    crate::utils::response_handling_fail(http_code, "cryptopay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(http_code, "cryptopay"),
                 )?,
             ),
             None => None,
@@ -378,7 +378,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     router_data.request.currency,
                 )
                 .change_context(
-                    crate::utils::response_handling_fail(http_code, "cryptopay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(http_code, "cryptopay"),
                 )?,
             ),
             None => None,

@@ -516,7 +516,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Parse the inner Response XML
         let response: PaymentResponse = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Map Bambora response code to standard status
@@ -648,7 +648,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
 
         // Parse the inner Response XML
         let response: CaptureResponse = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Map Bambora response code to standard status (0 = Approved)
@@ -767,7 +767,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 
         // Parse the inner QueryResponse XML
         let query_response: QueryResponse = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Check if response element exists
@@ -930,7 +930,7 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
 
         // Parse the inner RefundResponse XML
         let response: RefundResponseInner = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Map Bambora response code to standard refund status (0 = Approved)
@@ -1037,7 +1037,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 
         // Parse the inner QueryResponse XML
         let query_response: QueryResponse = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Check if response element exists
@@ -1269,7 +1269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Parse the inner RegisterSingleCustomerResponse XML
         let response: RegisterSingleCustomerResponseInner =
             inner_xml.as_str().parse_xml().change_context(
-                crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
             )?;
 
         // Map Bambora return_value to status
@@ -1454,7 +1454,7 @@ impl<
 
         // Parse the inner Response XML
         let response: PaymentResponse = inner_xml.as_str().parse_xml().change_context(
-            crate::utils::response_handling_fail(item.http_code, "bamboraapac: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
         )?;
 
         // Map Bambora response code to standard status

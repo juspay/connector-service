@@ -1008,7 +1008,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(crate::utils::response_handling_fail(item.http_code, "fiserv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))
+            .ok_or(crate::utils::response_handling_fail_for_connector(item.http_code, "fiserv"))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;
@@ -1139,7 +1139,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(crate::utils::response_handling_fail(item.http_code, "fiserv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))
+            .ok_or(crate::utils::response_handling_fail_for_connector(item.http_code, "fiserv"))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;

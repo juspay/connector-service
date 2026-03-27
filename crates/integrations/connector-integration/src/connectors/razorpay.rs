@@ -440,9 +440,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             res.response.to_vec(),
                         ))
                         .change_context(
-                            crate::utils::response_handling_fail(
+                            crate::utils::response_handling_fail_for_connector(
                                 res.status_code,
-                            "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            "razorpay"),
                         )
                     }
                     Err(_) => {
@@ -466,9 +466,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             data.request.payment_method_type,
                         ))
                         .change_context(
-                            crate::utils::response_handling_fail(
+                            crate::utils::response_handling_fail_for_connector(
                                 res.status_code,
-                            "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            "razorpay"),
                         )
                     }
                 }
@@ -495,7 +495,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     data.request.payment_method_type,
                 ))
                 .change_context(
-                    crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                    crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
                 )
             }
         }
@@ -606,7 +606,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.response.to_vec(),
         ))
         .change_context(
-            crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
         )
     }
 
@@ -733,7 +733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
             .change_context(
-                crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
             )
     }
 
@@ -814,7 +814,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
-            crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
         )
     }
 
@@ -1001,7 +1001,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
-            crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
         )
     }
 
@@ -1110,7 +1110,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
-            crate::utils::response_handling_fail(res.status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
         )
     }
 

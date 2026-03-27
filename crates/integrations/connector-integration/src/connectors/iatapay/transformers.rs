@@ -378,9 +378,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
                         let metadata_value = serde_json::to_value(metadata_map).change_context(
-                            crate::utils::response_handling_fail(
+                            crate::utils::response_handling_fail_for_connector(
                                 item.http_code,
-                            "iatapay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                            "iatapay"),
                         )?;
                         (Some(metadata_value), None)
                     }

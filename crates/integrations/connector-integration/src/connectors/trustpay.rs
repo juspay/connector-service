@@ -366,12 +366,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_info.amount.currency,
         )
         .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
-        let amount = domain_types::utils::convert_amount(
+        let amount = domain_types::utils::convert_amount_for_webhook(
             &StringMinorUnitForConnector,
             minor_units,
             payment_info.amount.currency,
-        )
-        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+        )?;
 
         Ok(
             domain_types::connector_types::DisputeWebhookDetailsResponse {

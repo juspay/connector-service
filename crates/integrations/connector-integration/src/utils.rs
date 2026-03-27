@@ -139,6 +139,22 @@ pub fn response_handling_fail(
     )
 }
 
+/// Canonical detail prefix for response-handling failures where connector
+/// returned a non-success HTTP status.
+pub fn response_http_status_detail(connector: &str) -> String {
+    format!(
+        "{connector}: connector returned an error HTTP status; check the payment or refund in the connector dashboard."
+    )
+}
+
+/// Convenience helper for the common non-success HTTP status case.
+pub fn response_handling_fail_for_connector(
+    http_status: u16,
+    connector: &str,
+) -> ConnectorResponseTransformationError {
+    response_handling_fail(http_status, response_http_status_detail(connector))
+}
+
 /// Response bytes could not be parsed into the expected response type (JSON/XML, schema drift).
 pub fn response_deserialization_fail(
     http_status: u16,

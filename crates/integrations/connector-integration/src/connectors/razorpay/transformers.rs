@@ -1610,9 +1610,9 @@ impl<F, Req>
                     None => {
                         // Payment ID is null, this is likely an error
                         return Err(error_stack::report!(
-                            crate::utils::response_handling_fail(
+                            crate::utils::response_handling_fail_for_connector(
                                 _status_code
-                            , "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                            , "razorpay")
                         ));
                     }
                 }
@@ -1620,7 +1620,7 @@ impl<F, Req>
             RazorpayUpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
                 return Err(error_stack::report!(
-                    crate::utils::response_handling_fail(_status_code, "razorpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                    crate::utils::response_handling_fail_for_connector(_status_code, "razorpay")
                 ));
             }
         };

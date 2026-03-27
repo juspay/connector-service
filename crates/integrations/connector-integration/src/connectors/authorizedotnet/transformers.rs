@@ -24,7 +24,7 @@ use crate::types::ResponseRouterData;
 type HsInterfacesConnectorRequestError = IntegrationError;
 use std::str::FromStr;
 
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
@@ -2865,7 +2865,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .or(response.customer_payment_profile_id.as_ref())
                 .ok_or_else(|| {
                     error_stack::report!(
-                        crate::utils::response_handling_fail(http_code, "authorizedotnet: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                        crate::utils::response_handling_fail_for_connector(http_code, "authorizedotnet")
                     )
                 })?;
 
@@ -3114,15 +3114,11 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
 }
 
 impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
-    type Error = error_stack::Report<IntegrationError>;
+    type Error = error_stack::Report<WebhookError>;
     fn try_from(item: AuthorizedotnetWebhookObjectId) -> Result<Self, Self::Error> {
         Ok(Self {
             transaction: Some(SyncTransactionResponse {
-                transaction_id: get_trans_id(&item).map_err(|e| {
-                    report!(e).change_context(IntegrationError::not_implemented(
-                        "webhook reference id not found".to_string(),
-                    ))
-                })?,
+                transaction_id: get_trans_id(&item)?,
                 transaction_status: SyncStatus::from(item.event_type),
                 response_code: Some(1),
                 response_reason_code: Some(1),

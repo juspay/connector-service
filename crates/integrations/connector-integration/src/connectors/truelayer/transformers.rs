@@ -610,9 +610,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
             TruelayerPSyncResponseData::WebhookResponse(response) => {
                 let status =
                     get_truelayer_payment_webhook_status(response._type).map_err(|_| {
-                        utils::response_handling_fail(
+                        utils::response_handling_fail_for_connector(
                             item.http_code,
-                        "truelayer: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                        "truelayer")
                     })?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
@@ -823,9 +823,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
                 let status =
                     get_truelayer_refund_webhook_status(webhook_response._type).map_err(|_| {
-                        utils::response_handling_fail(
+                        utils::response_handling_fail_for_connector(
                             item.http_code,
-                        "truelayer: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                        "truelayer")
                     })?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {

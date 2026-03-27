@@ -2200,9 +2200,9 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 Ok(id) => id.to_owned(),
                 Err(_) => {
                     return Err(
-                        crate::utils::response_handling_fail(
+                        crate::utils::response_handling_fail_for_connector(
                             item.http_code,
-                        "checkout: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
+                        "checkout")
                         .into(),
                     );
                 }
@@ -2401,7 +2401,7 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
             .ok_or(
-                crate::utils::response_handling_fail(item.http_code, "checkout: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(item.http_code, "checkout"),
             )?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {

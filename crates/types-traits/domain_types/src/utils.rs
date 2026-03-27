@@ -323,6 +323,16 @@ pub fn convert_amount<T>(
     )
 }
 
+pub fn convert_amount_for_webhook<T>(
+    amount_convertor: &dyn AmountConvertor<Output = T>,
+    amount: MinorUnit,
+    currency: common_enums::Currency,
+) -> core::result::Result<T, error_stack::Report<errors::WebhookError>> {
+    amount_convertor
+        .convert(amount, currency)
+        .change_context(errors::WebhookError::WebhookProcessingFailed)
+}
+
 pub fn convert_back_amount_to_minor_units<T>(
     amount_convertor: &dyn AmountConvertor<Output = T>,
     amount: T,

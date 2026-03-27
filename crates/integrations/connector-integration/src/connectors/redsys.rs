@@ -504,7 +504,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            crate::utils::response_handling_fail(res.status_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+            crate::utils::response_handling_fail_for_connector(res.status_code, "redsys"),
         )?;
 
         Ok(router_data)
@@ -685,7 +685,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 http_code: res.status_code,
             })
             .change_context(
-                crate::utils::response_handling_fail(res.status_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
+                crate::utils::response_handling_fail_for_connector(res.status_code, "redsys"),
             )?;
 
         Ok(router_data)
