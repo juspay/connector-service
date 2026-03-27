@@ -365,7 +365,7 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for IntegrationErro
     }
 }
 
-/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successReponse with error field for gRPC server (payments.rs:820-860).
+/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successResponse with error field for gRPC server (payments.rs:820-860).
 /// **TODO:** Refactor gRPC server to use `ConnectorFlowError → tonic::Status` directly.
 /// **FFI:** Already uses lossless `IntegrationError → grpc_api_types::payments::IntegrationError`.
 impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
@@ -599,7 +599,7 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
     }
 }
 
-/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successReponse with error field for gRPC server.
+/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successResponse with error field for gRPC server.
 /// **TODO:** Refactor gRPC server to use `ConnectorFlowError → tonic::Status` directly.
 /// **FFI:** Already uses lossless `ConnectorResponseTransformationError → grpc_api_types::payments::ConnectorResponseTransformationError`.
 impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseTransformationError {
