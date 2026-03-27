@@ -13,7 +13,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
-    errors::ApiErrorResponse,
+    errors::{ApiErrorResponse, ResponseTransformationErrorContext},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Proxy,
@@ -670,9 +670,16 @@ where
         Ok(data) => {
             data.request
                 .check_integrity(&data.request.clone(), None)
-                .map_err(|_| {
+                .map_err(|err| {
                     report_connector_response_to_flow(error_stack::report!(
-                        ConnectorResponseTransformationError::response_handling_failed_http_status_unknown()
+                        ConnectorResponseTransformationError::IntegrityCheckFailed {
+                            context: ResponseTransformationErrorContext {
+                                http_status_code: None,
+                                additional_context: None,
+                            },
+                            field_names: err.field_names,
+                            connector_transaction_id: err.connector_transaction_id,
+                        }
                     ))
                 })?;
             Ok(data)

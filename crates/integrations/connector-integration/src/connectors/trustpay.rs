@@ -243,19 +243,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             trustpay::handle_webhook_response_incoming_webhook(
                 webhook_response.payment_information.clone(),
                 200,
-            )
-            .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+            )?;
 
-        let (error_code, error_message, error_reason) =
-            if status == common_enums::AttemptStatus::Failure {
-                (
-                    error.as_ref().map(|e| e.code.clone()),
-                    error.as_ref().map(|e| e.message.clone()),
-                    error.as_ref().and_then(|e| e.reason.clone()),
-                )
-            } else {
-                (None, None, None)
-            };
+        let (error_code, error_message, error_reason): (
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ) = if status == common_enums::AttemptStatus::Failure {
+            (
+                error.as_ref().map(|e| e.code.clone()),
+                error.as_ref().map(|e| e.message.clone()),
+                error.as_ref().and_then(|e| e.reason.clone()),
+            )
+        } else {
+            (None, None, None)
+        };
 
         Ok(WebhookDetailsResponse {
             resource_id: webhook_response
@@ -298,10 +300,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             trustpay::handle_webhooks_refund_response_incoming_webhook(
                 webhook_response.payment_information,
                 200,
-            )
-            .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+            )?;
 
-        let (error_code, error_message) =
+        let (error_code, error_message): (Option<String>, Option<String>) =
             if refund_response_data.refund_status == common_enums::RefundStatus::Failure {
                 (
                     error.as_ref().map(|e| e.code.clone()),
@@ -343,12 +344,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .payment_id
             .ok_or_else(|| report!(WebhookError::WebhookReferenceIdNotFound))?;
 
-        let minor_units = domain_types::utils::convert_back_amount_to_minor_units(
+        let minor_units = domain_types::utils::convert_back_amount_to_minor_units_for_webhook(
             &FloatMajorUnitForConnector,
             payment_info.amount.amount,
             payment_info.amount.currency,
-        )
-        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+        )?;
         let amount = domain_types::utils::convert_amount_for_webhook(
             &StringMinorUnitForConnector,
             minor_units,

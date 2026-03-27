@@ -448,6 +448,12 @@ pub enum ConnectorResponseTransformationError {
     UnexpectedResponseError {
         context: ResponseTransformationErrorContext,
     },
+    #[error("Integrity check failed for fields: {field_names}")]
+    IntegrityCheckFailed {
+        context: ResponseTransformationErrorContext,
+        field_names: String,
+        connector_transaction_id: Option<String>,
+    },
 }
 
 /// Returns documentation URL for error codes.
@@ -462,7 +468,8 @@ impl ConnectorResponseTransformationError {
         match self {
             Self::ResponseDeserializationFailed { context }
             | Self::ResponseHandlingFailed { context }
-            | Self::UnexpectedResponseError { context } => context.http_status_code,
+            | Self::UnexpectedResponseError { context }
+            | Self::IntegrityCheckFailed { context, .. } => context.http_status_code,
         }
     }
 
@@ -471,7 +478,8 @@ impl ConnectorResponseTransformationError {
         match self {
             Self::ResponseDeserializationFailed { context }
             | Self::ResponseHandlingFailed { context }
-            | Self::UnexpectedResponseError { context } => context.additional_context.as_deref(),
+            | Self::UnexpectedResponseError { context }
+            | Self::IntegrityCheckFailed { context, .. } => context.additional_context.as_deref(),
         }
     }
 
@@ -480,7 +488,8 @@ impl ConnectorResponseTransformationError {
         match self {
             Self::ResponseDeserializationFailed { context }
             | Self::ResponseHandlingFailed { context }
-            | Self::UnexpectedResponseError { context } => context.clone(),
+            | Self::UnexpectedResponseError { context }
+            | Self::IntegrityCheckFailed { context, .. } => context.clone(),
         }
     }
 
@@ -629,6 +638,8 @@ pub enum WebhookError {
     WebhookVerificationSecretNotFound,
     #[error("Failed while processing webhook")]
     WebhookProcessingFailed,
+    #[error("Failed to convert amount for webhook: {reason}")]
+    WebhookAmountConversionFailed { reason: String },
     #[error("Merchant secret for webhook verification is invalid")]
     WebhookVerificationSecretInvalid,
     #[error("Incoming webhook object reference ID not found")]
@@ -703,7 +714,9 @@ impl ErrorSwitch<ApplicationErrorResponse> for WebhookError {
             Self::WebhooksNotImplemented { .. } => {
                 ApplicationErrorResponse::NotImplemented(api_err("NOT_IMPLEMENTED", 501))
             }
-            Self::WebhookProcessingFailed | Self::WebhookResponseEncodingFailed => {
+            Self::WebhookProcessingFailed
+            | Self::WebhookAmountConversionFailed { .. }
+            | Self::WebhookResponseEncodingFailed => {
                 ApplicationErrorResponse::InternalServerError(api_err("INTERNAL_SERVER_ERROR", 500))
             }
         }

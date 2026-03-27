@@ -319,12 +319,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let amount_minor = domain_types::utils::convert_back_amount_to_minor_units(
+        let amount_minor = domain_types::utils::convert_back_amount_to_minor_units_for_webhook(
             &common_utils::types::StringMajorUnitForConnector,
             dispute.dispute_amount.value,
             dispute.dispute_amount.currency_code,
-        )
-        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
+        )?;
         let amount = domain_types::utils::convert_amount_for_webhook(
             &common_utils::types::StringMinorUnitForConnector,
             amount_minor,

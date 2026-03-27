@@ -24,7 +24,7 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError},
     payment_method_data::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
@@ -811,15 +811,13 @@ pub fn handle_webhook_response_incoming_webhook(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    IntegrationError,
+    WebhookError,
 > {
     let status = match payment_information.status {
         WebhookStatus::Paid => enums::AttemptStatus::Charged,
         WebhookStatus::Rejected => enums::AttemptStatus::AuthorizationFailed,
         WebhookStatus::Refunded | WebhookStatus::Chargebacked | WebhookStatus::Unknown => {
-            return Err(report!(IntegrationError::not_implemented(
-                "unsupported webhook status for payment attempt".to_string(),
-            )));
+            return Err(report!(WebhookError::WebhookProcessingFailed));
         }
     };
     let error = if domain_types::utils::is_payment_failure(status) {
@@ -1951,14 +1949,12 @@ pub fn handle_webhooks_refund_response(
 pub fn handle_webhooks_refund_response_incoming_webhook(
     response: WebhookPaymentInformation,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), IntegrationError> {
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), WebhookError> {
     let refund_status = match response.status {
         WebhookStatus::Paid | WebhookStatus::Refunded => enums::RefundStatus::Success,
         WebhookStatus::Rejected => enums::RefundStatus::Failure,
         WebhookStatus::Chargebacked | WebhookStatus::Unknown => {
-            return Err(report!(IntegrationError::not_implemented(
-                "unsupported webhook status for refund".to_string(),
-            )));
+            return Err(report!(WebhookError::WebhookProcessingFailed));
         }
     };
     let error = match utils::is_refund_failure(refund_status) {
@@ -1987,11 +1983,10 @@ pub fn handle_webhooks_refund_response_incoming_webhook(
         false => None,
     };
     let refund_response_data = RefundsResponseData {
-        connector_refund_id: response.references.payment_id.ok_or(
-            IntegrationError::MissingConnectorRefundID {
-                context: Default::default(),
-            },
-        )?,
+        connector_refund_id: response
+            .references
+            .payment_id
+            .ok_or_else(|| report!(WebhookError::WebhookProcessingFailed))?,
         refund_status,
         status_code,
     };
