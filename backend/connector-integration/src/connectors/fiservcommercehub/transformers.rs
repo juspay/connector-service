@@ -1005,7 +1005,7 @@ impl<F, T> TryFrom<ResponseRouterData<FiservcommercehubAccessTokenResponse, Self
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: combined_token,
-                expires_in: None,
+                expires_in: Some(604_800), // 1 week in seconds
                 token_type: None,
             }),
             ..item.router_data
