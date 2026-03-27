@@ -14,7 +14,7 @@ use domain_types::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        VerifyWebhookSource, Void, VoidPC,
+        Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -26,14 +26,12 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::VerifyWebhookSourceRequestData,
-    router_response_types::{VerifyWebhookSourceResponseData, VerifyWebhookStatus},
     types::{
         generate_access_token_response_data, generate_create_order_response,
         generate_payment_authenticate_response, generate_payment_capture_response,
@@ -52,8 +50,8 @@ use grpc_api_types::payments::{
     merchant_authentication_service_server::MerchantAuthenticationService, payment_method,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
-    recurring_payment_service_server::RecurringPaymentService, EventServiceHandleRequest,
-    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    recurring_payment_service_server::RecurringPaymentService,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse,
@@ -3713,118 +3711,6 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             |request_data| async move { self.internal_post_authenticate(request_data).await },
         ))
         .await
-    }
-}
-
-/// For connectors requiring external webhook source verification (e.g., PayPal).
-/// Executes the VerifyWebhookSource flow via the connector integration.
-async fn verify_webhook_source_external(
-    config: &Config,
-    connector_data: &ConnectorData<DefaultPCIHolder>,
-    request_details: &domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_config: &ConnectorSpecificConfig,
-    metadata_payload: &utils::MetadataPayload,
-    service_name: &str,
-) -> Result<bool, tonic::Status> {
-    let connectors = utils::connectors_with_connector_config_overrides(connector_config, config)
-        .into_grpc_status()?;
-
-    let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
-        connectors,
-        connector_request_reference_id: format!("webhook_verify_{}", metadata_payload.request_id),
-        raw_connector_response: None,
-        raw_connector_request: None,
-        connector_response_headers: None,
-    };
-
-    let merchant_secret =
-        webhook_secrets.unwrap_or_else(|| domain_types::connector_types::ConnectorWebhookSecrets {
-            secret: "default_secret".to_string().into_bytes(),
-            additional_secret: None,
-        });
-
-    let verify_webhook_request = VerifyWebhookSourceRequestData {
-        webhook_headers: request_details.headers.clone(),
-        webhook_body: request_details.body.clone(),
-        merchant_secret,
-        webhook_uri: request_details.uri.clone(),
-    };
-
-    let verify_webhook_router_data = RouterDataV2::<
-        VerifyWebhookSource,
-        VerifyWebhookSourceFlowData,
-        VerifyWebhookSourceRequestData,
-        VerifyWebhookSourceResponseData,
-    > {
-        flow: std::marker::PhantomData,
-        resource_common_data: verify_webhook_flow_data,
-        connector_config: connector_config.clone(),
-        request: verify_webhook_request,
-        response: Err(ErrorResponse::default()),
-    };
-
-    let connector_integration: BoxedConnectorIntegrationV2<
-        '_,
-        VerifyWebhookSource,
-        VerifyWebhookSourceFlowData,
-        VerifyWebhookSourceRequestData,
-        VerifyWebhookSourceResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
-
-    let event_params = EventProcessingParams {
-        connector_name: connector_data.connector.id(),
-        service_name,
-        service_type: utils::service_type_str(&config.server.type_),
-        flow_name: FlowName::IncomingWebhook,
-        event_config: &config.events,
-        request_id: &metadata_payload.request_id,
-        lineage_ids: &metadata_payload.lineage_ids,
-        reference_id: &metadata_payload.reference_id,
-        resource_id: &metadata_payload.resource_id,
-        shadow_mode: metadata_payload.shadow_mode,
-    };
-
-    match Box::pin(
-        external_services::service::execute_connector_processing_step(
-            &config.proxy,
-            connector_integration,
-            verify_webhook_router_data,
-            None,
-            event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-            None,
-            None,
-        ),
-    )
-    .await
-    {
-        Ok(verify_result) => Ok(match verify_result.response {
-            Ok(response_data) => {
-                matches!(
-                    response_data.verify_webhook_status,
-                    VerifyWebhookStatus::SourceVerified
-                )
-            }
-            Err(_) => {
-                tracing::warn!(
-                    target: "webhook",
-                    "Webhook verification returned error response for connector {}",
-                    connector_data.connector.id()
-                );
-                false
-            }
-        }),
-        Err(e) => {
-            tracing::warn!(
-                target: "webhook",
-                "Webhook verification failed for connector {}: {:?}. Setting source_verified=false",
-                connector_data.connector.id(),
-                e
-            );
-            Ok(false)
-        }
     }
 }
 

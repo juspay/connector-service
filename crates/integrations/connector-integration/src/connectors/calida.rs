@@ -46,7 +46,7 @@ use domain_types::{
         SupportedPaymentMethods,
     },
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
@@ -60,7 +60,9 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{
+    ConnectorResponseTransformationError, IntegrationError, WebhookError,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -92,7 +94,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<bool, IntegrationError> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
+        
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
             None => return Ok(false),
@@ -101,33 +104,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let security_header = request
             .headers
             .get("x-eorder-webhook-signature")
-            .ok_or(IntegrationError::not_implemented(
-                "webhook signature not found".to_string(),
-            ))?
+            .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?
             .clone();
 
         let signature = hex::decode(security_header).change_context(
-            IntegrationError::not_implemented("webhook signature not found".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body).change_context(
-            IntegrationError::InvalidDataFormat {
-                field_name: "webhook_body",
-                context: Default::default(),
-            },
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
-        let sorted_payload = sort_and_minify_json(&parsed)?;
+        let sorted_payload = sort_and_minify_json(&parsed).map_err(|e| {
+            report!(e).change_context(WebhookError::WebhookBodyDecodingFailed)
+        })?;
 
         let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA512, &connector_webhook_secrets);
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookSourceVerificationFailed)?;
 
         Ok(verify)
+        
     }
 
     fn process_payment_webhook(
@@ -135,15 +134,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let request_body_copy = request.body.clone();
         let webhook_body: CalidaWebhookResponse = request
             .body
             .parse_struct("CalidaWebhookResponse")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))
-            .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)
+            .attach_printable_lazy(|| {
+                "Failed to parse Calida payment webhook body structure"
+            })?;
 
         let transaction_id = webhook_body.order_id.clone();
 
@@ -156,15 +156,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
             response_headers: None,
             mandate_reference: None,
             minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
+        
     }
 
     fn get_event_type(
@@ -172,7 +176,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
         Ok(EventType::Payment)
     }
 }

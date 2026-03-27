@@ -20,7 +20,7 @@ use domain_types::{
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -39,7 +39,7 @@ use serde::Serialize;
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -664,16 +664,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let description = webhook_body
             .transaction
@@ -718,16 +716,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         }
                     }
                 } else {
-                    Err(IntegrationError::not_implemented(
-                        "webhook event type not found".to_string(),
-                    )
-                    .into())
+                    Err(report!(WebhookError::WebhookEventTypeNotFound))
                 }
             }
-            _ => Err(
-                IntegrationError::not_implemented("webhook event type not found".to_string())
-                    .into(),
-            ),
+            _ => Err(report!(WebhookError::WebhookEventTypeNotFound)),
         }
     }
 
@@ -736,22 +728,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .ok_or_else(|| report!(WebhookError::WebhookResourceObjectNotFound))?;
 
         let status: common_enums::AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -787,6 +775,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
     }
 
@@ -795,22 +784,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
         let body = String::from_utf8(request.body.clone()).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .ok_or_else(|| report!(WebhookError::WebhookResourceObjectNotFound))?;
 
         let refund_status: common_enums::RefundStatus = match transaction.transaction_result {
             responses::PeachpaymentsPaymentStatus::ApprovedConfirmed
@@ -850,17 +835,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let body = String::from_utf8(request.body.clone()).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         )?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(Box::new(webhook_body))
     }

@@ -66,8 +66,8 @@ use base64::Engine;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
-use error_stack::ResultExt;
+use domain_types::errors::{IntegrationError, WebhookError};
+use error_stack::{report, ResultExt};
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -430,30 +430,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
         let base64_signature = request
             .headers
             .get("x-cryptopay-signature")
-            .ok_or(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))
             .attach_printable("Missing incoming webhook signature for Cryptopay")?;
-        hex::decode(base64_signature).change_context(IntegrationError::not_implemented(
-            "webhook source verification failed".to_string(),
-        ))
+        hex::decode(base64_signature).change_context(WebhookError::WebhookSourceVerificationFailed)
+        
     }
 
     fn get_webhook_source_verification_message(
         &self,
         request: &RequestDetails,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
         let message = std::str::from_utf8(&request.body)
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
-            .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
+            .attach_printable(
+                "Webhook source verification message parsing failed for Cryptopay",
+            )?;
         Ok(message.to_string().into_bytes())
+        
     }
 
     fn verify_webhook_source(
@@ -461,14 +461,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         let algorithm = crypto::HmacSha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))?,
+            None => {
+                return Err(error_stack::report!(WebhookError::WebhookVerificationSecretNotFound));
+            }
         };
 
         let signature =
@@ -479,9 +479,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
             .attach_printable("Webhook source verification failed for Cryptopay")
     }
 
@@ -490,19 +488,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(IntegrationError::not_implemented(
-                "webhook event type not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         match notif.data.status {
             cryptopay::CryptopayPaymentStatus::Completed => Ok(EventType::PaymentIntentSuccess),
             cryptopay::CryptopayPaymentStatus::Unresolved => Ok(EventType::PaymentActionRequired),
             cryptopay::CryptopayPaymentStatus::Cancelled => Ok(EventType::PaymentIntentFailure),
             _ => Ok(EventType::IncomingWebhookEventUnspecified),
         }
+        
     }
 
     fn process_payment_webhook(
@@ -510,15 +508,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(IntegrationError::not_implemented(
-                "webhook event type not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         );
 
         response.map(|mut response| {
@@ -526,6 +523,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
+        
     }
 }
 

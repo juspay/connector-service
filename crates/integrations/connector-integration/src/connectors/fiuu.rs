@@ -40,7 +40,7 @@ use domain_types::{
     types::Connectors,
     utils,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
@@ -66,7 +66,7 @@ use crate::{
     with_response_body,
 };
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 
 // Trait implementations with generic type parameters
 
@@ -735,26 +735,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
         let header =
             request
                 .headers
                 .get("content-type")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook source verification failed".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
             serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                IntegrationError::not_implemented("webhook source verification failed".to_string()),
+                WebhookError::WebhookSourceVerificationFailed,
             )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(IntegrationError::not_implemented(
-                    "webhook source verification failed".to_string(),
-                ))?
+                .change_context(WebhookError::WebhookSourceVerificationFailed)?
         };
 
         let signature = match resource {
@@ -765,35 +762,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 webhooks_refunds_response.signature
             }
         };
-        hex::decode(signature.expose()).change_context(IntegrationError::not_implemented(
-            "webhook source verification failed".to_string(),
-        ))
+        hex::decode(signature.expose()).change_context(WebhookError::WebhookSourceVerificationFailed)
+        
     }
 
     fn get_webhook_source_verification_message(
         &self,
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
         let header =
             request
                 .headers
                 .get("content-type")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook source verification failed".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
             serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                IntegrationError::not_implemented("webhook source verification failed".to_string()),
+                WebhookError::WebhookSourceVerificationFailed,
             )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(IntegrationError::not_implemented(
-                    "webhook source verification failed".to_string(),
-                ))?
+                .change_context(WebhookError::WebhookSourceVerificationFailed)?
         };
         let verification_message = match resource {
             FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhooks_payment_response) => {
@@ -809,9 +802,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let md5_key0 = hex::encode(
                     crypto::Md5
                         .generate_digest(key0.as_bytes())
-                        .change_context(IntegrationError::not_implemented(
-                            "webhook source verification failed".to_string(),
-                        ))?,
+                        .change_context(WebhookError::WebhookSourceVerificationFailed)?,
                 );
                 let key1 = format!(
                     "{}{}{}{}{}",
@@ -840,6 +831,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
         Ok(verification_message.as_bytes().to_vec())
+        
     }
 
     fn verify_webhook_source(
@@ -847,14 +839,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         let algorithm = crypto::Md5;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))?,
+            None => {
+                return Err(report!(WebhookError::WebhookVerificationSecretNotFound));
+            }
         };
 
         let signature =
@@ -865,9 +857,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
     fn get_event_type(
@@ -875,27 +865,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        
         let header =
             request
                 .headers
                 .get("content-type")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook source verification failed".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
             serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                IntegrationError::not_implemented("webhook event type not found".to_string()),
+                WebhookError::WebhookBodyDecodingFailed,
             )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(IntegrationError::not_implemented(
-                    "webhook event type not found".to_string(),
-                ))?
+                .change_context(WebhookError::WebhookBodyDecodingFailed)?
         };
 
         match resource {
@@ -906,44 +893,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Ok(EventType::from(webhooks_refunds_response.status))
             }
         }
+        
     }
 
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, IntegrationError> {
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
+        
         let header =
             request
                 .headers
                 .get("content-type")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook body decoding failed".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
             serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                IntegrationError::not_implemented("webhook resource object not found".to_string()),
+                WebhookError::WebhookResourceObjectNotFound,
             )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(IntegrationError::not_implemented(
-                    "webhook resource object not found".to_string(),
-                ))?
+                .change_context(WebhookError::WebhookResourceObjectNotFound)?
         };
 
         match payload.clone() {
             FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhook_payment_response) => {
                 Ok(Box::new(FiuuPaymentResponse::FiuuWebhooksPaymentResponse(
                     webhook_payment_response,
-                )))
+                ))
+                    as Box<dyn hyperswitch_masking::ErasedMaskSerialize>)
             }
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => Ok(
-                Box::new(FiuuRefundSyncResponse::Webhook(webhook_refund_response)),
+                Box::new(FiuuRefundSyncResponse::Webhook(webhook_refund_response))
+                    as Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
             ),
         }
+        
     }
 
     fn process_payment_webhook(
@@ -951,7 +940,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
         Ok(WebhookDetailsResponse {
             resource_id: None,
             status: common_enums::AttemptStatus::Unknown,
@@ -966,6 +955,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Incomplete,
         })
     }
@@ -975,40 +965,37 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let header =
             request
                 .headers
                 .get("content-type")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook body decoding failed".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
             serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                IntegrationError::not_implemented("webhook resource object not found".to_string()),
+                WebhookError::WebhookResourceObjectNotFound,
             )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(IntegrationError::not_implemented(
-                    "webhook resource object not found".to_string(),
-                ))?
+                .change_context(WebhookError::WebhookResourceObjectNotFound)?
         };
 
         let notif = match payload.clone() {
-            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => Err(
-                IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-            ),
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => Err(report!(
+                WebhookError::WebhookResourceObjectNotFound
+            )),
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
                 Ok(FiuuRefundSyncResponse::Webhook(webhook_refund_response))
             }
         }?;
 
         let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         );
 
         response.map(|mut response| {
@@ -1016,6 +1003,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
+        
     }
 }
 

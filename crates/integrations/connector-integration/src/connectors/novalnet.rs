@@ -62,8 +62,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
-use error_stack::ResultExt;
+use domain_types::errors::{IntegrationError, WebhookError};
+use error_stack::{report, ResultExt};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -617,54 +617,51 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
-        let notif_item = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented("webhook source verification failed".to_string()),
-        )?;
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
+        let notif_item = get_webhook_object_from_body(&request.body)?;
 
-        hex::decode(notif_item.event.checksum).change_context(IntegrationError::not_implemented(
-            "webhook verification secret invalid".to_string(),
-        ))
+        hex::decode(notif_item.event.checksum).change_context(
+            WebhookError::WebhookVerificationSecretInvalid,
+        )
+        
     }
 
     fn get_webhook_source_verification_message(
         &self,
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<IntegrationError>> {
-        let notif = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented("webhook source verification failed".to_string()),
-        )?;
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        
+        let notif = get_webhook_object_from_body(&request.body)?;
 
         let (amount, currency) = match notif.transaction {
-            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
-                (data.amount, data.currency)
-            }
-            novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => {
-                (data.amount, data.currency)
-            }
+        novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
+            (data.amount, data.currency)
+        }
+        novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => {
+            (data.amount, data.currency)
+        }
 
-            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
-                (data.amount, data.currency)
-            }
+        novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
+            (data.amount, data.currency)
+        }
 
-            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
-                (data.amount, data.currency)
-            }
-        };
-        let amount = amount
-            .map(|amount| amount.to_string())
-            .unwrap_or("".to_string());
-        let currency = currency
-            .map(|amount| amount.to_string())
-            .unwrap_or("".to_string());
+        novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
+            (data.amount, data.currency)
+        }
+    };
+    let amount = amount
+        .map(|amount| amount.to_string())
+        .unwrap_or("".to_string());
+    let currency = currency
+        .map(|amount| amount.to_string())
+        .unwrap_or("".to_string());
 
-        let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
-            .change_context(IntegrationError::not_implemented(
-                "webhook verification secret invalid".to_string(),
-            ))
-            .attach_printable("Could not convert webhook secret auth to UTF-8")?;
-        let reversed_secret_auth = novalnet::reverse_string(&secret_auth);
+    let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
+        .change_context(WebhookError::WebhookVerificationSecretInvalid)
+        .attach_printable("Could not convert webhook secret auth to UTF-8")?;
+    let reversed_secret_auth = novalnet::reverse_string(&secret_auth);
 
         let message = format!(
             "{}{}{}{}{}{}",
@@ -677,6 +674,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         );
 
         Ok(message.into_bytes())
+        
     }
 
     fn verify_webhook_source(
@@ -684,7 +682,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         let algorithm = crypto::Sha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
@@ -744,10 +742,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
-        let notif = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented("webhook event type not found".to_string()),
-        )?;
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        
+        let notif = get_webhook_object_from_body(&request.body)?;
 
         let optional_transaction_status = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
@@ -762,11 +759,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let transaction_status =
-            optional_transaction_status.ok_or(IntegrationError::MissingRequiredField {
-                field_name: "transaction_status",
-                context: Default::default(),
-            })?;
+        let transaction_status = optional_transaction_status.ok_or_else(|| {
+            report!(WebhookError::WebhookReferenceIdNotFound)
+                .attach_printable("transaction_status missing on Novalnet webhook")
+        })?;
         // NOTE: transaction_status will always be present for Webhooks
         // But we are handling optional type here, since we are reusing TransactionData Struct from NovalnetPaymentsResponseTransactionData for Webhooks response too
         // In NovalnetPaymentsResponseTransactionData, transaction_status is optional
@@ -774,6 +770,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let incoming_webhook_event =
             novalnet::get_incoming_webhook_event(notif.event.event_type, transaction_status);
         Ok(incoming_webhook_event)
+        
     }
 
     fn process_payment_webhook(
@@ -781,13 +778,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
-        let notif = get_webhook_object_from_body(&request.body).change_context(
-            IntegrationError::not_implemented("webhook reference id not found".to_string()),
-        )?;
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
+        let notif = get_webhook_object_from_body(&request.body)?;
 
         let response = WebhookDetailsResponse::try_from(notif).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         );
 
         response.map(|mut response| {
@@ -795,6 +791,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
+        
     }
 
     fn process_refund_webhook(
@@ -802,16 +799,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
             .parse_struct("NovalnetWebhookNotificationResponse")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
+            WebhookError::WebhookBodyDecodingFailed,
         );
 
         response.map(|mut response| {
@@ -819,6 +815,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
+        
     }
 
     fn process_dispute_webhook(
@@ -826,11 +823,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let notif: transformers::NovalnetWebhookNotificationResponse =
-            get_webhook_object_from_body(&request.body).change_context(
-                IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-            )?;
+            get_webhook_object_from_body(&request.body)?;
         let (amount, currency, reason, reason_code) = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
                 (data.amount, data.currency, None, None)
@@ -853,35 +849,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(DisputeWebhookDetailsResponse {
             amount: utils::convert_amount(
                 self.amount_converter,
-                amount.ok_or(IntegrationError::AmountConversionFailed {
-                    context: Default::default(),
-                })?,
-                novalnet::option_to_result(currency)?,
-            )?,
-            currency: novalnet::option_to_result(currency)?,
+                amount.ok_or_else(|| report!(WebhookError::WebhookProcessingFailed))?,
+                currency.ok_or_else(|| report!(WebhookError::WebhookProcessingFailed))?,
+            )
+            .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?,
+            currency: currency.ok_or_else(|| report!(WebhookError::WebhookProcessingFailed))?,
             stage: common_enums::DisputeStage::Dispute,
             dispute_id: notif.event.tid.to_string(),
             connector_reason_code: reason_code,
-            status: common_enums::DisputeStatus::foreign_try_from(dispute_status)?,
+            status: common_enums::DisputeStatus::foreign_try_from(dispute_status).map_err(|e| {
+                e.change_context(WebhookError::WebhookProcessingFailed)
+            })?,
             connector_response_reference_id: None,
             dispute_message: reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             status_code: 200,
             response_headers: None,
         })
+        
     }
 }
 
 fn get_webhook_object_from_body(
     body: &[u8],
-) -> CustomResult<novalnet::NovalnetWebhookNotificationResponse, IntegrationError> {
-    let novalnet_webhook_notification_response = body
-        .parse_struct("NovalnetWebhookNotificationResponse")
-        .change_context(IntegrationError::not_implemented(
-            "webhook body decoding failed".to_string(),
-        ))?;
-
-    Ok(novalnet_webhook_notification_response)
+) -> Result<
+    novalnet::NovalnetWebhookNotificationResponse,
+    error_stack::Report<WebhookError>,
+> {
+    body.parse_struct("NovalnetWebhookNotificationResponse")
+        .change_context(WebhookError::WebhookBodyDecodingFailed)
 }
 
 // Stub implementations for unsupported flows

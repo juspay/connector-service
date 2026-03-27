@@ -14,7 +14,7 @@ use common_utils::{
     types::{AmountConvertor, MinorUnit},
 };
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -843,19 +843,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string()
-            ))
-            .attach_printable(format!("error while decoing webhook body {err}"))
-        })?;
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        
+        let payload = transformers::get_webhook_object_from_body(request.body)?;
 
         if payload.refund.is_some() {
             Ok(EventType::RefundSuccess)
         } else {
             Ok(EventType::PaymentIntentSuccess)
         }
+        
     }
 
     fn process_payment_webhook(
@@ -863,19 +860,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let request_body_copy = request.body.clone();
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string()
-            ))
-            .attach_printable(format!("error while decoding webhook body {err}"))
-        })?;
+        let payload = transformers::get_webhook_object_from_body(request.body)?;
 
         let notif = payload.payment.ok_or_else(|| {
-            error_stack::Report::new(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
-            })
+            error_stack::report!(WebhookError::WebhookReferenceIdNotFound)
         })?;
 
         Ok(WebhookDetailsResponse {
@@ -896,7 +887,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
+        
     }
 
     fn process_refund_webhook(
@@ -904,19 +897,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let request_body_copy = request.body.clone();
-        let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string()
-            ))
-            .attach_printable(format!("error while decoing webhook body {err}"))
-        })?;
+        let payload = transformers::get_webhook_object_from_body(request.body)?;
 
         let notif = payload.refund.ok_or_else(|| {
-            error_stack::Report::new(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
-            })
+            error_stack::report!(WebhookError::WebhookReferenceIdNotFound)
         })?;
 
         Ok(RefundWebhookDetailsResponse {
@@ -932,6 +919,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             status_code: 200,
             response_headers: None,
         })
+        
     }
 }
 

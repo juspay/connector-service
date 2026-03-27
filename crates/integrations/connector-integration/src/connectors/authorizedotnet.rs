@@ -26,14 +26,14 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
@@ -123,7 +123,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         // If no webhook secret is provided, cannot verify
         let webhook_secret = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
@@ -198,18 +198,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        
         let webhook_body: AuthorizedotnetWebhookEventType = request
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
-            .change_context(IntegrationError::not_implemented(
-                "webhook event type not found".to_string(),
-            ))
+            .change_context(WebhookError::WebhookBodyDecodingFailed)
             .attach_printable_lazy(|| {
                 "Failed to parse webhook event type from Authorize.Net webhook body"
             })?;
 
-        Ok(match webhook_body.event_type {
+        let event_type = match webhook_body.event_type {
             transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated => {
                 EventType::PaymentIntentAuthorizationSuccess
             }
@@ -236,11 +235,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Received unknown webhook event type from Authorize.Net - rejecting webhook"
                 );
                 return Err(
-                    error_stack::report!(IntegrationError::not_implemented("webhook event type not found".to_string()))
+                    report!(WebhookError::WebhookEventTypeNotFound)
                         .attach_printable("Unknown webhook event type"),
-                )
+                );
             }
-        })
+        };
+        Ok(event_type)
+        
     }
 
     fn process_payment_webhook(
@@ -248,14 +249,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let request_body_copy = request.body.clone();
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))
+            .change_context(WebhookError::WebhookBodyDecodingFailed)
             .attach_printable_lazy(|| {
                 "Failed to parse Authorize.Net payment webhook body structure"
             })?;
@@ -276,14 +276,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
             response_headers: None,
             minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
+        
     }
 
     fn process_refund_webhook(
@@ -291,14 +295,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        
         let request_body_copy = request.body.clone();
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))
+            .change_context(WebhookError::WebhookBodyDecodingFailed)
             .attach_printable_lazy(|| {
                 "Failed to parse Authorize.Net refund webhook body structure"
             })?;
@@ -317,9 +320,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
             response_headers: None,
         })
+        
     }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

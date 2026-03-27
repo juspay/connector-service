@@ -916,6 +916,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::DuitNow
             | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
+            | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
             | common_enums::PaymentMethodType::Satispay
             | common_enums::PaymentMethodType::Wero => Err(IntegrationError::not_implemented(
@@ -1512,6 +1513,7 @@ fn create_stripe_payment_method<
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
             IntegrationError::not_implemented(get_unimplemented_payment_method_error_message(
                 "stripe",
@@ -4632,6 +4634,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(IntegrationError::not_implemented(
                     get_unimplemented_payment_method_error_message("stripe"),
@@ -4961,27 +4964,28 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             billing_address,
             payment_method_types,
             setup_future_usage,
-        ) = if payment_method_token.is_some() {
-            (None, None, StripeBillingAddress::default(), None, None)
-        } else {
-            match &item.request.mandate_reference {
-                MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => (
-                    None,
-                    connector_mandate_ids.get_connector_mandate_id(),
-                    StripeBillingAddress::default(),
-                    get_payment_method_type_for_saved_payment_method_payment(&item)?,
-                    None,
-                ),
-                MandateReferenceId::NetworkMandateId(network_transaction_id) => {
-                    payment_method_options = Some(StripePaymentMethodOptions::Card {
-                        mandate_options: None,
-                        network_transaction_id: None,
-                        mit_exemption: Some(MitExemption {
-                            network_transaction_id: Secret::new(network_transaction_id.clone()),
-                        }),
-                    });
+        ) =
+            if payment_method_token.is_some() {
+                (None, None, StripeBillingAddress::default(), None, None)
+            } else {
+                match &item.request.mandate_reference {
+                    MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => (
+                        None,
+                        connector_mandate_ids.get_connector_mandate_id(),
+                        StripeBillingAddress::default(),
+                        get_payment_method_type_for_saved_payment_method_payment(&item)?,
+                        None,
+                    ),
+                    MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                        payment_method_options = Some(StripePaymentMethodOptions::Card {
+                            mandate_options: None,
+                            network_transaction_id: None,
+                            mit_exemption: Some(MitExemption {
+                                network_transaction_id: Secret::new(network_transaction_id.clone()),
+                            }),
+                        });
 
-                    let payment_data = match item.request.payment_method_data {
+                        let payment_data = match item.request.payment_method_data {
                         PaymentMethodData::CardDetailsForNetworkTransactionId(
                             ref card_details_for_network_transaction_id,
                         ) => StripePaymentMethodData::CardNetworkTransactionId(
@@ -5024,6 +5028,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::OpenBanking(_)
                         | PaymentMethodData::CardToken(_)
                         | PaymentMethodData::NetworkToken(_)
+                        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                         | PaymentMethodData::Card(_) => Err(IntegrationError::NotSupported {
                             message: "Network tokenization for payment method".to_string(),
                             connector: "Stripe",
@@ -5075,8 +5080,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         None,
                     )
                 }
-            }
-        };
+                }
+            };
 
         if payment_method_token.is_some() {
             payment_data = None

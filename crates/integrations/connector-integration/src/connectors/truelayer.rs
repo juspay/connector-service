@@ -77,7 +77,7 @@ impl AccessTokenProvider for RefundFlowData {
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 use error_stack::ResultExt;
 
 const TL_SIGNATURE: &str = "Tl-Signature";
@@ -986,14 +986,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<IntegrationError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
     {
         let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
             .body
             .parse_struct("TruelayerPayoutsWebhookBody")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(truelayer::get_webhook_event(webhook_body._type))
     }
@@ -1005,15 +1003,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let request_body_copy = request.body.clone();
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let status = truelayer::get_truelayer_payment_webhook_status(details._type)?;
 
@@ -1046,6 +1042,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
     }
 
@@ -1056,19 +1053,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let request_body_copy = request.body.clone();
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        let status = truelayer::get_truelayer_refund_webhook_status(details._type).change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-        )?;
+        let status = truelayer::get_truelayer_refund_webhook_status(details._type)?;
 
         let (error_code, error_message) = if status == RefundStatus::Failure {
             (
@@ -1100,14 +1093,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhooksBody")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         Ok(Box::new(details))
     }
 }

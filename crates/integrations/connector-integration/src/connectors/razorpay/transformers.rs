@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{
+    ConnectorResponseTransformationError, IntegrationError, WebhookError,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -303,6 +305,7 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::OpenBanking(_) => Err(IntegrationError::not_implemented(
@@ -1163,35 +1166,31 @@ pub struct RazorpayWebhookCard {
 
 pub fn get_webhook_object_from_body(
     body: Vec<u8>,
-) -> Result<Payload, error_stack::Report<IntegrationError>> {
+) -> Result<Payload, error_stack::Report<WebhookError>> {
     let webhook: RazorpayWebhook =
         body.parse_struct("RazorpayWebhook")
-            .change_context(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
     Ok(webhook.payload)
 }
 
 pub(crate) fn get_razorpay_payment_webhook_status(
     entity: RazorpayEntity,
     status: RazorpayPaymentStatus,
-) -> Result<AttemptStatus, IntegrationError> {
+) -> Result<AttemptStatus, WebhookError> {
     match entity {
         RazorpayEntity::Payment => match status {
             RazorpayPaymentStatus::Authorized => Ok(AttemptStatus::Authorized),
             RazorpayPaymentStatus::Captured => Ok(AttemptStatus::Charged),
             RazorpayPaymentStatus::Failed => Ok(AttemptStatus::AuthorizationFailed),
         },
-        RazorpayEntity::Refund => Err(IntegrationError::RequestEncodingFailed {
-            context: Default::default(),
-        }),
+        RazorpayEntity::Refund => Err(WebhookError::WebhookProcessingFailed),
     }
 }
 
 pub(crate) fn get_razorpay_refund_webhook_status(
     entity: RazorpayEntity,
     status: RazorpayRefundStatus,
-) -> Result<common_enums::RefundStatus, IntegrationError> {
+) -> Result<common_enums::RefundStatus, WebhookError> {
     match entity {
         RazorpayEntity::Refund => match status {
             RazorpayRefundStatus::Processed => Ok(common_enums::RefundStatus::Success),
@@ -1200,9 +1199,7 @@ pub(crate) fn get_razorpay_refund_webhook_status(
             }
             RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
         },
-        RazorpayEntity::Payment => Err(IntegrationError::RequestEncodingFailed {
-            context: Default::default(),
-        }),
+        RazorpayEntity::Payment => Err(WebhookError::WebhookProcessingFailed),
     }
 }
 

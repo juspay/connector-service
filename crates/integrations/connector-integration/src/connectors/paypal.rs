@@ -36,7 +36,7 @@ use domain_types::{
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Mask, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -58,7 +58,7 @@ use crate::{
     utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
     with_error_response_body,
 };
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -167,14 +167,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
-        Err(error_stack::report!(IntegrationError::not_implemented(
-            "webhook source verification failed".to_string()
-        )))
-        .attach_printable(
-            "PayPal requires external API call for webhook verification, not internal verification",
+        Err::<bool, _>(
+            error_stack::report!(WebhookError::WebhookSourceVerificationFailed)
+                .attach_printable(
+                    "PayPal requires external API call for webhook verification, not internal verification",
+                ),
         )
     }
 
@@ -183,29 +183,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<IntegrationError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
     {
+        
         let payload: paypal::PaypalWebooksEventType = request
             .body
             .parse_struct("PaypalWebooksEventType")
-            .change_context(IntegrationError::not_implemented(
-                "webhook event type not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let outcome_code = match payload.event_type {
             paypal::PaypalWebhookEventType::CustomerDisputeResolved => Some(
                 request
                     .body
                     .parse_struct::<paypal::DisputeOutcome>("PaypalDisputeOutcome")
-                    .change_context(IntegrationError::not_implemented(
-                        "webhook event type not found".to_string(),
-                    ))?
+                    .change_context(WebhookError::WebhookEventTypeNotFound)?
                     .outcome_code,
             ),
             _ => None,
         };
 
         Ok(get_paypal_event_type(payload.event_type, outcome_code))
+        
     }
 
     fn process_payment_webhook(
@@ -215,15 +213,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
+        
         let request_body_copy = request.body.clone();
         let details: paypal::PaypalWebhooksBody = request
             .body
             .parse_struct("PaypalWebhooksBody")
-            .change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-        )?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let status = get_paypal_payment_webhook_status(details.event_type);
 
@@ -233,9 +230,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     resource.supplementary_data.related_ids.order_id,
                 ),
             ),
-            paypal::PaypalResource::PaypalRedirectsWebhooks(resource) => {
-                Some(domain_types::connector_types::ResponseId::ConnectorTransactionId(resource.id))
-            }
+            paypal::PaypalResource::PaypalRedirectsWebhooks(resource) => Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(resource.id),
+            ),
             _ => None,
         };
 
@@ -247,14 +244,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
+        
     }
 
     fn process_refund_webhook(
@@ -264,15 +265,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
+        
         let request_body_copy = request.body.clone();
         let details: paypal::PaypalWebhooksBody = request
             .body
             .parse_struct("PaypalWebhooksBody")
-            .change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-        )?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let (connector_refund_id, refund_status) = match (details.resource, details.event_type) {
             (
@@ -299,6 +299,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 response_headers: None,
             },
         )
+        
     }
 
     fn process_dispute_webhook(
@@ -308,22 +309,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
+        
         let request_body_copy = request.body.clone();
         let details: paypal::PaypalWebhooksBody = request
             .body
             .parse_struct("PaypalWebhooksBody")
-            .change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-        )?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let dispute = match details.resource {
             paypal::PaypalResource::PaypalDisputeWebhooks(payload) => payload,
-            _ => Err(error_stack::report!(IntegrationError::not_implemented(
-                "webhook body decoding failed".to_string()
-            )))
-            .attach_printable("Expected PayPal dispute webhook resource")?,
+            _ => {
+                return Err(
+                    report!(WebhookError::WebhookResourceObjectNotFound)
+                        .attach_printable("Expected PayPal dispute webhook resource"),
+                );
+            }
         };
 
         let amount_minor = domain_types::utils::convert_back_amount_to_minor_units(
@@ -331,14 +333,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             dispute.dispute_amount.value,
             dispute.dispute_amount.currency_code,
         )
-        .change_context(IntegrationError::AmountConversionFailed {
-            context: Default::default(),
-        })?;
+        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
         let amount = domain_types::utils::convert_amount(
             &common_utils::types::StringMinorUnitForConnector,
             amount_minor,
             dispute.dispute_amount.currency_code,
-        )?;
+        )
+        .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?;
 
         let status = match details.event_type {
             paypal::PaypalWebhookEventType::CustomerDisputeCreated => {
@@ -381,6 +382,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 connector_reason_code: None,
             },
         )
+        
     }
 
     fn get_webhook_resource_object(
@@ -388,15 +390,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
+        
         let details: paypal::PaypalWebhooksBody = request
             .body
             .parse_struct("PaypalWebhooksBody")
-            .change_context(
-            IntegrationError::not_implemented("webhook body decoding failed".to_string()),
-        )?;
-        Ok(Box::new(details))
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+        Ok(Box::new(details) as Box<dyn hyperswitch_masking::ErasedMaskSerialize>)
+        
     }
 }
 

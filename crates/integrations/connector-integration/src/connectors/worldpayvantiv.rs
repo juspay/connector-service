@@ -61,7 +61,8 @@ use self::transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
+use error_stack::report;
 
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -223,7 +224,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         Ok(false) // WorldpayVantiv doesn't support webhooks
     }
 
@@ -232,10 +233,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(IntegrationError::not_implemented(
-            "webhooks not implemented".to_string()
-        )))
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        Err(report!(WebhookError::WebhooksNotImplemented {
+            operation: "get_event_type",
+        }))
     }
 
     fn process_payment_webhook(
@@ -243,10 +244,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(IntegrationError::not_implemented(
-            "webhooks not implemented".to_string()
-        )))
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(report!(WebhookError::WebhooksNotImplemented {
+            operation: "process_payment_webhook",
+        }))
     }
 
     fn process_refund_webhook(
@@ -254,10 +255,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<IntegrationError>> {
-        Err(error_stack::report!(IntegrationError::not_implemented(
-            "webhooks not implemented".to_string()
-        )))
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(report!(WebhookError::WebhooksNotImplemented {
+            operation: "process_refund_webhook",
+        }))
     }
 }
 

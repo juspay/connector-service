@@ -1706,6 +1706,42 @@ impl<
                     }))
                 }
 
+                grpc_payment_types::payment_method::PaymentMethod::DecryptedWalletTokenDetailsForNetworkTransactionId(
+                    decrypted_wallet_token_details_for_nti,
+                ) => {
+                    let decrypted_token = decrypted_wallet_token_details_for_nti.decrypted_token
+                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "MISSING_DECRYPTED_WALLET_TOKEN".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Missing decrypted wallet token".to_owned(),
+                            error_object: None,
+                        }))?;
+
+                    Ok(Self::DecryptedWalletTokenDetailsForNetworkTransactionId(
+                        payment_method_data::DecryptedWalletTokenDetailsForNetworkTransactionId {
+                            decrypted_token,
+                            token_exp_month: decrypted_wallet_token_details_for_nti.token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_DECRYPTED_TOKEN_EXP_MONTH".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing decrypted token expiration month".to_owned(),
+                                error_object: None,
+                            }))?,
+                            token_exp_year: decrypted_wallet_token_details_for_nti.token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "MISSING_DECRYPTED_TOKEN_EXP_YEAR".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Missing decrypted token expiration year".to_owned(),
+                                error_object: None,
+                            }))?,
+                            card_holder_name: decrypted_wallet_token_details_for_nti.card_holder_name,
+                            eci: decrypted_wallet_token_details_for_nti.eci,
+                            token_source: decrypted_wallet_token_details_for_nti.token_source
+                                .and_then(|source_i32| grpc_api_types::payments::TokenSource::try_from(source_i32).ok())
+                                .and_then(|source| payment_method_data::TokenSource::foreign_try_from(source).ok()),
+
+                        },
+                    ))
+                }
+
                 // ============================================================================
                 // BANK REDIRECT - Trustly
                 // ============================================================================
@@ -1915,6 +1951,27 @@ impl<
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::TokenSource> for payment_method_data::TokenSource {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::TokenSource,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::TokenSource::Googlepay => Ok(Self::GooglePay),
+            grpc_api_types::payments::TokenSource::Applepay => Ok(Self::ApplePay),
+            grpc_api_types::payments::TokenSource::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_TOKEN_SOURCE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Token source is required".to_owned(),
+                    error_object: None,
+                })))
+            }
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::BankType> for common_enums::BankType {
     type Error = ApplicationErrorResponse;
 
@@ -2024,6 +2081,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             }
             grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
                 Ok(Some(PaymentMethodType::InstantBankTransferPoland))
+            }
+            grpc_api_types::payments::PaymentMethodType::NetworkToken => {
+                Ok(Some(PaymentMethodType::NetworkToken))
             }
             grpc_api_types::payments::PaymentMethodType::MbWay => {
                 Ok(Some(PaymentMethodType::MbWay))
@@ -2171,6 +2231,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::Card)),
                 grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_) => Ok(Some(PaymentMethodType::Card)),
+                grpc_payment_types::payment_method::PaymentMethod::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => Ok(Some(PaymentMethodType::NetworkToken)),
                 // ============================================================================
                 // GIFT CARDS
                 // ============================================================================
@@ -5185,6 +5246,7 @@ pub fn generate_payment_sync_response(
                     raw_connector_request,
                     connector_response,
                     incremental_authorization_allowed,
+                    payment_method_update: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -5255,6 +5317,7 @@ pub fn generate_payment_sync_response(
                 connector_response,
                 redirection_data: None,
                 incremental_authorization_allowed: None,
+                payment_method_update: None,
             })
         }
     }
@@ -5474,6 +5537,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Knet => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::Benefit => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
+
+            grpc_api_types::payments::PaymentMethodType::NetworkToken => Ok(Self::Card),
 
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
@@ -5955,6 +6020,25 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 ),
             }
                 });
+        let payment_method_update_grpc = value.payment_method_update.map(|update| {
+            grpc_api_types::payments::PaymentMethodUpdate {
+                payment_method_update_data: Some(match update {
+                    crate::connector_types::PaymentMethodUpdate::Card(card) => {
+                        grpc_api_types::payments::payment_method_update::PaymentMethodUpdateData::Card(
+                            grpc_api_types::payments::CardDetailUpdate {
+                                card_exp_month: card.card_exp_month,
+                                card_exp_year: card.card_exp_year,
+                                last4_digits: card.last4_digits,
+                                issuer_country: card.issuer_country,
+                                card_issuer: card.card_issuer,
+                                card_network: card.card_network,
+                                card_holder_name: card.card_holder_name,
+                            },
+                        )
+                    }
+                }),
+            }
+        });
         Ok(Self {
             connector_transaction_id: extract_connector_request_reference_id(
                 &value
@@ -6000,6 +6084,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             connector_response: None,
             redirection_data: None,
             incremental_authorization_allowed: None,
+            payment_method_update: payment_method_update_grpc,
         })
     }
 }

@@ -31,7 +31,6 @@ use domain_types::{
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -52,7 +51,7 @@ use interfaces::{
 
 use crate::{types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 use serde::Serialize;
 use std::fmt::Debug;
 use std::sync::LazyLock;
@@ -420,13 +419,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookResourceObjectNotFound)?;
 
         EventType::try_from(event.r#type)
     }
@@ -436,21 +433,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<IntegrationError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookResourceObjectNotFound)?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(IntegrationError::not_implemented(
-                    "webhooks not implemented".to_string(),
-                )
-                .into())
+                return Err(error_stack::report!(WebhookError::WebhooksNotImplemented {
+                    operation: "process_payment_webhook",
+                }));
             }
         };
 
@@ -484,6 +478,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
     }
 
@@ -494,22 +489,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookResourceObjectNotFound)?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(IntegrationError::not_implemented(
-                    "webhooks not implemented".to_string(),
-                )
-                .into())
+                return Err(error_stack::report!(WebhookError::WebhooksNotImplemented {
+                    operation: "process_refund_webhook",
+                }));
             }
         };
 
@@ -544,9 +536,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
-        Err(IntegrationError::not_implemented("process_dispute_webhook".to_string()).into())
+        Err(error_stack::report!(WebhookError::WebhooksNotImplemented {
+            operation: "process_dispute_webhook",
+        }))
     }
 
     fn verify_webhook_source(
@@ -554,25 +548,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         let connector_webhook_secrets = connector_webhook_secret
-            .ok_or(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .ok_or_else(|| error_stack::report!(WebhookError::WebhookVerificationSecretNotFound))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature =
             request
                 .headers
                 .get("Webhook-Signature")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook signature not found".to_string(),
-                ))?;
+                .ok_or_else(|| error_stack::report!(WebhookError::WebhookSignatureNotFound))?;
 
         let algorithm = crypto::HmacSha256;
-        let expected_signature = hex::decode(signature).change_context(
-            IntegrationError::not_implemented("webhook decoding failed".to_string()),
-        )?;
+        let expected_signature =
+            hex::decode(signature).change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         algorithm
             .verify_signature(
@@ -580,9 +569,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 &expected_signature,
                 &request.body,
             )
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
     fn get_webhook_resource_object(
@@ -590,14 +577,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookResourceObjectNotFound)?;
 
         match event.data {
             PproWebhookData::Charge { charge } => Ok(Box::new(charge)),
@@ -1105,7 +1090,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
     fn get_webhook_source_verification_algorithm(
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<Box<dyn VerifySignature + Send>, errors::WebhookError> {
+    ) -> CustomResult<Box<dyn VerifySignature + Send>, WebhookError> {
         Ok(Box::new(PproWebhookSignature))
     }
 
@@ -1113,13 +1098,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
         &self,
         request: &IncomingWebhookRequestDetails<'_>,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> CustomResult<Vec<u8>, errors::WebhookError> {
+    ) -> CustomResult<Vec<u8>, WebhookError> {
         let header_value = request
             .headers
             .get("Webhook-Signature")
-            .ok_or(errors::WebhookError::WebhookSignatureNotFound)?
+            .ok_or(WebhookError::WebhookSignatureNotFound)?
             .to_str()
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(header_value.as_bytes().to_vec())
     }
@@ -1129,18 +1114,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
         request: &IncomingWebhookRequestDetails<'_>,
         _merchant_id: &common_utils::id_type::MerchantId,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> CustomResult<Vec<u8>, errors::WebhookError> {
+    ) -> CustomResult<Vec<u8>, WebhookError> {
         Ok(request.body.to_vec())
     }
 
     fn get_webhook_event_type(
         &self,
         request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<IncomingWebhookEvent, errors::WebhookError> {
+    ) -> CustomResult<IncomingWebhookEvent, WebhookError> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         IncomingWebhookEvent::try_from(event.r#type)
     }
@@ -1148,11 +1133,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
     fn get_webhook_resource_object(
         &self,
         request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::WebhookError> {
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, WebhookError> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         match event.data {
             PproWebhookData::Charge { charge } => Ok(Box::new(charge)),

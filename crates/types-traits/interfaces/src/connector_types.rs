@@ -5,6 +5,7 @@ use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodTyp
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
+    errors::WebhookError,
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
@@ -34,13 +35,20 @@ use domain_types::{
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
+use serde_json::Value;
 
 use crate::{
-    api::ConnectorCommon,
+    api::{ApplicationResponse, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
     decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub enum IncomingWebhookFlowError {
+    ResourceNotFound,
+    InternalError,
+}
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
@@ -381,7 +389,7 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
         Ok(false)
     }
 
@@ -390,7 +398,7 @@ pub trait IncomingWebhook {
         &self,
         _request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
         Ok(Vec::new())
     }
 
@@ -399,7 +407,7 @@ pub trait IncomingWebhook {
         &self,
         _request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::IntegrationError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
         Ok(Vec::new())
     }
 
@@ -408,10 +416,12 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<domain_types::errors::IntegrationError>> {
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
         Err(
-            domain_types::errors::IntegrationError::not_implemented("get_event_type".to_string())
-                .into(),
+            WebhookError::WebhooksNotImplemented {
+                operation: "get_event_type",
+            }
+            .into(),
         )
     }
 
@@ -420,12 +430,13 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::IntegrationError>>
-    {
-        Err(domain_types::errors::IntegrationError::not_implemented(
-            "process_payment_webhook".to_string(),
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(
+            WebhookError::WebhooksNotImplemented {
+                operation: "process_payment_webhook",
+            }
+            .into(),
         )
-        .into())
     }
 
     fn process_refund_webhook(
@@ -433,28 +444,26 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<
-        RefundWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::IntegrationError>,
-    > {
-        Err(domain_types::errors::IntegrationError::not_implemented(
-            "process_refund_webhook".to_string(),
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(
+            WebhookError::WebhooksNotImplemented {
+                operation: "process_refund_webhook",
+            }
+            .into(),
         )
-        .into())
     }
     fn process_dispute_webhook(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<
-        DisputeWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::IntegrationError>,
-    > {
-        Err(domain_types::errors::IntegrationError::not_implemented(
-            "process_dispute_webhook".to_string(),
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(
+            WebhookError::WebhooksNotImplemented {
+                operation: "process_dispute_webhook",
+            }
+            .into(),
         )
-        .into())
     }
 
     /// fn get_webhook_resource_object
@@ -463,12 +472,26 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<domain_types::errors::IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
-        Err(domain_types::errors::IntegrationError::not_implemented(
-            "get_webhook_resource_object".to_string(),
+        Err(
+            WebhookError::WebhooksNotImplemented {
+                operation: "get_webhook_resource_object",
+            }
+            .into(),
         )
-        .into())
+    }
+
+    /// fn get_webhook_api_response
+    ///
+    /// This is used by callers to decide what HTTP response
+    /// should be sent back to the connector for webhook acknowledgement.
+    fn get_webhook_api_response(
+        &self,
+        _request: RequestDetails,
+        _error_kind: Option<IncomingWebhookFlowError>,
+    ) -> Result<ApplicationResponse<Value>, error_stack::Report<WebhookError>> {
+        Ok(ApplicationResponse::StatusOk)
     }
 }
 

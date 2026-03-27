@@ -18,7 +18,7 @@ use serde::Serialize;
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
 
 // Wallet type constants
 const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";
@@ -721,12 +721,12 @@ impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
 
 pub fn map_chargeback_status_to_event_type(
     cb_status: &str,
-) -> CustomResult<domain_types::connector_types::EventType, IntegrationError> {
+) -> CustomResult<domain_types::connector_types::EventType, WebhookError> {
     use domain_types::connector_types::EventType;
 
     let status: BluesnapChargebackStatus =
         serde_json::from_value(serde_json::Value::String(cb_status.to_string())).change_context(
-            IntegrationError::not_implemented("webhook event type not found".to_string()),
+            WebhookError::WebhookEventTypeNotFound,
         )?;
 
     Ok(match status {

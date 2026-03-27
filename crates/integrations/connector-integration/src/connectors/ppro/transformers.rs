@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{
+    ConnectorResponseTransformationError, IntegrationError, WebhookError,
+};
 use domain_types::{
     connector_flow::{Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -13,7 +15,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors,
     mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
@@ -533,7 +534,7 @@ pub enum PproWebhookType {
 }
 
 impl TryFrom<PproWebhookType> for EventType {
-    type Error = error_stack::Report<IntegrationError>;
+    type Error = error_stack::Report<WebhookError>;
 
     fn try_from(event_type: PproWebhookType) -> Result<Self, Self::Error> {
         match event_type {
@@ -558,7 +559,7 @@ impl TryFrom<PproWebhookType> for EventType {
 }
 
 impl TryFrom<PproWebhookType> for IncomingWebhookEvent {
-    type Error = error_stack::Report<errors::WebhookError>;
+    type Error = error_stack::Report<WebhookError>;
 
     fn try_from(event_type: PproWebhookType) -> Result<Self, Self::Error> {
         match event_type {

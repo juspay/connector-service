@@ -31,7 +31,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -43,7 +43,7 @@ use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaym
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -145,7 +145,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<IntegrationError>> {
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
+        
         let webhook_secret = match connector_webhook_secrets.clone() {
             Some(secrets) => secrets,
             None => return Ok(false),
@@ -155,23 +156,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             request
                 .headers
                 .get("authorization")
-                .ok_or(IntegrationError::not_implemented(
-                    "webhook signature not found".to_string(),
-                ))?;
+                .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
 
         let signature = base64_signature.as_bytes();
 
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert secret to UTF-8")?;
         let signature_auth = String::from_utf8(signature.to_vec())
-            .change_context(IntegrationError::not_implemented(
-                "webhook source verification failed".to_string(),
-            ))
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert secret to UTF-8")?;
         Ok(signature_auth == secret_auth)
+        
     }
 
     fn get_event_type(
@@ -179,7 +175,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<IntegrationError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
     {
         Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
@@ -191,35 +187,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<IntegrationError>,
+        error_stack::Report<WebhookError>,
     > {
+        
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
             .parse_struct("CashtocodePaymentsSyncResponse")
-            .change_context(IntegrationError::not_implemented(
-                "webhook resource object not found".to_string(),
-            ))?;
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(
-                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.transaction_id.clone(),
-                ),
+        resource_id: Some(
+            domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                webhook.transaction_id.clone(),
             ),
-            status: common_enums::AttemptStatus::Charged,
-            status_code: 200,
-            mandate_reference: None,
-            connector_response_reference_id: None,
-            error_code: None,
-            error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            response_headers: None,
-            minor_amount_captured: None,
-            amount_captured: None,
-            error_reason: None,
-            network_txn_id: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
-        })
+        ),
+        status: common_enums::AttemptStatus::Charged,
+        status_code: 200,
+        mandate_reference: None,
+        connector_response_reference_id: None,
+        error_code: None,
+        error_message: None,
+        raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+        response_headers: None,
+        minor_amount_captured: None,
+        amount_captured: None,
+        error_reason: None,
+        network_txn_id: None,
+        payment_method_update: None,
+        transformation_status: common_enums::WebhookTransformationStatus::Complete,
+    })
+        
     }
 }
 

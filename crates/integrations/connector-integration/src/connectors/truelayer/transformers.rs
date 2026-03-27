@@ -31,7 +31,7 @@ use std::collections::HashMap;
 
 use crate::{connectors::truelayer::TruelayerRouterData, types::ResponseRouterData, utils};
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, WebhookError};
 const GRANT_TYPE: &str = "client_credentials";
 const SCOPE: &str = "payments";
 const SIG_BYTES_EXPECTED_LENGTH: usize = 132;
@@ -1018,7 +1018,7 @@ pub fn get_webhook_event(
 
 pub fn get_truelayer_payment_webhook_status(
     event: TruelayerWebhookEventType,
-) -> Result<AttemptStatus, IntegrationError> {
+) -> Result<AttemptStatus, WebhookError> {
     match event {
         TruelayerWebhookEventType::PaymentAuthorized => Ok(AttemptStatus::Authorized),
         TruelayerWebhookEventType::PaymentCreditable
@@ -1031,15 +1031,13 @@ pub fn get_truelayer_payment_webhook_status(
         TruelayerWebhookEventType::PaymentDisputed
         | TruelayerWebhookEventType::Unknown
         | TruelayerWebhookEventType::RefundExecuted
-        | TruelayerWebhookEventType::RefundFailed => Err(IntegrationError::not_implemented(
-            "webhook body decoding failed".to_string(),
-        ))?,
+        | TruelayerWebhookEventType::RefundFailed => Err(WebhookError::WebhookBodyDecodingFailed),
     }
 }
 
 pub fn get_truelayer_refund_webhook_status(
     event: TruelayerWebhookEventType,
-) -> Result<common_enums::RefundStatus, IntegrationError> {
+) -> Result<common_enums::RefundStatus, WebhookError> {
     match event {
         TruelayerWebhookEventType::RefundExecuted => Ok(common_enums::RefundStatus::Success),
         TruelayerWebhookEventType::RefundFailed => Ok(common_enums::RefundStatus::Failure),
@@ -1052,9 +1050,7 @@ pub fn get_truelayer_refund_webhook_status(
         | TruelayerWebhookEventType::PaymentFundsReceived
         | TruelayerWebhookEventType::PaymentReversed
         | TruelayerWebhookEventType::PaymentSettlementStalled
-        | TruelayerWebhookEventType::Unknown => Err(IntegrationError::not_implemented(
-            "webhook body decoding failed".to_string(),
-        ))?,
+        | TruelayerWebhookEventType::Unknown => Err(WebhookError::WebhookBodyDecodingFailed),
     }
 }
 

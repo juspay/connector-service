@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError},
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
@@ -24,7 +24,7 @@ use crate::types::ResponseRouterData;
 type HsInterfacesConnectorRequestError = IntegrationError;
 use std::str::FromStr;
 
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
@@ -3057,7 +3057,7 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
     }
 }
 
-pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, IntegrationError> {
+pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, WebhookError> {
     match details.event_type {
         AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
             // For payment profile creation, use the customer_profile_id as the primary identifier
@@ -3083,9 +3083,7 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                             target: "authorizedotnet_webhook",
                             "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
                         );
-                        Err(IntegrationError::not_implemented(
-                            "webhook reference id not found".to_string(),
-                        ))
+                        Err(WebhookError::WebhookReferenceIdNotFound)
                     }
                 }
             }
@@ -3108,9 +3106,7 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                         "No transaction ID found in webhook payload for event type: {:?}",
                         details.event_type
                     );
-                    Err(IntegrationError::not_implemented(
-                        "webhook reference id not found".to_string(),
-                    ))
+                    Err(WebhookError::WebhookReferenceIdNotFound)
                 }
             }
         }
@@ -3122,7 +3118,11 @@ impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
     fn try_from(item: AuthorizedotnetWebhookObjectId) -> Result<Self, Self::Error> {
         Ok(Self {
             transaction: Some(SyncTransactionResponse {
-                transaction_id: get_trans_id(&item)?,
+                transaction_id: get_trans_id(&item).map_err(|e| {
+                    report!(e).change_context(IntegrationError::not_implemented(
+                        "webhook reference id not found".to_string(),
+                    ))
+                })?,
                 transaction_status: SyncStatus::from(item.event_type),
                 response_code: Some(1),
                 response_reason_code: Some(1),
