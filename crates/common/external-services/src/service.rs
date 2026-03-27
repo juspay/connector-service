@@ -13,7 +13,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
-    errors::{ApiErrorResponse, ResponseTransformationErrorContext},
+    errors::ApiErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Proxy,
@@ -23,7 +23,7 @@ use domain_types::{
 use domain_types::{
     errors::{
         report_common_api_client_to_flow, report_connector_request_to_flow,
-        report_connector_response_to_flow, ConnectorFlowError,
+        report_connector_response_to_flow, ConnectorFlowError, ResponseTransformationErrorContext,
     },
     IntegrationError,
 };
