@@ -448,7 +448,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.response.to_vec(),
                 ))
                 .change_context(
-                    crate::utils::response_handling_fail_for_connector(res.status_code, "razorpayv2"),
+                    crate::utils::response_handling_fail_for_connector(
+                        res.status_code,
+                        "razorpayv2",
+                    ),
                 )
             }
             Err(_) => {
@@ -474,7 +477,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.response.to_vec(),
                 ))
                 .change_context(
-                    crate::utils::response_handling_fail_for_connector(res.status_code, "razorpayv2"),
+                    crate::utils::response_handling_fail_for_connector(
+                        res.status_code,
+                        "razorpayv2",
+                    ),
                 )
             }
         }
@@ -773,9 +779,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpayv2"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "razorpayv2",
+        ))
     }
 
     fn get_error_response_v2(
@@ -880,9 +887,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpayv2"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "razorpayv2",
+        ))
     }
 
     fn get_error_response_v2(
@@ -982,9 +990,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpayv2"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "razorpayv2",
+        ))
     }
 
     fn get_error_response_v2(

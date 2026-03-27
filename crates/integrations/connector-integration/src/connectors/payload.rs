@@ -747,7 +747,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let signature = request
             .headers
             .get(headers::X_PAYLOAD_SIGNATURE)
@@ -755,7 +754,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
 
         Ok(signature)
-        
     }
 
     fn get_webhook_source_verification_message(
@@ -781,18 +779,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let signature = self
-            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
 
-        let message = self
-            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
 
         algorithm
-            .verify_signature(
-                &connector_webhook_secrets.secret,
-                &signature,
-                &message,
-            )
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
             .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
@@ -801,9 +795,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
-    {
-        
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>> {
         let webhook_body: transformers::PayloadWebhookEvent = request
             .body
             .parse_struct("PayloadWebhookEvent")
@@ -812,17 +804,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(transformers::get_event_type_from_trigger(
             webhook_body.trigger,
         ))
-        
     }
 
     fn get_webhook_resource_object(
         &self,
         request: domain_types::connector_types::RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<WebhookError>,
-    > {
-        
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
         let webhook_body: transformers::PayloadWebhookEvent = request
             .body
             .parse_struct("PayloadWebhookEvent")
@@ -830,6 +818,5 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> = Box::new(webhook_body);
         Ok(resource)
-        
     }
 }

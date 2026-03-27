@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::{
-    ConnectorResponseTransformationError, IntegrationError, WebhookError,
-};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
 use domain_types::{
     connector_flow::{Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{

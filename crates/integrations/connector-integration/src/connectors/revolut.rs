@@ -236,7 +236,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let signature_header = request
             .headers
             .get("revolut-signature")
@@ -255,7 +254,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         hex::decode(hex_signature)
             .attach_printable("Failed to decode hex signature")
             .change_context(WebhookError::WebhookSourceVerificationFailed)
-        
     }
 
     fn get_webhook_source_verification_message(
@@ -263,7 +261,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         // 1. Get the Timestamp
         let timestamp = request
             .headers
@@ -280,7 +277,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let message = format!("v1.{}.{}", timestamp, body);
 
         Ok(message.into_bytes())
-        
     }
 
     fn verify_webhook_source(
@@ -297,9 +293,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None => {
                 // If webhook secrets are not provided, take them from connector_account_details
                 let auth = revolut::RevolutAuthType::try_from(
-                    connector_account_details.as_ref().ok_or_else(|| {
-                        report!(WebhookError::WebhookVerificationSecretNotFound)
-                    })?,
+                    connector_account_details
+                        .as_ref()
+                        .ok_or_else(|| report!(WebhookError::WebhookVerificationSecretNotFound))?,
                 )
                 .map_err(|e| e.change_context(WebhookError::WebhookSourceVerificationFailed))?;
 
@@ -334,7 +330,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
@@ -352,9 +347,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             revolut::RevolutWebhookEvent::OrderPaymentDeclined => {
                 Ok(EventType::PaymentIntentAuthorizationFailure)
             }
-            revolut::RevolutWebhookEvent::OrderPaymentFailed => {
-                Ok(EventType::PaymentIntentFailure)
-            }
+            revolut::RevolutWebhookEvent::OrderPaymentFailed => Ok(EventType::PaymentIntentFailure),
             revolut::RevolutWebhookEvent::PayoutInitiated => Ok(EventType::PayoutCreated),
             revolut::RevolutWebhookEvent::PayoutCompleted => Ok(EventType::PayoutSuccess),
             revolut::RevolutWebhookEvent::PayoutFailed => Ok(EventType::PayoutFailure),
@@ -363,7 +356,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             revolut::RevolutWebhookEvent::DisputeWon => Ok(EventType::DisputeWon),
             revolut::RevolutWebhookEvent::DisputeLost => Ok(EventType::DisputeLost),
         }
-        
     }
 
     fn process_payment_webhook(
@@ -372,22 +364,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let notif: revolut::RevolutWebhookBody = request
             .body
             .parse_struct("RevolutWebhookBody")
             .attach_printable("Failed to parse Revolut webhook body")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
-        let response = WebhookDetailsResponse::try_from(notif).change_context(
-            WebhookError::WebhookResponseEncodingFailed,
-        );
+        let response = WebhookDetailsResponse::try_from(notif)
+            .change_context(WebhookError::WebhookResponseEncodingFailed);
 
         response.map(|mut response| {
             response.raw_connector_response =
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
-        
     }
 }
 

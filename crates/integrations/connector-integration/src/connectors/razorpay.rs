@@ -442,7 +442,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .change_context(
                             crate::utils::response_handling_fail_for_connector(
                                 res.status_code,
-                            "razorpay"),
+                                "razorpay",
+                            ),
                         )
                     }
                     Err(_) => {
@@ -468,7 +469,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .change_context(
                             crate::utils::response_handling_fail_for_connector(
                                 res.status_code,
-                            "razorpay"),
+                                "razorpay",
+                            ),
                         )
                     }
                 }
@@ -605,9 +607,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "razorpay",
+        ))
     }
 
     fn get_error_response_v2(
@@ -732,9 +735,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(res.status_code, "razorpay"),
-            )
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                res.status_code,
+                "razorpay",
+            ))
     }
 
     fn get_error_response_v2(
@@ -844,7 +848,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
         let payload = transformers::get_webhook_object_from_body(request.body)?;
 
         if payload.refund.is_some() {
@@ -852,7 +855,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             Ok(EventType::PaymentIntentSuccess)
         }
-        
     }
 
     fn process_payment_webhook(
@@ -861,13 +863,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body)?;
 
-        let notif = payload.payment.ok_or_else(|| {
-            error_stack::report!(WebhookError::WebhookReferenceIdNotFound)
-        })?;
+        let notif = payload
+            .payment
+            .ok_or_else(|| error_stack::report!(WebhookError::WebhookReferenceIdNotFound))?;
 
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(notif.entity.order_id)),
@@ -889,7 +890,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             payment_method_update: None,
         })
-        
     }
 
     fn process_refund_webhook(
@@ -898,13 +898,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body)?;
 
-        let notif = payload.refund.ok_or_else(|| {
-            error_stack::report!(WebhookError::WebhookReferenceIdNotFound)
-        })?;
+        let notif = payload
+            .refund
+            .ok_or_else(|| error_stack::report!(WebhookError::WebhookReferenceIdNotFound))?;
 
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(notif.entity.id),
@@ -919,7 +918,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             status_code: 200,
             response_headers: None,
         })
-        
     }
 }
 

@@ -148,7 +148,6 @@ pub fn combine_error_message_with_context(
     }
 }
 
-
 /// Errors that occur on the request transformationside:
 /// - proto → domain (`ForeignTryFrom`)
 /// - domain → connector bytes (`build_request_v2`)
@@ -347,13 +346,15 @@ impl IntegrationError {
     }
 }
 
-
 /// Direct conversion from domain IntegrationError to proto IntegrationError (lossless).
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for IntegrationError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
         let context = self.integration_context();
         let base_message = self.to_string();
-        let error_message = combine_error_message_with_context(&base_message, context.additional_context.as_deref());
+        let error_message = combine_error_message_with_context(
+            &base_message,
+            context.additional_context.as_deref(),
+        );
 
         grpc_api_types::payments::IntegrationError {
             error_message,
@@ -579,11 +580,16 @@ impl ConnectorResponseTransformationError {
 }
 
 /// Direct conversion from domain ConnectorResponseTransformationError to proto (lossless).
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorResponseTransformationError {
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ConnectorResponseTransformationError
+{
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         let context = self.response_transformation_context();
         let base_message = self.to_string();
-        let error_message = combine_error_message_with_context(&base_message, context.additional_context.as_deref());
+        let error_message = combine_error_message_with_context(
+            &base_message,
+            context.additional_context.as_deref(),
+        );
 
         grpc_api_types::payments::ConnectorResponseTransformationError {
             error_message,

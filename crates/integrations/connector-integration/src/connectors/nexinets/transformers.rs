@@ -373,9 +373,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     ) -> Result<Self, Self::Error> {
         let transaction = match item.response.transactions.first() {
             Some(order) => order,
-            _ => {
-                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"))?
-            }
+            _ => Err(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "nexinets",
+            ))?,
         };
         let nexinets_metadata = NexinetsPaymentsMetadata {
             transaction_id: Some(transaction.transaction_id.clone()),
@@ -396,9 +397,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             | NexinetsTransactionType::Capture => {
                 ResponseId::ConnectorTransactionId(transaction.transaction_id.clone())
             }
-            _ => {
-                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"))?
-            }
+            _ => Err(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "nexinets",
+            ))?,
         };
         let mandate_reference = item
             .response
@@ -526,9 +528,10 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
             order_id: Some(item.response.order.order_id.clone()),
             psync_flow: item.response.transaction_type.clone(),
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(item.http_code, "nexinets"),
-        )?;
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            item.http_code,
+            "nexinets",
+        ))?;
         let resource_id = match item.response.transaction_type.clone() {
             NexinetsTransactionType::Preauth
             | NexinetsTransactionType::Debit

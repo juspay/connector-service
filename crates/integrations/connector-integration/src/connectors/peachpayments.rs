@@ -665,9 +665,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        let body = String::from_utf8(request.body.clone()).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+        let body = String::from_utf8(request.body.clone())
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
@@ -729,9 +728,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        let body = String::from_utf8(request.body.clone()).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+        let body = String::from_utf8(request.body.clone())
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
@@ -785,9 +783,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        let body = String::from_utf8(request.body.clone()).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+        let body = String::from_utf8(request.body.clone())
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")
@@ -833,13 +830,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<WebhookError>,
-    > {
-        let body = String::from_utf8(request.body.clone()).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let webhook_body: responses::PeachpaymentsIncomingWebhook = body
             .parse_struct("PeachpaymentsIncomingWebhook")

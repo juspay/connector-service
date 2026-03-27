@@ -610,9 +610,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             })
             .filter(|redirect_str| !redirect_str.is_empty())
             .map(|url| {
-                Url::parse(url).change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "globalpay"),
-                )
+                Url::parse(url).change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "globalpay",
+                ))
             })
             .transpose()?;
 

@@ -171,7 +171,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let webhook_body: noon::NoonWebhookSignature = request
             .body
             .parse_struct("NoonWebhookSignature")
@@ -182,7 +181,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .decode(signature)
             .change_context(WebhookError::WebhookSignatureNotFound)
             .attach_printable("Missing incoming webhook signature for noon")
-        
     }
 
     fn get_webhook_source_verification_message(
@@ -190,7 +188,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let webhook_body: noon::NoonWebhookBody = request
             .body
             .parse_struct("NoonWebhookBody")
@@ -205,7 +202,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             webhook_body.time_stamp,
         );
         Ok(message.into_bytes())
-        
     }
 
     fn get_event_type(
@@ -214,7 +210,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
         let details: noon::NoonWebhookEvent = request
             .body
             .parse_struct("NoonWebhookEvent")
@@ -225,11 +220,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             noon::NoonWebhookEventTypes::Sale | noon::NoonWebhookEventTypes::Capture => {
                 match &details.order_status {
                     noon::NoonPaymentStatus::Captured => Ok(EventType::PaymentIntentSuccess),
-                    _ => Err(
-                        report!(WebhookError::WebhookEventTypeNotFound).attach_printable(
-                            "Unexpected order status for sale/capture Noon webhook",
-                        ),
-                    ),
+                    _ => Err(report!(WebhookError::WebhookEventTypeNotFound)
+                        .attach_printable("Unexpected order status for sale/capture Noon webhook")),
                 }
             }
             noon::NoonWebhookEventTypes::Fail => Ok(EventType::PaymentIntentFailure),
@@ -240,7 +232,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Ok(EventType::IncomingWebhookEventUnspecified)
             }
         }
-        
     }
 
     fn verify_webhook_source(
@@ -303,19 +294,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
     {
-        
         let webhook_object: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
             .change_context(WebhookError::WebhookResourceObjectNotFound)
-            .attach_printable(
-                "Failed to parse webhook resource object from Noon webhook body",
-            )?;
+            .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
 
         let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> =
             Box::new(NoonPaymentsResponse::from(webhook_object));
         Ok(resource)
-        
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

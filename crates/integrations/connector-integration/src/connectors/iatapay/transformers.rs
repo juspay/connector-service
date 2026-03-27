@@ -380,7 +380,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         let metadata_value = serde_json::to_value(metadata_map).change_context(
                             crate::utils::response_handling_fail_for_connector(
                                 item.http_code,
-                            "iatapay"),
+                                "iatapay",
+                            ),
                         )?;
                         (Some(metadata_value), None)
                     }

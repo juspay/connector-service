@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ConnectorSpecificConfig, ConnectorResponseTransformationError,
+    self, connector_specific_config, ConnectorResponseTransformationError, ConnectorSpecificConfig,
     Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
 };
 use prost::Message;
@@ -196,8 +196,15 @@ where
 
     let ffi_http_request = FfiConnectorHttpRequest::decode(ffi_http_request_bytes.as_slice())
         .map_err(|decode_error| {
-            if let Ok(integration_error) = IntegrationError::decode(ffi_http_request_bytes.as_slice()) {
-                return map_integration_error("request transformer", suite, scenario, integration_error);
+            if let Ok(integration_error) =
+                IntegrationError::decode(ffi_http_request_bytes.as_slice())
+            {
+                return map_integration_error(
+                    "request transformer",
+                    suite,
+                    scenario,
+                    integration_error,
+                );
             }
 
             ScenarioError::SdkExecution {
@@ -218,8 +225,15 @@ where
     );
 
     let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|decode_error| {
-        if let Ok(response_transformation_error) = ConnectorResponseTransformationError::decode(proto_response_bytes.as_slice()) {
-            return map_response_transformation_error("response transformer", suite, scenario, response_transformation_error);
+        if let Ok(response_transformation_error) =
+            ConnectorResponseTransformationError::decode(proto_response_bytes.as_slice())
+        {
+            return map_response_transformation_error(
+                "response transformer",
+                suite,
+                scenario,
+                response_transformation_error,
+            );
         }
 
         ScenarioError::SdkExecution {

@@ -215,9 +215,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<bool, WebhookError> {
         let connector_webhook_secret = connector_webhook_secret
-            .ok_or_else(|| {
-                report!(WebhookError::WebhookVerificationSecretNotFound)
-            })
+            .ok_or_else(|| report!(WebhookError::WebhookVerificationSecretNotFound))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature =
@@ -238,15 +236,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, WebhookError> {
-        
-        let signature_str =
-            request
-                .headers
-                .get("bls-signature")
-                .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
+        let signature_str = request
+            .headers
+            .get("bls-signature")
+            .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
 
         hex::decode(signature_str).change_context(WebhookError::WebhookSignatureNotFound)
-        
     }
 
     fn get_webhook_source_verification_message(
@@ -254,17 +249,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, WebhookError> {
-        
-        let timestamp =
-            request
-                .headers
-                .get("bls-ipn-timestamp")
-                .ok_or_else(|| report!(WebhookError::WebhookSourceVerificationFailed))?;
+        let timestamp = request
+            .headers
+            .get("bls-ipn-timestamp")
+            .ok_or_else(|| report!(WebhookError::WebhookSourceVerificationFailed))?;
 
         let body_str = String::from_utf8_lossy(&request.body);
 
         Ok(format!("{timestamp}{body_str}").into_bytes())
-        
     }
 
     fn get_event_type(
@@ -273,15 +265,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<domain_types::connector_types::EventType, WebhookError> {
-        
         match serde_urlencoded::from_bytes::<transformers::BluesnapWebhookBody>(&request.body) {
             Ok(webhook_body) => match webhook_body.transaction_type {
                 transformers::BluesnapWebhookEvent::Chargeback
                 | transformers::BluesnapWebhookEvent::ChargebackStatusChanged => {
                     let dispute_body: transformers::BluesnapDisputeWebhookBody =
-                        serde_urlencoded::from_bytes(&request.body).change_context(
-                            WebhookError::WebhookBodyDecodingFailed,
-                        )?;
+                        serde_urlencoded::from_bytes(&request.body)
+                            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
                     transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
                 }
@@ -291,14 +281,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             },
             Err(_) => {
                 let dispute_body: transformers::BluesnapDisputeWebhookBody =
-                    serde_urlencoded::from_bytes(&request.body).change_context(
-                        WebhookError::WebhookBodyDecodingFailed,
-                    )?;
+                    serde_urlencoded::from_bytes(&request.body)
+                        .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
                 transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
             }
         }
-        
     }
 
     fn process_payment_webhook(
@@ -307,11 +295,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, WebhookError> {
-        
         let webhook_body: transformers::BluesnapWebhookBody =
-            serde_urlencoded::from_bytes(&request.body).change_context(
-                WebhookError::WebhookBodyDecodingFailed,
-            )?;
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         let status = match webhook_body.transaction_type {
             transformers::BluesnapWebhookEvent::Decline
@@ -353,7 +339,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             network_txn_id: None,
             payment_method_update: None,
         })
-        
     }
 
     fn process_refund_webhook(
@@ -361,17 +346,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<domain_types::connector_types::RefundWebhookDetailsResponse, WebhookError> {
-        
+    ) -> CustomResult<domain_types::connector_types::RefundWebhookDetailsResponse, WebhookError>
+    {
         let webhook_body: transformers::BluesnapWebhookBody =
-            serde_urlencoded::from_bytes(&request.body).change_context(
-                WebhookError::WebhookBodyDecodingFailed,
-            )?;
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        let connector_refund_id =
-            webhook_body
-                .reversal_ref_num
-                .ok_or_else(|| report!(WebhookError::WebhookReferenceIdNotFound))?;
+        let connector_refund_id = webhook_body
+            .reversal_ref_num
+            .ok_or_else(|| report!(WebhookError::WebhookReferenceIdNotFound))?;
 
         Ok(
             domain_types::connector_types::RefundWebhookDetailsResponse {
@@ -385,7 +368,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 response_headers: None,
             },
         )
-        
     }
 }
 

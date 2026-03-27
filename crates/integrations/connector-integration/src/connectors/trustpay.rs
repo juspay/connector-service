@@ -159,13 +159,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, Report<WebhookError>> {
-        
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
-        hex::decode(webhook_response.signature).change_context(WebhookError::WebhookSignatureNotFound)
-        
+        hex::decode(webhook_response.signature)
+            .change_context(WebhookError::WebhookSignatureNotFound)
     }
 
     fn get_webhook_source_verification_message(
@@ -173,22 +172,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, Report<WebhookError>> {
-        
         let trustpay_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
-        let response: serde_json::Value =
-            request.body.parse_struct("Webhook Value").change_context(
-                WebhookError::WebhookBodyDecodingFailed,
-            )?;
+        let response: serde_json::Value = request
+            .body
+            .parse_struct("Webhook Value")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         let values = utils::collect_and_sort_values_by_removing_signature(
             &response,
             &trustpay_response.signature,
         );
         let payload = values.join("/");
         Ok(payload.into_bytes())
-        
     }
 
     fn verify_webhook_source(
@@ -210,11 +207,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
 
         algorithm
-            .verify_signature(
-                &connector_webhook_secrets.secret,
-                &signature,
-                &message,
-            )
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
             .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
@@ -224,7 +217,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, Report<WebhookError>> {
-        
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
@@ -234,7 +226,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             &webhook_response.payment_information.credit_debit_indicator,
             &webhook_response.payment_information.status,
         ))
-        
     }
 
     fn process_payment_webhook(
@@ -243,7 +234,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, Report<WebhookError>> {
-        
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
@@ -291,7 +281,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             network_txn_id: None,
             payment_method_update: None,
         })
-        
     }
 
     fn process_refund_webhook(
@@ -300,7 +289,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, Report<WebhookError>> {
-        
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
@@ -333,7 +321,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
         })
-        
     }
 
     fn process_dispute_webhook(
@@ -341,11 +328,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<
-        domain_types::connector_types::DisputeWebhookDetailsResponse,
-        Report<WebhookError>,
-    > {
-        
+    ) -> Result<domain_types::connector_types::DisputeWebhookDetailsResponse, Report<WebhookError>>
+    {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
@@ -354,11 +338,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_info = webhook_response.payment_information;
         let reason_info = payment_info.status_reason_information.unwrap_or_default();
 
-        let connector_dispute_id =
-            payment_info
-                .references
-                .payment_id
-                .ok_or_else(|| report!(WebhookError::WebhookReferenceIdNotFound))?;
+        let connector_dispute_id = payment_info
+            .references
+            .payment_id
+            .ok_or_else(|| report!(WebhookError::WebhookReferenceIdNotFound))?;
 
         let minor_units = domain_types::utils::convert_back_amount_to_minor_units(
             &FloatMajorUnitForConnector,
@@ -387,14 +370,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 connector_reason_code: reason_info.reason.code,
             },
         )
-        
     }
 
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
     ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, Report<WebhookError>> {
-        
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
@@ -403,7 +384,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> =
             Box::new(webhook_response.payment_information);
         Ok(resource)
-        
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

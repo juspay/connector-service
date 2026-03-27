@@ -5,7 +5,6 @@ use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodTyp
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
-    errors::WebhookError,
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
@@ -21,6 +20,7 @@ use domain_types::{
         RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
+    errors::WebhookError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
         PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
@@ -417,12 +417,10 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        Err(
-            WebhookError::WebhooksNotImplemented {
-                operation: "get_event_type",
-            }
-            .into(),
-        )
+        Err(WebhookError::WebhooksNotImplemented {
+            operation: "get_event_type",
+        }
+        .into())
     }
 
     fn process_payment_webhook(
@@ -431,12 +429,10 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        Err(
-            WebhookError::WebhooksNotImplemented {
-                operation: "process_payment_webhook",
-            }
-            .into(),
-        )
+        Err(WebhookError::WebhooksNotImplemented {
+            operation: "process_payment_webhook",
+        }
+        .into())
     }
 
     fn process_refund_webhook(
@@ -445,12 +441,10 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        Err(
-            WebhookError::WebhooksNotImplemented {
-                operation: "process_refund_webhook",
-            }
-            .into(),
-        )
+        Err(WebhookError::WebhooksNotImplemented {
+            operation: "process_refund_webhook",
+        }
+        .into())
     }
     fn process_dispute_webhook(
         &self,
@@ -458,28 +452,22 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        Err(
-            WebhookError::WebhooksNotImplemented {
-                operation: "process_dispute_webhook",
-            }
-            .into(),
-        )
+        Err(WebhookError::WebhooksNotImplemented {
+            operation: "process_dispute_webhook",
+        }
+        .into())
     }
 
     /// fn get_webhook_resource_object
     fn get_webhook_resource_object(
         &self,
         _request: RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<WebhookError>,
-    > {
-        Err(
-            WebhookError::WebhooksNotImplemented {
-                operation: "get_webhook_resource_object",
-            }
-            .into(),
-        )
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
+        Err(WebhookError::WebhooksNotImplemented {
+            operation: "get_webhook_resource_object",
+        }
+        .into())
     }
 
     /// fn get_webhook_api_response

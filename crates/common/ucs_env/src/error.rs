@@ -264,4 +264,3 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
         }
     }
 }
-

@@ -573,9 +573,10 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "trustpayments"),
-            )?;
+            .ok_or(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "trustpayments",
+            ))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -1162,9 +1163,10 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "trustpayments"),
-            )?;
+            .ok_or(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "trustpayments",
+            ))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {

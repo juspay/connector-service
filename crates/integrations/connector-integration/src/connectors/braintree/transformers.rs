@@ -756,24 +756,22 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 {
                     Ok(t) => t,
                     Err(_) => {
-                        return Err(
-                            utils::response_handling_fail_for_connector(
-                                item.http_code,
-                            "braintree")
-                            .into(),
-                        );
+                        return Err(utils::response_handling_fail_for_connector(
+                            item.http_code,
+                            "braintree",
+                        )
+                        .into());
                     }
                 };
                 let complete_authorize_url =
                     match item.router_data.request.get_complete_authorize_url() {
                         Ok(u) => u,
                         Err(_) => {
-                            return Err(
-                                utils::response_handling_fail_for_connector(
-                                    item.http_code,
-                                "braintree")
-                                .into(),
-                            );
+                            return Err(utils::response_handling_fail_for_connector(
+                                item.http_code,
+                                "braintree",
+                            )
+                            .into());
                         }
                     };
                 Ok(Self {
@@ -1016,24 +1014,22 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 {
                     Ok(t) => t,
                     Err(_) => {
-                        return Err(
-                            utils::response_handling_fail_for_connector(
-                                item.http_code,
-                            "braintree")
-                            .into(),
-                        );
+                        return Err(utils::response_handling_fail_for_connector(
+                            item.http_code,
+                            "braintree",
+                        )
+                        .into());
                     }
                 };
                 let complete_authorize_url =
                     match item.router_data.request.get_complete_authorize_url() {
                         Ok(u) => u,
                         Err(_) => {
-                            return Err(
-                                utils::response_handling_fail_for_connector(
-                                    item.http_code,
-                                "braintree")
-                                .into(),
-                            );
+                            return Err(utils::response_handling_fail_for_connector(
+                                item.http_code,
+                                "braintree",
+                            )
+                            .into());
                         }
                     };
                 Ok(Self {

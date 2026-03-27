@@ -61,7 +61,8 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                                 Url::parse(url).change_context(
                                     crate::utils::response_handling_fail_for_connector(
                                         item.http_code,
-                                    "rapyd"),
+                                        "rapyd",
+                                    ),
                                 )
                             })
                             .transpose()?;

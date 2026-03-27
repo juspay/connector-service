@@ -731,9 +731,9 @@ impl<
                 })
             }
             PaypalAuthResponse::PaypalRedirectResponse(_)
-            | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
-                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"))?
-            }
+            | PaypalAuthResponse::PaypalThreeDsResponse(_) => Err(
+                crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"),
+            )?,
         }
     }
 }
@@ -1838,16 +1838,19 @@ where
                 ResponseId::ConnectorTransactionId(item.response.id.clone()),
             ),
 
-            PaypalPaymentIntent::Authenticate => {
-                Err(crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"))?
-            }
+            PaypalPaymentIntent::Authenticate => Err(
+                crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"),
+            )?,
         };
         //payment collection will always have only one element as we only make one transaction per order.
         let payment_collection = &item
             .response
             .purchase_units
             .first()
-            .ok_or(crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"))?
+            .ok_or(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "paypal",
+            ))?
             .payments;
         //payment collection item will either have "authorizations" field or "capture" field, not both at a time.
         let payment_collection_item = match (
@@ -1859,7 +1862,10 @@ where
             (Some(_), Some(captures)) => captures.first(),
             _ => None,
         }
-        .ok_or(crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"))?;
+        .ok_or(crate::utils::response_handling_fail_for_connector(
+            item.http_code,
+            "paypal",
+        ))?;
         let status = payment_collection_item.status.clone();
         let status = common_enums::AttemptStatus::from(status);
 
@@ -2024,11 +2030,10 @@ impl TryFrom<ResponseRouterData<PaypalRedirectResponse, Self>>
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(
-                        crate::utils::response_handling_fail_for_connector(
-                            item.http_code,
-                        "paypal"),
-                    )?,
+                    link.ok_or(crate::utils::response_handling_fail_for_connector(
+                        item.http_code,
+                        "paypal",
+                    ))?,
                     Method::Get,
                 )))),
                 mandate_reference: None,

@@ -2864,9 +2864,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
                 .ok_or_else(|| {
-                    error_stack::report!(
-                        crate::utils::response_handling_fail_for_connector(http_code, "authorizedotnet")
-                    )
+                    error_stack::report!(crate::utils::response_handling_fail_for_connector(
+                        http_code,
+                        "authorizedotnet"
+                    ))
                 })?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}

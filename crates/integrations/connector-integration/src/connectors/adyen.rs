@@ -847,17 +847,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 notif.psp_reference.clone(),
             )),
-            status: transformers::get_adyen_payment_webhook_event(
-                notif.event_code,
-                notif.success,
-            )?,
+            status: transformers::get_adyen_payment_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference),
             error_code,
             mandate_reference,
             error_message,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
@@ -898,9 +893,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             connector_response_reference_id: Some(notif.psp_reference.clone()),
             error_code,
             error_message,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
         })

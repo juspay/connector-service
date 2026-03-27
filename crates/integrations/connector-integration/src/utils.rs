@@ -214,12 +214,11 @@ pub(crate) fn handle_json_response_deserialization_failure(
     res: Response,
     _connector: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
-    let response_data = String::from_utf8(res.response.to_vec()).change_context(
-        response_deserialization_fail(
+    let response_data =
+        String::from_utf8(res.response.to_vec()).change_context(response_deserialization_fail(
             res.status_code,
             "Response body was not valid UTF-8 when reading connector error payload.",
-        ),
-    )?;
+        ))?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {

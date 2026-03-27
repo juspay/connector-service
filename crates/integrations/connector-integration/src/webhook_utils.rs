@@ -160,9 +160,11 @@ pub fn get_refunds_webhook_content<
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_config: Option<ConnectorSpecificConfig>,
 ) -> error_stack::Result<EventContent, WebhookError> {
-    let webhook_details = connector_data
-        .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_config)?;
+    let webhook_details = connector_data.connector.process_refund_webhook(
+        request_details,
+        webhook_secrets,
+        connector_config,
+    )?;
 
     let response = RefundResponse::foreign_try_from(webhook_details)
         .change_context(WebhookError::WebhookProcessingFailed)?;
@@ -190,9 +192,11 @@ pub fn get_disputes_webhook_content<
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_config: Option<ConnectorSpecificConfig>,
 ) -> error_stack::Result<EventContent, WebhookError> {
-    let webhook_details = connector_data
-        .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_config)?;
+    let webhook_details = connector_data.connector.process_dispute_webhook(
+        request_details,
+        webhook_secrets,
+        connector_config,
+    )?;
 
     let response = DisputeResponse::foreign_try_from(webhook_details)
         .change_context(WebhookError::WebhookProcessingFailed)?;

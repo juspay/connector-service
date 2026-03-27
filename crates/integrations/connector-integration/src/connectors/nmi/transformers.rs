@@ -524,9 +524,10 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "nmi"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "nmi",
+            ))?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)

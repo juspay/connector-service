@@ -199,7 +199,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
         let webhook_body: AuthorizedotnetWebhookEventType = request
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
@@ -241,7 +240,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
         Ok(event_type)
-        
     }
 
     fn process_payment_webhook(
@@ -250,7 +248,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let request_body_copy = request.body.clone();
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
@@ -276,9 +273,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             minor_amount_captured: None,
             amount_captured: None,
@@ -287,7 +282,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
-        
     }
 
     fn process_refund_webhook(
@@ -296,7 +290,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let request_body_copy = request.body.clone();
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
@@ -320,12 +313,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
         })
-        
     }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

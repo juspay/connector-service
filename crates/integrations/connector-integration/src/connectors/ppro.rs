@@ -553,11 +553,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or_else(|| error_stack::report!(WebhookError::WebhookVerificationSecretNotFound))
             .attach_printable("Connector webhook secret not configured")?;
 
-        let signature =
-            request
-                .headers
-                .get("Webhook-Signature")
-                .ok_or_else(|| error_stack::report!(WebhookError::WebhookSignatureNotFound))?;
+        let signature = request
+            .headers
+            .get("Webhook-Signature")
+            .ok_or_else(|| error_stack::report!(WebhookError::WebhookSignatureNotFound))?;
 
         let algorithm = crypto::HmacSha256;
         let expected_signature =
@@ -575,10 +574,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<WebhookError>,
-    > {
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")

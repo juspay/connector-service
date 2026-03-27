@@ -964,9 +964,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "truelayer"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "truelayer",
+        ))
     }
 
     fn get_error_response_v2(
@@ -986,8 +987,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
-    {
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>> {
         let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
             .body
             .parse_struct("TruelayerPayoutsWebhookBody")
@@ -1091,10 +1091,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: domain_types::connector_types::RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<WebhookError>,
-    > {
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhooksBody")

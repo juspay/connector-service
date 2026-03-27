@@ -742,9 +742,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: HipayRSyncResponse = res
             .response
             .parse_struct("HipayRSyncResponse")
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(res.status_code, "hipay"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                res.status_code,
+                "hipay",
+            ))?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response);
@@ -755,9 +756,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "hipay"),
-        )
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "hipay",
+        ))
     }
 
     fn get_error_response_v2(

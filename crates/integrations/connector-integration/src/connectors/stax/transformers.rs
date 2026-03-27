@@ -639,9 +639,10 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "stax"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "stax",
+            ))?;
 
         // MUST find and validate child transaction with type="refund"
         // Following HS pattern: filter by amount and find most recent by created_at
@@ -708,9 +709,10 @@ fn get_refund_status(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        error_stack::report!(
-            crate::utils::response_handling_fail_for_connector(http_status, "stax")
-        )
+        error_stack::report!(crate::utils::response_handling_fail_for_connector(
+            http_status,
+            "stax"
+        ))
         .attach_printable("No refund child transaction found with matching amount")
     })?;
 
@@ -748,9 +750,10 @@ fn extract_refund_id(
         .collect();
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
-        error_stack::report!(
-            crate::utils::response_handling_fail_for_connector(http_status, "stax")
-        )
+        error_stack::report!(crate::utils::response_handling_fail_for_connector(
+            http_status,
+            "stax"
+        ))
         .attach_printable("No refund child transaction found with matching amount")
     })?;
 

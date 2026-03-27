@@ -523,9 +523,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "xendit"),
-                )?;
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "xendit",
+                ))?;
 
         let response_integrity_object = Some(AuthoriseIntegrityObject {
             amount: response_amount,
@@ -795,9 +796,10 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "xendit"),
-                )?;
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "xendit",
+                ))?;
 
         let response_integrity_object = {
             Some(RefundIntegrityObject {

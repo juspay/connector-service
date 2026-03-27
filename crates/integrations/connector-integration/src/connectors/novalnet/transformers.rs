@@ -1329,9 +1329,10 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .transaction
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
-            .ok_or(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "novalnet"),
-            )?;
+            .ok_or(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "novalnet",
+            ))?;
 
         match item.response.result.status {
             NovalnetAPIStatus::Success => {

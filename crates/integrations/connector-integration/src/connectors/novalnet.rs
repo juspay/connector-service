@@ -618,13 +618,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let notif_item = get_webhook_object_from_body(&request.body)?;
 
-        hex::decode(notif_item.event.checksum).change_context(
-            WebhookError::WebhookVerificationSecretInvalid,
-        )
-        
+        hex::decode(notif_item.event.checksum)
+            .change_context(WebhookError::WebhookVerificationSecretInvalid)
     }
 
     fn get_webhook_source_verification_message(
@@ -632,36 +629,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
         let notif = get_webhook_object_from_body(&request.body)?;
 
         let (amount, currency) = match notif.transaction {
-        novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
-            (data.amount, data.currency)
-        }
-        novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => {
-            (data.amount, data.currency)
-        }
+            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
+                (data.amount, data.currency)
+            }
+            novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => {
+                (data.amount, data.currency)
+            }
 
-        novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
-            (data.amount, data.currency)
-        }
+            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
+                (data.amount, data.currency)
+            }
 
-        novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
-            (data.amount, data.currency)
-        }
-    };
-    let amount = amount
-        .map(|amount| amount.to_string())
-        .unwrap_or("".to_string());
-    let currency = currency
-        .map(|amount| amount.to_string())
-        .unwrap_or("".to_string());
+            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
+                (data.amount, data.currency)
+            }
+        };
+        let amount = amount
+            .map(|amount| amount.to_string())
+            .unwrap_or("".to_string());
+        let currency = currency
+            .map(|amount| amount.to_string())
+            .unwrap_or("".to_string());
 
-    let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
-        .change_context(WebhookError::WebhookVerificationSecretInvalid)
-        .attach_printable("Could not convert webhook secret auth to UTF-8")?;
-    let reversed_secret_auth = novalnet::reverse_string(&secret_auth);
+        let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
+            .change_context(WebhookError::WebhookVerificationSecretInvalid)
+            .attach_printable("Could not convert webhook secret auth to UTF-8")?;
+        let reversed_secret_auth = novalnet::reverse_string(&secret_auth);
 
         let message = format!(
             "{}{}{}{}{}{}",
@@ -674,7 +670,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         );
 
         Ok(message.into_bytes())
-        
     }
 
     fn verify_webhook_source(
@@ -743,7 +738,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
         let notif = get_webhook_object_from_body(&request.body)?;
 
         let optional_transaction_status = match notif.transaction {
@@ -770,7 +764,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let incoming_webhook_event =
             novalnet::get_incoming_webhook_event(notif.event.event_type, transaction_status);
         Ok(incoming_webhook_event)
-        
     }
 
     fn process_payment_webhook(
@@ -779,19 +772,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let notif = get_webhook_object_from_body(&request.body)?;
 
-        let response = WebhookDetailsResponse::try_from(notif).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        );
+        let response = WebhookDetailsResponse::try_from(notif)
+            .change_context(WebhookError::WebhookBodyDecodingFailed);
 
         response.map(|mut response| {
             response.raw_connector_response =
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
-        
     }
 
     fn process_refund_webhook(
@@ -800,22 +790,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
             .parse_struct("NovalnetWebhookNotificationResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        );
+        let response = RefundWebhookDetailsResponse::try_from(notif)
+            .change_context(WebhookError::WebhookBodyDecodingFailed);
 
         response.map(|mut response| {
             response.raw_connector_response =
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
-        
     }
 
     fn process_dispute_webhook(
@@ -824,7 +811,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let notif: transformers::NovalnetWebhookNotificationResponse =
             get_webhook_object_from_body(&request.body)?;
         let (amount, currency, reason, reason_code) = match notif.transaction {
@@ -856,25 +842,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             stage: common_enums::DisputeStage::Dispute,
             dispute_id: notif.event.tid.to_string(),
             connector_reason_code: reason_code,
-            status: common_enums::DisputeStatus::foreign_try_from(dispute_status).map_err(|e| {
-                e.change_context(WebhookError::WebhookProcessingFailed)
-            })?,
+            status: common_enums::DisputeStatus::foreign_try_from(dispute_status)
+                .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?,
             connector_response_reference_id: None,
             dispute_message: reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             status_code: 200,
             response_headers: None,
         })
-        
     }
 }
 
 fn get_webhook_object_from_body(
     body: &[u8],
-) -> Result<
-    novalnet::NovalnetWebhookNotificationResponse,
-    error_stack::Report<WebhookError>,
-> {
+) -> Result<novalnet::NovalnetWebhookNotificationResponse, error_stack::Report<WebhookError>> {
     body.parse_struct("NovalnetWebhookNotificationResponse")
         .change_context(WebhookError::WebhookBodyDecodingFailed)
 }

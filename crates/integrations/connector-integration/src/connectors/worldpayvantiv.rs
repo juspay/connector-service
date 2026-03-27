@@ -75,16 +75,20 @@ fn unwrap_json_wrapped_xml(
     status_code: u16,
 ) -> CustomResult<String, ConnectorResponseTransformationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(crate::utils::response_handling_fail_for_connector(status_code, "worldpayvantiv"))
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            status_code,
+            "worldpayvantiv",
+        ))
         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
     // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(status_code, "worldpayvantiv"),
-            )
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                status_code,
+                "worldpayvantiv",
+            ))
             .attach_printable("Failed to parse JSON-wrapped XML response")?
     } else {
         response_str.to_string()
@@ -904,9 +908,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                res.status_code,
+                "worldpayvantiv",
+            ))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }

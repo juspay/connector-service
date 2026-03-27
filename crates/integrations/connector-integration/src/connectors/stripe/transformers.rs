@@ -2917,9 +2917,10 @@ pub fn get_connector_metadata(
             _ => None,
         })
         .transpose()
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(http_status, "stripe"),
-        )?;
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            http_status,
+            "stripe",
+        ))?;
     Ok(next_action_response)
 }
 
@@ -3052,9 +3053,10 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 )?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-                )?;
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "stripe",
+                ))?;
 
         let response_integrity_object = PaymentSynIntegrityObject {
             amount: amount_in_minor_unit,
@@ -4067,9 +4069,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-                )?;
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "stripe",
+                ))?;
 
         let response_integrity_object = AuthoriseIntegrityObject {
             amount: amount_in_minor_unit,
@@ -4081,9 +4084,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-        );
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            item.http_code,
+            "stripe",
+        ));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = Some(response_integrity_object);
@@ -4116,9 +4120,10 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             .amount_received
             .map(|amount| StripeAmountConvertor::convert_back(amount, currency_enum))
             .transpose()
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                item.http_code,
+                "stripe",
+            ))?;
 
         let response_integrity_object =
             capture_amount_in_minor_unit.map(|amount_to_capture| CaptureIntegrityObject {
@@ -4131,9 +4136,10 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-        );
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            item.http_code,
+            "stripe",
+        ));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = response_integrity_object;
@@ -4371,9 +4377,10 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "stripe"),
-                )?;
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "stripe",
+                ))?;
 
         let response_integrity_object = RefundIntegrityObject {
             currency: currency_enum,
@@ -5036,50 +5043,50 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         })?,
                     };
 
-                    (
-                        Some(payment_data),
-                        None,
-                        StripeBillingAddress::default(),
-                        None,
-                        None,
-                    )
-                }
-                MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    let (payment_method_data, payment_method_type, billing_address) =
-                        create_stripe_payment_method(
-                            &item.request.payment_method_data,
-                            PaymentRequestDetails {
-                                auth_type: item.resource_common_data.auth_type,
-                                payment_method_token: item
-                                    .resource_common_data
-                                    .payment_method_token
-                                    .clone(),
-                                is_customer_initiated_mandate_payment: Some(false),
-                                billing_address: billing_address.ok_or(
-                                    IntegrationError::MissingRequiredField {
-                                        field_name: "billing_address",
-                                        context: Default::default(),
-                                    },
-                                )?,
-                                request_incremental_authorization: false,
-                                request_extended_authorization: None,
-                                request_overcapture: None,
-                            },
+                        (
+                            Some(payment_data),
+                            None,
+                            StripeBillingAddress::default(),
+                            None,
+                            None,
+                        )
+                    }
+                    MandateReferenceId::NetworkTokenWithNTI(_) => {
+                        let (payment_method_data, payment_method_type, billing_address) =
+                            create_stripe_payment_method(
+                                &item.request.payment_method_data,
+                                PaymentRequestDetails {
+                                    auth_type: item.resource_common_data.auth_type,
+                                    payment_method_token: item
+                                        .resource_common_data
+                                        .payment_method_token
+                                        .clone(),
+                                    is_customer_initiated_mandate_payment: Some(false),
+                                    billing_address: billing_address.ok_or(
+                                        IntegrationError::MissingRequiredField {
+                                            field_name: "billing_address",
+                                            context: Default::default(),
+                                        },
+                                    )?,
+                                    request_incremental_authorization: false,
+                                    request_extended_authorization: None,
+                                    request_overcapture: None,
+                                },
+                            )?;
+
+                        validate_shipping_address_against_payment_method(
+                            &shipping_address,
+                            payment_method_type.as_ref(),
                         )?;
 
-                    validate_shipping_address_against_payment_method(
-                        &shipping_address,
-                        payment_method_type.as_ref(),
-                    )?;
-
-                    (
-                        Some(payment_method_data),
-                        None,
-                        billing_address,
-                        payment_method_type,
-                        None,
-                    )
-                }
+                        (
+                            Some(payment_method_data),
+                            None,
+                            billing_address,
+                            payment_method_type,
+                            None,
+                        )
+                    }
                 }
             };
 

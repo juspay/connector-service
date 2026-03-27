@@ -58,9 +58,13 @@ fn get_webhook_response(
     (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
     ConnectorResponseTransformationError,
 > {
-    let transaction = response
-        .transaction
-        .ok_or(crate::utils::response_handling_fail_for_connector(status_code, "peachpayments"))?;
+    let transaction =
+        response
+            .transaction
+            .ok_or(crate::utils::response_handling_fail_for_connector(
+                status_code,
+                "peachpayments",
+            ))?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 

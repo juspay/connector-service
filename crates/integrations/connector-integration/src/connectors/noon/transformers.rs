@@ -994,9 +994,10 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(
-                utils::response_handling_fail_for_connector(item.http_code, "noon"),
-            )?;
+            .ok_or(utils::response_handling_fail_for_connector(
+                item.http_code,
+                "noon",
+            ))?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {

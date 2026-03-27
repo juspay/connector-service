@@ -561,7 +561,8 @@ impl<
                             let url = Url::parse(&deep_link_info.deep_link).change_context(
                                 crate::utils::response_handling_fail_for_connector(
                                     item.http_code,
-                                "paytm"),
+                                    "paytm",
+                                ),
                             )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }

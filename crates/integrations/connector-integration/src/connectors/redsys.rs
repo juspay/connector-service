@@ -503,9 +503,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "redsys"),
-        )?;
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            res.status_code,
+            "redsys",
+        ))?;
 
         Ok(router_data)
     }
@@ -684,9 +685,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data: data.clone(),
                 http_code: res.status_code,
             })
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(res.status_code, "redsys"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                res.status_code,
+                "redsys",
+            ))?;
 
         Ok(router_data)
     }

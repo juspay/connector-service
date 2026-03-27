@@ -670,11 +670,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Some(headers) => {
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
-                    .change_context(
-                        crate::utils::response_handling_fail_for_connector(
-                            res.status_code,
-                        "fiuu"),
-                    )?;
+                    .change_context(crate::utils::response_handling_fail_for_connector(
+                        res.status_code,
+                        "fiuu",
+                    ))?;
                 let response: FiuuPaymentResponse = if content_header
                     .to_lowercase()
                     .replace(' ', "")
@@ -736,17 +735,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
-        let header =
-            request
-                .headers
-                .get("content-type")
-                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                WebhookError::WebhookSourceVerificationFailed,
-            )?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(WebhookError::WebhookSourceVerificationFailed)?
         } else {
             request
                 .body
@@ -762,8 +758,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 webhooks_refunds_response.signature
             }
         };
-        hex::decode(signature.expose()).change_context(WebhookError::WebhookSourceVerificationFailed)
-        
+        hex::decode(signature.expose())
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
     fn get_webhook_source_verification_message(
@@ -771,17 +767,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
-        
-        let header =
-            request
-                .headers
-                .get("content-type")
-                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                WebhookError::WebhookSourceVerificationFailed,
-            )?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(WebhookError::WebhookSourceVerificationFailed)?
         } else {
             request
                 .body
@@ -831,7 +824,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
         Ok(verification_message.as_bytes().to_vec())
-        
     }
 
     fn verify_webhook_source(
@@ -866,18 +858,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        
-        let header =
-            request
-                .headers
-                .get("content-type")
-                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                WebhookError::WebhookBodyDecodingFailed,
-            )?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(WebhookError::WebhookBodyDecodingFailed)?
         } else {
             request
                 .body
@@ -893,7 +882,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Ok(EventType::from(webhooks_refunds_response.status))
             }
         }
-        
     }
 
     fn get_webhook_resource_object(
@@ -901,18 +889,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
     {
-        
-        let header =
-            request
-                .headers
-                .get("content-type")
-                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                WebhookError::WebhookResourceObjectNotFound,
-            )?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(WebhookError::WebhookResourceObjectNotFound)?
         } else {
             request
                 .body
@@ -928,13 +913,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Ok(resource)
             }
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
-                let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> = Box::new(
-                    FiuuRefundSyncResponse::Webhook(webhook_refund_response),
-                );
+                let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> =
+                    Box::new(FiuuRefundSyncResponse::Webhook(webhook_refund_response));
                 Ok(resource)
             }
         }
-        
     }
 
     fn process_payment_webhook(
@@ -968,18 +951,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
-        let header =
-            request
-                .headers
-                .get("content-type")
-                .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or_else(|| report!(WebhookError::WebhookBodyDecodingFailed))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
-                WebhookError::WebhookResourceObjectNotFound,
-            )?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(WebhookError::WebhookResourceObjectNotFound)?
         } else {
             request
                 .body
@@ -988,24 +968,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let notif = match payload.clone() {
-            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => Err(report!(
-                WebhookError::WebhookResourceObjectNotFound
-            )),
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => {
+                Err(report!(WebhookError::WebhookResourceObjectNotFound))
+            }
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
                 Ok(FiuuRefundSyncResponse::Webhook(webhook_refund_response))
             }
         }?;
 
-        let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        );
+        let response = RefundWebhookDetailsResponse::try_from(notif)
+            .change_context(WebhookError::WebhookBodyDecodingFailed);
 
         response.map(|mut response| {
             response.raw_connector_response =
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
-        
     }
 }
 

@@ -302,18 +302,20 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(http_status, "worldpay"),
-                )
+                .change_context(crate::utils::response_handling_fail_for_connector(
+                    http_status,
+                    "worldpay",
+                ))
         })
         .transpose()?;
     optional_reference_id
         .or_else(|| response.transaction_reference.map(&transform_fn))
         .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
-            error_stack::Report::new(
-                crate::utils::response_handling_fail_for_connector(http_status, "worldpay"),
-            )
+            error_stack::Report::new(crate::utils::response_handling_fail_for_connector(
+                http_status,
+                "worldpay",
+            ))
         })
 }
 

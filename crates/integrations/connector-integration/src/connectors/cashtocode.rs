@@ -146,17 +146,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<WebhookError>> {
-        
         let webhook_secret = match connector_webhook_secrets.clone() {
             Some(secrets) => secrets,
             None => return Ok(false),
         };
 
-        let base64_signature =
-            request
-                .headers
-                .get("authorization")
-                .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
+        let base64_signature = request
+            .headers
+            .get("authorization")
+            .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?;
 
         let signature = base64_signature.as_bytes();
 
@@ -167,7 +165,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert secret to UTF-8")?;
         Ok(signature_auth == secret_auth)
-        
     }
 
     fn get_event_type(
@@ -175,8 +172,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>>
-    {
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<WebhookError>> {
         Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
 
@@ -189,34 +185,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<WebhookError>,
     > {
-        
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
             .parse_struct("CashtocodePaymentsSyncResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(domain_types::connector_types::WebhookDetailsResponse {
-        resource_id: Some(
-            domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                webhook.transaction_id.clone(),
+            resource_id: Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    webhook.transaction_id.clone(),
+                ),
             ),
-        ),
-        status: common_enums::AttemptStatus::Charged,
-        status_code: 200,
-        mandate_reference: None,
-        connector_response_reference_id: None,
-        error_code: None,
-        error_message: None,
-        raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-        response_headers: None,
-        minor_amount_captured: None,
-        amount_captured: None,
-        error_reason: None,
-        network_txn_id: None,
-        payment_method_update: None,
-        transformation_status: common_enums::WebhookTransformationStatus::Complete,
-    })
-        
+            status: common_enums::AttemptStatus::Charged,
+            status_code: 200,
+            mandate_reference: None,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+            response_headers: None,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
+            network_txn_id: None,
+            payment_method_update: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+        })
     }
 }
 

@@ -684,9 +684,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(
-                    crate::utils::response_handling_fail_for_connector(_status_code, "razorpayv2"),
-                );
+                return Err(crate::utils::response_handling_fail_for_connector(
+                    _status_code,
+                    "razorpayv2",
+                ));
             }
         };
 

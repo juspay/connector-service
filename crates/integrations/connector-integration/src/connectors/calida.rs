@@ -60,9 +60,7 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::{
-    ConnectorResponseTransformationError, IntegrationError, WebhookError,
-};
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -95,7 +93,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<WebhookError>> {
-        
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
             None => return Ok(false),
@@ -107,17 +104,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or_else(|| report!(WebhookError::WebhookSignatureNotFound))?
             .clone();
 
-        let signature = hex::decode(security_header).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+        let signature =
+            hex::decode(security_header).change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        let parsed: serde_json::Value = serde_json::from_slice(&request.body).change_context(
-            WebhookError::WebhookBodyDecodingFailed,
-        )?;
+        let parsed: serde_json::Value = serde_json::from_slice(&request.body)
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        let sorted_payload = sort_and_minify_json(&parsed).map_err(|e| {
-            report!(e).change_context(WebhookError::WebhookBodyDecodingFailed)
-        })?;
+        let sorted_payload = sort_and_minify_json(&parsed)
+            .map_err(|e| report!(e).change_context(WebhookError::WebhookBodyDecodingFailed))?;
 
         let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA512, &connector_webhook_secrets);
 
@@ -126,7 +120,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookSourceVerificationFailed)?;
 
         Ok(verify)
-        
     }
 
     fn process_payment_webhook(
@@ -135,15 +128,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        
         let request_body_copy = request.body.clone();
         let webhook_body: CalidaWebhookResponse = request
             .body
             .parse_struct("CalidaWebhookResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)
-            .attach_printable_lazy(|| {
-                "Failed to parse Calida payment webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
 
         let transaction_id = webhook_body.order_id.clone();
 
@@ -156,9 +146,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             mandate_reference: None,
             minor_amount_captured: None,
@@ -168,7 +156,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
-        
     }
 
     fn get_event_type(
@@ -574,9 +561,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: CalidaErrorResponse = res
             .response
             .parse_struct("CalidaErrorResponse")
-            .change_context(
-                crate::utils::response_handling_fail_for_connector(res.status_code, "calida"),
-            )?;
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                res.status_code,
+                "calida",
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
