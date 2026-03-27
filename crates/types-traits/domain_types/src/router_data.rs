@@ -1845,6 +1845,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 base_url: truelayer.base_url,
                 secondary_base_url: truelayer.secondary_base_url,
             }),
+            AuthType::Archipel(archipel) => Ok(Self::Archipel {
+                api_key: archipel.ca_certificate.ok_or_else(err)?,
+                base_url: archipel.base_url,
+            }),
         }
     }
 }
