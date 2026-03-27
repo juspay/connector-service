@@ -119,9 +119,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2ErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -255,9 +255,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2CreateOrderResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -294,9 +294,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2ErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -448,7 +448,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.response.to_vec(),
                 ))
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                    crate::utils::response_handling_fail(res.status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )
             }
             Err(_) => {
@@ -457,9 +457,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .response
                     .parse_struct("RazorpayV2PaymentsResponse")
                     .change_context(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             res.status_code,
-                        ),
+                        "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
 
                 if let Some(i) = event_builder {
@@ -474,7 +474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.response.to_vec(),
                 ))
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                    crate::utils::response_handling_fail(res.status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )
             }
         }
@@ -757,9 +757,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2SyncResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -774,7 +774,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.response.to_vec(),
         ))
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )
     }
 
@@ -865,9 +865,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2RefundResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -881,7 +881,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.response.to_vec(),
         ))
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )
     }
 
@@ -967,9 +967,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayV2RefundResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "razorpayv2: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {
@@ -983,7 +983,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.response.to_vec(),
         ))
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "razorpayv2: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )
     }
 

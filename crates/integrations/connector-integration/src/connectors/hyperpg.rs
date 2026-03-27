@@ -303,9 +303,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("HyperpgErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "hyperpg: response body did not match the expected format; confirm API version and connector documentation."),
             )
             .attach_printable("Failed to deserialize Hyperpg error response")?;
 

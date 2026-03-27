@@ -757,9 +757,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     Ok(t) => t,
                     Err(_) => {
                         return Err(
-                            ConnectorResponseTransformationError::response_handling_failed(
+                            utils::response_handling_fail(
                                 item.http_code,
-                            )
+                            "braintree: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                             .into(),
                         );
                     }
@@ -769,9 +769,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         Ok(u) => u,
                         Err(_) => {
                             return Err(
-                                ConnectorResponseTransformationError::response_handling_failed(
+                                utils::response_handling_fail(
                                     item.http_code,
-                                )
+                                "braintree: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                                 .into(),
                             );
                         }
@@ -1017,9 +1017,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     Ok(t) => t,
                     Err(_) => {
                         return Err(
-                            ConnectorResponseTransformationError::response_handling_failed(
+                            utils::response_handling_fail(
                                 item.http_code,
-                            )
+                            "braintree: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                             .into(),
                         );
                     }
@@ -1029,9 +1029,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         Ok(u) => u,
                         Err(_) => {
                             return Err(
-                                ConnectorResponseTransformationError::response_handling_failed(
+                                utils::response_handling_fail(
                                     item.http_code,
-                                )
+                                "braintree: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                                 .into(),
                             );
                         }

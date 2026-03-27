@@ -60,7 +60,7 @@ fn get_webhook_response(
 > {
     let transaction = response
         .transaction
-        .ok_or(ConnectorResponseTransformationError::response_handling_failed(status_code))?;
+        .ok_or(crate::utils::response_handling_fail(status_code, "peachpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 

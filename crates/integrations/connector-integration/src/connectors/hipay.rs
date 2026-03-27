@@ -743,7 +743,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .parse_struct("HipayRSyncResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                crate::utils::response_handling_fail(res.status_code, "hipay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         if let Some(event) = event_builder {
@@ -756,7 +756,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "hipay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )
     }
 

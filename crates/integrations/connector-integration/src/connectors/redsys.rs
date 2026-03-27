@@ -315,9 +315,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("RedsysErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "redsys: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -477,15 +477,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorResponseTransformationError,
     > {
         let response = String::from_utf8(res.response.to_vec()).change_context(
-            ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+            crate::utils::response_deserialization_fail(res.status_code, "redsys: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "redsys: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         let router_data: RouterDataV2<
@@ -504,7 +504,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         Ok(router_data)
@@ -662,15 +662,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorResponseTransformationError,
     > {
         let response = String::from_utf8(res.response.to_vec()).change_context(
-            ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+            crate::utils::response_deserialization_fail(res.status_code, "redsys: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "redsys: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         let router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> =
@@ -685,7 +685,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 http_code: res.status_code,
             })
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                crate::utils::response_handling_fail(res.status_code, "redsys: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         Ok(router_data)

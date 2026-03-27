@@ -333,7 +333,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Get the first response from the array
         let response = item.response.responses.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Check for errors
@@ -543,7 +543,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
 
         // Get the first response from the array
         let response_item = item.response.response.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Check for errors at the response level
@@ -574,7 +574,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .as_ref()
             .and_then(|records| records.first())
             .ok_or(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         // Check for errors at the record level
@@ -745,7 +745,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
 
         // Get the first response from the array
         let response_item = item.response.response.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Check for errors
@@ -894,7 +894,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
 
         // Get the first response from the array
         let response_item = item.response.response.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Check for errors
@@ -1136,7 +1136,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
 
         // Get the first response from the array
         let response_item = item.response.response.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Check for errors at the response level
@@ -1163,7 +1163,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .as_ref()
             .and_then(|records| records.first())
             .ok_or(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         // Check for errors at the record level
@@ -1214,7 +1214,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRefundResponse, Self>>
 
         // Get the first response from the array
         let response = item.response.responses.first().ok_or(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "trustpayments: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         // Map refund status

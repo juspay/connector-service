@@ -1,4 +1,4 @@
-use crate::ConnectorResponseTransformationError;
+use crate::{utils, ConnectorResponseTransformationError};
 use bytes::Bytes;
 use serde_json::{Map, Value};
 
@@ -21,7 +21,10 @@ pub fn preprocess_xml_response_bytes(
     // Convert to UTF-8 string
     let response_str = std::str::from_utf8(&xml_data)
         .map_err(|_| {
-            ConnectorResponseTransformationError::response_deserialization_failed(http_status)
+            utils::response_deserialization_fail(
+                http_status,
+                "XML response was not valid UTF-8; check encoding and connector response.",
+            )
         })?
         .trim();
 
@@ -64,9 +67,10 @@ pub fn preprocess_xml_response_bytes(
             tracing::error!(error=?err, "Failed to parse XML to JSON structure");
 
             // Create a basic JSON structure with error information
-            return Err(
-                ConnectorResponseTransformationError::response_deserialization_failed(http_status),
-            );
+            return Err(utils::response_deserialization_fail(
+                http_status,
+                "Could not parse connector XML into JSON; verify connector response format and API version.",
+            ));
         }
     };
 
@@ -76,7 +80,10 @@ pub fn preprocess_xml_response_bytes(
     // Convert JSON Value to string and then to bytes
     let json_string = serde_json::to_string(&flattened_json).map_err(|e| {
         tracing::error!(error=?e, "Failed to convert to JSON string");
-        ConnectorResponseTransformationError::response_deserialization_failed(http_status)
+        utils::response_deserialization_fail(
+            http_status,
+            "Internal JSON serialization failed after XML conversion.",
+        )
     })?;
 
     tracing::info!(json=?json_string, "Flattened JSON structure");

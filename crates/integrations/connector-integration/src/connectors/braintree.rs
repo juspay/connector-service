@@ -485,9 +485,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .response
                     .parse_struct("Braintree PaymentsResponse")
                     .change_context(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             res.status_code,
-                        ),
+                        "braintree: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
@@ -501,9 +501,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .response
                     .parse_struct("Braintree AuthResponse")
                     .change_context(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             res.status_code,
-                        ),
+                        "braintree: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {

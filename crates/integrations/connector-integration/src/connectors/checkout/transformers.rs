@@ -1593,7 +1593,7 @@ fn get_connector_meta(
             }))
         }
         common_enums::CaptureMethod::Scheduled => {
-            Err(ConnectorResponseTransformationError::unexpected_response_error(http_status).into())
+            Err(crate::utils::unexpected_response_fail(http_status, "checkout: unexpected response for this operation; retry with idempotency keys and check connector status.").into())
         }
     }
 }
@@ -1941,7 +1941,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             },
             Some(common_enums::CaptureMethod::Scheduled) => {
                 return Err(
-                    ConnectorResponseTransformationError::unexpected_response_error(item.http_code)
+                    crate::utils::unexpected_response_fail(item.http_code, "checkout: unexpected response for this operation; retry with idempotency keys and check connector status.")
                         .into(),
                 );
             }
@@ -2200,9 +2200,9 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 Ok(id) => id.to_owned(),
                 Err(_) => {
                     return Err(
-                        ConnectorResponseTransformationError::response_handling_failed(
+                        crate::utils::response_handling_fail(
                             item.http_code,
-                        )
+                        "checkout: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                         .into(),
                     );
                 }
@@ -2401,7 +2401,7 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
             .ok_or(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "checkout: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {

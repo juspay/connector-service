@@ -1143,9 +1143,9 @@ where
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
                         other => Err(error_stack::Report::from(
-                            ConnectorResponseTransformationError::unexpected_response_error(
+                            crate::utils::unexpected_response_fail(
                                 item.http_code,
-                            ),
+                            "fiuu: unexpected response for this operation; retry with idempotency keys and check connector status."),
                         )
                         .attach_printable(other.to_owned())),
                     }?;
@@ -1398,9 +1398,9 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     "11" => Ok(common_enums::RefundStatus::Failure),
                     "22" => Ok(common_enums::RefundStatus::Pending),
                     other => Err(error_stack::Report::from(
-                        ConnectorResponseTransformationError::unexpected_response_error(
+                        crate::utils::unexpected_response_fail(
                             item.http_code,
-                        ),
+                        "fiuu: unexpected response for this operation; retry with idempotency keys and check connector status."),
                     )
                     .attach_printable(other.to_owned())),
                 }?;
@@ -1904,7 +1904,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             "11" | "12" | "13" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "23" | "24"
             | "25" | "99" => Ok(common_enums::AttemptStatus::Failure),
             other => Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+                crate::utils::unexpected_response_fail(item.http_code, "fiuu: unexpected response for this operation; retry with idempotency keys and check connector status."),
             )
             .attach_printable(other.to_owned())),
         }?;
@@ -2037,7 +2037,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
                 Ok(common_enums::AttemptStatus::VoidFailed)
             }
             other => Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+                crate::utils::unexpected_response_fail(item.http_code, "fiuu: unexpected response for this operation; retry with idempotency keys and check connector status."),
             )
             .attach_printable(other.to_owned())),
         }?;

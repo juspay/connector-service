@@ -148,21 +148,6 @@ pub fn combine_error_message_with_context(
     }
 }
 
-impl IntegrationErrorContext {
-    /// Override or set appended detail for proto `error_message` (see [`combine_error_message_with_context`]).
-    pub fn with_additional_context(mut self, detail: impl Into<String>) -> Self {
-        self.additional_context = Some(detail.into());
-        self
-    }
-}
-
-impl ResponseTransformationErrorContext {
-    /// Set appended detail for proto `ConnectorResponseTransformationError.error_message`.
-    pub fn with_additional_context(mut self, detail: impl Into<String>) -> Self {
-        self.additional_context = Some(detail.into());
-        self
-    }
-}
 
 /// Errors that occur on the request transformationside:
 /// - proto → domain (`ForeignTryFrom`)
@@ -275,7 +260,7 @@ pub enum IntegrationError {
     /// Config/auth/metadata validation failures (e.g. invalid config override, missing header).
     #[error("{message}")]
     ConfigurationError {
-        code: &'static str,
+        code: String,
         message: String,
         context: IntegrationErrorContext,
     },
@@ -283,19 +268,19 @@ pub enum IntegrationError {
 
 impl IntegrationError {
     /// Create a configuration/auth/metadata error with a standardized code.
-    pub fn config_error(code: &'static str, message: impl Into<String>) -> Self {
+    pub fn config_error(code: impl Into<String>, message: impl Into<String>) -> Self {
         Self::config_error_with_context(code, message, IntegrationErrorContext::default())
     }
 
     /// Like [`Self::config_error`], but allows connector-specific [`IntegrationErrorContext`]
     /// (merged with central defaults in `ucs_env`).
     pub fn config_error_with_context(
-        code: &'static str,
+        code: impl Into<String>,
         message: impl Into<String>,
         context: IntegrationErrorContext,
     ) -> Self {
         Self::ConfigurationError {
-            code,
+            code: code.into(),
             message: message.into(),
             context,
         }
@@ -362,6 +347,26 @@ impl IntegrationError {
     }
 }
 
+
+/// Direct conversion from domain IntegrationError to proto IntegrationError (lossless).
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for IntegrationError {
+    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
+        let context = self.integration_context();
+        let base_message = self.to_string();
+        let error_message = combine_error_message_with_context(&base_message, context.additional_context.as_deref());
+
+        grpc_api_types::payments::IntegrationError {
+            error_message,
+            error_code: self.error_code().to_string(),
+            suggested_action: context.suggested_action.clone(),
+            doc_url: doc_url_for_error_code(self.error_code()),
+        }
+    }
+}
+
+/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successReponse with error field for gRPC server (payments.rs:820-860).
+/// **TODO:** Refactor gRPC server to use `ConnectorFlowError → tonic::Status` directly.
+/// **FFI:** Already uses lossless `IntegrationError → grpc_api_types::payments::IntegrationError`.
 impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
     fn switch(&self) -> ApplicationErrorResponse {
         let api_err = |sub_code: &str, id: u16| ApiError {
@@ -379,9 +384,11 @@ impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
             | Self::UrlParsingFailed { .. }
             | Self::UrlEncodingFailed { .. }
             | Self::AmountConversionFailed { .. }
-            | Self::MandatePaymentDataMismatch { .. }
-            | Self::SourceVerificationFailed { .. } => {
+            | Self::NoConnectorMetaData { .. } => {
                 ApplicationErrorResponse::InternalServerError(api_err("INTERNAL_SERVER_ERROR", 500))
+            }
+            Self::SourceVerificationFailed { .. } => {
+                ApplicationErrorResponse::Unauthorized(api_err("UNAUTHORIZED", 401))
             }
             Self::InvalidWallet { .. }
             | Self::MissingRequiredField { .. }
@@ -395,11 +402,11 @@ impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
             | Self::NotSupported { .. }
             | Self::FlowNotSupported { .. }
             | Self::MissingApplePayTokenData { .. }
+            | Self::MandatePaymentDataMismatch { .. }
             | Self::ConfigurationError { .. } => {
                 ApplicationErrorResponse::BadRequest(api_err("BAD_REQUEST", 400))
             }
-            Self::NoConnectorMetaData { .. }
-            | Self::MaxFieldLengthViolated { .. }
+            Self::MaxFieldLengthViolated { .. }
             | Self::MissingConnectorMandateID { .. }
             | Self::MissingConnectorMandateMetadata { .. }
             | Self::MissingConnectorTransactionID { .. }
@@ -414,38 +421,10 @@ impl ErrorSwitch<ApplicationErrorResponse> for IntegrationError {
     }
 }
 
-/// Convert `Report<IntegrationError>` to `Report<ApplicationErrorResponse>` for use in
-/// `types.rs` impls that have `type Error = ApplicationErrorResponse`.
-pub fn connector_request_report_to_application(
-    r: Report<IntegrationError>,
-) -> Report<ApplicationErrorResponse> {
-    let ctx = r.current_context().clone().switch();
-    r.change_context(ctx)
-}
-
-impl ErrorSwitch<IntegrationError> for ApplicationErrorResponse {
-    fn switch(&self) -> IntegrationError {
-        IntegrationError::ConfigurationError {
-            code: "APPLICATION_ERROR",
-            message: self.get_api_error().error_message.clone(),
-            context: IntegrationErrorContext::default(),
-        }
-    }
-}
-
 impl common_utils::errors::ErrorSwitchFrom<ApplicationErrorResponse> for ApplicationErrorResponse {
     fn switch_from(error: &ApplicationErrorResponse) -> Self {
         error.clone()
     }
-}
-
-/// Convert `Report<ApplicationErrorResponse>` to `Report<IntegrationError>` for use in
-/// impls that have `type Error = IntegrationError`.
-pub fn application_report_to_connector_request(
-    r: Report<ApplicationErrorResponse>,
-) -> Report<IntegrationError> {
-    let ctx = r.current_context().clone().switch();
-    r.change_context(ctx)
 }
 
 /// Errors that occur on the response transformation side:
@@ -470,10 +449,10 @@ pub enum ConnectorResponseTransformationError {
     },
 }
 
-/// Build doc_url from error code. Returns `None` until real docs are hosted; update this
-/// to return `Some(format!("{BASE}/{error_code}"))` when docs are available.
+/// Returns documentation URL for error codes.
+/// Points to the comprehensive error code reference page.
 pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
-    None
+    Some("https://docs.hyperswitch.io/prism/architecture/concepts/error-codes".to_string())
 }
 
 impl ConnectorResponseTransformationError {
@@ -599,6 +578,24 @@ impl ConnectorResponseTransformationError {
     }
 }
 
+/// Direct conversion from domain ConnectorResponseTransformationError to proto (lossless).
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorResponseTransformationError {
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        let context = self.response_transformation_context();
+        let base_message = self.to_string();
+        let error_message = combine_error_message_with_context(&base_message, context.additional_context.as_deref());
+
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message,
+            error_code: self.as_ref().to_string(),
+            http_status_code: context.http_status_code.map(|code| code as u32),
+        }
+    }
+}
+
+/// **LEGACY:** Lossy conversion to ApplicationErrorResponse to grpc successReponse with error field for gRPC server.
+/// **TODO:** Refactor gRPC server to use `ConnectorFlowError → tonic::Status` directly.
+/// **FFI:** Already uses lossless `ConnectorResponseTransformationError → grpc_api_types::payments::ConnectorResponseTransformationError`.
 impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseTransformationError {
     fn switch(&self) -> ApplicationErrorResponse {
         ApplicationErrorResponse::InternalServerError(ApiError {

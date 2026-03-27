@@ -322,9 +322,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("PayloadErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "payload: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -828,7 +828,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("PayloadWebhookEvent")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        Ok(Box::new(webhook_body) as Box<dyn hyperswitch_masking::ErasedMaskSerialize>)
+        let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> = Box::new(webhook_body);
+        Ok(resource)
         
     }
 }

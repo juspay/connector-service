@@ -1456,7 +1456,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             (_, _) => Err(Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error(item.http_code),
+                crate::utils::unexpected_response_fail(item.http_code, "worldpayvantiv: unexpected response for this operation; retry with idempotency keys and check connector status."),
             )
             .attach_printable(
                 "Only one of 'sale_response' or 'authorization_response' is expected",

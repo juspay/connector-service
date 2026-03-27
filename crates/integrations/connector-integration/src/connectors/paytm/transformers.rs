@@ -559,9 +559,9 @@ impl<
                         } else {
                             // For regular URLs, parse and convert
                             let url = Url::parse(&deep_link_info.deep_link).change_context(
-                                ConnectorResponseTransformationError::response_handling_failed(
+                                crate::utils::response_handling_fail(
                                     item.http_code,
-                                ),
+                                "paytm: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                             )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }

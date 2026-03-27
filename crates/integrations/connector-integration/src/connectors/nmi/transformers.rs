@@ -525,7 +525,7 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .connector_transaction_id
             .get_connector_transaction_id()
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "nmi: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         // Find the transaction matching the requested transaction_id

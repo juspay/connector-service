@@ -59,9 +59,9 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                             .filter(|redirect_str| !redirect_str.is_empty())
                             .map(|url| {
                                 Url::parse(url).change_context(
-                                    ConnectorResponseTransformationError::response_handling_failed(
+                                    crate::utils::response_handling_fail(
                                         item.http_code,
-                                    ),
+                                    "rapyd: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                                 )
                             })
                             .transpose()?;

@@ -477,9 +477,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                 .map(|hosted_page| hosted_page.uri.clone())
                 .ok_or_else(|| {
                     error_stack::report!(
-                        ConnectorResponseTransformationError::unexpected_response_error(
+                        utils::unexpected_response_fail(
                             item.http_code
-                        )
+                        , "truelayer: unexpected response for this operation; retry with idempotency keys and check connector status.")
                     )
                 })?;
 
@@ -610,9 +610,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
             TruelayerPSyncResponseData::WebhookResponse(response) => {
                 let status =
                     get_truelayer_payment_webhook_status(response._type).map_err(|_| {
-                        ConnectorResponseTransformationError::response_handling_failed(
+                        utils::response_handling_fail(
                             item.http_code,
-                        )
+                        "truelayer: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                     })?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
@@ -823,9 +823,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
                 let status =
                     get_truelayer_refund_webhook_status(webhook_response._type).map_err(|_| {
-                        ConnectorResponseTransformationError::response_handling_failed(
+                        utils::response_handling_fail(
                             item.http_code,
-                        )
+                        "truelayer: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                     })?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {
@@ -849,9 +849,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                     Ok(RefundsResponseData {
                         connector_refund_id: webhook_response.refund_id.ok_or_else(|| {
                             error_stack::report!(
-                                ConnectorResponseTransformationError::unexpected_response_error(
+                                utils::unexpected_response_fail(
                                     item.http_code
-                                )
+                                , "truelayer: unexpected response for this operation; retry with idempotency keys and check connector status.")
                             )
                         })?,
                         refund_status: status,

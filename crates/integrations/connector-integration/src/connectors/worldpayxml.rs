@@ -711,9 +711,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("WorldpayxmlErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         match response {

@@ -2918,7 +2918,7 @@ pub fn get_connector_metadata(
         })
         .transpose()
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(http_status),
+            crate::utils::response_handling_fail(http_status, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
     Ok(next_action_response)
 }
@@ -3046,14 +3046,14 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
                 .change_context(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "stripe: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )?;
 
         let response_integrity_object = PaymentSynIntegrityObject {
@@ -4060,15 +4060,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
                 .change_context(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "stripe: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum)
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )?;
 
         let response_integrity_object = AuthoriseIntegrityObject {
@@ -4082,7 +4082,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: item.http_code,
         })
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         );
 
         new_router_data.map(|mut router_data| {
@@ -4105,9 +4105,9 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
                 .change_context(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "stripe: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
         let capture_amount_in_minor_unit = item
@@ -4117,7 +4117,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             .map(|amount| StripeAmountConvertor::convert_back(amount, currency_enum))
             .transpose()
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         let response_integrity_object =
@@ -4132,7 +4132,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             http_code: item.http_code,
         })
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+            crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         );
 
         new_router_data.map(|mut router_data| {
@@ -4364,15 +4364,15 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
                 .change_context(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "stripe: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum)
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                    crate::utils::response_handling_fail(item.http_code, "stripe: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )?;
 
         let response_integrity_object = RefundIntegrityObject {

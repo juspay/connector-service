@@ -222,9 +222,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct::<ElavonPaymentsResponse>("ElavonPaymentsResponse")
             .map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                )
+                "elavon: response body did not match the expected format; confirm API version and connector documentation.")
             }) {
             Ok(elavon_response) => {
                 with_error_response_body!(event_builder, elavon_response);

@@ -390,9 +390,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: adyen::AdyenErrorResponse =
             res.response.parse_struct("ErrorResponse").map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                )
+                "adyen: response body did not match the expected format; confirm API version and connector documentation.")
             })?;
 
         with_error_response_body!(event_builder, response);

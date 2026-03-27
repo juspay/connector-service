@@ -575,7 +575,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("CalidaErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                crate::utils::response_handling_fail(res.status_code, "calida: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         with_error_response_body!(event_builder, response);

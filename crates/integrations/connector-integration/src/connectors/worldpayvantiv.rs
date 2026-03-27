@@ -75,7 +75,7 @@ fn unwrap_json_wrapped_xml(
     status_code: u16,
 ) -> CustomResult<String, ConnectorResponseTransformationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(status_code))
+        .change_context(crate::utils::response_handling_fail(status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."))
         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
     // Handle JSON-wrapped XML response (response might be a JSON string containing XML)
@@ -83,7 +83,7 @@ fn unwrap_json_wrapped_xml(
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(status_code),
+                crate::utils::response_handling_fail(status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )
             .attach_printable("Failed to parse JSON-wrapped XML response")?
     } else {
@@ -366,7 +366,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
 
         with_response_body!(event_builder, response);
@@ -593,7 +593,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -663,7 +663,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -757,7 +757,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -827,7 +827,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -905,7 +905,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("VantivSyncResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                crate::utils::response_handling_fail(res.status_code, "worldpayvantiv: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)

@@ -2260,7 +2260,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             ) => match get_apple_pay_session(instance_id, &secrets, apple_pay_response, item) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(report!(
-                    ConnectorResponseTransformationError::response_handling_failed(http_code)
+                    utils::response_handling_fail(http_code, "trustpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                 )
                 .attach(e)),
             },
@@ -2270,7 +2270,7 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             ) => match get_google_pay_session(instance_id, &secrets, google_pay_response, item) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(report!(
-                    ConnectorResponseTransformationError::response_handling_failed(http_code)
+                    utils::response_handling_fail(http_code, "trustpay: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                 )
                 .attach(e)),
             },

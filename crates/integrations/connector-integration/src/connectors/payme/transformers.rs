@@ -497,9 +497,9 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
         } else {
             // Get the first sale item from the items array
             let sale_item = response.items.first().ok_or(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     item.http_code,
-                ),
+                "payme: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
             // Map PayMe sale status to AttemptStatus using SaleStatus enum
@@ -877,7 +877,7 @@ impl TryFrom<ResponseRouterData<PaymeRSyncResponse, Self>>
 
         // Get the first transaction item from the items array
         let transaction_item = response.items.first().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "payme: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Map PayMe sale status to RefundStatus using SaleStatus enum

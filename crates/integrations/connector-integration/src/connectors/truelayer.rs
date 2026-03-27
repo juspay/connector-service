@@ -441,9 +441,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("TruelayerErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "truelayer: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -548,7 +548,7 @@ macros::macro_connector_implementation!(
             let response: truelayer::TruelayerAccessTokenErrorResponse = res
                 .response
                 .parse_struct("TruelayerAccessTokenErrorResponse")
-                .change_context(ConnectorResponseTransformationError::response_deserialization_failed(res.status_code))?;
+                .change_context(crate::utils::response_deserialization_fail(res.status_code, "truelayer: response body did not match the expected format; confirm API version and connector documentation."))?;
 
             with_error_response_body!(event_builder, response);
 
@@ -951,9 +951,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > {
         let response: truelayer::Jwks =
             res.response.parse_struct("truelayer Jwks").change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "truelayer: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -965,7 +965,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         })
         .change_context(
-            ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+            crate::utils::response_handling_fail(res.status_code, "truelayer: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
         )
     }
 

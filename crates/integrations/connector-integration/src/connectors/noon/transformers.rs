@@ -995,7 +995,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
             .ok_or(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                utils::response_handling_fail(item.http_code, "noon: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());

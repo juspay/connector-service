@@ -559,7 +559,7 @@ fn get_payment_status(
             StaxTransactionType::Charge => AttemptStatus::Charged,
             _ => {
                 return Err(error_stack::report!(
-                    ConnectorResponseTransformationError::response_handling_failed(http_status)
+                    crate::utils::response_handling_fail(http_status, "stax: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                 )
                 .attach_printable("Unsupported transaction type"))
             }
@@ -640,7 +640,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.currency,
             )
             .change_context(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "stax: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         // MUST find and validate child transaction with type="refund"
@@ -709,7 +709,7 @@ fn get_refund_status(
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
         error_stack::report!(
-            ConnectorResponseTransformationError::response_handling_failed(http_status)
+            crate::utils::response_handling_fail(http_status, "stax: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
         )
         .attach_printable("No refund child transaction found with matching amount")
     })?;
@@ -749,7 +749,7 @@ fn extract_refund_id(
 
     let mut refund_child = filtered_refunds.first().ok_or_else(|| {
         error_stack::report!(
-            ConnectorResponseTransformationError::response_handling_failed(http_status)
+            crate::utils::response_handling_fail(http_status, "stax: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
         )
         .attach_printable("No refund child transaction found with matching amount")
     })?;

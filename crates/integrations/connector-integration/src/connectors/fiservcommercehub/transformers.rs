@@ -592,9 +592,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let psync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     item.http_code
-                )
+                , "fiservcommercehub: response body did not match the expected format; confirm API version and connector documentation.")
             )
         })?;
         let status = AttemptStatus::from(&psync_item.gateway_response.transaction_state);
@@ -799,9 +799,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(
-                errors::ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     item.http_code
-                )
+                , "fiservcommercehub: response body did not match the expected format; confirm API version and connector documentation.")
             )
         })?;
         let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);

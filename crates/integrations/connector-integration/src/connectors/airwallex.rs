@@ -779,9 +779,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("AirwallexErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "airwallex: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);

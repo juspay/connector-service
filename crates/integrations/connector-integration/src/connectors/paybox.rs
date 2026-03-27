@@ -93,9 +93,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("PayboxErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "paybox: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -211,7 +211,7 @@ macros::create_all_prerequisites!(
                     parsed
                 }
                 Err(e) => {
-                    return Err(error_stack::report!(ConnectorResponseTransformationError::response_deserialization_failed(status_code))
+                    return Err(error_stack::report!(crate::utils::response_deserialization_fail(status_code, "paybox: response body did not match the expected format; confirm API version and connector documentation."))
                         .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e)));
                 }
             };
@@ -221,7 +221,7 @@ macros::create_all_prerequisites!(
                     bytes
                 }
                 Err(e) => {
-                    return Err(error_stack::report!(ConnectorResponseTransformationError::response_deserialization_failed(status_code))
+                    return Err(error_stack::report!(crate::utils::response_deserialization_fail(status_code, "paybox: response body did not match the expected format; confirm API version and connector documentation."))
                         .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e)));
                 }
             };

@@ -621,9 +621,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             } else {
                 Err(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    )
+                    "phonepe: response body did not match the expected format; confirm API version and connector documentation.")
                     .into(),
                 )
             }
@@ -925,9 +925,9 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                 }
             } else {
                 Err(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    )
+                    "phonepe: response body did not match the expected format; confirm API version and connector documentation.")
                     .into(),
                 )
             }

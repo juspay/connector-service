@@ -444,9 +444,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: transformers::ResponseMessages =
             res.response.parse_struct("ResponseMessages").map_err(|_| {
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                )
+                "authorizedotnet: response body did not match the expected format; confirm API version and connector documentation.")
             })?;
 
         with_response_body!(event_builder, response);

@@ -1330,7 +1330,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
             .ok_or(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "novalnet: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?;
 
         match item.response.result.status {

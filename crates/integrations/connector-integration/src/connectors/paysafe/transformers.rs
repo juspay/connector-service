@@ -695,9 +695,9 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
             PaysafeSyncResponse::Payments(sync_response) => {
                 let payment_response = sync_response.payments.first().ok_or_else(|| {
                     error_stack::Report::from(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             item.http_code,
-                        ),
+                        "paysafe: response body did not match the expected format; confirm API version and connector documentation."),
                     )
                 })?;
                 let status = get_paysafe_payment_status(
@@ -714,9 +714,9 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 let payment_handle_response =
                     sync_response.payment_handles.first().ok_or_else(|| {
                         error_stack::Report::from(
-                            ConnectorResponseTransformationError::response_deserialization_failed(
+                            crate::utils::response_deserialization_fail(
                                 item.http_code,
-                            ),
+                            "paysafe: response body did not match the expected format; confirm API version and connector documentation."),
                         )
                     })?;
                 let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;

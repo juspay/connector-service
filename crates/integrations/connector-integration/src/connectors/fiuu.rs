@@ -270,7 +270,7 @@ macros::create_all_prerequisites!(
         ) -> Result<Bytes, ConnectorResponseTransformationError> {
                 let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
                 error!("Error in Deserializing Response Data: {:?}", e);
-                ConnectorResponseTransformationError::response_deserialization_failed(status_code)
+                crate::utils::response_deserialization_fail(status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")
             })?;
 
             let mut json = serde_json::Map::new();
@@ -293,7 +293,7 @@ macros::create_all_prerequisites!(
             if !miscellaneous.is_empty() {
                 let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
                     error!("Error serializing miscellaneous data: {:?}", e);
-                    ConnectorResponseTransformationError::response_deserialization_failed(status_code)
+                    crate::utils::response_deserialization_fail(status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")
                 })?;
                 json.insert("miscellaneous".to_string(), misc_value);
             }
@@ -303,7 +303,7 @@ macros::create_all_prerequisites!(
             // Convert JSON Value to string and then to bytes
             let json_string = serde_json::to_string(&flattened_json).map_err(|e| {
                 tracing::error!(error=?e, "Failed to convert to JSON string");
-                ConnectorResponseTransformationError::response_deserialization_failed(status_code)
+                crate::utils::response_deserialization_fail(status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")
             })?;
 
             tracing::info!(json=?json_string, "Flattened JSON structure");
@@ -395,9 +395,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("fiuu::FiuuErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -671,9 +671,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
                     .change_context(
-                        ConnectorResponseTransformationError::response_handling_failed(
+                        crate::utils::response_handling_fail(
                             res.status_code,
-                        ),
+                        "fiuu: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                     )?;
                 let response: FiuuPaymentResponse = if content_header
                     .to_lowercase()
@@ -682,7 +682,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 {
                     parse_response(&res.response, res.status_code)
                 } else {
-                    Err(error_stack::Report::from(ConnectorResponseTransformationError::response_deserialization_failed(res.status_code)))
+                    Err(error_stack::Report::from(crate::utils::response_deserialization_fail(res.status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")))
                         .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
                 }?;
                 with_response_body!(event_builder, response);
@@ -693,7 +693,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     http_code: res.status_code,
                 })
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                    crate::utils::response_handling_fail(res.status_code, "fiuu: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )
             }
             None => {
@@ -702,9 +702,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .response
                     .parse_struct("fiuu::FiuuPaymentResponse")
                     .change_context(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             res.status_code,
-                        ),
+                        "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
                 with_response_body!(event_builder, response);
 
@@ -714,7 +714,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     http_code: res.status_code,
                 })
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(res.status_code),
+                    crate::utils::response_handling_fail(res.status_code, "fiuu: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )
             }
         }
@@ -922,15 +922,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         match payload.clone() {
             FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhook_payment_response) => {
-                Ok(Box::new(FiuuPaymentResponse::FiuuWebhooksPaymentResponse(
-                    webhook_payment_response,
-                ))
-                    as Box<dyn hyperswitch_masking::ErasedMaskSerialize>)
+                let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> = Box::new(
+                    FiuuPaymentResponse::FiuuWebhooksPaymentResponse(webhook_payment_response),
+                );
+                Ok(resource)
             }
-            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => Ok(
-                Box::new(FiuuRefundSyncResponse::Webhook(webhook_refund_response))
-                    as Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-            ),
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
+                let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> = Box::new(
+                    FiuuRefundSyncResponse::Webhook(webhook_refund_response),
+                );
+                Ok(resource)
+            }
         }
         
     }
@@ -1153,7 +1155,7 @@ where
     let response_str = String::from_utf8(data.to_vec()).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
         error_stack::Report::from(
-            ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+            crate::utils::response_deserialization_fail(http_status, "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
         )
     })?;
 
@@ -1178,7 +1180,7 @@ where
         let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
             error!("Error serializing miscellaneous data: {:?}", e);
             error_stack::Report::from(
-                ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+                crate::utils::response_deserialization_fail(http_status, "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
             )
         })?;
         json.insert("miscellaneous".to_string(), misc_value);
@@ -1187,7 +1189,7 @@ where
     let response: T = serde_json::from_value(Value::Object(json)).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
         error_stack::Report::from(
-            ConnectorResponseTransformationError::response_deserialization_failed(http_status),
+            crate::utils::response_deserialization_fail(http_status, "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
         )
     })?;
 

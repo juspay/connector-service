@@ -2865,7 +2865,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .or(response.customer_payment_profile_id.as_ref())
                 .ok_or_else(|| {
                     error_stack::report!(
-                        ConnectorResponseTransformationError::response_handling_failed(http_code)
+                        crate::utils::response_handling_fail(http_code, "authorizedotnet: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate.")
                     )
                 })?;
 

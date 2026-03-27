@@ -413,12 +413,12 @@ macros::create_all_prerequisites!(
             status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorResponseTransformationError> {
             let url_encoded_response: Value = serde_urlencoded::from_bytes(&bytes)
-                    .change_context(ConnectorResponseTransformationError::response_deserialization_failed(status_code))
+                    .change_context(crate::utils::response_deserialization_fail(status_code, "zift: response body did not match the expected format; confirm API version and connector documentation."))
                     .attach_printable("Failed to parse URL-encoded response from Zift")
                     ?;
 
             let json_bytes = serde_json::to_vec(&url_encoded_response)
-                    .change_context(ConnectorResponseTransformationError::response_deserialization_failed(status_code))
+                    .change_context(crate::utils::response_deserialization_fail(status_code, "zift: response body did not match the expected format; confirm API version and connector documentation."))
                     .attach_printable("Failed to convert URL-encoded response to JSON")
                     ?;
 
@@ -483,9 +483,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: ZiftErrorResponse = serde_urlencoded::from_bytes(&res.response)
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "zift: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);

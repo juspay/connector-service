@@ -346,9 +346,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("VoltErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "volt: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         with_error_response_body!(event_builder, response);
@@ -443,7 +443,7 @@ macros::macro_connector_implementation!(
         let response: volt::VoltAuthErrorResponse = res
             .response
             .parse_struct("VoltAuthErrorResponse")
-            .change_context(ConnectorResponseTransformationError::response_deserialization_failed(res.status_code))?;
+            .change_context(crate::utils::response_deserialization_fail(res.status_code, "volt: response body did not match the expected format; confirm API version and connector documentation."))?;
 
          with_error_response_body!(event_builder, response);
 

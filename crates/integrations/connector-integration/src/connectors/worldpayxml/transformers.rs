@@ -606,7 +606,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract order status
         let order_status = response.reply.order_status.as_ref().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Check for error in order status
@@ -633,7 +633,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Extract payment details
         let payment = order_status.payment.as_ref().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Determine if auto-capture
@@ -709,7 +709,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Extract captureReceived
@@ -776,7 +776,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Extract cancelReceived
@@ -848,9 +848,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
                 // Special handling: If error exists but payment is None, return current status (don't fail)
@@ -903,9 +903,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
                 // Determine if auto-capture from request data
@@ -958,9 +958,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
                     .ok_or(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             item.http_code,
-                        ),
+                        "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
 
                 // Parse string to enum
@@ -1035,7 +1035,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
 
         // Extract ok response
         let ok_response = response.reply.ok.as_ref().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Extract refundReceived
@@ -1094,9 +1094,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract order status
                 let order_status = response.reply.order_status.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
                 // Special handling: If error exists but payment is None, return Pending (don't fail)
@@ -1118,9 +1118,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 
                 // Extract payment details
                 let payment = order_status.payment.as_ref().ok_or(
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         item.http_code,
-                    ),
+                    "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                 )?;
 
                 // Map status from lastEvent using refund status mapping
@@ -1170,9 +1170,9 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
                     .ok_or(
-                        ConnectorResponseTransformationError::response_deserialization_failed(
+                        crate::utils::response_deserialization_fail(
                             item.http_code,
-                        ),
+                        "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
 
                 // Parse string to enum

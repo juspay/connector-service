@@ -368,9 +368,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("IatapayErrorResponse")
             .change_context(
-                ConnectorResponseTransformationError::response_deserialization_failed(
+                crate::utils::response_deserialization_fail(
                     res.status_code,
-                ),
+                "iatapay: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
 
         if let Some(i) = event_builder {

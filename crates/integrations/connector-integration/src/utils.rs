@@ -101,6 +101,66 @@ pub fn missing_field_err(
     })
 }
 
+/// Build [`errors::IntegrationErrorContext`] with explicit `additional_context` and `suggested_action`
+/// at the call site (no hidden defaults).
+pub fn integration_ctx(
+    additional_context: impl Into<String>,
+    suggested_action: impl Into<String>,
+) -> errors::IntegrationErrorContext {
+    errors::IntegrationErrorContext {
+        additional_context: Some(additional_context.into()),
+        suggested_action: Some(suggested_action.into()),
+        ..Default::default()
+    }
+}
+
+/// Use at `.convert(minor_amount, currency)` failures. `flow` should name the **payment operation**
+pub fn amount_conversion_ctx(
+    flow: &'static str,
+    minor_amount: &impl std::fmt::Debug,
+    currency: &impl std::fmt::Display,
+) -> errors::IntegrationErrorContext {
+    integration_ctx(
+        format!("{flow}: amount={minor_amount:?}, currency={currency}"),
+        "Send the amount in minor units for that ISO currency (e.g. cents for USD), ensure the currency is enabled for this connector, and keep the value within the connector's allowed range."
+            .to_string(),
+    )
+}
+
+// --- Response phase (`ConnectorResponseTransformationError`) -----------------
+
+pub fn response_handling_fail(
+    http_status: u16,
+    detail: impl Into<String>,
+) -> ConnectorResponseTransformationError {
+    ConnectorResponseTransformationError::response_handling_failed_with_context(
+        http_status,
+        Some(detail.into()),
+    )
+}
+
+/// Response bytes could not be parsed into the expected response type (JSON/XML, schema drift).
+pub fn response_deserialization_fail(
+    http_status: u16,
+    detail: impl Into<String>,
+) -> ConnectorResponseTransformationError {
+    ConnectorResponseTransformationError::response_deserialization_failed_with_context(
+        http_status,
+        Some(detail.into()),
+    )
+}
+
+/// Connector returned a response that does not match this flow’s contract.
+pub fn unexpected_response_fail(
+    http_status: u16,
+    detail: impl Into<String>,
+) -> ConnectorResponseTransformationError {
+    ConnectorResponseTransformationError::unexpected_response_error_with_context(
+        http_status,
+        Some(detail.into()),
+    )
+}
+
 pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
     format!("Selected payment method through {connector}")
 }
@@ -139,15 +199,19 @@ pub(crate) fn handle_json_response_deserialization_failure(
     _connector: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
     let response_data = String::from_utf8(res.response.to_vec()).change_context(
-        ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
+        response_deserialization_fail(
+            res.status_code,
+            "Response body was not valid UTF-8 when reading connector error payload.",
+        ),
     )?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(
-            ConnectorResponseTransformationError::response_deserialization_failed(res.status_code),
-        )?,
+        Ok(_) => Err(response_deserialization_fail(
+            res.status_code,
+            "Connector returned JSON but not in the expected error shape for this handler.",
+        ))?,
         // in case of unexpected response but in html or string format
         Err(_error_msg) => Ok(ErrorResponse {
             status_code: res.status_code,

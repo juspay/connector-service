@@ -401,10 +401,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("TrustpayWebhookResponse")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
 
-        Ok(
-            Box::new(webhook_response.payment_information)
-                as Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        )
+        let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> =
+            Box::new(webhook_response.payment_information);
+        Ok(resource)
         
     }
 }

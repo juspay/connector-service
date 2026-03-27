@@ -614,7 +614,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
 
         // Extract first transaction data (API returns array but we expect single transaction)
         let transaction_data = response.data.first().ok_or(
-            ConnectorResponseTransformationError::response_deserialization_failed(item.http_code),
+            crate::utils::response_deserialization_fail(item.http_code, "celero: response body did not match the expected format; confirm API version and connector documentation."),
         )?;
 
         // Extract card response for detailed checking

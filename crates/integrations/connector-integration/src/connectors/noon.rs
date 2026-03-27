@@ -304,7 +304,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
     {
         
-        let resource: noon::NoonWebhookObject = request
+        let webhook_object: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
             .change_context(WebhookError::WebhookResourceObjectNotFound)
@@ -312,8 +312,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "Failed to parse webhook resource object from Noon webhook body",
             )?;
 
-        Ok(Box::new(NoonPaymentsResponse::from(resource))
-            as Box<dyn hyperswitch_masking::ErasedMaskSerialize>)
+        let resource: Box<dyn hyperswitch_masking::ErasedMaskSerialize> =
+            Box::new(NoonPaymentsResponse::from(webhook_object));
+        Ok(resource)
         
     }
 }
@@ -495,9 +496,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             res.response
                 .parse_struct("NoonErrorResponse")
                 .map_err(|_| {
-                    ConnectorResponseTransformationError::response_deserialization_failed(
+                    crate::utils::response_deserialization_fail(
                         res.status_code,
-                    )
+                    "noon: response body did not match the expected format; confirm API version and connector documentation.")
                 })?;
 
         with_error_response_body!(event_builder, response);

@@ -463,7 +463,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         let status = map_payment_response_to_attempt_status(
             response.clone(),
             is_auto_capture(&router_data.request).change_context(
-                ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                crate::utils::response_handling_fail(item.http_code, "xendit: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
             )?,
         );
 
@@ -524,7 +524,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                    crate::utils::response_handling_fail(item.http_code, "xendit: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )?;
 
         let response_integrity_object = Some(AuthoriseIntegrityObject {
@@ -796,7 +796,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
                 .change_context(
-                    ConnectorResponseTransformationError::response_handling_failed(item.http_code),
+                    crate::utils::response_handling_fail(item.http_code, "xendit: connector returned an error HTTP status; check the payment or refund in the connector dashboard and retry if appropriate."),
                 )?;
 
         let response_integrity_object = {
