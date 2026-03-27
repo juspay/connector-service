@@ -328,17 +328,15 @@ pub fn convert_amount_for_webhook<T>(
     amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<T, error_stack::Report<errors::WebhookError>> {
-    amount_convertor
-        .convert(amount, currency)
-        .map_err(|_| {
-            error_stack::report!(errors::WebhookError::WebhookAmountConversionFailed {
-                reason: format!(
-                    "Failed to convert amount from minor units: amount={}, currency={}",
-                    amount.get_amount_as_i64(),
-                    currency
-                ),
-            })
+    amount_convertor.convert(amount, currency).map_err(|_| {
+        error_stack::report!(errors::WebhookError::WebhookAmountConversionFailed {
+            reason: format!(
+                "Failed to convert amount from minor units: amount={}, currency={}",
+                amount.get_amount_as_i64(),
+                currency
+            ),
         })
+    })
 }
 
 pub fn convert_back_amount_to_minor_units_for_webhook<T>(
@@ -350,7 +348,10 @@ pub fn convert_back_amount_to_minor_units_for_webhook<T>(
         .convert_back(amount, currency)
         .map_err(|_| {
             error_stack::report!(errors::WebhookError::WebhookAmountConversionFailed {
-                reason: format!("Failed to convert amount to minor units: currency={}", currency),
+                reason: format!(
+                    "Failed to convert amount to minor units: currency={}",
+                    currency
+                ),
             })
         })
 }
