@@ -327,10 +327,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     {
+        // Content-Type must match the RequestContent type used in get_request_body():
+        // - UPI uses RequestContent::FormUrlEncoded → application/x-www-form-urlencoded
+        // - Card/Wallet/Netbanking use RequestContent::Json → application/json
+        let content_type = match &req.request.payment_method_data {
+            PaymentMethodData::Upi(_) => "application/x-www-form-urlencoded",
+            _ => "application/json",
+        };
         let mut header = vec![
             (
                 headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
+                content_type.to_string().into(),
             ),
             (
                 headers::ACCEPT.to_string(),
@@ -353,9 +360,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
 
-        // For UPI payments, use the specific UPI endpoint
+        // Route to the appropriate endpoint based on payment method
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
+            PaymentMethodData::Card(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::Netbanking(_) => Ok(format!("{base_url}v1/payments/create/json")),
             _ => Ok(format!("{base_url}v1/payments/create/json")),
         }
     }
@@ -383,6 +393,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Some(RequestContent::FormUrlEncoded(Box::new(
                     connector_req,
                 ))))
+            }
+            PaymentMethodData::Wallet(wallet_data) => {
+                let wallet_name = razorpay::get_razorpay_wallet_name(wallet_data)
+                    .map_err(|e| error_stack::Report::new(e))?;
+                let connector_req = razorpay::RazorpayWalletPaymentRequest::try_from((
+                    &connector_router_data,
+                    wallet_name,
+                ))?;
+                Ok(Some(RequestContent::Json(Box::new(connector_req))))
+            }
+            PaymentMethodData::Netbanking(nb_data) => {
+                let bank_code = nb_data.bank_code.clone();
+                let connector_req = razorpay::RazorpayNetbankingPaymentRequest::try_from((
+                    &connector_router_data,
+                    bank_code,
+                ))?;
+                Ok(Some(RequestContent::Json(Box::new(connector_req))))
             }
             _ => {
                 let connector_req =
@@ -451,8 +478,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }
             }
+            // Wallet and Netbanking use the same response format as Card payments
+            // The response includes a redirect URL in the `next` array
+            PaymentMethodData::Card(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::Netbanking(_) => {
+                let response: razorpay::RazorpayResponse = res
+                    .response
+                    .parse_struct("RazorpayPaymentResponse")
+                    .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                with_response_body!(event_builder, response);
+
+                RouterDataV2::foreign_try_from((
+                    response,
+                    data.clone(),
+                    res.status_code,
+                    data.request.capture_method,
+                    false,
+                    data.request.payment_method_type,
+                ))
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            }
             _ => {
-                // Regular payment response handling
+                // Default: regular payment response handling
                 let response: razorpay::RazorpayResponse = res
                     .response
                     .parse_struct("RazorpayPaymentResponse")
@@ -1193,6 +1242,48 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
                         supported_card_networks: razorpay_supported_card_network.clone(),
                     },
                 )),
+            },
+        );
+
+        // UPI payment methods
+        for pmt in [
+            PaymentMethodType::UpiIntent,
+            PaymentMethodType::UpiCollect,
+            PaymentMethodType::UpiQr,
+        ] {
+            razorpay_supported_payment_methods.add(
+                PaymentMethod::Upi,
+                pmt,
+                PaymentMethodDetails {
+                    mandates: FeatureStatus::NotSupported,
+                    refunds: FeatureStatus::Supported,
+                    supported_capture_methods: vec![CaptureMethod::Automatic],
+                    specific_features: None,
+                },
+            );
+        }
+
+        // Wallet payment methods
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Wallet,
+            PaymentMethodType::GooglePay,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: vec![CaptureMethod::Automatic],
+                specific_features: None,
+            },
+        );
+
+        // Netbanking payment method
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Netbanking,
+            PaymentMethodType::Netbanking,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: vec![CaptureMethod::Automatic],
+                specific_features: None,
             },
         );
 

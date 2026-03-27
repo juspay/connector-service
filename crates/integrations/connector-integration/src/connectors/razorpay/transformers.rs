@@ -170,6 +170,10 @@ pub enum PaymentMethodSpecificData<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardDetails<T>),
+    #[serde(skip)]
+    Wallet(String),
+    #[serde(skip)]
+    Netbanking(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,8 +290,18 @@ fn extract_payment_method_and_data<
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::Wallet(wallet_data) => {
+            let wallet_name = get_razorpay_wallet_name(wallet_data)?;
+            Ok((
+                PaymentMethodType::Wallet,
+                PaymentMethodSpecificData::Wallet(wallet_name),
+            ))
+        }
+        PaymentMethodData::Netbanking(nb_data) => Ok((
+            PaymentMethodType::Netbanking,
+            PaymentMethodSpecificData::Netbanking(nb_data.bank_code.clone()),
+        )),
         PaymentMethodData::CardRedirect(_)
-        | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
         | PaymentMethodData::BankRedirect(_)
         | PaymentMethodData::BankDebit(_)
@@ -305,7 +319,24 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
-            "Only Card payment method is supported for Razorpay".to_string(),
+            "This payment method is not supported for Razorpay".to_string(),
+        )),
+    }
+}
+
+pub fn get_razorpay_wallet_name(
+    wallet_data: &domain_types::payment_method_data::WalletData,
+) -> Result<String, errors::ConnectorError> {
+    use domain_types::payment_method_data::WalletData;
+    match wallet_data {
+        WalletData::AliPayRedirect(_) => Ok("alipay".to_string()),
+        WalletData::AmazonPayRedirect(_) => Ok("amazonpay".to_string()),
+        WalletData::MomoRedirect(_) => Ok("momo".to_string()),
+        WalletData::PaypalRedirect(_) => Ok("paypal".to_string()),
+        WalletData::GooglePay(_) | WalletData::GooglePayRedirect(_) => Ok("googlepay".to_string()),
+        WalletData::ApplePay(_) | WalletData::ApplePayRedirect(_) => Ok("applepay".to_string()),
+        _ => Err(errors::ConnectorError::NotImplemented(
+            "This wallet type is not supported for Razorpay".to_string(),
         )),
     }
 }
@@ -475,6 +506,247 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .into()),
         }
+    }
+}
+
+// ============ Wallet Payment Request ============
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayWalletPaymentRequest {
+    pub amount: MinorUnit,
+    pub currency: String,
+    pub contact: Secret<String>,
+    pub email: Email,
+    pub order_id: String,
+    pub method: PaymentMethodType,
+    pub wallet: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<AuthenticationDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser: Option<BrowserInfo>,
+    pub ip: Secret<String>,
+    pub referer: String,
+    pub user_agent: String,
+    pub callback_url: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &RazorpayRouterData<
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+        String, // wallet_name
+    )> for RazorpayWalletPaymentRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        (item, wallet_name): (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            String,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let billing = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_payment_billing();
+
+        let contact = billing
+            .and_then(|billing| billing.phone.as_ref())
+            .and_then(|phone| phone.number.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "contact",
+            })?;
+
+        let billing_email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .ok();
+
+        let email = billing_email
+            .or(item.router_data.request.email.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id",
+            })?;
+
+        // authentication and browser fields are card-specific (3DS) and must NOT be
+        // sent for wallet payments — Razorpay rejects them with:
+        // "The authentication.authentication channel field may be sent only when method is card"
+        let authentication: Option<AuthenticationDetails> = None;
+        let browser: Option<BrowserInfo> = None;
+
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
+
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
+
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
+
+        let callback_url = item.router_data.request.get_router_return_url()?;
+
+        Ok(Self {
+            amount: item.amount,
+            currency: item.router_data.request.currency.to_string(),
+            contact,
+            email,
+            order_id,
+            method: PaymentMethodType::Wallet,
+            wallet: wallet_name,
+            authentication,
+            browser,
+            ip,
+            referer,
+            user_agent,
+            callback_url,
+        })
+    }
+}
+
+// ============ Netbanking Payment Request ============
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayNetbankingPaymentRequest {
+    pub amount: MinorUnit,
+    pub currency: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<Email>,
+    pub order_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contact: Option<Secret<String>>,
+    pub method: PaymentMethodType,
+    pub bank: String,
+    pub callback_url: String,
+    pub ip: Secret<String>,
+    pub referer: String,
+    pub user_agent: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &RazorpayRouterData<
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+        String, // bank_code
+    )> for RazorpayNetbankingPaymentRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        (item, bank_code): (
+            &RazorpayRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+            >,
+            String,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id (reference_id)",
+            })?
+            .clone();
+
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
+
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
+
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
+
+        let callback_url = item.router_data.request.get_router_return_url()?;
+
+        Ok(Self {
+            currency: item.router_data.request.currency.to_string(),
+            amount: item.amount,
+            email: item
+                .router_data
+                .resource_common_data
+                .get_billing_email()
+                .ok(),
+            order_id,
+            contact: item
+                .router_data
+                .resource_common_data
+                .get_billing_phone_number()
+                .ok(),
+            method: PaymentMethodType::Netbanking,
+            bank: bank_code,
+            callback_url,
+            ip,
+            referer,
+            user_agent,
+            description: None,
+        })
     }
 }
 
