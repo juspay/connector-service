@@ -46,8 +46,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as razorpayv2;
 
-use crate::connectors::razorpay::transformers::ForeignTryFrom;
 use super::macros;
+use crate::connectors::razorpay::transformers::ForeignTryFrom;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -55,14 +55,14 @@ pub(crate) mod headers {
 }
 
 #[derive(Clone)]
-pub struct RazorpayV2<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct RazorpayV2<T> {
     #[allow(dead_code)]
     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
     #[allow(dead_code)]
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RazorpayV2<T> {
+impl<T> RazorpayV2<T> {
     pub const fn new() -> &'static Self {
         &Self {
             amount_converter: &common_utils::types::MinorUnitForConnector,
@@ -598,8 +598,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     connector_types::SdkSessionTokenV2 for RazorpayV2<T>
 {
 }
-
-
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for RazorpayV2<T>

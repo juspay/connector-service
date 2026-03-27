@@ -78,7 +78,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Elavon<T>
 {

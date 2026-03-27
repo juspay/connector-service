@@ -2,6 +2,7 @@ pub mod test;
 pub mod transformers;
 use std::sync::LazyLock;
 
+use super::macros;
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -56,11 +57,11 @@ use interfaces::{
     verification::SourceVerification,
 };
 use serde::Serialize;
-use super::macros;
 use transformers::{self as razorpay, ForeignTryFrom};
+
 use crate::{
-    connectors::razorpayv2::transformers::RazorpayV2SyncResponse, 
-    with_error_response_body, with_response_body,
+    connectors::razorpayv2::transformers::RazorpayV2SyncResponse, with_error_response_body,
+    with_response_body,
 };
 
 pub(crate) mod headers {

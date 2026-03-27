@@ -27,8 +27,6 @@ use interfaces::{
 };
 use serde::Serialize;
 
-
-
 use self::transformers::{
     ItaubankAccessTokenRequest, ItaubankAccessTokenResponse, ItaubankErrorResponse,
     ItaubankTransferRequest, ItaubankTransferResponse,
@@ -332,12 +330,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<
-            PayoutTransfer,
-            PayoutFlowData,
-            PayoutTransferRequest,
-            PayoutTransferResponse,
-        >,
+        RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
         errors::ConnectorError,
     > {
         let response: ItaubankTransferResponse = res
@@ -363,7 +356,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-
 // ===== NO-OP PAYMENT TRAIT IMPLS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Itaubank<T>
@@ -386,12 +378,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -401,12 +389,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -431,12 +415,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -446,12 +426,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -461,12 +437,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -641,12 +613,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -656,12 +624,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Itaubank<T>
 {
 }
 
@@ -671,12 +635,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Itaubank<T>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Itaubank<T>
 {
 }
 

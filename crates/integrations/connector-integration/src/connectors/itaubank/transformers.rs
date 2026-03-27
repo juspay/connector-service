@@ -1,16 +1,10 @@
-
 use domain_types::{
-    connector_flow::*,
-    connector_types::*,
-    errors::ConnectorError,
-    payouts::payouts_types::*,
-    router_data::ConnectorSpecificConfig,
-    router_data_v2::RouterDataV2,
+    connector_flow::*, connector_types::*, errors::ConnectorError, payouts::payouts_types::*,
+    router_data::ConnectorSpecificConfig, router_data_v2::RouterDataV2,
 };
 
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-
 
 use crate::types::ResponseRouterData;
 // ===== AUTH TYPE =====
@@ -174,21 +168,13 @@ impl ItaubankTransferResponse {
 
 // ===== PSYNC RESPONSE (placeholder for macro) =====
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            ItaubankErrorResponse,
-            Self,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<ItaubankErrorResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        _item: ResponseRouterData<
-            ItaubankErrorResponse,
-            Self,
-        >,
+        _item: ResponseRouterData<ItaubankErrorResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Err(ConnectorError::NotImplemented("PSync for Itaubank".to_string()).into())
     }

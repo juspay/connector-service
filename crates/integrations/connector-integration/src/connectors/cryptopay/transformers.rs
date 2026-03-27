@@ -234,7 +234,6 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         };
         match (amount_captured_in_minor_units, status) {
             (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                let minor_amount: common_utils::types::MinorUnit = minor_amount;
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -373,7 +372,6 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
         };
         match (amount_captured_in_minor_units, status) {
             (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                let minor_amount: common_utils::types::MinorUnit = minor_amount;
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -443,7 +441,6 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 };
             match (amount_captured_in_minor_units, status) {
                 (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                    let minor_amount: common_utils::types::MinorUnit = minor_amount;
                     let amount_captured = Some(minor_amount.get_amount_as_i64());
                     Ok(Self {
                         amount_captured,
