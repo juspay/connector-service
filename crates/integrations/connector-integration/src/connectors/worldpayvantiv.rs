@@ -46,9 +46,10 @@ use interfaces::{
         CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
         MandateRevokeV2, PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture,
         PaymentOrderCreate, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2,
-        PaymentSessionToken, PaymentSyncV2, PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2,
-        RefundV2, RepeatPaymentV2, SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2,
-        ValidationTrait, VerifyRedirectResponse,
+        PaymentSessionToken, PaymentSyncV2, PaymentVoidPostCaptureV2, PaymentVoidV2,
+        RefundSyncV2, RefundV2,
+        RepeatPaymentV2, SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+        VerifyRedirectResponse,
     },
     decode::BodyDecoding,
     verification::SourceVerification,
@@ -106,6 +107,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     SdkSessionTokenV2 for Worldpayvantiv<T>
 {
 }
+
+macros::macro_connector_payout_implementation!(
+    connector: Worldpayvantiv,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     PaymentAuthenticateV2<T> for Worldpayvantiv<T>

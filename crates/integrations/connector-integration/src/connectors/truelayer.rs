@@ -52,6 +52,11 @@ use transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+pub(crate) mod headers_local {
+    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
+}
+
 // Trait for types that can provide access tokens
 pub trait AccessTokenProvider {
     fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError>;
@@ -204,6 +209,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Truelayer<T>
 {
 }
+
+crate::connectors::macros::macro_connector_payout_implementation!(
+    connector: Truelayer,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    payout_flows: [
+        PayoutCreate,
+        PayoutTransfer,
+        PayoutGet,
+        PayoutVoid,
+        PayoutStage,
+        PayoutCreateLink,
+        PayoutCreateRecipient,
+        PayoutEnrollDisburseAccount
+    ]
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -572,11 +593,11 @@ macros::macro_connector_implementation!(
                 .clone()
                 .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
+                headers_local::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             ),
             (
-                headers::AUTHORIZATION.to_string(),
+                headers_local::AUTHORIZATION.to_string(),
                 format!("Bearer {}", access_token.access_token.expose()).into_masked(),
             )])
         }
@@ -676,11 +697,11 @@ macros::macro_connector_implementation!(
                 .clone()
                 .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
+                headers_local::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             ),
             (
-                headers::AUTHORIZATION.to_string(),
+                headers_local::AUTHORIZATION.to_string(),
                 format!("Bearer {}", access_token.access_token.expose()).into_masked(),
             )])
         }

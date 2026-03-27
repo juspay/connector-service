@@ -58,11 +58,11 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,
+    AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,
     AdyenDefendDisputeResponse, AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse,
     AdyenDisputeSubmitEvidenceRequest, AdyenNotificationRequestItemWH, AdyenPSyncResponse,
-    AdyenPaymentRequest, AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest,
-    AdyenRefundResponse, AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse,
+    AdyenPaymentRequest, AdyenPaymentResponse, AdyenRedirectRequest,
+    AdyenRefundRequest, AdyenRefundResponse, AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse,
     AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse, SetupMandateRequest,
     SetupMandateResponse,
 };
@@ -92,10 +92,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Adyen<T>
-{
-}
+
+
+
+
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Adyen<T>
 {
@@ -216,6 +217,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+
+
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,
@@ -323,6 +326,14 @@ macros::create_all_prerequisites!(
     }
 );
 
+
+macros::macro_connector_payout_implementation!(
+    connector: Adyen,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
+
+
 fn build_env_specific_endpoint(
     base_url: &str,
     test_mode: Option<bool>,
@@ -354,7 +365,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = adyen::AdyenAuthType::try_from(auth_type)
+        let auth = transformers::AdyenAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
@@ -370,7 +381,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: adyen::AdyenErrorResponse = res
+        let response: transformers::AdyenErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
             .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -389,6 +400,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_error_message: None,
         })
     }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Adyen<T>
+{
 }
 
 const ADYEN_API_VERSION: &str = "v68";

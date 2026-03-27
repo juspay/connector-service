@@ -1005,6 +1005,7 @@ macro_rules! create_all_prerequisites {
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
                     >,
                 )*
+                pub _marker: std::marker::PhantomData<$generic_type>,
             }
 
             impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> Clone for $connector<$generic_type> {
@@ -1016,6 +1017,7 @@ macro_rules! create_all_prerequisites {
                         $(
                             [<$flow_name:snake>]: self.[<$flow_name:snake>],
                         )*
+                        _marker: self._marker,
                     }
                 }
             }
@@ -1032,6 +1034,7 @@ macro_rules! create_all_prerequisites {
                                     [<$flow_response Templating>], $generic_type
                                 >(PhantomData),
                         )*
+                        _marker: std::marker::PhantomData,
                     }
                 }
                 $($function_def)*
@@ -1130,6 +1133,7 @@ pub(crate) use create_all_prerequisites_resolve_templating_type;
 
 macro_rules! expand_imports {
     () => {
+        #[allow(unused_imports)]
         use std::marker::PhantomData;
 
         #[allow(unused_imports)]
@@ -1187,4 +1191,189 @@ macro_rules! create_amount_converter_wrapper {
         }
     };
 }
+
 pub(crate) use create_amount_converter_wrapper;
+
+macro_rules! macro_connector_payout_implementation {
+    (
+        connector: $connector: ident,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        $crate::connectors::macros::macro_connector_payout_implementation!(
+            connector: $connector,
+            generic_type: $generic_type,
+            [ $($bounds)* ],
+            payout_flows: [
+                PayoutCreate,
+                PayoutTransfer,
+                PayoutGet,
+                PayoutVoid,
+                PayoutStage,
+                PayoutCreateLink,
+                PayoutCreateRecipient,
+                PayoutEnrollDisburseAccount
+            ]
+        );
+    };
+
+    (
+        connector: $connector: ident,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ],
+        payout_flows: [ $flow: ident $(, $rest: ident)* ]
+    ) => {
+        $crate::connectors::macros::expand_payout_implementation!(
+            connector: $connector,
+            flow: $flow,
+            generic_type: $generic_type,
+            [ $($bounds)* ]
+        );
+        $crate::connectors::macros::macro_connector_payout_implementation!(
+            connector: $connector,
+            generic_type: $generic_type,
+            [ $($bounds)* ],
+            payout_flows: [ $($rest),* ]
+        );
+    };
+    (
+        connector: $connector: ident,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ],
+        payout_flows: []
+    ) => {};
+
+}
+pub(crate) use macro_connector_payout_implementation;
+
+macro_rules! expand_payout_implementation {
+    (
+        connector: $connector: ident,
+        flow: PayoutCreate,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutCreateV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutCreate,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutCreateRequest,
+                ::domain_types::payouts::payouts_types::PayoutCreateResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutTransfer,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutTransferV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutTransfer,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutTransferRequest,
+                ::domain_types::payouts::payouts_types::PayoutTransferResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutGet,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutGetV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutGet,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutGetRequest,
+                ::domain_types::payouts::payouts_types::PayoutGetResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutVoid,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutVoidV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutVoid,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutVoidRequest,
+                ::domain_types::payouts::payouts_types::PayoutVoidResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutStage,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutStageV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutStage,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutStageRequest,
+                ::domain_types::payouts::payouts_types::PayoutStageResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutCreateLink,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutCreateLinkV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutCreateLink,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutCreateLinkRequest,
+                ::domain_types::payouts::payouts_types::PayoutCreateLinkResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutCreateRecipient,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutCreateRecipientV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutCreateRecipient,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutCreateRecipientRequest,
+                ::domain_types::payouts::payouts_types::PayoutCreateRecipientResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+    (
+        connector: $connector: ident,
+        flow: PayoutEnrollDisburseAccount,
+        generic_type: $generic_type:tt,
+        [ $($bounds:tt)* ]
+    ) => {
+        impl<$generic_type: $($bounds)*> ::interfaces::connector_types::PayoutEnrollDisburseAccountV2 for $connector<$generic_type> {}
+        impl<$generic_type: $($bounds)*>
+            ::interfaces::connector_integration_v2::ConnectorIntegrationV2<
+                ::domain_types::connector_flow::PayoutEnrollDisburseAccount,
+                ::domain_types::payouts::payouts_types::PayoutFlowData,
+                ::domain_types::payouts::payouts_types::PayoutEnrollDisburseAccountRequest,
+                ::domain_types::payouts::payouts_types::PayoutEnrollDisburseAccountResponse,
+            > for $connector<$generic_type>
+        {}
+    };
+}
+pub(crate) use expand_payout_implementation;
