@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.04.0-hotfix4
+
+### Refactors
+
+- **connector:** [Fiservcommercehub] send expiry year as 1 week in second for access_token ([#827](https://github.com/juspay/connector-service/pull/827)) ([`26e44b1`](https://github.com/juspay/connector-service/commit/26e44b1d794cf572e5c8cde87ca1fa37ac8a13a3))
+
+**Full Changelog:** [`2026.03.04.0-hotfix3...2026.03.04.0-hotfix4`](https://github.com/juspay/connector-service/compare/2026.03.04.0-hotfix3...2026.03.04.0-hotfix4)
+
+- - -
+
 ## 2026.03.04.0-hotfix3
 
 ### Features
