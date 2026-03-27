@@ -283,6 +283,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
     }
 
