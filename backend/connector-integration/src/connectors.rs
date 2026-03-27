@@ -223,3 +223,6 @@ pub use self::fiservcommercehub::Fiservcommercehub;
 
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
+
+pub mod trustly;
+pub use self::trustly::Trustly;

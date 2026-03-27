@@ -603,6 +603,7 @@ enum Connector {
   REVOLV3 = 109;
   TRUELAYER = 110;
   FISERVCOMMERCEHUB = 111;
+  TRUSTLY = 112;
 }
 
 // Payment method types.
@@ -685,7 +686,7 @@ enum PaymentMethodType {
   SOFORT = 75;
   SWISH = 76;
   TOUCH_N_GO = 77;
-  TRUSTLY = 78;
+  TRUSTLY_BANK_REDIRECT = 78;
   TWINT = 79;
   UPI_COLLECT = 80;
   UPI_INTENT = 81;
@@ -3861,6 +3862,12 @@ message CoingateAuth {
   SecretString api_key = 1;
 }
 
+message TrustlyAuth {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString private_key = 3;
+}
+
 // ConnectorAuth message with oneof containing all 70 auth types
 // Ordered to match Connector enum order
 message ConnectorAuth {
@@ -4080,5 +4087,8 @@ message ConnectorAuth {
 
     // AUTHORIZEDOTNET = 5
     AuthorizedotnetAuth authorizedotnet = 72;
+
+    // TRUSTLY = 112
+    TrustlyAuth trustly = 73;
   }
 }
