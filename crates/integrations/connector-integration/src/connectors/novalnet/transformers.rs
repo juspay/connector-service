@@ -473,6 +473,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::Mifinity(_)
                 | WalletDataPaymentMethod::MbWay(_)
                 | WalletDataPaymentMethod::Satispay(_)
+                | WalletDataPaymentMethod::LazyPayRedirect(_)
+                | WalletDataPaymentMethod::PhonePeRedirect(_)
+                | WalletDataPaymentMethod::BillDeskRedirect(_)
+                | WalletDataPaymentMethod::CashfreeRedirect(_)
+                | WalletDataPaymentMethod::PayURedirect(_)
+                | WalletDataPaymentMethod::EaseBuzzRedirect(_)
                 | WalletDataPaymentMethod::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 )
@@ -2119,7 +2125,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
                 | WalletDataPaymentMethod::MbWayRedirect(_)
                 | WalletDataPaymentMethod::MobilePayRedirect(_)
-                | WalletDataPaymentMethod::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+                | WalletDataPaymentMethod::RevolutPay(_)
+                | WalletDataPaymentMethod::LazyPayRedirect(_)
+                | WalletDataPaymentMethod::PhonePeRedirect(_)
+                | WalletDataPaymentMethod::BillDeskRedirect(_)
+                | WalletDataPaymentMethod::CashfreeRedirect(_)
+                | WalletDataPaymentMethod::PayURedirect(_)
+                | WalletDataPaymentMethod::EaseBuzzRedirect(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 ))?,
                 WalletDataPaymentMethod::PaypalRedirect(_) => {

@@ -64,8 +64,10 @@ message PaymentMethod {
     PazeWallet paze = 23;                               // Paze
     SamsungWallet samsung_pay = 24;                     //Samsung
     MBWay mb_way = 25;                                  // MB WAY 
-    Satispay satispay = 26;                             // Satispay 
-    Wero wero = 27;                                     // Wero 
+    Satispay satispay = 26;                             // Satispay
+    Wero wero = 27;                                     // Wero
+    LazyPayRedirectWallet lazypay_redirect = 28;        // LazyPay - Indian BNPL/wallet redirect
+    PhonePeRedirectWallet phonepe_redirect = 29;        // PhonePe - Indian digital payments redirect
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -95,7 +97,9 @@ message PaymentMethod {
     Interac interac = 59;                                     // Interac - Canadian bank redirect payment method
     Bizum bizum = 156;
     Eft eft = 157;
-    
+    BillDeskRedirectWallet billdesk_redirect = 158;     // BillDesk - Indian payment gateway redirect
+    CashfreeRedirectWallet cashfree_redirect = 159;     // Cashfree - Indian payment gateway redirect
+
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
     
@@ -164,6 +168,10 @@ message PaymentMethod {
 
     // NETBANKING (160-169) - Indian net banking
     NetbankingPayment netbanking = 160;                          // Netbanking - Indian online banking
+
+    // INDIAN WALLET REDIRECTS (165-169)
+    PayURedirectWallet payu_redirect = 165;             // PayU - Indian payment gateway redirect
+    EaseBuzzRedirectWallet easebuzz_redirect = 166;     // EaseBuzz - Indian payment gateway redirect
   }
 }
 
@@ -522,6 +530,24 @@ message Satispay {
 message Wero {
   // Fields will be added as needed for Wero integration
 }
+
+// LazyPay - Indian BNPL/wallet redirect payment method
+message LazyPayRedirectWallet {}
+
+// PhonePe - Indian digital payments platform redirect
+message PhonePeRedirectWallet {}
+
+// BillDesk - Indian payment gateway redirect
+message BillDeskRedirectWallet {}
+
+// Cashfree - Indian payment gateway redirect
+message CashfreeRedirectWallet {}
+
+// PayU - Indian payment gateway redirect
+message PayURedirectWallet {}
+
+// EaseBuzz - Indian payment gateway redirect
+message EaseBuzzRedirectWallet {}
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
 message ApplePayThirdPartySdkWallet {

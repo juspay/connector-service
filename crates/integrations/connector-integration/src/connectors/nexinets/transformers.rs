@@ -839,6 +839,12 @@ fn get_wallet_details<
         | WalletData::RevolutPay(_)
         | WalletData::MbWay(_)
         | WalletData::Satispay(_)
+        | WalletData::LazyPayRedirect(_)
+        | WalletData::PhonePeRedirect(_)
+        | WalletData::BillDeskRedirect(_)
+        | WalletData::CashfreeRedirect(_)
+        | WalletData::PayURedirect(_)
+        | WalletData::EaseBuzzRedirect(_)
         | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("nexinets"),
         ))?,

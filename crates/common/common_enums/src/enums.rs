@@ -1055,6 +1055,12 @@ pub enum PaymentMethodType {
     RevolutPay,
     SepaGuaranteedDebit,
     IndonesianBankTransfer,
+    LazyPay,
+    PhonePe,
+    BillDesk,
+    Cashfree,
+    PayU,
+    EaseBuzz,
 }
 
 impl PaymentMethodType {
