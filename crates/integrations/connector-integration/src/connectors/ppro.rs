@@ -611,6 +611,21 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
     let mut ppro_supported_payment_methods = SupportedPaymentMethods::new();
 
     let ppro_bridge_supported_capture_methods = vec![common_enums::CaptureMethod::Automatic];
+    let ppro_card_supported_capture_methods = vec![
+        common_enums::CaptureMethod::Automatic,
+        common_enums::CaptureMethod::Manual,
+    ];
+
+    ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Card,
+        common_enums::PaymentMethodType::Card,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_card_supported_capture_methods,
+            specific_features: None,
+        },
+    );
 
     ppro_supported_payment_methods.add(
         common_enums::PaymentMethod::Wallet,
