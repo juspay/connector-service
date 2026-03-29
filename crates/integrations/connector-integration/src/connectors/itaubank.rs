@@ -16,7 +16,6 @@ use domain_types::{
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
@@ -31,6 +30,12 @@ use self::transformers::{
     ItaubankAccessTokenRequest, ItaubankAccessTokenResponse, ItaubankErrorResponse,
     ItaubankTransferRequest, ItaubankTransferResponse,
 };
+pub(crate) mod headers {
+    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const ACCEPT: &str = "Accept";
+    pub(crate) const USER_AGENT: &str = "User-Agent";
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
+}
 
 use std::fmt::Debug;
 
@@ -199,11 +204,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(vec![
             (
-                "Content-Type".to_string(),
+                headers::CONTENT_TYPE.to_string(),
                 "application/x-www-form-urlencoded".to_string().into(),
             ),
-            ("accept".to_string(), "*/*".to_string().into()),
-            ("User-Agent".to_string(), "Hyperswitch".to_string().into()),
+            (headers::ACCEPT.to_string(), "*/*".to_string().into()),
+            (
+                headers::USER_AGENT.to_string(),
+                "Hyperswitch".to_string().into(),
+            ),
         ])
     }
 
@@ -329,15 +337,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         Ok(vec![
             (
-                "Content-Type".to_string(),
+                headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             ),
-            ("accept".to_string(), "*/*".to_string().into()),
+            (headers::ACCEPT.to_string(), "*/*".to_string().into()),
             (
-                "Authorization".to_string(),
+                headers::AUTHORIZATION.to_string(),
                 format!("Bearer {access_token}").into_masked(),
             ),
-            ("User-Agent".to_string(), "Hyperswitch".to_string().into()),
+            (
+                headers::USER_AGENT.to_string(),
+                "Hyperswitch".to_string().into(),
+            ),
         ])
     }
 

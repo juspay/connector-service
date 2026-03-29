@@ -1,12 +1,19 @@
 use domain_types::{
-    connector_flow::*, connector_types::*, errors::ConnectorError, payouts::payouts_types::*,
-    router_data::ConnectorSpecificConfig, router_data_v2::RouterDataV2,
+    connector_flow::*,
+    connector_types::*,
+    errors::ConnectorError,
+    payouts::payout_method_data::{Bank, PayoutMethodData, PixBankTransfer},
+    payouts::payouts_types::*,
+    router_data::ConnectorSpecificConfig,
+    router_data_v2::RouterDataV2,
 };
 
-use hyperswitch_masking::Secret;
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
+use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
 // ===== AUTH TYPE =====
 
 pub struct ItaubankAuthType {
@@ -91,23 +98,41 @@ pub struct ItaubankAccessTokenResponse {
 
 #[derive(Debug, Serialize)]
 pub struct ItaubankTransferRequest {
-    pub valor_pagamento: String,
+    pub valor_pagamento: StringMajorUnit,
     pub data_pagamento: String,
-    pub chave: Option<String>,
+    pub chave: Option<Secret<String>>,
     pub referencia_empresa: Option<String>,
-    pub identificacao_comprovante: Option<String>,
-    pub informacoes_entre_usuarios: Option<String>,
+    pub identificacao_comprovante: Option<Secret<String>>,
+    pub informacoes_entre_usuarios: Option<Secret<String>>,
     pub recebedor: Option<ItaubankRecebedor>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub enum ItaubankAccountType {
+    #[serde(rename = "Conta Corrente")]
+    Checking,
+    #[serde(rename = "Conta Poupanca")]
+    Savings,
+    #[serde(rename = "Conta Pagamento")]
+    Payment,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub enum ItaubankPersonType {
+    #[serde(rename = "F")]
+    Individual,
+    #[serde(rename = "J")]
+    Company,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ItaubankRecebedor {
-    pub tipo_conta: Option<String>,
+    pub banco: Option<String>,
+    pub tipo_conta: Option<ItaubankAccountType>,
     pub agencia: Option<i64>,
-    pub conta: Option<String>,
-    pub tipo_pessoa: Option<String>,
-    pub documento: Option<i64>,
-    pub modulo_sispag: Option<String>,
+    pub conta: Option<Secret<String>>,
+    pub tipo_pessoa: Option<ItaubankPersonType>,
+    pub documento: Option<Secret<String>>,
 }
 
 impl
@@ -130,38 +155,98 @@ impl
             PayoutTransferResponse,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = req.request.amount;
-        // Convert MinorUnit to a string with 2 decimal places (e.g. 400 -> "4.00")
-        #[allow(clippy::as_conversions)]
-        let amount_str = format!("{:.2}", amount.0 as f64 / 100.0);
+        let converter = StringMajorUnitForConnector;
+        let valor_pagamento = converter
+            .convert(req.request.amount, req.request.source_currency)
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+
+        let data_pagamento = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+
+        let recebedor = match req.request.payout_method_data.clone() {
+            Some(PayoutMethodData::Bank(Bank::Pix(PixBankTransfer {
+                tax_id,
+                bank_branch,
+                bank_account_number,
+                bank_name,
+                ..
+            }))) => {
+                let tipo_pessoa = tax_id.clone().expose_option().map(|id| {
+                    if id.len() == 11 {
+                        ItaubankPersonType::Individual
+                    } else {
+                        ItaubankPersonType::Company
+                    }
+                });
+
+                let agencia = bank_branch
+                    .map(|b| {
+                        b.parse::<i64>()
+                            .change_context(ConnectorError::InvalidDataFormat {
+                                field_name: "bank_branch",
+                            })
+                    })
+                    .transpose()?;
+
+                Some(ItaubankRecebedor {
+                    banco: bank_name.map(|bank| bank.to_string()),
+                    tipo_conta: Some(ItaubankAccountType::Checking),
+                    agencia,
+                    conta: Some(bank_account_number),
+                    tipo_pessoa,
+                    documento: tax_id,
+                })
+            }
+            _ => None,
+        };
 
         Ok(Self {
-            valor_pagamento: amount_str,
-            data_pagamento: "2026-03-26".to_string(),
-            chave: req.request.connector_payout_id.clone(),
+            valor_pagamento,
+            data_pagamento,
+            chave: req.request.connector_payout_id.clone().map(Secret::new),
             referencia_empresa: req.request.merchant_payout_id.clone(),
-            identificacao_comprovante: None,
-            informacoes_entre_usuarios: None,
-            recebedor: None,
+            identificacao_comprovante: req.request.merchant_payout_id.clone().map(Secret::new),
+            informacoes_entre_usuarios: Some(Secret::new("Payout".to_string())),
+            recebedor,
         })
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ItaubankPayoutStatus {
+    Aprovado,
+    Confirmado,
+    Efetivado,
+    Pendente,
+    EmProcessamento,
+    Rejeitado,
+    Cancelado,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItaubankTransferResponse {
     pub id: Option<String>,
     #[serde(rename = "status")]
-    pub transfer_status: Option<String>,
+    pub transfer_status: Option<ItaubankPayoutStatus>,
     pub mensagem: Option<String>,
 }
 
 impl ItaubankTransferResponse {
     pub fn status(&self) -> common_enums::PayoutStatus {
-        match self.transfer_status.as_deref().unwrap_or("unknown") {
-            "APROVADO" | "CONFIRMADO" | "EFETIVADO" => common_enums::PayoutStatus::Success,
-            "PENDENTE" | "EM_PROCESSAMENTO" => common_enums::PayoutStatus::Initiated,
-            "REJEITADO" | "CANCELADO" => common_enums::PayoutStatus::Failure,
-            _ => common_enums::PayoutStatus::Initiated,
+        match self.transfer_status {
+            Some(ItaubankPayoutStatus::Aprovado)
+            | Some(ItaubankPayoutStatus::Confirmado)
+            | Some(ItaubankPayoutStatus::Efetivado) => common_enums::PayoutStatus::Success,
+            Some(ItaubankPayoutStatus::Pendente) | Some(ItaubankPayoutStatus::EmProcessamento) => {
+                common_enums::PayoutStatus::Pending
+            }
+            Some(ItaubankPayoutStatus::Rejeitado) | Some(ItaubankPayoutStatus::Cancelado) => {
+                common_enums::PayoutStatus::Failure
+            }
+            Some(ItaubankPayoutStatus::Unknown) | None => common_enums::PayoutStatus::Pending,
         }
     }
 }

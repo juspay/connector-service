@@ -1224,7 +1224,7 @@ pub(crate) use create_amount_converter_wrapper;
 ///   – The marker trait that flags the connector as supporting flow `F`.
 /// - `impl ::interfaces::connector_integration_v2::ConnectorIntegrationV2<FlowType, FlowData, Request, Response>`
 ///   – The default (empty) integration trait, providing no-op behaviour that connectors
-///     can override by supplying their own impl.
+///   can override by supplying their own impl.
 ///
 /// # Parameters
 ///
