@@ -92,24 +92,43 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: ItaubankErrorResponse = res
-            .response
-            .parse_struct("ItaubankErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: Result<ItaubankErrorResponse, _> =
+            res.response.parse_struct("ItaubankErrorResponse");
 
-        event_builder.map(|i| i.set_connector_response(&response));
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.code.unwrap_or_else(|| "UNKNOWN".to_string()),
-            message: response.message.clone().unwrap_or_default(),
-            reason: response.message.clone(),
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
+        match response {
+            Ok(error_res) => {
+                event_builder.map(|i| i.set_connector_response(&error_res));
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: error_res.code.unwrap_or_else(|| "UNKNOWN".to_string()),
+                    message: error_res.message.clone().unwrap_or_default(),
+                    reason: error_res.message,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                })
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Failed to parse error response from Itaubank. Status: {}, Raw: {:?}",
+                    res.status_code,
+                    res.response
+                );
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: res.status_code.to_string(),
+                    message: "Failed to parse error response from connector".to_string(),
+                    reason: Some(format!("Raw response: {:?}", res.response)),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                })
+            }
+        }
     }
 }
 
@@ -159,8 +178,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             AccessTokenResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = self.base_url(&req.resource_common_data.connectors);
-        Ok(format!("{base_url}api/oauth/jwt"))
+        let base_url = req
+            .resource_common_data
+            .connectors
+            .itaubank
+            .secondary_base_url
+            .as_ref()
+            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+        Ok(format!("{base_url}/api/oauth/jwt"))
     }
 
     fn get_headers(
@@ -178,6 +203,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "application/x-www-form-urlencoded".to_string().into(),
             ),
             ("accept".to_string(), "*/*".to_string().into()),
+            ("User-Agent".to_string(), "Hyperswitch".to_string().into()),
         ])
     }
 
@@ -215,22 +241,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
         errors::ConnectorError,
     > {
-        let response: ItaubankAccessTokenResponse = res
-            .response
-            .parse_struct("ItaubankAccessTokenResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        event_builder.map(|i| i.set_connector_response(&response));
+        let response: Result<ItaubankAccessTokenResponse, _> =
+            res.response.parse_struct("ItaubankAccessTokenResponse");
 
-        let access_token_data = AccessTokenResponseData {
-            access_token: response.access_token.into(),
-            token_type: response.token_type,
-            expires_in: response.expires_in,
-        };
+        match response {
+            Ok(token_res) => {
+                event_builder.map(|i| i.set_connector_response(&token_res));
+                let access_token_data = AccessTokenResponseData {
+                    access_token: token_res.access_token.into(),
+                    token_type: token_res.token_type,
+                    expires_in: token_res.expires_in,
+                };
 
-        Ok(RouterDataV2 {
-            response: Ok(access_token_data),
-            ..data.clone()
-        })
+                Ok(RouterDataV2 {
+                    response: Ok(access_token_data),
+                    ..data.clone()
+                })
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Failed to parse access token response from Itaubank. Status: {}, Raw: {:?}",
+                    res.status_code,
+                    res.response
+                );
+                Err(errors::ConnectorError::ResponseDeserializationFailed.into())
+            }
+        }
     }
 
     fn get_error_response_v2(
@@ -274,9 +310,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.base_url(&req.resource_common_data.connectors);
-        Ok(format!(
-            "{base_url}itau-ep9-gtw-sispag-ext/v1/transferencias"
-        ))
+        Ok(format!("{base_url}/v1/transferencias"))
     }
 
     fn get_headers(
@@ -303,6 +337,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "Authorization".to_string(),
                 format!("Bearer {access_token}").into_masked(),
             ),
+            ("User-Agent".to_string(), "Hyperswitch".to_string().into()),
         ])
     }
 
@@ -333,18 +368,28 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
         errors::ConnectorError,
     > {
-        let response: ItaubankTransferResponse = res
-            .response
-            .parse_struct("ItaubankTransferResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        event_builder.map(|i| i.set_connector_response(&response));
+        let response: Result<ItaubankTransferResponse, _> =
+            res.response.parse_struct("ItaubankTransferResponse");
 
-        let payout_response = PayoutTransferResponse::try_from(response)?;
+        match response {
+            Ok(transfer_res) => {
+                event_builder.map(|i| i.set_connector_response(&transfer_res));
+                let payout_response = PayoutTransferResponse::try_from(transfer_res)?;
 
-        Ok(RouterDataV2 {
-            response: Ok(payout_response),
-            ..data.clone()
-        })
+                Ok(RouterDataV2 {
+                    response: Ok(payout_response),
+                    ..data.clone()
+                })
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Failed to parse transfer response from Itaubank. Status: {}, Raw: {:?}",
+                    res.status_code,
+                    res.response
+                );
+                Err(errors::ConnectorError::ResponseDeserializationFailed.into())
+            }
+        }
     }
 
     fn get_error_response_v2(
