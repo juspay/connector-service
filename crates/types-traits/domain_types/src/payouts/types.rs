@@ -1942,6 +1942,102 @@ pub fn generate_payout_create_recipient_response(
     }
 }
 
+// ============================================================================
+// CreditToWallet conversions
+// ============================================================================
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreditToWalletRequest>
+    for payouts::payouts_types::CreditToWalletData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceCreditToWalletRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.amount),
+            currency: value.currency,
+            reference_id: value.reference_id,
+            user_account_id: value.user_account_id,
+            program_id: value.program_id,
+            credit_expiry: value.credit_expiry,
+            description: value.description,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceCreditToWalletRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for payouts::payouts_types::CreditToWalletFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceCreditToWalletRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            connectors,
+            connector_request_reference_id: value.reference_id.clone(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            test_mode: None,
+        })
+    }
+}
+
+pub fn generate_credit_to_wallet_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::CreditToWallet,
+        super::payouts_types::CreditToWalletFlowData,
+        super::payouts_types::CreditToWalletData,
+        super::payouts_types::CreditToWalletResponseData,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreditToWalletResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => {
+            let status_str = match response.status {
+                super::payouts_types::CreditToWalletStatus::Success => "success",
+                super::payouts_types::CreditToWalletStatus::Pending => "pending",
+                super::payouts_types::CreditToWalletStatus::Failed => "failed",
+            };
+            Ok(
+                grpc_api_types::payouts::PayoutServiceCreditToWalletResponse {
+                    transaction_id: Some(response.transaction_id),
+                    status: Some(status_str.to_string()),
+                    balance: response.balance,
+                    status_code: u32::from(response.status_code),
+                    error_code: response.error_code,
+                    error_message: response.error_message,
+                },
+            )
+        }
+        Err(err) => Ok(
+            grpc_api_types::payouts::PayoutServiceCreditToWalletResponse {
+                transaction_id: err.connector_transaction_id.clone(),
+                status: Some("failed".to_string()),
+                balance: None,
+                status_code: u32::from(err.status_code),
+                error_code: Some(err.code.clone()),
+                error_message: Some(err.message.clone()),
+            },
+        ),
+    }
+}
+
 pub fn generate_payout_enroll_disburse_account_response(
     router_data_v2: crate::router_data_v2::RouterDataV2<
         crate::connector_flow::PayoutEnrollDisburseAccount,

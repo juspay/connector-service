@@ -16,8 +16,8 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        CreateOrder, CreateSessionToken, CreditToWallet, DefendDispute, IncrementalAuthorization,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
         SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
@@ -37,6 +37,9 @@ use domain_types::{
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
+    payouts::payouts_types::{
+        CreditToWalletData, CreditToWalletFlowData, CreditToWalletResponseData,
+    },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -1272,4 +1275,110 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MandateRevokeResponseData,
     > for Razorpay<T>
 {
+}
+
+// ========== CreditToWallet Implementation ==========
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreditToWalletV2 for Razorpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreditToWallet,
+        CreditToWalletFlowData,
+        CreditToWalletData,
+        CreditToWalletResponseData,
+    > for Razorpay<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            CreditToWallet,
+            CreditToWalletFlowData,
+            CreditToWalletData,
+            CreditToWalletResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            CreditToWallet,
+            CreditToWalletFlowData,
+            CreditToWalletData,
+            CreditToWalletResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        Ok(format!("{base_url}v1/engage/transactions/credit"))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            CreditToWallet,
+            CreditToWalletFlowData,
+            CreditToWalletData,
+            CreditToWalletResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let connector_req = razorpay::RazorpayCreditToWalletRequest::try_from(&req.request)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            CreditToWallet,
+            CreditToWalletFlowData,
+            CreditToWalletData,
+            CreditToWalletResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            CreditToWallet,
+            CreditToWalletFlowData,
+            CreditToWalletData,
+            CreditToWalletResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: razorpay::RazorpayCreditToWalletResponse = res
+            .response
+            .parse_struct("RazorpayCreditToWalletResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }

@@ -522,3 +522,41 @@ message PayoutMethodEligibilityResponse {
   uint32 status_code = 5;
 }
 
+// ============================================================================
+// CREDIT TO WALLET MESSAGES
+// ============================================================================
+
+// Request message for crediting to a wallet
+message PayoutServiceCreditToWalletRequest {
+  // Amount in minor units (e.g., paise, cents)
+  int64 amount = 1;
+  // Currency code (e.g., "INR", "USD")
+  string currency = 2;
+  // Unique reference ID for this credit transaction
+  string reference_id = 3;
+  // User account identifier in the wallet system
+  string user_account_id = 4;
+  // Program identifier for the wallet credit
+  string program_id = 5;
+  // Expiry timestamp for the credit (ISO 8601 or Unix timestamp)
+  string credit_expiry = 6;
+  // Optional description for the credit
+  optional string description = 7;
+}
+
+// Response message for crediting to a wallet
+message PayoutServiceCreditToWalletResponse {
+  // Transaction ID returned by the connector
+  optional string transaction_id = 1;
+  // Status of the credit operation (e.g., "success", "pending", "failed")
+  optional string status = 2;
+  // Updated wallet balance after credit (in minor units)
+  optional int64 balance = 3;
+  // HTTP status code from the connector
+  uint32 status_code = 4;
+  // Error code if the operation failed
+  optional string error_code = 5;
+  // Error message if the operation failed
+  optional string error_message = 6;
+}
+

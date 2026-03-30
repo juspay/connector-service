@@ -50,3 +50,9 @@ pub struct PayoutVoidIntegrityObject {
     pub merchant_payout_id: Option<String>,
     pub connector_payout_id: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CreditToWalletIntegrityObject {
+    pub amount: MinorUnit,
+    pub reference_id: String,
+}

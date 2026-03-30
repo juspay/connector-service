@@ -283,4 +283,7 @@ service PayoutService {
 
   // Enroll disburse account.
   rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
+
+  // Credit funds to a wallet.
+  rpc CreditToWallet(PayoutServiceCreditToWalletRequest) returns (PayoutServiceCreditToWalletResponse);
 }
