@@ -31,3 +31,9 @@ output/
 **/references/**
 
 .envrc
+
+# 10xGrace
+index_store/
+.worktrees/
+state.json
+.10xgrace.lock

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10xGrace Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{surface:'#0f1117',card:'#1a1d27',border:'#2a2d3a',accent:'#7c3aed',green:'#10b981',red:'#ef4444',yellow:'#f59e0b',blue:'#3b82f6'}}}}</script>
+  <style>
+    body { background: #0f1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; }
+    .card:hover { border-color: #3a3d4a; }
+    .column { min-height: 400px; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .step-line { border-left: 2px solid #2a2d3a; margin-left: 11px; padding-left: 20px; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 3px; }
+  </style>
+</head>
+<body class="text-gray-200 min-h-screen">
+  <!-- Header -->
+  <header class="border-b border-[#2a2d3a] px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-[#7c3aed] flex items-center justify-center font-bold text-sm">10x</div>
+      <h1 class="text-lg font-semibold">10xGrace Dashboard</h1>
+    </div>
+    <div class="flex items-center gap-4 text-sm">
+      <span id="cycle-badge" class="text-gray-500">Waiting...</span>
+      <span id="live-dot" class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-green-500 pulse"></span>
+        <span class="text-gray-400">Live</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Kanban Board -->
+  <main class="p-6">
+    <div class="grid grid-cols-4 gap-4">
+      <!-- Backlog -->
+      <div class="column">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+          <span class="font-medium text-sm">Backlog</span>
+          <span id="backlog-count" class="text-xs text-gray-500 bg-[#1a1d27] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="backlog-col" class="space-y-2"></div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="column">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500 pulse"></span>
+          <span class="font-medium text-sm">In Progress</span>
+          <span id="progress-count" class="text-xs text-gray-500 bg-[#1a1d27] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="progress-col" class="space-y-2"></div>
+      </div>
+
+      <!-- Completed -->
+      <div class="column">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+          <span class="font-medium text-sm">Completed</span>
+          <span id="completed-count" class="text-xs text-gray-500 bg-[#1a1d27] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="completed-col" class="space-y-2"></div>
+      </div>
+
+      <!-- Failed -->
+      <div class="column">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+          <span class="font-medium text-sm">Failed</span>
+          <span id="failed-count" class="text-xs text-gray-500 bg-[#1a1d27] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="failed-col" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- Live Activity Panel -->
+    <div id="activity-panel" class="mt-6 card p-4 hidden">
+      <div class="flex items-center justify-between mb-3">
+        <h2 id="activity-title" class="font-medium text-sm">Live Activity</h2>
+        <button onclick="document.getElementById('activity-panel').classList.add('hidden')" class="text-gray-500 hover:text-gray-300 text-sm">Close</button>
+      </div>
+      <div id="activity-steps" class="space-y-1 max-h-96 overflow-y-auto step-line"></div>
+    </div>
+  </main>
+
+  <script>
+    // ── State ──
+    const state = {
+      backlog: [],
+      inProgress: [],
+      completed: [],
+      failed: [],
+      currentPR: null,
+      stepsByPR: {},  // { pr_number: [steps] } — persists across clicks
+    };
+
+    // ── Card Templates ──
+    function backlogCard(item) {
+      return `<div class="card p-3 fade-in cursor-pointer" onclick="showActivity(${item.pr})">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-mono text-[#7c3aed]">PR #${item.pr}</span>
+          <span class="text-xs text-gray-500">@${item.author}</span>
+        </div>
+        <div class="text-xs text-gray-400 font-mono truncate">${item.path || ''}</div>
+        <div class="text-xs text-gray-300 mt-1 line-clamp-2">${item.instruction || ''}</div>
+        ${item.line ? `<div class="text-xs text-gray-500 mt-1">L:${item.line}</div>` : ''}
+      </div>`;
+    }
+
+    function progressCard(item) {
+      const pr = item.pr_number || item.pr;
+      const steps = state.stepsByPR[pr] || [];
+      const lastStep = steps.length > 0 ? steps[steps.length - 1].text : 'Starting...';
+      return `<div class="card p-3 fade-in cursor-pointer border-blue-500/30" onclick="showActivity(${pr})">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-mono text-blue-400">PR #${pr}</span>
+          <span class="w-2 h-2 rounded-full bg-blue-500 pulse"></span>
+        </div>
+        <div class="text-xs text-gray-500">${item.thread_count || 1} comment(s)</div>
+        <div class="text-xs text-gray-400 mt-1 truncate">${lastStep}</div>
+      </div>`;
+    }
+
+    function completedCard(item) {
+      const ago = timeAgo(item.processed_at);
+      return `<div class="card p-3 fade-in">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-mono text-green-400">PR #${item.pr_number}</span>
+          <span class="text-xs text-gray-500">${ago}</span>
+        </div>
+        <div class="text-xs text-gray-400 font-mono truncate">${item.path}</div>
+        <div class="text-xs text-gray-300 mt-1 truncate">${item.instruction}</div>
+        ${item.commit_sha ? `<div class="text-xs text-green-500/70 mt-1 font-mono">${item.commit_sha.slice(0,12)}</div>` : ''}
+      </div>`;
+    }
+
+    function failedCard(item) {
+      const ago = timeAgo(item.processed_at);
+      return `<div class="card p-3 fade-in border-red-500/20">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-mono text-red-400">PR #${item.pr_number}</span>
+          <span class="text-xs text-gray-500">${ago}</span>
+        </div>
+        <div class="text-xs text-gray-400 font-mono truncate">${item.path || ''}</div>
+        <div class="text-xs text-red-300/70 mt-1 truncate">${item.error || 'Unknown error'}</div>
+      </div>`;
+    }
+
+    // ── Activity Steps ──
+    function stepHTML(icon, color, text, detail) {
+      return `<div class="flex items-start gap-2 py-1 fade-in">
+        <span class="text-xs mt-0.5">${icon}</span>
+        <div>
+          <span class="text-xs ${color}">${text}</span>
+          ${detail ? `<span class="text-xs text-gray-500 ml-1">${detail}</span>` : ''}
+        </div>
+      </div>`;
+    }
+
+    function showActivity(prNumber) {
+      const panel = document.getElementById('activity-panel');
+      const title = document.getElementById('activity-title');
+      panel.classList.remove('hidden');
+      title.textContent = `Live Activity — PR #${prNumber}`;
+      state.currentPR = prNumber;
+      renderSteps();
+    }
+
+    function addStep(prNumber, icon, color, text, detail) {
+      if (!state.stepsByPR[prNumber]) state.stepsByPR[prNumber] = [];
+      state.stepsByPR[prNumber].push({ icon, color, text, detail });
+      if (state.currentPR === prNumber) renderSteps();
+    }
+
+    function renderSteps() {
+      const container = document.getElementById('activity-steps');
+      const steps = state.stepsByPR[state.currentPR] || [];
+      if (steps.length === 0) {
+        container.innerHTML = '<div class="text-xs text-gray-500 py-2">Waiting for activity...</div>';
+      } else {
+        container.innerHTML = steps.map(s => stepHTML(s.icon, s.color, s.text, s.detail)).join('');
+      }
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ── Render Columns ──
+    function render() {
+      document.getElementById('backlog-col').innerHTML = state.backlog.map(backlogCard).join('');
+      document.getElementById('progress-col').innerHTML = state.inProgress.map(progressCard).join('');
+      document.getElementById('completed-col').innerHTML = state.completed.slice(0, 20).map(completedCard).join('');
+      document.getElementById('failed-col').innerHTML = state.failed.slice(0, 10).map(failedCard).join('');
+
+      document.getElementById('backlog-count').textContent = state.backlog.length;
+      document.getElementById('progress-count').textContent = state.inProgress.length;
+      document.getElementById('completed-count').textContent = state.completed.length;
+      document.getElementById('failed-count').textContent = state.failed.length;
+    }
+
+    // ── Time formatting ──
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    // ── Load initial state ──
+    async function loadState() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        state.backlog = data.backlog || [];
+        state.inProgress = data.in_progress || [];
+        state.completed = data.completed || [];
+        state.failed = data.failed || [];
+
+        // Load steps from API (server-side replay of events)
+        const serverSteps = data.steps_by_pr || {};
+        for (const [pr, steps] of Object.entries(serverSteps)) {
+          const prNum = parseInt(pr);
+          if (!state.stepsByPR[prNum] || state.stepsByPR[prNum].length === 0) {
+            state.stepsByPR[prNum] = steps.map(s => ({
+              icon: s.icon === 'pass' ? '&#10003;' : s.icon === 'fail' ? '&#10007;' : s.icon === 'tool' ? '&#9889;' : '&#128172;',
+              color: s.icon === 'pass' ? 'text-green-400' : s.icon === 'fail' ? 'text-red-400' : s.icon === 'tool' ? 'text-yellow-400' : 'text-blue-300',
+              text: s.text || '',
+              detail: s.detail || '',
+            }));
+          }
+        }
+
+        render();
+        if (state.currentPR) renderSteps();
+      } catch (e) {
+        console.error('Failed to load state:', e);
+      }
+    }
+
+    // ── SSE Connection ──
+    function connectSSE() {
+      const source = new EventSource('/api/events');
+
+      source.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          handleEvent(event);
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      };
+
+      source.onerror = () => {
+        document.getElementById('live-dot').querySelector('span').classList.remove('bg-green-500');
+        document.getElementById('live-dot').querySelector('span').classList.add('bg-red-500');
+        setTimeout(() => {
+          source.close();
+          connectSSE();
+        }, 3000);
+      };
+
+      source.onopen = () => {
+        const dot = document.getElementById('live-dot').querySelector('span');
+        dot.classList.remove('bg-red-500');
+        dot.classList.add('bg-green-500');
+      };
+    }
+
+    // ── Event Handler ──
+    let activePR = null; // Track which PR is currently being processed
+
+    function handleEvent(event) {
+      const t = event.type;
+
+      if (t === 'cycle_start') {
+        document.getElementById('cycle-badge').textContent = `Cycle #${event.cycle}`;
+        state.backlog = [];
+        state.inProgress = [];
+        render();
+
+      } else if (t === 'comment_found') {
+        state.backlog.push(event);
+        render();
+
+      } else if (t === 'pr_start') {
+        activePR = event.pr_number;
+        state.backlog = state.backlog.filter(b => b.pr !== event.pr_number);
+        state.inProgress.push(event);
+        state.stepsByPR[activePR] = []; // Fresh steps for this PR
+        render();
+        showActivity(activePR);
+
+      } else if (t === 'gate') {
+        const pr = activePR;
+        const icon = event.passed ? '&#10003;' : '&#10007;';
+        const color = event.passed ? 'text-green-400' : 'text-red-400';
+        if (pr) addStep(pr, icon, color, event.name, event.detail || '');
+
+      } else if (t === 'agent_tool') {
+        if (activePR) addStep(activePR, '&#9889;', 'text-yellow-400', event.tool, event.input_summary || '');
+
+      } else if (t === 'agent_text') {
+        if (activePR) addStep(activePR, '&#128172;', 'text-blue-300', event.text || '', '');
+
+      } else if (t === 'commit') {
+        if (activePR) addStep(activePR, '&#10003;', 'text-green-400', 'Committed', `${event.sha?.slice(0,12)} → ${event.branch}`);
+
+      } else if (t === 'fixed') {
+        const pr = event.pr;
+        state.inProgress = state.inProgress.filter(p => (p.pr_number || p.pr) !== pr);
+        state.completed.unshift({
+          thread_id: event.thread_id,
+          pr_number: pr,
+          path: event.path,
+          instruction: event.instruction,
+          commit_sha: event.commit_sha,
+          processed_at: new Date().toISOString(),
+          status: 'fixed',
+        });
+        addStep(pr, '&#10003;', 'text-green-400', 'Fixed', event.path);
+        render();
+
+      } else if (t === 'failed') {
+        const pr = event.pr || activePR;
+        state.inProgress = state.inProgress.filter(p => (p.pr_number || p.pr) !== pr);
+        state.failed.unshift({
+          thread_id: event.thread_id,
+          pr_number: pr,
+          error: event.error,
+          processed_at: new Date().toISOString(),
+          status: 'failed',
+        });
+        if (pr) addStep(pr, '&#10007;', 'text-red-400', 'Failed', event.error || '');
+        render();
+
+      } else if (t === 'cycle_end') {
+        document.getElementById('cycle-badge').textContent =
+          `Cycle done: ${event.fixed || 0} fixed, ${event.failed || 0} failed (${(event.duration || 0).toFixed(1)}s)`;
+        state.inProgress = [];
+        render();
+
+      } else if (t === 'no_comments') {
+        document.getElementById('cycle-badge').textContent = 'No @10xGrace comments';
+      }
+    }
+
+    // ── Init ──
+    loadState();
+    connectSSE();
+    // Refresh state every 30s
+    setInterval(loadState, 30000);
+  </script>
+</body>
+</html>
