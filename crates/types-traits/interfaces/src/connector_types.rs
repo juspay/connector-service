@@ -18,7 +18,8 @@ use domain_types::{
         PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        SubmitEvidenceData, TriggerOtpForWalletData, TriggerOtpForWalletResponseData,
+        VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
@@ -77,6 +78,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
     + VerifyWebhookSourceV2
+    + TriggerOtpForWalletV2
     + VerifyRedirectResponse
     + PayoutCreateV2
     + PayoutTransferV2
@@ -358,6 +360,16 @@ pub trait VerifyWebhookSourceV2:
 {
 }
 
+pub trait TriggerOtpForWalletV2:
+    ConnectorIntegrationV2<
+    connector_flow::TriggerOtpForWallet,
+    PaymentFlowData,
+    TriggerOtpForWalletData,
+    TriggerOtpForWalletResponseData,
+>
+{
+}
+
 pub trait PayoutCreateV2:
     ConnectorIntegrationV2<
     connector_flow::PayoutCreate,
@@ -381,6 +393,7 @@ where
     T: ConnectorCommon + Sync + Send + 'static,
 {
 }
+
 
 pub trait IncomingWebhook {
     fn verify_webhook_source(

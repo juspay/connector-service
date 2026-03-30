@@ -14,7 +14,7 @@ use domain_types::connector_types::{
     PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
     PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    SetupMandateRequestData, SubmitEvidenceData, TriggerOtpForWalletData,
 };
 use domain_types::payouts::payouts_types::{
     PayoutCreateLinkRequest, PayoutCreateRecipientRequest, PayoutCreateRequest,
@@ -39,7 +39,8 @@ use domain_types::{
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        SubmitEvidenceIntegrityObject, TriggerOtpForWalletIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -184,6 +185,7 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(TriggerOtpForWalletData);
 impl_check_integrity!(PayoutCreateRequest);
 impl_check_integrity!(PayoutTransferRequest);
 impl_check_integrity!(PayoutStageRequest);
@@ -439,6 +441,16 @@ impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSdkSessionTo
 
     fn get_request_integrity_object(&self) -> SdkSessionTokenIntegrityObject {
         SdkSessionTokenIntegrityObject {}
+    }
+}
+
+impl GetIntegrityObject<TriggerOtpForWalletIntegrityObject> for TriggerOtpForWalletData {
+    fn get_response_integrity_object(&self) -> Option<TriggerOtpForWalletIntegrityObject> {
+        None // OTP trigger responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> TriggerOtpForWalletIntegrityObject {
+        TriggerOtpForWalletIntegrityObject {}
     }
 }
 
@@ -1009,6 +1021,18 @@ impl FlowIntegrity for SdkSessionTokenIntegrityObject {
         _connector_transaction_id: Option<String>,
     ) -> Result<(), IntegrityCheckError> {
         Ok(())
+    }
+}
+
+impl FlowIntegrity for TriggerOtpForWalletIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(()) // No integrity fields to compare for OTP triggering
     }
 }
 
