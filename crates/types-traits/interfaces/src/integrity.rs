@@ -13,8 +13,8 @@ use domain_types::connector_types::{
     PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
     PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
-    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    PaymentsSyncData, RefreshWalletBalanceData, RefundSyncData, RefundsData, RepeatPaymentData,
+    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData, TriggerOtpForWalletData,
 };
 use domain_types::payouts::payouts_types::{
     PayoutCreateLinkRequest, PayoutCreateRecipientRequest, PayoutCreateRequest,
@@ -37,9 +37,10 @@ use domain_types::{
         IncrementalAuthorizationIntegrityObject, MandateRevokeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        PreAuthenticateIntegrityObject, RefreshWalletBalanceIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        TriggerOtpForWalletIntegrityObject, VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -184,6 +185,8 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(TriggerOtpForWalletData);
+impl_check_integrity!(RefreshWalletBalanceData);
 impl_check_integrity!(PayoutCreateRequest);
 impl_check_integrity!(PayoutTransferRequest);
 impl_check_integrity!(PayoutStageRequest);
@@ -439,6 +442,26 @@ impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSdkSessionTo
 
     fn get_request_integrity_object(&self) -> SdkSessionTokenIntegrityObject {
         SdkSessionTokenIntegrityObject {}
+    }
+}
+
+impl GetIntegrityObject<TriggerOtpForWalletIntegrityObject> for TriggerOtpForWalletData {
+    fn get_response_integrity_object(&self) -> Option<TriggerOtpForWalletIntegrityObject> {
+        None // OTP trigger responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> TriggerOtpForWalletIntegrityObject {
+        TriggerOtpForWalletIntegrityObject {}
+    }
+}
+
+impl GetIntegrityObject<RefreshWalletBalanceIntegrityObject> for RefreshWalletBalanceData {
+    fn get_response_integrity_object(&self) -> Option<RefreshWalletBalanceIntegrityObject> {
+        None // Wallet balance responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> RefreshWalletBalanceIntegrityObject {
+        RefreshWalletBalanceIntegrityObject {}
     }
 }
 
@@ -1009,6 +1032,30 @@ impl FlowIntegrity for SdkSessionTokenIntegrityObject {
         _connector_transaction_id: Option<String>,
     ) -> Result<(), IntegrityCheckError> {
         Ok(())
+    }
+}
+
+impl FlowIntegrity for TriggerOtpForWalletIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(()) // No integrity fields to compare for OTP triggering
+    }
+}
+
+impl FlowIntegrity for RefreshWalletBalanceIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(()) // No integrity fields to compare for wallet balance refresh
     }
 }
 

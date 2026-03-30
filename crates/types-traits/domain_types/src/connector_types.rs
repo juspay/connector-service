@@ -1673,6 +1673,37 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct TriggerOtpForWalletData {
+    pub phone_number: Secret<String>,
+    pub merchant_id: Secret<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TriggerOtpForWalletResponseData {
+    pub otp_token: String,
+    pub merchant_id: String,
+    pub status_code: u16,
+}
+
+#[derive(Debug, Clone)]
+pub struct RefreshWalletBalanceData {
+    pub user_auth_token: Secret<String>,
+    pub merchant_id: Secret<String>,
+    pub txn_amount: Option<i64>,
+    pub device_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RefreshWalletBalanceResponseData {
+    pub available_balance: i64,
+    pub usable_balance: i64,
+    pub max_topup_allowed: i64,
+    pub debit_possible: Option<bool>,
+    pub topup_possible: Option<bool>,
+    pub status_code: u16,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

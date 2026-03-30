@@ -15,10 +15,12 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
+        PaymentsSyncData, RedirectDetailsResponse, RefreshWalletBalanceData,
+        RefreshWalletBalanceResponseData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        SubmitEvidenceData, TriggerOtpForWalletData, TriggerOtpForWalletResponseData,
+        VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
@@ -77,6 +79,8 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
     + VerifyWebhookSourceV2
+    + TriggerOtpForWalletV2
+    + RefreshWalletBalanceV2
     + VerifyRedirectResponse
     + PayoutCreateV2
     + PayoutTransferV2
@@ -354,6 +358,26 @@ pub trait VerifyWebhookSourceV2:
     VerifyWebhookSourceFlowData,
     VerifyWebhookSourceRequestData,
     VerifyWebhookSourceResponseData,
+>
+{
+}
+
+pub trait TriggerOtpForWalletV2:
+    ConnectorIntegrationV2<
+    connector_flow::TriggerOtpForWallet,
+    PaymentFlowData,
+    TriggerOtpForWalletData,
+    TriggerOtpForWalletResponseData,
+>
+{
+}
+
+pub trait RefreshWalletBalanceV2:
+    ConnectorIntegrationV2<
+    connector_flow::RefreshWalletBalance,
+    PaymentFlowData,
+    RefreshWalletBalanceData,
+    RefreshWalletBalanceResponseData,
 >
 {
 }

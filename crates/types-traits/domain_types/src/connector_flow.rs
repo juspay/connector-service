@@ -71,6 +71,12 @@ pub struct MandateRevoke;
 pub struct VerifyWebhookSource;
 
 #[derive(Debug, Clone)]
+pub struct TriggerOtpForWallet;
+
+#[derive(Debug, Clone)]
+pub struct RefreshWalletBalance;
+
+#[derive(Debug, Clone)]
 pub struct PayoutCreate;
 
 #[derive(Debug, Clone)]
@@ -122,6 +128,8 @@ pub enum FlowName {
     SdkSessionToken,
     IncrementalAuthorization,
     MandateRevoke,
+    TriggerOtpForWallet,
+    RefreshWalletBalance,
     PayoutCreate,
     PayoutTransfer,
     PayoutGet,
