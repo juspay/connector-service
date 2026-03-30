@@ -79,6 +79,7 @@ mod tests {
                     vault_headers: None,
                     raw_connector_request: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
@@ -89,6 +90,7 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
+                    endpoint_prefix: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -274,6 +276,7 @@ mod tests {
                     vault_headers: None,
                     raw_connector_request: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
@@ -284,6 +287,7 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
+                    endpoint_prefix: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,

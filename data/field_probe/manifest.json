@@ -527,24 +527,6 @@
       "comments": {},
       "field_types": {}
     },
-    "BNPLPaymentMethodType": {
-      "comments": {
-        "affirm": "Affirm - US BNPL service",
-        "afterpay_clearpay": "Afterpay/Clearpay - BNPL service",
-        "alma": "Alma - French BNPL service",
-        "atome": "Atome - Asian BNPL service",
-        "pay_bright": "PayBright - Canadian BNPL service",
-        "walley": "Walley - Nordic BNPL service"
-      },
-      "field_types": {
-        "affirm": "Affirm",
-        "afterpay_clearpay": "AfterpayClearpay",
-        "alma": "Alma",
-        "atome": "Atome",
-        "pay_bright": "PayBright",
-        "walley": "Walley"
-      }
-    },
     "Bacs": {
       "comments": {
         "account_number": "Account number for Bacs payment method",
@@ -576,14 +558,6 @@
       },
       "field_types": {
         "interac": "InteracCustomerInfo"
-      }
-    },
-    "BankTransferPaymentMethodType": {
-      "comments": {
-        "instant_bank_transfer": "Generic instant bank transfer"
-      },
-      "field_types": {
-        "instant_bank_transfer": "InstantBankTransfer"
       }
     },
     "BarclaycardConfig": {
@@ -706,42 +680,6 @@
         "cavv_algorithm": "CavvAlgorithm"
       }
     },
-    "CashVoucherPaymentMethodType": {
-      "comments": {
-        "alfamart": "Alfamart - Indonesian convenience store payment",
-        "boleto": "Boleto - Brazilian payment method",
-        "efecty": "Efecty - Colombian cash payment network",
-        "evoucher": "E-Voucher - Generic electronic voucher payment",
-        "family_mart": "FamilyMart - Japanese convenience store payment",
-        "givex": "Givex - Gift card and loyalty program provider",
-        "indomaret": "Indomaret - Indonesian convenience store payment",
-        "lawson": "Lawson - Japanese convenience store payment",
-        "mini_stop": "Ministop - Japanese convenience store payment",
-        "oxxo": "OXXO - Mexican convenience store payment",
-        "pago_efectivo": "PagoEfectivo - Peruvian cash payment method",
-        "pay_easy": "Pay-easy - Japanese bill payment service",
-        "pay_safe_card": "Paysafecard - Prepaid payment method",
-        "seicomart": "Seicomart - Japanese convenience store payment",
-        "seven_eleven": "7-Eleven - Convenience store payment"
-      },
-      "field_types": {
-        "alfamart": "Alfamart",
-        "boleto": "Boleto",
-        "efecty": "Efecty",
-        "evoucher": "EVoucher",
-        "family_mart": "FamilyMart",
-        "givex": "Givex",
-        "indomaret": "Indomaret",
-        "lawson": "Lawson",
-        "mini_stop": "MiniStop",
-        "oxxo": "OXXO",
-        "pago_efectivo": "PagoEfectivo",
-        "pay_easy": "PayEasy",
-        "pay_safe_card": "PaySafeCard",
-        "seicomart": "Seicomart",
-        "seven_eleven": "SevenEleven"
-      }
-    },
     "CashfreeConfig": {
       "comments": {},
       "field_types": {}
@@ -798,6 +736,14 @@
         "additional_payment_method_data": "AdditionalPaymentMethodConnectorResponse",
         "extended_authorization_response_data": "ExtendedAuthorizationResponseData"
       }
+    },
+    "ConnectorResponseTransformationError": {
+      "comments": {
+        "error_code": "Machine-readable code (e.g., \"RESPONSE_DESERIALIZATION_FAILED\")",
+        "error_message": "Human-readable description of parsing failure (e.g., \"Expected JSON response, got HTML\")",
+        "http_status_code": "HTTP status from connector before parsing failed (e.g., 401, 500, 200)"
+      },
+      "field_types": {}
     },
     "ConnectorSpecificConfig": {
       "comments": {
@@ -1098,36 +1044,6 @@
       "comments": {},
       "field_types": {}
     },
-    "DirectCarrierBilling": {
-      "comments": {
-        "client_uid": "Unique user identifier"
-      },
-      "field_types": {}
-    },
-    "DirectDebitPaymentMethodType": {
-      "comments": {
-        "bancontact_card": "Bancontact - Belgian debit card scheme",
-        "becs": "BECS - Bulk Electronic Clearing System - Australian direct debit",
-        "benefit": "Benefit - Bahrain's national electronic wallet",
-        "bni_va": "BNI VA - Bank Negara Indonesia Virtual Account",
-        "bri_va": "BRI VA - Bank Rakyat Indonesia Virtual Account",
-        "cimb_va": "CIMB VA - CIMB Bank Virtual Account",
-        "danamon_va": "Danamon VA - Bank Danamon Virtual Account",
-        "knet": "KNET - Kuwait's national electronic banking service",
-        "mandiri_va": "Mandiri VA - Bank Mandiri Virtual Account"
-      },
-      "field_types": {
-        "bancontact_card": "BancontactCard",
-        "becs": "BECS",
-        "benefit": "Benefit",
-        "bni_va": "BNIVA",
-        "bri_va": "BRIVA",
-        "cimb_va": "CIMBVA",
-        "danamon_va": "DanamonVA",
-        "knet": "KNET",
-        "mandiri_va": "MandiriVA"
-      }
-    },
     "DisputeResponse": {
       "comments": {
         "connector_dispute_id": "Connector's unique identifier for the dispute",
@@ -1338,10 +1254,10 @@
     "FfiResult": {
       "comments": {},
       "field_types": {
+        "connector_response_transformation_error": "ConnectorResponseTransformationError",
         "http_request": "FfiConnectorHttpRequest",
         "http_response": "FfiConnectorHttpResponse",
-        "request_error": "RequestError",
-        "response_error": "ResponseError",
+        "integration_error": "IntegrationError",
         "type": "Type"
       }
     },
@@ -1578,6 +1494,15 @@
       "field_types": {
         "bank_name": "BankNames"
       }
+    },
+    "IntegrationError": {
+      "comments": {
+        "doc_url": "documentation url for reference",
+        "error_code": "Machine-readable code for programmatic handling (e.g., \"MISSING_REQUIRED_FIELD\")",
+        "error_message": "Human-readable error description with full context (e.g., \"Missing required field 'card_exp'\")",
+        "suggested_action": "Actionable guidance for developers to resolve the error (e.g., \"Provide the 'card_exp' field in your request\")"
+      },
+      "field_types": {}
     },
     "Interac": {
       "comments": {
@@ -1939,24 +1864,6 @@
         "order_details": "OrderDetailsWithAmount"
       }
     },
-    "OtherPaymentMethodType": {
-      "comments": {
-        "classic_reward": "Classic Reward - Loyalty/reward points payment",
-        "direct_carrier_billing": "Direct Carrier Billing - Mobile carrier billing",
-        "interac": "Interac - Canadian debit card system",
-        "multibanco": "Multibanco - Portuguese payment method",
-        "red_compra": "RedCompra - Chilean debit card network",
-        "red_pagos": "RedPagos - Uruguayan payment network"
-      },
-      "field_types": {
-        "classic_reward": "ClassicReward",
-        "direct_carrier_billing": "DirectCarrierBilling",
-        "interac": "Interac",
-        "multibanco": "Multibanco",
-        "red_compra": "RedCompra",
-        "red_pagos": "RedPagos"
-      }
-    },
     "PayboxConfig": {
       "comments": {},
       "field_types": {}
@@ -2030,12 +1937,13 @@
         "crypto": "CRYPTOCURRENCY (70-79) - Direct variant",
         "danamon_va_bank_transfer": "Danamon VA Bank transfer in Indonesia",
         "duit_now": "MOBILE PAYMENTS (60-69) - Direct variants",
-        "e_voucher": "Electronic voucher",
+        "e_voucher": "Electronic voucher (e-voucher)",
         "efecty": "Efecty - Colombian cash payment network",
         "family_mart": "FamilyMart - Japanese convenience store payment",
         "givex": "Givex gift card",
         "google_pay": "Google Pay",
         "google_pay_third_party_sdk": "Google Pay Third Party SDK",
+        "indomaret": "Indomaret - Indonesian convenience store payment",
         "indonesian_bank_transfer": "Indonesian bank transfer method",
         "instant_bank_transfer": "Generic instant bank transfer",
         "instant_bank_transfer_finland": "Finland's instant bank transfer",
@@ -2051,7 +1959,7 @@
         "multibanco_bank_transfer": "Multibanco - Portuguese payment method",
         "network_token": "Network token data",
         "online_banking_thailand": "ONLINE BANKING (40-59) - Direct variants",
-        "oxxo": "Indomaret - Indonesian convenience store payment",
+        "oxxo": "Oxxo - Mexican convenience store payment",
         "pago_efectivo": "PagoEfectivo - Peruvian cash payment method",
         "pay_easy": "Pay-easy - Japanese bill payment service",
         "pay_safe_card": "Paysafecard - Prepaid payment method",
@@ -2930,22 +2838,6 @@
       },
       "field_types": {
         "bank_name": "BankNames"
-      }
-    },
-    "RTPPaymentMethodType": {
-      "comments": {
-        "pix": "PIX - Brazilian instant payment system",
-        "prompt_pay": "PromptPay - Thai QR code payment system",
-        "upi_collect": "UPI Collect - Indian real-time payment system (collect flow)",
-        "upi_intent": "UPI Intent - Indian real-time payment system (intent flow)",
-        "viet_qr": "VietQR - Vietnamese QR code payment system"
-      },
-      "field_types": {
-        "pix": "PIX",
-        "prompt_pay": "PromptPay",
-        "upi_collect": "UPI",
-        "upi_intent": "UPI",
-        "viet_qr": "VietQR"
       }
     },
     "RapydConfig": {
