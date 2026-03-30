@@ -6,8 +6,8 @@
 // Run a scenario:  node stripe.js checkout_card
 'use strict';
 
-const { PaymentClient, RecurringPaymentClient, CustomerClient, PaymentMethodClient } = require('hs-playlib');
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
+const { PaymentClient, RecurringPaymentClient, CustomerClient, PaymentMethodClient } = require('hyperswitch-prism');
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hyperswitch-prism').types;
 
 const _defaultConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
@@ -70,6 +70,27 @@ function _buildVoidRequest(connectorTransactionId) {
     return {
         "merchantVoidId": "probe_void_001",  // Identification
         "connectorTransactionId": connectorTransactionId
+    };
+}
+
+function _buildRecurringChargeRequest(mandateId) {
+    return {
+        "connectorRecurringPaymentId": {
+            "connectorMandateId": {
+                "connectorMandateId": mandateId
+            }
+        },
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        },
+        "paymentMethod": {
+            "token": {"token": {"value": "probe_pm_token"}}
+        },
+        "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
+        "paymentMethodType": "PAY_PAL",
+        "offSession": true
     };
 }
 
@@ -494,7 +515,39 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, get, recurringCharge, setupRecurring, voidPayment };
+function _buildSetupRecurringRequest() {
+    return {
+        "merchantRecurringPaymentId": "probe_mandate_001",
+        "amount": {
+            "minorAmount": 0,
+            "currency": "USD"
+        },
+        "paymentMethod": {
+            "card": {
+                "cardNumber": {"value": "4111111111111111"},
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}
+            }
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "authType": "NO_THREE_DS",
+        "enrolledFor3Ds": false,
+        "returnUrl": "https://example.com/mandate-return",
+        "setupFutureUsage": "OFF_SESSION",
+        "requestIncrementalAuthorization": false,
+        "customerAcceptance": {
+            "acceptanceType": "OFFLINE",
+            "acceptedAt": 0
+        }
+    };
+}
+
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, get, recurringCharge, setupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildVoidRequest, _buildRecurringChargeRequest, _buildSetupRecurringRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

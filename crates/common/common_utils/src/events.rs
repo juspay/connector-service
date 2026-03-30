@@ -326,6 +326,13 @@ pub enum FlowName {
     TriggerOtpForWallet,
     ResendOtpForWallet,
     VerifyOtpForWallet,
+    PayoutTransfer,
+    PayoutGet,
+    PayoutVoid,
+    PayoutStage,
+    PayoutCreateLink,
+    PayoutCreateRecipient,
+    PayoutEnrollDisburseAccount,
 }
 
 impl FlowName {
@@ -357,6 +364,13 @@ impl FlowName {
             Self::SdkSessionToken => "SdkSessionToken",
             Self::IncrementalAuthorization => "IncrementalAuthorization",
             Self::PayoutCreate => "PayoutCreate",
+            Self::PayoutTransfer => "PayoutTransfer",
+            Self::PayoutGet => "PayoutGet",
+            Self::PayoutVoid => "PayoutVoid",
+            Self::PayoutStage => "PayoutStage",
+            Self::PayoutCreateLink => "PayoutCreateLink",
+            Self::PayoutCreateRecipient => "PayoutCreateRecipient",
+            Self::PayoutEnrollDisburseAccount => "PayoutEnrollDisburseAccount",
             Self::MandateRevoke => "MandateRevoke",
             Self::TriggerOtpForWallet => "TriggerOtpForWallet",
             Self::ResendOtpForWallet => "ResendOtpForWallet",
