@@ -215,21 +215,31 @@ impl
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ItaubankPayoutStatus {
+    #[serde(alias = "Aprovado", alias = "APROVADO")]
     Aprovado,
+    #[serde(alias = "Confirmado", alias = "CONFIRMADO")]
     Confirmado,
+    #[serde(alias = "Efetivado", alias = "EFETIVADO")]
     Efetivado,
+    #[serde(alias = "Pendente", alias = "PENDENTE")]
     Pendente,
+    #[serde(alias = "EmProcessamento", alias = "EM_PROCESSAMENTO")]
     EmProcessamento,
+    #[serde(alias = "Rejeitado", alias = "REJEITADO")]
     Rejeitado,
+    #[serde(alias = "Cancelado", alias = "CANCELADO")]
     Cancelado,
+    #[serde(alias = "Sucesso", alias = "SUCESSO")]
+    Sucesso,
     #[serde(other)]
     Unknown,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItaubankTransferResponse {
-    pub id: Option<String>,
-    #[serde(rename = "status")]
+    #[serde(alias = "id", alias = "cod_pagamento")]
+    pub id: String,
+    #[serde(alias = "status", alias = "status_pagamento")]
     pub transfer_status: Option<ItaubankPayoutStatus>,
     pub mensagem: Option<String>,
 }
@@ -239,7 +249,8 @@ impl ItaubankTransferResponse {
         match self.transfer_status {
             Some(ItaubankPayoutStatus::Aprovado)
             | Some(ItaubankPayoutStatus::Confirmado)
-            | Some(ItaubankPayoutStatus::Efetivado) => common_enums::PayoutStatus::Success,
+            | Some(ItaubankPayoutStatus::Efetivado)
+            | Some(ItaubankPayoutStatus::Sucesso) => common_enums::PayoutStatus::Success,
             Some(ItaubankPayoutStatus::Pendente) | Some(ItaubankPayoutStatus::EmProcessamento) => {
                 common_enums::PayoutStatus::Pending
             }
@@ -274,7 +285,7 @@ impl TryFrom<ItaubankTransferResponse> for PayoutTransferResponse {
         Ok(Self {
             merchant_payout_id: None,
             payout_status: response.status(),
-            connector_payout_id: response.id,
+            connector_payout_id: Some(response.id),
             status_code: 200,
         })
     }
