@@ -183,13 +183,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             AccessTokenResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = req
-            .resource_common_data
-            .connectors
-            .itaubank
-            .secondary_base_url
-            .as_ref()
-            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+        let base_url = self.base_url(&req.resource_common_data.connectors);
         Ok(format!("{base_url}/api/oauth/jwt"))
     }
 
@@ -317,7 +311,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PayoutTransferResponse,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = self.base_url(&req.resource_common_data.connectors);
+        let base_url = build_env_specific_endpoint(
+            self.base_url(&req.resource_common_data.connectors),
+            req.resource_common_data.test_mode,
+        );
         Ok(format!("{base_url}/v1/transferencias"))
     }
 
@@ -409,6 +406,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
+    }
+}
+
+fn build_env_specific_endpoint(base_url: &str, test_mode: Option<bool>) -> String {
+    if test_mode.unwrap_or(true) {
+        format!("{base_url}/itau-ep9-gtw-sispag-ext")
+    } else {
+        format!("{base_url}/sispag")
     }
 }
 
