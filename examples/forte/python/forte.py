@@ -196,6 +196,39 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
+async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.proxy_authorize"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: proxy_authorize
+    proxy_response = await payment_client.proxy_authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_proxy_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "card_proxy": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "123",
+                "card_holder_name": "John Doe"
+            },
+            "address": {
+                "billing_address": {
+                    "first_name": "John"
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return"
+        },
+    ))
+
+    return {"status": proxy_response.status}
+
+
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Void"""
     payment_client = PaymentClient(config)

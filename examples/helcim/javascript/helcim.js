@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py helcim
 //
 // Helcim — all integration scenarios and flows in one file.
-// Run a scenario:  node helcim.js checkout_card
+// Run a scenario:  node helcim.js checkout_autocapture
 'use strict';
 
 const { PaymentClient } = require('hyperswitch-prism');
@@ -61,6 +61,8 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
+
+// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -120,8 +122,42 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: PaymentService.proxy_authorize
+async function proxyAuthorize(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: proxy_authorize
+    const proxyResponse = await paymentClient.proxyAuthorize({
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        },
+        "cardProxy": {
+            "cardNumber": "4111111111111111",
+            "cardExpMonth": "03",
+            "cardExpYear": "2030",
+            "cardCvc": "123",
+            "cardHolderName": "John Doe"
+        },
+        "address": {
+            "billingAddress": {
+                "firstName": "John",
+                "line1": "123 Main St",
+                "zipCode": "98101"
+            }
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "returnUrl": "https://example.com/return",
+        "browserInfo": {
+            "ipAddress": "1.2.3.4"
+        }
+    });
 
-module.exports = { processCheckoutAutocapture, processGetPayment, authorize, get };
+    return { status: proxyResponse.status };
+}
+
+
+module.exports = { processCheckoutAutocapture, processGetPayment, authorize, get, proxyAuthorize, _buildAuthorizeRequest, _buildGetRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

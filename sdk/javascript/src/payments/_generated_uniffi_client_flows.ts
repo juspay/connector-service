@@ -361,38 +361,38 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('pre_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxied_authorize flow. */
-  proxiedAuthorizeReq(
+  /** Build connector HTTP request for proxy_authorize flow. */
+  proxyAuthorizeReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxied_authorize', requestBytes, optionsBytes);
+    return this.callReq('proxy_authorize', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxied_authorize flow. */
-  proxiedAuthorizeRes(
+  /** Parse connector HTTP response for proxy_authorize flow. */
+  proxyAuthorizeRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxied_authorize', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxy_authorize', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for proxied_setup_recurring flow. */
-  proxiedSetupRecurringReq(
+  /** Build connector HTTP request for proxy_setup_recurring flow. */
+  proxySetupRecurringReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('proxied_setup_recurring', requestBytes, optionsBytes);
+    return this.callReq('proxy_setup_recurring', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for proxied_setup_recurring flow. */
-  proxiedSetupRecurringRes(
+  /** Parse connector HTTP response for proxy_setup_recurring flow. */
+  proxySetupRecurringRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('proxied_setup_recurring', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('proxy_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for refund flow. */
@@ -463,6 +463,40 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('submit_evidence', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for token_authorize flow. */
+  tokenAuthorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('token_authorize', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for token_authorize flow. */
+  tokenAuthorizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('token_authorize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for token_setup_recurring flow. */
+  tokenSetupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('token_setup_recurring', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for token_setup_recurring flow. */
+  tokenSetupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('token_setup_recurring', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for tokenize flow. */
   tokenizeReq(
     requestBytes: Buffer | Uint8Array,
@@ -478,40 +512,6 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('tokenize', responseBytes, requestBytes, optionsBytes);
-  }
-
-  /** Build connector HTTP request for tokenized_authorize flow. */
-  tokenizedAuthorizeReq(
-    requestBytes: Buffer | Uint8Array,
-    optionsBytes: Buffer | Uint8Array
-  ): Buffer {
-    return this.callReq('tokenized_authorize', requestBytes, optionsBytes);
-  }
-
-  /** Parse connector HTTP response for tokenized_authorize flow. */
-  tokenizedAuthorizeRes(
-    responseBytes: Buffer | Uint8Array,
-    requestBytes: Buffer | Uint8Array,
-    optionsBytes: Buffer | Uint8Array
-  ): Buffer {
-    return this.callRes('tokenized_authorize', responseBytes, requestBytes, optionsBytes);
-  }
-
-  /** Build connector HTTP request for tokenized_setup_recurring flow. */
-  tokenizedSetupRecurringReq(
-    requestBytes: Buffer | Uint8Array,
-    optionsBytes: Buffer | Uint8Array
-  ): Buffer {
-    return this.callReq('tokenized_setup_recurring', requestBytes, optionsBytes);
-  }
-
-  /** Parse connector HTTP response for tokenized_setup_recurring flow. */
-  tokenizedSetupRecurringRes(
-    responseBytes: Buffer | Uint8Array,
-    requestBytes: Buffer | Uint8Array,
-    optionsBytes: Buffer | Uint8Array
-  ): Buffer {
-    return this.callRes('tokenized_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for void flow. */

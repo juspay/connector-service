@@ -18,11 +18,9 @@ import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentMethodAuthenticationServicePreAuthenticateRequest
-import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
-import payments.FutureUsage
 import payments.PaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -249,15 +247,13 @@ fun processRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): M
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        enrolledFor3Ds = false
         metadataBuilder.value = "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\"}"  // Additional metadata for the connector
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
-        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
-        customerAcceptanceBuilder.apply {  // Details of customer acceptance
-            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
-            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
+        setupFutureUsage = "OFF_SESSION"
+        requestIncrementalAuthorization = false
+        acceptanceType = "OFFLINE"
+        acceptedAt = 0L
     }.build())
 
     if (setupResponse.status.name == "FAILED")
@@ -381,22 +377,39 @@ fun preAuthenticate(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.proxy_authorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = .newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        minorAmount = 1000L
+        currency = "USD"
+        cardNumber = "4111111111111111"
+        cardExpMonth = "03"
+        cardExpYear = "2030"
+        cardCvc = "123"
+        cardHolderName = "John Doe"
+        email = "test@example.com"
+        captureMethod = "AUTOMATIC"
+        authType = "NO_THREE_DS"
+        returnUrl = "https://example.com/return"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: RecurringPaymentService.Charge
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
-        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
-            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
-                connectorMandateId = "probe-mandate-123"
-            }
-        }
+        connectorMandateId = "probe-mandate-123"
         amountBuilder.apply {  // Amount Information
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
             tokenBuilder.apply {  // Payment tokens
-                tokenBuilder.value = "probe_pm_token"
+                tokenBuilder.value = "probe_pm_token"  // The token string representing a payment method.
             }
         }
         returnUrl = "https://example.com/recurring-return"
@@ -446,15 +459,13 @@ fun setupRecurring(txnId: String) {
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        enrolledFor3Ds = false
         metadataBuilder.value = "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\"}"  // Additional metadata for the connector
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
-        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
-        customerAcceptanceBuilder.apply {  // Details of customer acceptance
-            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
-            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
+        setupFutureUsage = "OFF_SESSION"
+        requestIncrementalAuthorization = false
+        acceptanceType = "OFFLINE"
+        acceptedAt = 0L
     }.build()
     val response = client.setup_recurring(request)
     when (response.status.name) {
@@ -489,10 +500,11 @@ fun main(args: Array<String>) {
         "capture" -> capture(txnId)
         "get" -> get(txnId)
         "preAuthenticate" -> preAuthenticate(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, preAuthenticate, recurringCharge, refund, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, preAuthenticate, proxyAuthorize, recurringCharge, refund, setupRecurring, void")
     }
 }

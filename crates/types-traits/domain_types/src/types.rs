@@ -11493,7 +11493,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
 // NON-PCI PAYMENT SERVICES — ForeignTryFrom impls for Tokenized/Proxy types
 //
 // Each "Tokenized" request type substitutes a connector token for raw card
-// data; each "Proxy" request type supplies a vault alias (VaultAliasCard)
+// data; each "Proxy" request type uses CardDetails with card_proxy field
 // instead of raw card data.  The conversions below normalise both non-PCI
 // request types into the corresponding PCI base types so the existing
 // ForeignTryFrom / flow-transformer machinery can be reused unchanged.
@@ -11503,44 +11503,6 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Convert a vault-alias card struct into the gRPC `CardDetails` payload used
-/// by the `CardProxy` payment-method variant.
-pub fn vault_alias_to_grpc_card_details(
-    alias: &grpc_payment_types::VaultAliasCard,
-) -> grpc_payment_types::CardDetails {
-    grpc_payment_types::CardDetails {
-        card_number: alias
-            .card_number_alias
-            .as_ref()
-            .and_then(|s| cards::CardNumber::from_str(s.peek()).ok()),
-        card_exp_month: Some(Secret::from(alias.exp_month.clone())),
-        card_exp_year: Some(Secret::from(alias.exp_year.clone())),
-        card_cvc: alias
-            .cvc_alias
-            .as_ref()
-            .map(|s| Secret::from(s.peek().to_string())),
-        card_holder_name: alias.card_holder_name.clone().map(Secret::from),
-        card_network: alias.card_network,
-        ..Default::default()
-    }
-}
-
-/// Unwrap an optional `VaultAliasCard`, returning a validation error if absent.
-fn unwrap_vault_card(
-    vault_card: Option<grpc_payment_types::VaultAliasCard>,
-    operation: &str,
-) -> Result<grpc_payment_types::CardDetails, error_stack::Report<ApplicationErrorResponse>> {
-    let alias = vault_card.ok_or_else(|| {
-        report!(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "MISSING_VAULT_CARD".to_owned(),
-            error_identifier: 400,
-            error_message: format!("Vault card is required for {operation}"),
-            error_object: None,
-        }))
-    })?;
-    Ok(vault_alias_to_grpc_card_details(&alias))
-}
-
 /// Wrap `CardDetails` in a `PaymentMethodWrapper` using the `CardProxy` variant.
 fn card_proxy_pm(card: grpc_payment_types::CardDetails) -> grpc_payment_types::PaymentMethod {
     grpc_payment_types::PaymentMethod {
@@ -11549,11 +11511,11 @@ fn card_proxy_pm(card: grpc_payment_types::CardDetails) -> grpc_payment_types::P
 }
 
 // ---------------------------------------------------------------------------
-// TokenizedPaymentServiceAuthorizeRequest
+// PaymentServiceTokenAuthorizeRequest
 // ---------------------------------------------------------------------------
 
 pub fn tokenized_authorize_to_base(
-    v: grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest,
+    v: grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
 ) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         merchant_transaction_id: v.merchant_transaction_id,
@@ -11585,7 +11547,7 @@ pub fn tokenized_authorize_to_base(
 
 impl
     ForeignTryFrom<(
-        grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest,
+        grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
         Connectors,
         &MaskedMetadata,
     )> for PaymentFlowData
@@ -11594,7 +11556,7 @@ impl
 
     fn foreign_try_from(
         (v, connectors, meta): (
-            grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest,
+            grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
             Connectors,
             &MaskedMetadata,
         ),
@@ -11614,24 +11576,24 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest>
+    > ForeignTryFrom<grpc_payment_types::PaymentServiceTokenAuthorizeRequest>
     for PaymentsAuthorizeData<T>
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        v: grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest,
+        v: grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         ForeignTryFrom::foreign_try_from(tokenized_authorize_to_base(v))
     }
 }
 
 // ---------------------------------------------------------------------------
-// TokenizedPaymentServiceSetupRecurringRequest
+// PaymentServiceTokenSetupRecurringRequest
 // ---------------------------------------------------------------------------
 
 pub fn tokenized_setup_recurring_to_base(
-    v: grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest,
+    v: grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
 ) -> PaymentServiceSetupRecurringRequest {
     PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
@@ -11658,7 +11620,7 @@ pub fn tokenized_setup_recurring_to_base(
 
 impl
     ForeignTryFrom<(
-        grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest,
+        grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
         Connectors,
         &MaskedMetadata,
     )> for PaymentFlowData
@@ -11667,7 +11629,7 @@ impl
 
     fn foreign_try_from(
         (v, connectors, meta): (
-            grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest,
+            grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
             Connectors,
             &MaskedMetadata,
         ),
@@ -11687,26 +11649,33 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest>
+    > ForeignTryFrom<grpc_payment_types::PaymentServiceTokenSetupRecurringRequest>
     for SetupMandateRequestData<T>
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        v: grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest,
+        v: grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         ForeignTryFrom::foreign_try_from(tokenized_setup_recurring_to_base(v))
     }
 }
 
 // ---------------------------------------------------------------------------
-// ProxiedPaymentServiceAuthorizeRequest
+// PaymentServiceProxyAuthorizeRequest
 // ---------------------------------------------------------------------------
 
 pub fn proxied_authorize_to_base(
-    v: grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
+    v: grpc_payment_types::PaymentServiceProxyAuthorizeRequest,
 ) -> Result<PaymentServiceAuthorizeRequest, error_stack::Report<ApplicationErrorResponse>> {
-    let card = unwrap_vault_card(v.vault_card, "proxy authorization")?;
+    let card = v.card_proxy.ok_or_else(|| {
+        report!(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_PROXY".to_owned(),
+            error_identifier: 400,
+            error_message: "Card proxy is required for proxy authorization".to_owned(),
+            error_object: None,
+        }))
+    })?;
     Ok(PaymentServiceAuthorizeRequest {
         merchant_transaction_id: v.merchant_transaction_id,
         amount: v.amount,
@@ -11734,7 +11703,7 @@ pub fn proxied_authorize_to_base(
 
 impl
     ForeignTryFrom<(
-        grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
+        grpc_payment_types::PaymentServiceProxyAuthorizeRequest,
         Connectors,
         &MaskedMetadata,
     )> for PaymentFlowData
@@ -11743,7 +11712,7 @@ impl
 
     fn foreign_try_from(
         (v, connectors, meta): (
-            grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
+            grpc_payment_types::PaymentServiceProxyAuthorizeRequest,
             Connectors,
             &MaskedMetadata,
         ),
@@ -11763,26 +11732,33 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest>
+    > ForeignTryFrom<grpc_payment_types::PaymentServiceProxyAuthorizeRequest>
     for PaymentsAuthorizeData<T>
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        v: grpc_payment_types::ProxiedPaymentServiceAuthorizeRequest,
+        v: grpc_payment_types::PaymentServiceProxyAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         ForeignTryFrom::foreign_try_from(proxied_authorize_to_base(v)?)
     }
 }
 
 // ---------------------------------------------------------------------------
-// ProxiedPaymentServiceSetupRecurringRequest
+// PaymentServiceProxySetupRecurringRequest
 // ---------------------------------------------------------------------------
 
 pub fn proxied_setup_recurring_to_base(
-    v: grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
+    v: grpc_payment_types::PaymentServiceProxySetupRecurringRequest,
 ) -> Result<PaymentServiceSetupRecurringRequest, error_stack::Report<ApplicationErrorResponse>> {
-    let card = unwrap_vault_card(v.vault_card, "proxy setup recurring")?;
+    let card = v.card_proxy.ok_or_else(|| {
+        report!(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_PROXY".to_owned(),
+            error_identifier: 400,
+            error_message: "Card proxy is required for proxy setup recurring".to_owned(),
+            error_object: None,
+        }))
+    })?;
     Ok(PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
         amount: v.amount,
@@ -11801,7 +11777,7 @@ pub fn proxied_setup_recurring_to_base(
 
 impl
     ForeignTryFrom<(
-        grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
+        grpc_payment_types::PaymentServiceProxySetupRecurringRequest,
         Connectors,
         &MaskedMetadata,
     )> for PaymentFlowData
@@ -11810,7 +11786,7 @@ impl
 
     fn foreign_try_from(
         (v, connectors, meta): (
-            grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
+            grpc_payment_types::PaymentServiceProxySetupRecurringRequest,
             Connectors,
             &MaskedMetadata,
         ),
@@ -11830,13 +11806,13 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest>
+    > ForeignTryFrom<grpc_payment_types::PaymentServiceProxySetupRecurringRequest>
     for SetupMandateRequestData<T>
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        v: grpc_payment_types::ProxiedPaymentServiceSetupRecurringRequest,
+        v: grpc_payment_types::PaymentServiceProxySetupRecurringRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         ForeignTryFrom::foreign_try_from(proxied_setup_recurring_to_base(v)?)
     }

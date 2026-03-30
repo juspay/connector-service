@@ -51,6 +51,18 @@ def _build_authorize_request(capture_method: str):
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
 
+def _build_create_order_request():
+    return ParseDict(
+        {
+            "merchant_order_id": "probe_order_001",  # Identification
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.PaymentServiceCreateOrderRequest(),
+    )
+
 def _build_get_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -62,6 +74,21 @@ def _build_get_request(connector_transaction_id: str):
             }
         },
         payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_refund_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": connector_transaction_id,
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
     )
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Card Payment (Automatic Capture)
@@ -193,19 +220,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request"  # Reason for the refund
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    ))
+    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -248,17 +263,7 @@ async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.Conn
     """Flow: PaymentService.CreateOrder"""
     payment_client = PaymentClient(config)
 
-    # Step 1: create_order
-    create_response = await payment_client.create_order(ParseDict(
-        {
-            "merchant_order_id": "probe_order_001",  # Identification
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            }
-        },
-        payment_pb2.PaymentServiceCreateOrderRequest(),
-    ))
+    create_response = await payment_client.create_order(_build_create_order_request())
 
     return {"status": create_response.status}
 
@@ -270,6 +275,74 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
+
+
+async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.proxy_authorize"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: proxy_authorize
+    proxy_response = await payment_client.proxy_authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_proxy_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "card_proxy": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "123",
+                "card_holder_name": "John Doe"
+            },
+            "address": {
+                "billing_address": {
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "merchant_order_id": "probe_order_001"
+        },
+    ))
+
+    return {"status": proxy_response.status}
+
+
+async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Refund"""
+    payment_client = PaymentClient(config)
+
+    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+
+    return {"status": refund_response.status}
+
+
+async def token_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.token_authorize"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: token_authorize
+    token_response = await payment_client.token_authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_tokenized_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "connector_token": "pm_1AbcXyzStripeTestToken",
+            "address": {
+                "billing_address": {
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "return_url": "https://example.com/return",
+            "merchant_order_id": "probe_order_001"
+        },
+    ))
+
+    return {"status": token_response.status}
 
 if __name__ == "__main__":
     scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_autocapture"

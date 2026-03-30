@@ -37,7 +37,7 @@ interface GrpcFfi {
     reqPtr:    Buffer,
     reqLen:    number,
     outLen:    number[],
-  ) => unknown; // opaque koffi pointer
+  ) => unknown;
   free: (ptr: unknown, len: number) => void;
 }
 
@@ -52,12 +52,12 @@ function loadGrpcFfi(libPath?: string): GrpcFfi {
   const call = lib.func("hyperswitch_grpc_call",
     koffi.pointer("uint8"),
     [
-      "str",                               // method (null-terminated C string)
-      koffi.pointer("uint8"),              // config_ptr
-      "uint32",                            // config_len
-      koffi.pointer("uint8"),              // req_ptr
-      "uint32",                            // req_len
-      koffi.out(koffi.pointer("uint32")), // out_len (written by callee)
+      "str",
+      koffi.pointer("uint8"),
+      "uint32",
+      koffi.pointer("uint8"),
+      "uint32",
+      koffi.out(koffi.pointer("uint32")),
     ],
   );
 
@@ -70,10 +70,6 @@ function loadGrpcFfi(libPath?: string): GrpcFfi {
 }
 
 // ── SecretString field normalization ─────────────────────────────────────────
-// protobufjs fromObject requires SecretString fields to be {value: "..."} objects,
-// but the field-probe JSON stores them as plain strings (Secret<String> serde format).
-// These maps (generated from the proto descriptor) drive a type-aware pre-pass
-// that wraps those strings before fromObject is called.
 
 const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   TokenPaymentMethodType: ["token"],
@@ -238,10 +234,10 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PaypalConfig: ["clientId", "clientSecret", "payerId"],
   TruelayerConfig: ["clientId", "clientSecret", "merchantAccountId", "accountHolderName", "privateKey", "kid"],
   VaultAliasCard: ["cardNumberAlias", "cvcAlias"],
-  TokenizedPaymentServiceAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
-  TokenizedPaymentServiceSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
-  ProxiedPaymentServiceAuthorizeRequest: ["metadata", "connectorFeatureData"],
-  ProxiedPaymentServiceSetupRecurringRequest: ["metadata"],
+  PaymentServiceTokenAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
+  PaymentServiceTokenSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
+  PaymentServiceProxyAuthorizeRequest: ["metadata", "connectorFeatureData"],
+  PaymentServiceProxySetupRecurringRequest: ["metadata"],
   CardPayout: ["cardNumber", "cardExpMonth", "cardExpYear", "cardHolderName"],
   AchBankTransferPayout: ["bankAccountNumber", "bankRoutingNumber"],
   BacsBankTransferPayout: ["bankAccountNumber", "bankSortCode"],
@@ -263,7 +259,6 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayoutMethodEligibilityRequest: ["connectorFeatureData", "accessToken"],
 };
 
-// {MessageName: {camelFieldName: NestedMessageTypeName}} — for recursive traversal
 const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   PaymentMethod: { "card": "CardDetails", "cardRedirect": "CardRedirect", "cardProxy": "CardDetails", "token": "TokenPaymentMethodType", "applePay": "AppleWallet", "googlePay": "GoogleWallet", "applePayThirdPartySdk": "ApplePayThirdPartySdkWallet", "googlePayThirdPartySdk": "GooglePayThirdPartySdkWallet", "paypalSdk": "PaypalSdkWallet", "amazonPayRedirect": "AmazonPayRedirectWallet", "cashappQr": "CashappQrWallet", "paypalRedirect": "PaypalRedirectWallet", "weChatPayQr": "WeChatPayQrWallet", "aliPayRedirect": "AliPayRedirectWallet", "revolutPay": "RevolutPayWallet", "mifinity": "MifinityWallet", "bluecode": "Bluecode", "paze": "PazeWallet", "samsungPay": "SamsungWallet", "mbWay": "MBWay", "satispay": "Satispay", "wero": "Wero", "upiCollect": "UpiCollect", "upiIntent": "UpiIntent", "upiQr": "UpiQr", "onlineBankingThailand": "OnlineBankingThailand", "onlineBankingCzechRepublic": "OnlineBankingCzechRepublic", "onlineBankingFinland": "OnlineBankingFinland", "onlineBankingFpx": "OnlineBankingFPX", "onlineBankingPoland": "OnlineBankingPoland", "onlineBankingSlovakia": "OnlineBankingSlovakia", "openBankingUk": "OpenBankingUK", "openBankingPis": "OpenBankingPIS", "localBankRedirect": "LocalBankRedirect", "ideal": "Ideal", "sofort": "Sofort", "trustly": "Trustly", "giropay": "Giropay", "eps": "Eps", "przelewy24": "Przelewy24", "pse": "Pse", "bancontactCard": "BancontactCard", "blik": "Blik", "openBanking": "OpenBanking", "interac": "Interac", "bizum": "Bizum", "eft": "Eft", "duitNow": "DuitNow", "crypto": "CryptoCurrency", "classicReward": "ClassicReward", "eVoucher": "EVoucher", "instantBankTransfer": "InstantBankTransfer", "achBankTransfer": "AchBankTransfer", "sepaBankTransfer": "SepaBankTransfer", "bacsBankTransfer": "BacsBankTransfer", "multibancoBankTransfer": "MultibancoBankTransfer", "instantBankTransferFinland": "InstantBankTransferFinland", "instantBankTransferPoland": "InstantBankTransferPoland", "pix": "PixPayment", "permataBankTransfer": "PermataBankTransfer", "bcaBankTransfer": "BCABankTransfer", "bniVaBankTransfer": "BNIVaBankTransfer", "briVaBankTransfer": "BRIVaBankTransfer", "cimbVaBankTransfer": "CIMBVaBankTransfer", "danamonVaBankTransfer": "DanamonVaBankTransfer", "mandiriVaBankTransfer": "MandiriVaBankTransfer", "localBankTransfer": "LocalBankTransfer", "indonesianBankTransfer": "IndonesianBankTransfer", "ach": "Ach", "sepa": "Sepa", "bacs": "Bacs", "becs": "Becs", "sepaGuaranteedDebit": "SepaGuaranteedDebit", "affirm": "Affirm", "afterpayClearpay": "AfterpayClearpay", "klarna": "Klarna", "cardDetailsForNetworkTransactionId": "CardDetailsForNetworkTransactionId", "networkToken": "NetworkTokenData", "decryptedWalletTokenDetailsForNetworkTransactionId": "DecryptedWalletTokenDetailsForNetworkTransactionId", "givex": "Givex", "paySafeCard": "PaySafeCard", "boleto": "Boleto", "efecty": "Efecty", "pagoEfectivo": "PagoEfectivo", "redCompra": "RedCompra", "redPagos": "RedPagos", "alfamart": "Alfamart", "indomaret": "Indomaret", "oxxo": "Oxxo", "sevenEleven": "SevenEleven", "lawson": "Lawson", "miniStop": "MiniStop", "familyMart": "FamilyMart", "seicomart": "Seicomart", "payEasy": "PayEasy" },
   AppleWallet: { "paymentData": "PaymentData", "paymentMethod": "PaymentMethod" },
@@ -374,10 +369,10 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   AuthKeyMapEntry: { "value": "PayloadCurrencyAuthData" },
   PayloadConfig: { "authKeyMap": "AuthKeyMapEntry" },
   ConnectorSpecificConfig: { "adyen": "AdyenConfig", "airwallex": "AirwallexConfig", "bambora": "BamboraConfig", "bankofamerica": "BankOfAmericaConfig", "billwerk": "BillwerkConfig", "bluesnap": "BluesnapConfig", "braintree": "BraintreeConfig", "cashtocode": "CashtocodeConfig", "cryptopay": "CryptopayConfig", "cybersource": "CybersourceConfig", "datatrans": "DatatransConfig", "dlocal": "DlocalConfig", "elavon": "ElavonConfig", "fiserv": "FiservConfig", "fiservemea": "FiservemeaConfig", "forte": "ForteConfig", "getnet": "GetnetConfig", "globalpay": "GlobalpayConfig", "hipay": "HipayConfig", "helcim": "HelcimConfig", "iatapay": "IatapayConfig", "jpmorgan": "JpmorganConfig", "mifinity": "MifinityConfig", "mollie": "MollieConfig", "multisafepay": "MultisafepayConfig", "nexinets": "NexinetsConfig", "nexixpay": "NexixpayConfig", "nmi": "NmiConfig", "noon": "NoonConfig", "novalnet": "NovalnetConfig", "nuvei": "NuveiConfig", "paybox": "PayboxConfig", "payme": "PaymeConfig", "payu": "PayuConfig", "powertranz": "PowertranzConfig", "rapyd": "RapydConfig", "redsys": "RedsysConfig", "shift4": "Shift4Config", "stax": "StaxConfig", "stripe": "StripeConfig", "trustpay": "TrustpayConfig", "tsys": "TsysConfig", "volt": "VoltConfig", "wellsfargo": "WellsfargoConfig", "worldpay": "WorldpayConfig", "worldpayvantiv": "WorldpayvantivConfig", "xendit": "XenditConfig", "phonepe": "PhonepeConfig", "cashfree": "CashfreeConfig", "paytm": "PaytmConfig", "calida": "CalidaConfig", "payload": "PayloadConfig", "authipay": "AuthipayConfig", "silverflow": "SilverflowConfig", "celero": "CeleroConfig", "trustpayments": "TrustpaymentsConfig", "paysafe": "PaysafeConfig", "barclaycard": "BarclaycardConfig", "worldpayxml": "WorldpayxmlConfig", "revolut": "RevolutConfig", "loonio": "LoonioConfig", "gigadat": "GigadatConfig", "hyperpg": "HyperpgConfig", "zift": "ZiftConfig", "screenstream": "ScreenstreamConfig", "ebanx": "EbanxConfig", "fiuu": "FiuuConfig", "globepay": "GlobepayConfig", "coinbase": "CoinbaseConfig", "coingate": "CoingateConfig", "revolv3": "Revolv3Config", "authorizedotnet": "AuthorizedotnetConfig", "peachpayments": "PeachpaymentsConfig", "paypal": "PaypalConfig", "truelayer": "TruelayerConfig", "fiservcommercehub": "FiservcommercehubConfig" },
-  TokenizedPaymentServiceAuthorizeRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState", "billingDescriptor": "BillingDescriptor", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
-  TokenizedPaymentServiceSetupRecurringRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "customerAcceptance": "CustomerAcceptance", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor" },
-  ProxiedPaymentServiceAuthorizeRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
-  ProxiedPaymentServiceSetupRecurringRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "customerAcceptance": "CustomerAcceptance", "authenticationData": "AuthenticationData" },
+  PaymentServiceTokenAuthorizeRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState", "billingDescriptor": "BillingDescriptor", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
+  PaymentServiceTokenSetupRecurringRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "customerAcceptance": "CustomerAcceptance", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor" },
+  PaymentServiceProxyAuthorizeRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
+  PaymentServiceProxySetupRecurringRequest: { "amount": "Money", "vaultCard": "VaultAliasCard", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "customerAcceptance": "CustomerAcceptance", "authenticationData": "AuthenticationData" },
   PayoutAddress: { "shippingAddress": "Address", "billingAddress": "Address" },
   PayoutMethod: { "card": "CardPayout", "ach": "AchBankTransferPayout", "bacs": "BacsBankTransferPayout", "sepa": "SepaBankTransferPayout", "pix": "PixBankTransferPayout", "applePayDecrypt": "ApplePayDecrypt", "paypal": "Paypal", "venmo": "Venmo", "interac": "InteracPayout", "openBankingUk": "OpenBankingUkPayout", "passthrough": "Passthrough" },
   PayoutServiceCreateRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation" },
@@ -406,14 +401,6 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorResponseTransformationError": "ConnectorResponseTransformationError" },
 };
 
-/**
- * Recursively pre-process a proto request object so that SecretString fields
- * (which the field-probe serialises as plain strings) are wrapped as {value: "..."}
- * before being handed to protobufjs fromObject.
- *
- * @param obj      - The (potentially plain-string) value to process.
- * @param msgName  - The protobuf message name for this level (e.g. "Ach").
- */
 function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
   if (typeof obj !== "object" || obj === null) return obj;
   if (Array.isArray(obj)) return (obj as unknown[]).map(item => _wrapSecretStrings(item, msgName));
@@ -424,14 +411,10 @@ function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
 
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
     if (secretSet.has(k) && typeof v === "string") {
-      // SecretString / CardNumberType / NetworkTokenType field stored as plain string → wrap
       result[k] = { value: v };
     } else if (typeof v === "string") {
       const nestedType = fieldTypes[k];
       if (nestedType) {
-        // A message-type field received a plain string: this happens when
-        // flatten_oneof_wrappers collapses e.g. {token: {token: SecretString}} → {token: "..."}
-        // Re-expand: find the sole SecretString field of the nested message and wrap.
         const nestedSecrets = _SECRET_STRING_FIELDS[nestedType];
         if (nestedSecrets && nestedSecrets.length === 1) {
           result[k] = { [nestedSecrets[0]]: { value: v } };
@@ -453,13 +436,11 @@ function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
 
 // ── Dispatch helper ───────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function callGrpc(ffi: GrpcFfi, config: GrpcConfig, method: string, req: any, ReqType: any, ResType: any): unknown {
   const configBuf = Buffer.from(JSON.stringify(config));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const normalized = _wrapSecretStrings(req, (ReqType as any).name as string);
-  const reqBuf    = Buffer.from(ReqType.encode(ReqType.fromObject(normalized)).finish());
-  const outLen    = [0];
+  const reqBuf = Buffer.from(ReqType.encode(ReqType.fromObject(normalized)).finish());
+  const outLen = [0];
 
   const ptr = ffi.call(method, configBuf, configBuf.length, reqBuf, reqBuf.length, outLen);
   const len = outLen[0];
@@ -481,76 +462,9 @@ export class GrpcCustomerClient {
 
   /** CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information. */
   async create(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "customer/create",
+    return callGrpc(this.ffi, this.config, "create",
       req, types.CustomerServiceCreateRequest, types.CustomerServiceCreateResponse);
   }
-
-}
-
-// DirectPaymentService
-export class GrpcDirectPaymentClient {
-  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
-
-  /** DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing. */
-  async authorize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/authorize",
-      req, types.PaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
-  }
-
-  /** DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking. */
-  async get(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/get",
-      req, types.PaymentServiceGetRequest, types.PaymentServiceGetResponse);
-  }
-
-  /** DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed. */
-  async void(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/void",
-      req, types.PaymentServiceVoidRequest, types.PaymentServiceVoidResponse);
-  }
-
-  /** DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization. */
-  async reverse(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/reverse",
-      req, types.PaymentServiceReverseRequest, types.PaymentServiceReverseResponse);
-  }
-
-  /** DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account. */
-  async capture(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/capture",
-      req, types.PaymentServiceCaptureRequest, types.PaymentServiceCaptureResponse);
-  }
-
-  /** DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls. */
-  async createOrder(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/create_order",
-      req, types.PaymentServiceCreateOrderRequest, types.PaymentServiceCreateOrderResponse);
-  }
-
-  /** DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled. */
-  async refund(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/refund",
-      req, types.PaymentServiceRefundRequest, types.RefundResponse);
-  }
-
-  /** DirectPaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization. */
-  async incrementalAuthorization(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/incremental_authorization",
-      req, types.PaymentServiceIncrementalAuthorizationRequest, types.PaymentServiceIncrementalAuthorizationResponse);
-  }
-
-  /** DirectPaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly. */
-  async verifyRedirectResponse(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/verify_redirect_response",
-      req, types.PaymentServiceVerifyRedirectResponseRequest, types.PaymentServiceVerifyRedirectResponseResponse);
-  }
-
-  /** DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges. */
-  async setupRecurring(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "direct_payment/setup_recurring",
-      req, types.PaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
-  }
-
 }
 
 // DisputeService
@@ -559,28 +473,24 @@ export class GrpcDisputeClient {
 
   /** DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims. */
   async submitEvidence(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "dispute/submit_evidence",
+    return callGrpc(this.ffi, this.config, "submit_evidence",
       req, types.DisputeServiceSubmitEvidenceRequest, types.DisputeServiceSubmitEvidenceResponse);
   }
-
   /** DisputeService.Get — Retrieve dispute status and evidence submission state. Tracks dispute progress through bank review process for informed decision-making. */
   async disputeGet(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "dispute/dispute_get",
+    return callGrpc(this.ffi, this.config, "dispute_get",
       req, types.DisputeServiceGetRequest, types.DisputeResponse);
   }
-
   /** DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation. */
   async defend(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "dispute/defend",
+    return callGrpc(this.ffi, this.config, "defend",
       req, types.DisputeServiceDefendRequest, types.DisputeServiceDefendResponse);
   }
-
   /** DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient. */
   async accept(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "dispute/accept",
+    return callGrpc(this.ffi, this.config, "accept",
       req, types.DisputeServiceAcceptRequest, types.DisputeServiceAcceptResponse);
   }
-
 }
 
 // EventService
@@ -589,10 +499,9 @@ export class GrpcEventClient {
 
   /** EventService.HandleEvent — Process webhook notifications from connectors. Translates connector events into standardized responses for asynchronous payment state updates. */
   async handleEvent(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "event/handle_event",
+    return callGrpc(this.ffi, this.config, "handle_event",
       req, types.EventServiceHandleRequest, types.EventServiceHandleResponse);
   }
-
 }
 
 // MerchantAuthenticationService
@@ -601,22 +510,19 @@ export class GrpcMerchantAuthenticationClient {
 
   /** MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
   async createAccessToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_access_token",
+    return callGrpc(this.ffi, this.config, "create_access_token",
       req, types.MerchantAuthenticationServiceCreateAccessTokenRequest, types.MerchantAuthenticationServiceCreateAccessTokenResponse);
   }
-
   /** MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking. */
   async createSessionToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_session_token",
+    return callGrpc(this.ffi, this.config, "create_session_token",
       req, types.MerchantAuthenticationServiceCreateSessionTokenRequest, types.MerchantAuthenticationServiceCreateSessionTokenResponse);
   }
-
   /** MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification. */
   async createSdkSessionToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_sdk_session_token",
+    return callGrpc(this.ffi, this.config, "create_sdk_session_token",
       req, types.MerchantAuthenticationServiceCreateSdkSessionTokenRequest, types.MerchantAuthenticationServiceCreateSdkSessionTokenResponse);
   }
-
 }
 
 // PaymentMethodAuthenticationService
@@ -625,22 +531,19 @@ export class GrpcPaymentMethodAuthenticationClient {
 
   /** PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification. */
   async preAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment_method_authentication/pre_authenticate",
+    return callGrpc(this.ffi, this.config, "pre_authenticate",
       req, types.PaymentMethodAuthenticationServicePreAuthenticateRequest, types.PaymentMethodAuthenticationServicePreAuthenticateResponse);
   }
-
   /** PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention. */
   async authenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment_method_authentication/authenticate",
+    return callGrpc(this.ffi, this.config, "authenticate",
       req, types.PaymentMethodAuthenticationServiceAuthenticateRequest, types.PaymentMethodAuthenticationServiceAuthenticateResponse);
   }
-
   /** PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed. */
   async postAuthenticate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment_method_authentication/post_authenticate",
+    return callGrpc(this.ffi, this.config, "post_authenticate",
       req, types.PaymentMethodAuthenticationServicePostAuthenticateRequest, types.PaymentMethodAuthenticationServicePostAuthenticateResponse);
   }
-
 }
 
 // PaymentMethodService
@@ -649,16 +552,90 @@ export class GrpcPaymentMethodClient {
 
   /** PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing. */
   async tokenize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment_method/tokenize",
+    return callGrpc(this.ffi, this.config, "tokenize",
       req, types.PaymentMethodServiceTokenizeRequest, types.PaymentMethodServiceTokenizeResponse);
   }
-
   /** PaymentMethodService.Eligibility — Check if the payout method is eligible for the transaction */
   async eligibility(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payment_method/eligibility",
+    return callGrpc(this.ffi, this.config, "eligibility",
       req, types.PayoutMethodEligibilityRequest, types.PayoutMethodEligibilityResponse);
   }
+}
 
+// PaymentService
+export class GrpcPaymentClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing. */
+  async authorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "authorize",
+      req, types.PaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+  /** PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking. */
+  async get(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "get",
+      req, types.PaymentServiceGetRequest, types.PaymentServiceGetResponse);
+  }
+  /** PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed. */
+  async void(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "void",
+      req, types.PaymentServiceVoidRequest, types.PaymentServiceVoidResponse);
+  }
+  /** PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization. */
+  async reverse(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "reverse",
+      req, types.PaymentServiceReverseRequest, types.PaymentServiceReverseResponse);
+  }
+  /** PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account. */
+  async capture(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "capture",
+      req, types.PaymentServiceCaptureRequest, types.PaymentServiceCaptureResponse);
+  }
+  /** PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls. */
+  async createOrder(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "create_order",
+      req, types.PaymentServiceCreateOrderRequest, types.PaymentServiceCreateOrderResponse);
+  }
+  /** PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled. */
+  async refund(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "refund",
+      req, types.PaymentServiceRefundRequest, types.RefundResponse);
+  }
+  /** PaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization. */
+  async incrementalAuthorization(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "incremental_authorization",
+      req, types.PaymentServiceIncrementalAuthorizationRequest, types.PaymentServiceIncrementalAuthorizationResponse);
+  }
+  /** PaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly. */
+  async verifyRedirectResponse(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "verify_redirect_response",
+      req, types.PaymentServiceVerifyRedirectResponseRequest, types.PaymentServiceVerifyRedirectResponseResponse);
+  }
+  /** PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges. */
+  async setupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "setup_recurring",
+      req, types.PaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
+  /** PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token. */
+  async tokenAuthorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "token_authorize",
+      req, types.PaymentServiceTokenAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+  /** PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token. */
+  async tokenSetupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "token_setup_recurring",
+      req, types.PaymentServiceTokenSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
+  /** PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
+  async proxyAuthorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_authorize",
+      req, types.PaymentServiceProxyAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+  /** PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data. */
+  async proxySetupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_setup_recurring",
+      req, types.PaymentServiceProxySetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
 }
 
 // PayoutService
@@ -667,70 +644,44 @@ export class GrpcPayoutClient {
 
   /** PayoutService.Create — Creates a payout. */
   async payoutCreate(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/payout_create",
+    return callGrpc(this.ffi, this.config, "payout_create",
       req, types.PayoutServiceCreateRequest, types.PayoutServiceCreateResponse);
   }
-
   /** PayoutService.Transfer — Creates a payout fund transfer. */
   async transfer(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/transfer",
+    return callGrpc(this.ffi, this.config, "transfer",
       req, types.PayoutServiceTransferRequest, types.PayoutServiceTransferResponse);
   }
-
   /** PayoutService.Get — Retrieve payout details. */
   async payoutGet(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/payout_get",
+    return callGrpc(this.ffi, this.config, "payout_get",
       req, types.PayoutServiceGetRequest, types.PayoutServiceGetResponse);
   }
-
   /** PayoutService.Void — Void a payout. */
   async payoutVoid(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/payout_void",
+    return callGrpc(this.ffi, this.config, "payout_void",
       req, types.PayoutServiceVoidRequest, types.PayoutServiceVoidResponse);
   }
-
   /** PayoutService.Stage — Stage the payout. */
   async stage(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/stage",
+    return callGrpc(this.ffi, this.config, "stage",
       req, types.PayoutServiceStageRequest, types.PayoutServiceStageResponse);
   }
-
   /** PayoutService.CreateLink — Creates a link between the recipient and the payout. */
   async createLink(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/create_link",
+    return callGrpc(this.ffi, this.config, "create_link",
       req, types.PayoutServiceCreateLinkRequest, types.PayoutServiceCreateLinkResponse);
   }
-
   /** PayoutService.CreateRecipient — Create payout recipient. */
   async createRecipient(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/create_recipient",
+    return callGrpc(this.ffi, this.config, "create_recipient",
       req, types.PayoutServiceCreateRecipientRequest, types.PayoutServiceCreateRecipientResponse);
   }
-
   /** PayoutService.EnrollDisburseAccount — Enroll disburse account. */
   async enrollDisburseAccount(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "payout/enroll_disburse_account",
+    return callGrpc(this.ffi, this.config, "enroll_disburse_account",
       req, types.PayoutServiceEnrollDisburseAccountRequest, types.PayoutServiceEnrollDisburseAccountResponse);
   }
-
-}
-
-// ProxiedPaymentService
-export class GrpcProxiedPaymentClient {
-  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
-
-  /** ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
-  async proxiedAuthorize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_authorize",
-      req, types.ProxiedPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
-  }
-
-  /** ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
-  async proxiedSetupRecurring(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "proxied_payment/proxied_setup_recurring",
-      req, types.ProxiedPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
-  }
-
 }
 
 // RecurringPaymentService
@@ -739,16 +690,14 @@ export class GrpcRecurringPaymentClient {
 
   /** RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details. */
   async charge(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "recurring_payment/charge",
+    return callGrpc(this.ffi, this.config, "charge",
       req, types.RecurringPaymentServiceChargeRequest, types.RecurringPaymentServiceChargeResponse);
   }
-
   /** RecurringPaymentService.Revoke — Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations. */
   async revoke(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "recurring_payment/revoke",
+    return callGrpc(this.ffi, this.config, "revoke",
       req, types.RecurringPaymentServiceRevokeRequest, types.RecurringPaymentServiceRevokeResponse);
   }
-
 }
 
 // RefundService
@@ -757,78 +706,36 @@ export class GrpcRefundClient {
 
   /** RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication. */
   async refundGet(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "refund/refund_get",
+    return callGrpc(this.ffi, this.config, "refund_get",
       req, types.RefundServiceGetRequest, types.RefundResponse);
   }
-
-}
-
-// TokenizedPaymentService
-export class GrpcTokenizedPaymentClient {
-  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
-
-  /** TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token. */
-  async tokenizedAuthorize(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "tokenized_payment/tokenized_authorize",
-      req, types.TokenizedPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
-  }
-
-  /** TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token. */
-  async tokenizedSetupRecurring(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "tokenized_payment/tokenized_setup_recurring",
-      req, types.TokenizedPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
-  }
-
 }
 
 // ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
-/**
- * Top-level gRPC client for the connector-service.
- *
- * Each sub-client corresponds to one proto service.  Auth headers from
- * `GrpcConfig` are injected automatically on every call via the Rust FFI layer.
- *
- * Example:
- * ```ts
- * const client = new GrpcClient({
- *   endpoint: "http://localhost:8000",
- *   connector: "stripe",
- *   connector_config: {"config": {"Stripe": {"api_key": "sk_test_..."}}},
- * });
- * const res = await client.customer.create({ ... });
- * const res = await client.directPayment.authorize({ ... });
- * const res = await client.dispute.submitEvidence({ ... });
- * const res = await client.event.handleEvent({ ... });
- * ```
- */
 export class GrpcClient {
   public customer: GrpcCustomerClient;
-  public directPayment: GrpcDirectPaymentClient;
   public dispute: GrpcDisputeClient;
   public event: GrpcEventClient;
   public merchantAuthentication: GrpcMerchantAuthenticationClient;
   public paymentMethodAuthentication: GrpcPaymentMethodAuthenticationClient;
   public paymentMethod: GrpcPaymentMethodClient;
+  public payment: GrpcPaymentClient;
   public payout: GrpcPayoutClient;
-  public proxiedPayment: GrpcProxiedPaymentClient;
   public recurringPayment: GrpcRecurringPaymentClient;
   public refund: GrpcRefundClient;
-  public tokenizedPayment: GrpcTokenizedPaymentClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
     this.customer = new GrpcCustomerClient(ffi, config);
-    this.directPayment = new GrpcDirectPaymentClient(ffi, config);
     this.dispute = new GrpcDisputeClient(ffi, config);
     this.event = new GrpcEventClient(ffi, config);
     this.merchantAuthentication = new GrpcMerchantAuthenticationClient(ffi, config);
     this.paymentMethodAuthentication = new GrpcPaymentMethodAuthenticationClient(ffi, config);
     this.paymentMethod = new GrpcPaymentMethodClient(ffi, config);
+    this.payment = new GrpcPaymentClient(ffi, config);
     this.payout = new GrpcPayoutClient(ffi, config);
-    this.proxiedPayment = new GrpcProxiedPaymentClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
     this.refund = new GrpcRefundClient(ffi, config);
-    this.tokenizedPayment = new GrpcTokenizedPaymentClient(ffi, config);
   }
 }

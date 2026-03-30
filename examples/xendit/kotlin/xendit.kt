@@ -201,6 +201,29 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.proxy_authorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = .newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        minorAmount = 1000L
+        currency = "USD"
+        cardNumber = "4111111111111111"
+        cardExpMonth = "03"
+        cardExpYear = "2030"
+        cardCvc = "123"
+        cardHolderName = "John Doe"
+        email = "test@example.com"
+        phoneNumber = "4155552671"
+        phoneCountryCode = "+1"
+        captureMethod = "AUTOMATIC"
+        authType = "NO_THREE_DS"
+        returnUrl = "https://example.com/return"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -223,7 +246,8 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "get" -> get(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processGetPayment, authorize, capture, get, refund")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processGetPayment, authorize, capture, get, proxyAuthorize, refund")
     }
 }

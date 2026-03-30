@@ -4063,33 +4063,11 @@ message ConnectorSpecificConfig {
 // ============================================================================
 // NON-PCI SDK CLIENTS - TOKENIZED AND PROXY PAYMENT MESSAGES
 // ============================================================================
-// These messages are used by TokenizedPaymentService and ProxiedPaymentService
+// These messages are used for tokenized and proxied payment methods
 // for merchants who do not hold raw card data.
 // ============================================================================
 
-// ── VaultAliasCard ────────────────────────────────────────────────────────────
-// Used by ProxiedPaymentService. Every field is a vault alias token or plain
-// metadata — no real PAN, CVV, or sensitive card data.
-// VGS / Basis Theory / Spreedly substitutes aliases with real values in-flight.
-message VaultAliasCard {
-  // Vault alias for the card PAN (e.g. "tok_sandbox_abc123").
-  SecretString card_number_alias = 1;
-
-  // Expiry month — alias OR real value (many vaults keep expiry in the clear).
-  string exp_month = 2;
-  string exp_year = 3;
-
-  // Alias for CVV. Omit if vault does not store CVV.
-  optional SecretString cvc_alias = 4;
-
-  optional string card_holder_name = 5;
-  optional CardNetwork card_network = 6;
-  optional string vault_provider = 7; // informational: "vgs", "basis_theory", "spreedly"
-}
-
-// ── TokenizedPaymentService messages ─────────────────────────────────────────
-
-message TokenizedPaymentServiceAuthorizeRequest {
+message PaymentServiceTokenAuthorizeRequest {
   optional string merchant_transaction_id = 1;
   Money amount = 2;
   // Connector-issued token. Replaces PaymentMethod entirely.
@@ -4117,7 +4095,7 @@ message TokenizedPaymentServiceAuthorizeRequest {
   // Use connector_feature_data to pass connector-specific delegated-3DS flags.
 }
 
-message TokenizedPaymentServiceSetupRecurringRequest {
+message PaymentServiceTokenSetupRecurringRequest {
   string merchant_recurring_payment_id = 1;
   Money amount = 2;
   SecretString connector_token = 3;
@@ -4136,11 +4114,12 @@ message TokenizedPaymentServiceSetupRecurringRequest {
 
 // ── ProxiedPaymentService messages ──────────────────────────────────────────────
 
-message ProxiedPaymentServiceAuthorizeRequest {
+message PaymentServiceProxyAuthorizeRequest {
   optional string merchant_transaction_id = 1;
   Money amount = 2;
-  // VaultAliasCard replaces PaymentMethod. Real values substituted by proxy.
-  VaultAliasCard vault_card = 3;
+  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly).
+  // Real card values are substituted by the proxy before reaching the connector.
+  CardDetails card_proxy = 3;
   optional Customer customer = 4;
   PaymentAddress address = 5;
   optional CaptureMethod capture_method = 6;
@@ -4163,10 +4142,11 @@ message ProxiedPaymentServiceAuthorizeRequest {
   optional bool test_mode = 23;
 }
 
-message ProxiedPaymentServiceSetupRecurringRequest {
+message PaymentServiceProxySetupRecurringRequest {
   string merchant_recurring_payment_id = 1;
   Money amount = 2;
-  VaultAliasCard vault_card = 3;
+  // Card proxy for vault-aliased payments.
+  CardDetails card_proxy = 3;
   optional Customer customer = 4;
   PaymentAddress address = 5;
   optional string return_url = 6;

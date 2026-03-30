@@ -22,9 +22,9 @@ use grpc_api_types::payments::{
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
+    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
-    TokenizedPaymentServiceAuthorizeRequest, TokenizedPaymentServiceSetupRecurringRequest,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
 };
 
 use domain_types::{
@@ -543,16 +543,10 @@ pub fn handle_event_transformer(
     )
 }
 
-// ============================================================================
-// NON-PCI SDK CLIENTS — TokenizedPaymentService and ProxiedPaymentService
-// transformers (generated via req_transformer! / res_transformer! macros;
-// type conversions live in domain_types::types)
-// ============================================================================
-
-// tokenized authorize
+// token_authorize
 req_transformer!(
-    fn_name: tokenized_authorize_req_transformer,
-    request_type: TokenizedPaymentServiceAuthorizeRequest,
+    fn_name: token_authorize_req_transformer,
+    request_type: PaymentServiceTokenAuthorizeRequest,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<T>,
@@ -560,8 +554,8 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: tokenized_authorize_res_transformer,
-    request_type: TokenizedPaymentServiceAuthorizeRequest,
+    fn_name: token_authorize_res_transformer,
+    request_type: PaymentServiceTokenAuthorizeRequest,
     response_type: PaymentServiceAuthorizeResponse,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
@@ -570,10 +564,10 @@ res_transformer!(
     generate_response_fn: generate_payment_authorize_response,
 );
 
-// tokenized setup_recurring
+// token_setup_recurring
 req_transformer!(
-    fn_name: tokenized_setup_recurring_req_transformer,
-    request_type: TokenizedPaymentServiceSetupRecurringRequest,
+    fn_name: token_setup_recurring_req_transformer,
+    request_type: PaymentServiceTokenSetupRecurringRequest,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<T>,
@@ -581,8 +575,8 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: tokenized_setup_recurring_res_transformer,
-    request_type: TokenizedPaymentServiceSetupRecurringRequest,
+    fn_name: token_setup_recurring_res_transformer,
+    request_type: PaymentServiceTokenSetupRecurringRequest,
     response_type: PaymentServiceSetupRecurringResponse,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
@@ -591,10 +585,10 @@ res_transformer!(
     generate_response_fn: generate_setup_mandate_response,
 );
 
-// proxy authorize
+// proxy_authorize
 req_transformer!(
-    fn_name: proxied_authorize_req_transformer,
-    request_type: ProxiedPaymentServiceAuthorizeRequest,
+    fn_name: proxy_authorize_req_transformer,
+    request_type: PaymentServiceProxyAuthorizeRequest,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<T>,
@@ -602,8 +596,8 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxied_authorize_res_transformer,
-    request_type: ProxiedPaymentServiceAuthorizeRequest,
+    fn_name: proxy_authorize_res_transformer,
+    request_type: PaymentServiceProxyAuthorizeRequest,
     response_type: PaymentServiceAuthorizeResponse,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
@@ -612,10 +606,10 @@ res_transformer!(
     generate_response_fn: generate_payment_authorize_response,
 );
 
-// proxy setup_recurring
+// proxy_setup_recurring
 req_transformer!(
-    fn_name: proxied_setup_recurring_req_transformer,
-    request_type: ProxiedPaymentServiceSetupRecurringRequest,
+    fn_name: proxy_setup_recurring_req_transformer,
+    request_type: PaymentServiceProxySetupRecurringRequest,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<T>,
@@ -623,8 +617,8 @@ req_transformer!(
 );
 
 res_transformer!(
-    fn_name: proxied_setup_recurring_res_transformer,
-    request_type: ProxiedPaymentServiceSetupRecurringRequest,
+    fn_name: proxy_setup_recurring_res_transformer,
+    request_type: PaymentServiceProxySetupRecurringRequest,
     response_type: PaymentServiceSetupRecurringResponse,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,

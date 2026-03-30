@@ -13,8 +13,6 @@ from typing import Any, Dict, Optional
 
 from payments.generated import payment_pb2
 
-# ── Config ────────────────────────────────────────────────────────────────────
-
 
 @dataclass
 class GrpcConfig:
@@ -41,9 +39,6 @@ class GrpcConfig:
         return json.dumps(d).encode()
 
 
-# ── ctypes FFI bindings ───────────────────────────────────────────────────────
-
-
 class _GrpcFfi:
     """Thin ctypes wrapper around libhyperswitch_grpc_ffi."""
 
@@ -55,24 +50,17 @@ class _GrpcFfi:
 
         lib = ctypes.CDLL(lib_path)
 
-        # uint8_t *hyperswitch_grpc_call(
-        #     const char   *method,
-        #     const uint8_t *config_ptr, uint32_t config_len,
-        #     const uint8_t *req_ptr,    uint32_t req_len,
-        #     uint32_t      *out_len,
-        # );
         self._call = lib.hyperswitch_grpc_call
         self._call.restype  = ctypes.POINTER(ctypes.c_uint8)
         self._call.argtypes = [
-            ctypes.c_char_p,                         # method
-            ctypes.POINTER(ctypes.c_uint8),          # config_ptr
-            ctypes.c_uint32,                         # config_len
-            ctypes.POINTER(ctypes.c_uint8),          # req_ptr
-            ctypes.c_uint32,                         # req_len
-            ctypes.POINTER(ctypes.c_uint32),         # out_len  (written by callee)
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint32),
         ]
 
-        # void hyperswitch_grpc_free(uint8_t *ptr, uint32_t len);
         self._free = lib.hyperswitch_grpc_free
         self._free.restype  = None
         self._free.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint32]
@@ -94,9 +82,6 @@ class _GrpcFfi:
         return raw
 
 
-# ── Dispatch helper ───────────────────────────────────────────────────────────
-
-
 def _call_grpc(ffi: _GrpcFfi, config: GrpcConfig, method: str, req, res_cls):
     """Serialize req, call FFI, parse response or raise on error."""
     config_bytes = config.to_json_bytes()
@@ -106,7 +91,7 @@ def _call_grpc(ffi: _GrpcFfi, config: GrpcConfig, method: str, req, res_cls):
     if not raw:
         raise RuntimeError(f"gRPC error ({method}): empty response from FFI")
 
-    if raw[0] == 1:  # error flag
+    if raw[0] == 1:
         raise RuntimeError(f"gRPC error ({method}): {raw[1:].decode('utf-8', errors='replace')}")
 
     res = res_cls()
@@ -129,10 +114,9 @@ class Grpc{{ service[:-7] if service.endswith('Service') else service }}Client:
         """{{ f.service }}.{{ f.rpc }} — {{ f.description }}"""
         return _call_grpc(
             self._ffi, self._config,
-            "{{ grpc_method_path(service, f.name) }}",
+            "{{ f.name }}",
             req, payment_pb2.{{ f.response }},
         )
-
 {% endfor %}
 
 {% endfor %}

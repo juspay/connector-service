@@ -31,10 +31,10 @@ use grpc_api_types::payments::{
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
+    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
-    RequestConfig, TokenizedPaymentServiceAuthorizeRequest,
-    TokenizedPaymentServiceSetupRecurringRequest,
+    RequestConfig, PaymentServiceTokenAuthorizeRequest,
+    PaymentServiceTokenSetupRecurringRequest,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
@@ -413,42 +413,42 @@ impl ConnectorClient {
         post_authenticate_res_handler
     );
 
-    // ── Non-PCI: TokenizedPaymentService ─────────────────────────────────────
+    // ── Non-PCI: Tokenized payment methods ────────────────────────────────────
     // For merchants holding connector-issued tokens (Stripe pm_xxx, Adyen stored
     // refs, etc.). No raw card data fields are present in the request types.
     impl_flow_method!(
-        tokenized_authorize,
-        TokenizedPaymentServiceAuthorizeRequest,
+        token_authorize,
+        PaymentServiceTokenAuthorizeRequest,
         PaymentServiceAuthorizeResponse,
-        tokenized_authorize_req_handler,
-        tokenized_authorize_res_handler
+        token_authorize_req_handler,
+        token_authorize_res_handler
     );
     impl_flow_method!(
-        tokenized_setup_recurring,
-        TokenizedPaymentServiceSetupRecurringRequest,
+        token_setup_recurring,
+        PaymentServiceTokenSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse,
-        tokenized_setup_recurring_req_handler,
-        tokenized_setup_recurring_res_handler
+        token_setup_recurring_req_handler,
+        token_setup_recurring_res_handler
     );
 
-    // ── Non-PCI: ProxyPaymentService ──────────────────────────────────────────
-    // For merchants using VGS, Basis Theory, or Spreedly. VaultAliasCard fields
+    // ── Non-PCI: Proxied payment methods ──────────────────────────────────────
+    // For merchants using VGS, Basis Theory, or Spreedly. Card proxy fields
     // hold vault alias tokens; the proxy substitutes real values before the
     // connector sees them. 3DS flows are supported because the proxy substitutes
     // aliases with the real PAN before forwarding to the 3DS server.
     impl_flow_method!(
         proxy_authorize,
-        ProxiedPaymentServiceAuthorizeRequest,
+        PaymentServiceProxyAuthorizeRequest,
         PaymentServiceAuthorizeResponse,
-        proxied_authorize_req_handler,
-        proxied_authorize_res_handler
+        proxy_authorize_req_handler,
+        proxy_authorize_res_handler
     );
     impl_flow_method!(
         proxy_setup_recurring,
-        ProxiedPaymentServiceSetupRecurringRequest,
+        PaymentServiceProxySetupRecurringRequest,
         PaymentServiceSetupRecurringResponse,
-        proxied_setup_recurring_req_handler,
-        proxied_setup_recurring_res_handler
+        proxy_setup_recurring_req_handler,
+        proxy_setup_recurring_res_handler
     );
 }
 

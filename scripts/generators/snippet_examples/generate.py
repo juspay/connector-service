@@ -143,7 +143,7 @@ def set_scenario_groups(groups: list[dict]) -> None:
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 _SERVICE_TO_CLIENT: dict[str, str] = {
-    "PaymentService":                     "PaymentClient",
+    "PaymentService":               "PaymentClient",
     "CustomerService":                    "CustomerClient",
     "DisputeService":                     "DisputeClient",
     "EventService":                       "EventClient",

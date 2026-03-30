@@ -18,13 +18,6 @@ import types.Payouts.*
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-/**
- * Connection configuration for the gRPC client.
- *
- * The connector_config field should contain the connector-specific authentication
- * and configuration in the format expected by the server:
- * {"config": {"ConnectorName": {"api_key": "...", ...}}}
- */
 data class GrpcConfig(
     val endpoint: String,
     val connector: String,
@@ -61,7 +54,6 @@ private object GrpcFfi {
         }
         val libName = "libhyperswitch_grpc_ffi.$ext"
 
-        // Try relative to jar location
         val codeSource = GrpcFfi::class.java.protectionDomain.codeSource
         if (codeSource != null) {
             val jarDir = File(codeSource.location.toURI()).parentFile
@@ -70,17 +62,13 @@ private object GrpcFfi {
             if (libFile.exists()) return libFile.absolutePath
         }
 
-        // Try classpath resource
         val resource = GrpcFfi::class.java.classLoader.getResource("native/$libName")
         if (resource != null) return File(resource.toURI()).absolutePath
 
-        // Fallback to system library path
         return libName.removePrefix("lib")
     }
 
     fun call(method: String, configBytes: ByteArray, reqBytes: ByteArray): ByteArray {
-        // Use JNA Memory to allocate native buffers — avoids GetDirectBufferAddress
-        // which is restricted in unnamed modules on Java 22+.
         val configMem = Memory(configBytes.size.toLong().coerceAtLeast(1))
         configMem.write(0, configBytes, 0, configBytes.size)
 
@@ -94,8 +82,6 @@ private object GrpcFfi {
         )
 
         val len = outLen.value
-
-        // Read bytes from pointer and copy to heap array (free immediately after read)
         val raw = ByteArray(len)
         resultPtr.read(0, raw, 0, len)
         lib.hyperswitch_grpc_free(resultPtr, len)
@@ -147,36 +133,13 @@ class Grpc{{ service[:-7] if service.endswith('Service') else service }}Client i
      * {{ f.service }}.{{ f.rpc }} — {{ f.description }}
      */
     suspend fun {{ f.name }}(req: {{ f.request }}): {{ f.response }} =
-        callGrpc(config, "{{ grpc_method_path(service, f.name) }}", req, {{ f.response }}.parser())
-
+        callGrpc(config, "{{ f.name }}", req, {{ f.response }}.parser())
 {% endfor %}
 }
 
 {% endfor %}
 // ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
-/**
- * Top-level gRPC client for the connector-service.
- *
- * Each sub-client corresponds to one proto service. Auth headers from
- * `GrpcConfig` are injected automatically on every call via the Rust FFI layer.
- *
- * Example:
- * ```kotlin
- * val client = GrpcClient(GrpcConfig(
- *     endpoint = "http://localhost:8000",
- *     connector = "stripe",
- *     connectorConfig = mapOf(
- *         "config" to mapOf(
- *             "Stripe" to mapOf("api_key" to "sk_test_...")
- *         )
- *     )
- * ))
-{% for service in services[:4] %}
- * val res = client.{{ service_to_grpc_field(service) }}.{{ groups[service][0].name }}(...)
-{% endfor %}
- * ```
- */
 class GrpcClient(config: GrpcConfig) {
 {% for service in services %}
     val {{ service_to_grpc_field(service) }}: Grpc{{ service[:-7] if service.endswith('Service') else service }}Client =

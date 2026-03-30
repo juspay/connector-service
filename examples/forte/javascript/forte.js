@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py forte
 //
 // Forte — all integration scenarios and flows in one file.
-// Run a scenario:  node forte.js checkout_card
+// Run a scenario:  node forte.js checkout_autocapture
 'use strict';
 
 const { PaymentClient } = require('hyperswitch-prism');
@@ -63,6 +63,8 @@ function _buildVoidRequest(connectorTransactionId) {
     };
 }
 
+
+// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -184,6 +186,35 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: PaymentService.proxy_authorize
+async function proxyAuthorize(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: proxy_authorize
+    const proxyResponse = await paymentClient.proxyAuthorize({
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        },
+        "cardProxy": {
+            "cardNumber": "4111111111111111",
+            "cardExpMonth": "03",
+            "cardExpYear": "2030",
+            "cardCvc": "123",
+            "cardHolderName": "John Doe"
+        },
+        "address": {
+            "billingAddress": {
+                "firstName": "John"
+            }
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "returnUrl": "https://example.com/return"
+    });
+
+    return { status: proxyResponse.status };
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -194,7 +225,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutAutocapture, processCheckoutBank, processVoidPayment, processGetPayment, authorize, get, voidPayment };
+module.exports = { processCheckoutAutocapture, processCheckoutBank, processVoidPayment, processGetPayment, authorize, get, proxyAuthorize, voidPayment, _buildAuthorizeRequest, _buildGetRequest, _buildVoidRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

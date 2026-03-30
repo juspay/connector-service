@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -47,10 +47,11 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "payment_method_token": "probe_pm_token",  // Payment Method Token
+    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
     serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
     "merchant_capture_id": "probe_capture_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -61,7 +62,7 @@ fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptur
     })).unwrap_or_default()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -72,7 +73,7 @@ fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest
     })).unwrap_or_default()
 }
 
-fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -85,7 +86,32 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
     })).unwrap_or_default()
 }
 
-fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
+    serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
+    "amount": {  // Payment Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {  // Generic card payment
+                "card_number": "4111111111111111",  // Card Identification
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information
+            },
+        }
+    },
+    "address": {  // Address Information
+        "billing_address": {
+        },
+    },
+    "return_url": "https://example.com/return",  // URLs for Redirection
+    })).unwrap_or_default()
+}
+
+pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -173,6 +199,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, _merchant_transac
         "auth_type": "NO_THREE_DS",  // Authentication Details
         "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
         "payment_method_token": "probe_pm_token",  // Payment Method Token
+        "order_details": []  // Order Details
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {
@@ -211,6 +238,7 @@ pub async fn process_checkout_bank(client: &ConnectorClient, _merchant_transacti
         "auth_type": "NO_THREE_DS",  // Authentication Details
         "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
         "payment_method_token": "probe_pm_token",  // Payment Method Token
+        "order_details": []  // Order Details
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {
@@ -350,28 +378,7 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
 // Flow: PaymentMethodService.Tokenize
 #[allow(dead_code)]
 pub async fn tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.tokenize(serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
-    "amount": {  // Payment Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment
-                "card_number": "4111111111111111",  // Card Identification
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information
-            },
-        }
-    },
-    "address": {  // Address Information
-        "billing_address": {
-        },
-    },
-    "return_url": "https://example.com/return",  // URLs for Redirection
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.tokenize(build_tokenize_request(), &HashMap::new(), None).await?;
     Ok(format!("token: {}", response.payment_method_token))
 }
 
@@ -381,7 +388,6 @@ pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> R
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

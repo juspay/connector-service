@@ -35,10 +35,10 @@ impl ConnectorExecutor {
         }
     }
 
-    /// Returns a `DirectPaymentServiceClient` backed by the in-process server channel.
+    /// Returns a `PaymentServiceClient` backed by the in-process server channel.
     pub fn payment_client(
         &self,
-    ) -> grpc_api_types::payments::direct_payment_service_client::DirectPaymentServiceClient<
+    ) -> grpc_api_types::payments::payment_service_client::PaymentServiceClient<
         tonic::transport::Channel,
     > {
         self.server.payment_client()

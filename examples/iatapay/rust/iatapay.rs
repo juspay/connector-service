@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -49,10 +49,17 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
             "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
         },
     },
+    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_create_access_token_request() -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+    serde_json::from_value::<MerchantAuthenticationServiceCreateAccessTokenRequest>(serde_json::json!({
+
+    })).unwrap_or_default()
+}
+
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -71,7 +78,7 @@ fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest
     })).unwrap_or_default()
 }
 
-fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -82,7 +89,7 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
     },
     "reason": "customer_request",  // Reason for the refund
     "webhook_url": "https://example.com/webhook",  // URL for webhook notifications
-    "state": {  // State data for access token storage and other connector-specific state
+    "state": {  // State data for access token storage and
         "access_token": {  // Access token obtained from connector
             "token": "probe_access_token",  // The token string.
             "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
@@ -108,9 +115,7 @@ pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str)
 // Flow: MerchantAuthenticationService.CreateAccessToken
 #[allow(dead_code)]
 pub async fn create_access_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_access_token(serde_json::from_value::<MerchantAuthenticationServiceCreateAccessTokenRequest>(serde_json::json!({
-
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.create_access_token(build_create_access_token_request(), &HashMap::new(), None).await?;
     Ok(format!("Session token obtained (statusCode={})", response.status_code))
 }
 
@@ -127,7 +132,6 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

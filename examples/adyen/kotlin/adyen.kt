@@ -19,11 +19,9 @@ import payments.PaymentServiceVoidRequest
 import payments.DisputeServiceAcceptRequest
 import payments.DisputeServiceDefendRequest
 import payments.DisputeServiceSubmitEvidenceRequest
-import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
-import payments.FutureUsage
 import payments.PaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -290,27 +288,23 @@ fun processRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): M
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        enrolledFor3Ds = false
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
-        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
-        customerAcceptanceBuilder.apply {  // Details of customer acceptance
-            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
-            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
-        browserInfoBuilder.apply {  // Information about the customer's browser
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
+        setupFutureUsage = "OFF_SESSION"
+        requestIncrementalAuthorization = false
+        acceptanceType = "OFFLINE"
+        acceptedAt = 0L
+        colorDepth = 24L
+        screenHeight = 900L
+        screenWidth = 1440L
+        javaEnabled = false
+        javaScriptEnabled = true
+        language = "en-US"
+        timeZoneOffsetMinutes = -480L
+        acceptHeader = "application/json"
+        userAgent = "Mozilla/5.0 (probe-bot)"
+        acceptLanguage = "en-US,en;q=0.9"
+        ipAddress = "1.2.3.4"
     }.build())
 
     if (setupResponse.status.name == "FAILED")
@@ -411,28 +405,55 @@ fun disputeSubmitEvidence(txnId: String) {
         merchantDisputeId = "probe_dispute_001"  // Identification
         connectorTransactionId = "probe_txn_001"
         disputeId = "probe_dispute_id_001"
-        // evidenceDocuments: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": [112, 114, 111, 98, 101, 32, 101, 118, 105, 100, 101, 110, 99, 101, 32, 99, 111, 110, 116, 101, 110, 116], "file_mime_type": "application/pdf"}]  // Collection of evidence documents
+        // evidenceDocuments: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": [112, 114, 111, 98, 101, 32, 101, 118, 105, 100, 101, 110, 99, 101, 32, 99, 111, 110, 116, 101, 110, 116], "file_mime_type": "application/pdf"}]
     }.build()
     val response = client.submit_evidence(request)
     println("Dispute status: ${response.disputeStatus.name}")
+}
+
+// Flow: PaymentService.proxy_authorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = .newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        minorAmount = 1000L
+        currency = "USD"
+        cardNumber = "4111111111111111"
+        cardExpMonth = "03"
+        cardExpYear = "2030"
+        cardCvc = "123"
+        cardHolderName = "John Doe"
+        captureMethod = "AUTOMATIC"
+        authType = "NO_THREE_DS"
+        returnUrl = "https://example.com/return"
+        colorDepth = 24L
+        screenHeight = 900L
+        screenWidth = 1440L
+        javaEnabled = false
+        javaScriptEnabled = true
+        language = "en-US"
+        timeZoneOffsetMinutes = -480L
+        acceptHeader = "application/json"
+        userAgent = "Mozilla/5.0 (probe-bot)"
+        acceptLanguage = "en-US,en;q=0.9"
+        ipAddress = "1.2.3.4"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
 }
 
 // Flow: RecurringPaymentService.Charge
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
-        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
-            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
-                connectorMandateId = "probe-mandate-123"
-            }
-        }
+        connectorMandateId = "probe-mandate-123"
         amountBuilder.apply {  // Amount Information
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
             tokenBuilder.apply {  // Payment tokens
-                tokenBuilder.value = "probe_pm_token"
+                tokenBuilder.value = "probe_pm_token"  // The token string representing a payment method.
             }
         }
         returnUrl = "https://example.com/recurring-return"
@@ -482,27 +503,23 @@ fun setupRecurring(txnId: String) {
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        enrolledFor3Ds = false
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
-        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
-        customerAcceptanceBuilder.apply {  // Details of customer acceptance
-            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
-            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
-        browserInfoBuilder.apply {  // Information about the customer's browser
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
+        setupFutureUsage = "OFF_SESSION"
+        requestIncrementalAuthorization = false
+        acceptanceType = "OFFLINE"
+        acceptedAt = 0L
+        colorDepth = 24L
+        screenHeight = 900L
+        screenWidth = 1440L
+        javaEnabled = false
+        javaScriptEnabled = true
+        language = "en-US"
+        timeZoneOffsetMinutes = -480L
+        acceptHeader = "application/json"
+        userAgent = "Mozilla/5.0 (probe-bot)"
+        acceptLanguage = "en-US,en;q=0.9"
+        ipAddress = "1.2.3.4"
     }.build()
     val response = client.setup_recurring(request)
     when (response.status.name) {
@@ -538,10 +555,11 @@ fun main(args: Array<String>) {
         "disputeAccept" -> disputeAccept(txnId)
         "disputeDefend" -> disputeDefend(txnId)
         "disputeSubmitEvidence" -> disputeSubmitEvidence(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, authorize, capture, disputeAccept, disputeDefend, disputeSubmitEvidence, recurringCharge, refund, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, authorize, capture, disputeAccept, disputeDefend, disputeSubmitEvidence, proxyAuthorize, recurringCharge, refund, setupRecurring, void")
     }
 }

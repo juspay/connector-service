@@ -20,15 +20,12 @@ use std::{
 };
 
 use grpc_api_types::payments::{
-    customer_service_client::CustomerServiceClient,
-    direct_payment_service_client::DirectPaymentServiceClient,
-    event_service_client::EventServiceClient,
+    customer_service_client::CustomerServiceClient, event_service_client::EventServiceClient,
     merchant_authentication_service_client::MerchantAuthenticationServiceClient,
     payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
     payment_method_service_client::PaymentMethodServiceClient,
-    proxied_payment_service_client::ProxiedPaymentServiceClient,
-    recurring_payment_service_client::RecurringPaymentServiceClient,
-    tokenized_payment_service_client::TokenizedPaymentServiceClient, CustomerServiceCreateRequest,
+    payment_service_client::PaymentServiceClient,
+    recurring_payment_service_client::RecurringPaymentServiceClient, CustomerServiceCreateRequest,
     EventServiceHandleRequest, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
@@ -39,9 +36,9 @@ use grpc_api_types::payments::{
     PaymentServiceGetRequest, PaymentServiceIncrementalAuthorizationRequest,
     PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
-    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
-    TokenizedPaymentServiceSetupRecurringRequest,
+    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
+    RecurringPaymentServiceChargeRequest, PaymentServiceTokenAuthorizeRequest,
+    PaymentServiceTokenSetupRecurringRequest,
 };
 use prost::Message;
 use serde::Deserialize;
@@ -155,50 +152,44 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
     }
 
     match method {
-        // DirectPaymentService - support both old (payment/*) and new (direct_payment/*) method names
+        // PaymentService - support both old (payment/*, direct_payment/*) and new method paths
         "payment/authorize" | "direct_payment/authorize" => call!(
-            DirectPaymentServiceClient,
+            PaymentServiceClient,
             authorize,
             PaymentServiceAuthorizeRequest
         ),
-        "payment/capture" | "direct_payment/capture" => call!(
-            DirectPaymentServiceClient,
-            capture,
-            PaymentServiceCaptureRequest
-        ),
+        "payment/capture" | "direct_payment/capture" => {
+            call!(PaymentServiceClient, capture, PaymentServiceCaptureRequest)
+        }
         "payment/void" | "direct_payment/void" => {
-            call!(DirectPaymentServiceClient, void, PaymentServiceVoidRequest)
+            call!(PaymentServiceClient, void, PaymentServiceVoidRequest)
         }
         "payment/get" | "direct_payment/get" => {
-            call!(DirectPaymentServiceClient, get, PaymentServiceGetRequest)
+            call!(PaymentServiceClient, get, PaymentServiceGetRequest)
         }
-        "payment/refund" | "direct_payment/refund" => call!(
-            DirectPaymentServiceClient,
-            refund,
-            PaymentServiceRefundRequest
-        ),
-        "payment/reverse" | "direct_payment/reverse" => call!(
-            DirectPaymentServiceClient,
-            reverse,
-            PaymentServiceReverseRequest
-        ),
+        "payment/refund" | "direct_payment/refund" => {
+            call!(PaymentServiceClient, refund, PaymentServiceRefundRequest)
+        }
+        "payment/reverse" | "direct_payment/reverse" => {
+            call!(PaymentServiceClient, reverse, PaymentServiceReverseRequest)
+        }
         "payment/setup_recurring" | "direct_payment/setup_recurring" => call!(
-            DirectPaymentServiceClient,
+            PaymentServiceClient,
             setup_recurring,
             PaymentServiceSetupRecurringRequest
         ),
         "direct_payment/create_order" => call!(
-            DirectPaymentServiceClient,
+            PaymentServiceClient,
             create_order,
             PaymentServiceCreateOrderRequest
         ),
         "direct_payment/incremental_authorization" => call!(
-            DirectPaymentServiceClient,
+            PaymentServiceClient,
             incremental_authorization,
             PaymentServiceIncrementalAuthorizationRequest
         ),
         "direct_payment/verify_redirect_response" => call!(
-            DirectPaymentServiceClient,
+            PaymentServiceClient,
             verify_redirect_response,
             PaymentServiceVerifyRedirectResponseRequest
         ),
@@ -244,27 +235,26 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
             charge,
             RecurringPaymentServiceChargeRequest
         ),
-        // TokenizedPaymentService
-        "tokenized_payment/authorize" => call!(
-            TokenizedPaymentServiceClient,
-            authorize,
-            TokenizedPaymentServiceAuthorizeRequest
+        "payment/token_authorize" | "tokenized_payment/authorize" => call!(
+            PaymentServiceClient,
+            token_authorize,
+            PaymentServiceTokenAuthorizeRequest
         ),
-        "tokenized_payment/setup_recurring" => call!(
-            TokenizedPaymentServiceClient,
-            setup_recurring,
-            TokenizedPaymentServiceSetupRecurringRequest
+        "payment/token_setup_recurring" | "tokenized_payment/setup_recurring" => call!(
+            PaymentServiceClient,
+            token_setup_recurring,
+            PaymentServiceTokenSetupRecurringRequest
         ),
-        // ProxiedPaymentService
-        "proxy_payment/authorize" => call!(
-            ProxiedPaymentServiceClient,
-            authorize,
-            ProxiedPaymentServiceAuthorizeRequest
+        // ProxiedPaymentService - now part of PaymentService
+        "payment/proxy_authorize" | "proxy_payment/authorize" => call!(
+            PaymentServiceClient,
+            proxy_authorize,
+            PaymentServiceProxyAuthorizeRequest
         ),
-        "proxy_payment/setup_recurring" => call!(
-            ProxiedPaymentServiceClient,
-            setup_recurring,
-            ProxiedPaymentServiceSetupRecurringRequest
+        "payment/proxy_setup_recurring" | "proxy_payment/setup_recurring" => call!(
+            PaymentServiceClient,
+            proxy_setup_recurring,
+            PaymentServiceProxySetupRecurringRequest
         ),
         other => Err(format!("unknown gRPC method: \"{other}\"")),
     }

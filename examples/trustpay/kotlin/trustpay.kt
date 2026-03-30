@@ -96,7 +96,7 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         reason = "customer_request"  // Reason for the refund
-        stateBuilder.apply {  // State data for access token storage and other connector-specific state
+        stateBuilder.apply {  // State data for access token storage and
             accessTokenBuilder.apply {  // Access token obtained from connector
                 tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
@@ -220,6 +220,34 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.proxy_authorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = .newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        minorAmount = 1000L
+        currency = "USD"
+        cardNumber = "4111111111111111"
+        cardExpMonth = "03"
+        cardExpYear = "2030"
+        cardCvc = "123"
+        cardHolderName = "John Doe"
+        email = "test@example.com"
+        firstName = "John"
+        line1 = "123 Main St"
+        city = "Seattle"
+        zipCode = "98101"
+        countryAlpha2Code = "US"
+        captureMethod = "AUTOMATIC"
+        authType = "NO_THREE_DS"
+        returnUrl = "https://example.com/return"
+        userAgent = "Mozilla/5.0 (probe-bot)"
+        ipAddress = "1.2.3.4"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -242,7 +270,8 @@ fun main(args: Array<String>) {
         "createAccessToken" -> createAccessToken(txnId)
         "createOrder" -> createOrder(txnId)
         "get" -> get(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processRefund, processGetPayment, authorize, createAccessToken, createOrder, get, refund")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processRefund, processGetPayment, authorize, createAccessToken, createOrder, get, proxyAuthorize, refund")
     }
 }

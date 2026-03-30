@@ -13,8 +13,6 @@ from typing import Any, Dict, Optional
 
 from payments.generated import payment_pb2
 
-# ── Config ────────────────────────────────────────────────────────────────────
-
 
 @dataclass
 class GrpcConfig:
@@ -41,9 +39,6 @@ class GrpcConfig:
         return json.dumps(d).encode()
 
 
-# ── ctypes FFI bindings ───────────────────────────────────────────────────────
-
-
 class _GrpcFfi:
     """Thin ctypes wrapper around libhyperswitch_grpc_ffi."""
 
@@ -55,24 +50,17 @@ class _GrpcFfi:
 
         lib = ctypes.CDLL(lib_path)
 
-        # uint8_t *hyperswitch_grpc_call(
-        #     const char   *method,
-        #     const uint8_t *config_ptr, uint32_t config_len,
-        #     const uint8_t *req_ptr,    uint32_t req_len,
-        #     uint32_t      *out_len,
-        # );
         self._call = lib.hyperswitch_grpc_call
         self._call.restype  = ctypes.POINTER(ctypes.c_uint8)
         self._call.argtypes = [
-            ctypes.c_char_p,                         # method
-            ctypes.POINTER(ctypes.c_uint8),          # config_ptr
-            ctypes.c_uint32,                         # config_len
-            ctypes.POINTER(ctypes.c_uint8),          # req_ptr
-            ctypes.c_uint32,                         # req_len
-            ctypes.POINTER(ctypes.c_uint32),         # out_len  (written by callee)
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_uint32,
+            ctypes.POINTER(ctypes.c_uint32),
         ]
 
-        # void hyperswitch_grpc_free(uint8_t *ptr, uint32_t len);
         self._free = lib.hyperswitch_grpc_free
         self._free.restype  = None
         self._free.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint32]
@@ -94,9 +82,6 @@ class _GrpcFfi:
         return raw
 
 
-# ── Dispatch helper ───────────────────────────────────────────────────────────
-
-
 def _call_grpc(ffi: _GrpcFfi, config: GrpcConfig, method: str, req, res_cls):
     """Serialize req, call FFI, parse response or raise on error."""
     config_bytes = config.to_json_bytes()
@@ -106,7 +91,7 @@ def _call_grpc(ffi: _GrpcFfi, config: GrpcConfig, method: str, req, res_cls):
     if not raw:
         raise RuntimeError(f"gRPC error ({method}): empty response from FFI")
 
-    if raw[0] == 1:  # error flag
+    if raw[0] == 1:
         raise RuntimeError(f"gRPC error ({method}): {raw[1:].decode('utf-8', errors='replace')}")
 
     res = res_cls()
@@ -127,98 +112,9 @@ class GrpcCustomerClient:
         """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
         return _call_grpc(
             self._ffi, self._config,
-            "customer/create",
+            "create",
             req, payment_pb2.CustomerServiceCreateResponse,
         )
-
-
-class GrpcDirectPaymentClient:
-    """DirectPaymentService — gRPC sub-client."""
-
-    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
-        self._ffi    = ffi
-        self._config = config
-
-    def authorize(self, req: payment_pb2.PaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
-        """DirectPaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/authorize",
-            req, payment_pb2.PaymentServiceAuthorizeResponse,
-        )
-
-    def get(self, req: payment_pb2.PaymentServiceGetRequest) -> payment_pb2.PaymentServiceGetResponse:
-        """DirectPaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/get",
-            req, payment_pb2.PaymentServiceGetResponse,
-        )
-
-    def void(self, req: payment_pb2.PaymentServiceVoidRequest) -> payment_pb2.PaymentServiceVoidResponse:
-        """DirectPaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/void",
-            req, payment_pb2.PaymentServiceVoidResponse,
-        )
-
-    def reverse(self, req: payment_pb2.PaymentServiceReverseRequest) -> payment_pb2.PaymentServiceReverseResponse:
-        """DirectPaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/reverse",
-            req, payment_pb2.PaymentServiceReverseResponse,
-        )
-
-    def capture(self, req: payment_pb2.PaymentServiceCaptureRequest) -> payment_pb2.PaymentServiceCaptureResponse:
-        """DirectPaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/capture",
-            req, payment_pb2.PaymentServiceCaptureResponse,
-        )
-
-    def create_order(self, req: payment_pb2.PaymentServiceCreateOrderRequest) -> payment_pb2.PaymentServiceCreateOrderResponse:
-        """DirectPaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/create_order",
-            req, payment_pb2.PaymentServiceCreateOrderResponse,
-        )
-
-    def refund(self, req: payment_pb2.PaymentServiceRefundRequest) -> payment_pb2.RefundResponse:
-        """DirectPaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/refund",
-            req, payment_pb2.RefundResponse,
-        )
-
-    def incremental_authorization(self, req: payment_pb2.PaymentServiceIncrementalAuthorizationRequest) -> payment_pb2.PaymentServiceIncrementalAuthorizationResponse:
-        """DirectPaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/incremental_authorization",
-            req, payment_pb2.PaymentServiceIncrementalAuthorizationResponse,
-        )
-
-    def verify_redirect_response(self, req: payment_pb2.PaymentServiceVerifyRedirectResponseRequest) -> payment_pb2.PaymentServiceVerifyRedirectResponseResponse:
-        """DirectPaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/verify_redirect_response",
-            req, payment_pb2.PaymentServiceVerifyRedirectResponseResponse,
-        )
-
-    def setup_recurring(self, req: payment_pb2.PaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
-        """DirectPaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "direct_payment/setup_recurring",
-            req, payment_pb2.PaymentServiceSetupRecurringResponse,
-        )
-
 
 class GrpcDisputeClient:
     """DisputeService — gRPC sub-client."""
@@ -231,34 +127,30 @@ class GrpcDisputeClient:
         """DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims."""
         return _call_grpc(
             self._ffi, self._config,
-            "dispute/submit_evidence",
+            "submit_evidence",
             req, payment_pb2.DisputeServiceSubmitEvidenceResponse,
         )
-
     def dispute_get(self, req: payment_pb2.DisputeServiceGetRequest) -> payment_pb2.DisputeResponse:
         """DisputeService.Get — Retrieve dispute status and evidence submission state. Tracks dispute progress through bank review process for informed decision-making."""
         return _call_grpc(
             self._ffi, self._config,
-            "dispute/dispute_get",
+            "dispute_get",
             req, payment_pb2.DisputeResponse,
         )
-
     def defend(self, req: payment_pb2.DisputeServiceDefendRequest) -> payment_pb2.DisputeServiceDefendResponse:
         """DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation."""
         return _call_grpc(
             self._ffi, self._config,
-            "dispute/defend",
+            "defend",
             req, payment_pb2.DisputeServiceDefendResponse,
         )
-
     def accept(self, req: payment_pb2.DisputeServiceAcceptRequest) -> payment_pb2.DisputeServiceAcceptResponse:
         """DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient."""
         return _call_grpc(
             self._ffi, self._config,
-            "dispute/accept",
+            "accept",
             req, payment_pb2.DisputeServiceAcceptResponse,
         )
-
 
 class GrpcEventClient:
     """EventService — gRPC sub-client."""
@@ -271,10 +163,9 @@ class GrpcEventClient:
         """EventService.HandleEvent — Process webhook notifications from connectors. Translates connector events into standardized responses for asynchronous payment state updates."""
         return _call_grpc(
             self._ffi, self._config,
-            "event/handle_event",
+            "handle_event",
             req, payment_pb2.EventServiceHandleResponse,
         )
-
 
 class GrpcMerchantAuthenticationClient:
     """MerchantAuthenticationService — gRPC sub-client."""
@@ -287,26 +178,23 @@ class GrpcMerchantAuthenticationClient:
         """MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side."""
         return _call_grpc(
             self._ffi, self._config,
-            "merchant_authentication/create_access_token",
+            "create_access_token",
             req, payment_pb2.MerchantAuthenticationServiceCreateAccessTokenResponse,
         )
-
     def create_session_token(self, req: payment_pb2.MerchantAuthenticationServiceCreateSessionTokenRequest) -> payment_pb2.MerchantAuthenticationServiceCreateSessionTokenResponse:
         """MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking."""
         return _call_grpc(
             self._ffi, self._config,
-            "merchant_authentication/create_session_token",
+            "create_session_token",
             req, payment_pb2.MerchantAuthenticationServiceCreateSessionTokenResponse,
         )
-
     def create_sdk_session_token(self, req: payment_pb2.MerchantAuthenticationServiceCreateSdkSessionTokenRequest) -> payment_pb2.MerchantAuthenticationServiceCreateSdkSessionTokenResponse:
         """MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification."""
         return _call_grpc(
             self._ffi, self._config,
-            "merchant_authentication/create_sdk_session_token",
+            "create_sdk_session_token",
             req, payment_pb2.MerchantAuthenticationServiceCreateSdkSessionTokenResponse,
         )
-
 
 class GrpcPaymentMethodAuthenticationClient:
     """PaymentMethodAuthenticationService — gRPC sub-client."""
@@ -319,26 +207,23 @@ class GrpcPaymentMethodAuthenticationClient:
         """PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification."""
         return _call_grpc(
             self._ffi, self._config,
-            "payment_method_authentication/pre_authenticate",
+            "pre_authenticate",
             req, payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse,
         )
-
     def authenticate(self, req: payment_pb2.PaymentMethodAuthenticationServiceAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse:
         """PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention."""
         return _call_grpc(
             self._ffi, self._config,
-            "payment_method_authentication/authenticate",
+            "authenticate",
             req, payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse,
         )
-
     def post_authenticate(self, req: payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse:
         """PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed."""
         return _call_grpc(
             self._ffi, self._config,
-            "payment_method_authentication/post_authenticate",
+            "post_authenticate",
             req, payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse,
         )
-
 
 class GrpcPaymentMethodClient:
     """PaymentMethodService — gRPC sub-client."""
@@ -351,18 +236,122 @@ class GrpcPaymentMethodClient:
         """PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing."""
         return _call_grpc(
             self._ffi, self._config,
-            "payment_method/tokenize",
+            "tokenize",
             req, payment_pb2.PaymentMethodServiceTokenizeResponse,
         )
-
     def eligibility(self, req: payment_pb2.PayoutMethodEligibilityRequest) -> payment_pb2.PayoutMethodEligibilityResponse:
         """PaymentMethodService.Eligibility — Check if the payout method is eligible for the transaction"""
         return _call_grpc(
             self._ffi, self._config,
-            "payment_method/eligibility",
+            "eligibility",
             req, payment_pb2.PayoutMethodEligibilityResponse,
         )
 
+class GrpcPaymentClient:
+    """PaymentService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def authorize(self, req: payment_pb2.PaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+        """PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "authorize",
+            req, payment_pb2.PaymentServiceAuthorizeResponse,
+        )
+    def get(self, req: payment_pb2.PaymentServiceGetRequest) -> payment_pb2.PaymentServiceGetResponse:
+        """PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "get",
+            req, payment_pb2.PaymentServiceGetResponse,
+        )
+    def void(self, req: payment_pb2.PaymentServiceVoidRequest) -> payment_pb2.PaymentServiceVoidResponse:
+        """PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "void",
+            req, payment_pb2.PaymentServiceVoidResponse,
+        )
+    def reverse(self, req: payment_pb2.PaymentServiceReverseRequest) -> payment_pb2.PaymentServiceReverseResponse:
+        """PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "reverse",
+            req, payment_pb2.PaymentServiceReverseResponse,
+        )
+    def capture(self, req: payment_pb2.PaymentServiceCaptureRequest) -> payment_pb2.PaymentServiceCaptureResponse:
+        """PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "capture",
+            req, payment_pb2.PaymentServiceCaptureResponse,
+        )
+    def create_order(self, req: payment_pb2.PaymentServiceCreateOrderRequest) -> payment_pb2.PaymentServiceCreateOrderResponse:
+        """PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "create_order",
+            req, payment_pb2.PaymentServiceCreateOrderResponse,
+        )
+    def refund(self, req: payment_pb2.PaymentServiceRefundRequest) -> payment_pb2.RefundResponse:
+        """PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "refund",
+            req, payment_pb2.RefundResponse,
+        )
+    def incremental_authorization(self, req: payment_pb2.PaymentServiceIncrementalAuthorizationRequest) -> payment_pb2.PaymentServiceIncrementalAuthorizationResponse:
+        """PaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "incremental_authorization",
+            req, payment_pb2.PaymentServiceIncrementalAuthorizationResponse,
+        )
+    def verify_redirect_response(self, req: payment_pb2.PaymentServiceVerifyRedirectResponseRequest) -> payment_pb2.PaymentServiceVerifyRedirectResponseResponse:
+        """PaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "verify_redirect_response",
+            req, payment_pb2.PaymentServiceVerifyRedirectResponseResponse,
+        )
+    def setup_recurring(self, req: payment_pb2.PaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+        """PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "setup_recurring",
+            req, payment_pb2.PaymentServiceSetupRecurringResponse,
+        )
+    def token_authorize(self, req: payment_pb2.PaymentServiceTokenAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+        """PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "token_authorize",
+            req, payment_pb2.PaymentServiceAuthorizeResponse,
+        )
+    def token_setup_recurring(self, req: payment_pb2.PaymentServiceTokenSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+        """PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "token_setup_recurring",
+            req, payment_pb2.PaymentServiceSetupRecurringResponse,
+        )
+    def proxy_authorize(self, req: payment_pb2.PaymentServiceProxyAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+        """PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_authorize",
+            req, payment_pb2.PaymentServiceAuthorizeResponse,
+        )
+    def proxy_setup_recurring(self, req: payment_pb2.PaymentServiceProxySetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+        """PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_setup_recurring",
+            req, payment_pb2.PaymentServiceSetupRecurringResponse,
+        )
 
 class GrpcPayoutClient:
     """PayoutService — gRPC sub-client."""
@@ -375,90 +364,58 @@ class GrpcPayoutClient:
         """PayoutService.Create — Creates a payout."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/payout_create",
+            "payout_create",
             req, payment_pb2.PayoutServiceCreateResponse,
         )
-
     def transfer(self, req: payment_pb2.PayoutServiceTransferRequest) -> payment_pb2.PayoutServiceTransferResponse:
         """PayoutService.Transfer — Creates a payout fund transfer."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/transfer",
+            "transfer",
             req, payment_pb2.PayoutServiceTransferResponse,
         )
-
     def payout_get(self, req: payment_pb2.PayoutServiceGetRequest) -> payment_pb2.PayoutServiceGetResponse:
         """PayoutService.Get — Retrieve payout details."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/payout_get",
+            "payout_get",
             req, payment_pb2.PayoutServiceGetResponse,
         )
-
     def payout_void(self, req: payment_pb2.PayoutServiceVoidRequest) -> payment_pb2.PayoutServiceVoidResponse:
         """PayoutService.Void — Void a payout."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/payout_void",
+            "payout_void",
             req, payment_pb2.PayoutServiceVoidResponse,
         )
-
     def stage(self, req: payment_pb2.PayoutServiceStageRequest) -> payment_pb2.PayoutServiceStageResponse:
         """PayoutService.Stage — Stage the payout."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/stage",
+            "stage",
             req, payment_pb2.PayoutServiceStageResponse,
         )
-
     def create_link(self, req: payment_pb2.PayoutServiceCreateLinkRequest) -> payment_pb2.PayoutServiceCreateLinkResponse:
         """PayoutService.CreateLink — Creates a link between the recipient and the payout."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/create_link",
+            "create_link",
             req, payment_pb2.PayoutServiceCreateLinkResponse,
         )
-
     def create_recipient(self, req: payment_pb2.PayoutServiceCreateRecipientRequest) -> payment_pb2.PayoutServiceCreateRecipientResponse:
         """PayoutService.CreateRecipient — Create payout recipient."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/create_recipient",
+            "create_recipient",
             req, payment_pb2.PayoutServiceCreateRecipientResponse,
         )
-
     def enroll_disburse_account(self, req: payment_pb2.PayoutServiceEnrollDisburseAccountRequest) -> payment_pb2.PayoutServiceEnrollDisburseAccountResponse:
         """PayoutService.EnrollDisburseAccount — Enroll disburse account."""
         return _call_grpc(
             self._ffi, self._config,
-            "payout/enroll_disburse_account",
+            "enroll_disburse_account",
             req, payment_pb2.PayoutServiceEnrollDisburseAccountResponse,
         )
-
-
-class GrpcProxiedPaymentClient:
-    """ProxiedPaymentService — gRPC sub-client."""
-
-    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
-        self._ffi    = ffi
-        self._config = config
-
-    def proxied_authorize(self, req: payment_pb2.ProxiedPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
-        """ProxiedPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "proxied_payment/proxied_authorize",
-            req, payment_pb2.PaymentServiceAuthorizeResponse,
-        )
-
-    def proxied_setup_recurring(self, req: payment_pb2.ProxiedPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
-        """ProxiedPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "proxied_payment/proxied_setup_recurring",
-            req, payment_pb2.PaymentServiceSetupRecurringResponse,
-        )
-
 
 class GrpcRecurringPaymentClient:
     """RecurringPaymentService — gRPC sub-client."""
@@ -471,18 +428,16 @@ class GrpcRecurringPaymentClient:
         """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
         return _call_grpc(
             self._ffi, self._config,
-            "recurring_payment/charge",
+            "charge",
             req, payment_pb2.RecurringPaymentServiceChargeResponse,
         )
-
     def revoke(self, req: payment_pb2.RecurringPaymentServiceRevokeRequest) -> payment_pb2.RecurringPaymentServiceRevokeResponse:
         """RecurringPaymentService.Revoke — Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations."""
         return _call_grpc(
             self._ffi, self._config,
-            "recurring_payment/revoke",
+            "revoke",
             req, payment_pb2.RecurringPaymentServiceRevokeResponse,
         )
-
 
 class GrpcRefundClient:
     """RefundService — gRPC sub-client."""
@@ -495,34 +450,9 @@ class GrpcRefundClient:
         """RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication."""
         return _call_grpc(
             self._ffi, self._config,
-            "refund/refund_get",
+            "refund_get",
             req, payment_pb2.RefundResponse,
         )
-
-
-class GrpcTokenizedPaymentClient:
-    """TokenizedPaymentService — gRPC sub-client."""
-
-    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
-        self._ffi    = ffi
-        self._config = config
-
-    def tokenized_authorize(self, req: payment_pb2.TokenizedPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
-        """TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "tokenized_payment/tokenized_authorize",
-            req, payment_pb2.PaymentServiceAuthorizeResponse,
-        )
-
-    def tokenized_setup_recurring(self, req: payment_pb2.TokenizedPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
-        """TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token."""
-        return _call_grpc(
-            self._ffi, self._config,
-            "tokenized_payment/tokenized_setup_recurring",
-            req, payment_pb2.PaymentServiceSetupRecurringResponse,
-        )
-
 
 # ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
@@ -541,35 +471,31 @@ class GrpcClient:
             connector_config = {"config": {"Stripe": {"api_key": "sk_test_..."}}},
         ))
         res = client.customer.create(...)
-        res = client.direct_payment.authorize(...)
         res = client.dispute.submit_evidence(...)
         res = client.event.handle_event(...)
+        res = client.merchant_authentication.create_access_token(...)
     """
 
     customer: GrpcCustomerClient
-    direct_payment: GrpcDirectPaymentClient
     dispute: GrpcDisputeClient
     event: GrpcEventClient
     merchant_authentication: GrpcMerchantAuthenticationClient
     payment_method_authentication: GrpcPaymentMethodAuthenticationClient
     payment_method: GrpcPaymentMethodClient
+    payment: GrpcPaymentClient
     payout: GrpcPayoutClient
-    proxied_payment: GrpcProxiedPaymentClient
     recurring_payment: GrpcRecurringPaymentClient
     refund: GrpcRefundClient
-    tokenized_payment: GrpcTokenizedPaymentClient
 
     def __init__(self, config: GrpcConfig, lib_path: Optional[str] = None) -> None:
         ffi = _GrpcFfi(lib_path)
         self.customer = GrpcCustomerClient(ffi, config)
-        self.direct_payment = GrpcDirectPaymentClient(ffi, config)
         self.dispute = GrpcDisputeClient(ffi, config)
         self.event = GrpcEventClient(ffi, config)
         self.merchant_authentication = GrpcMerchantAuthenticationClient(ffi, config)
         self.payment_method_authentication = GrpcPaymentMethodAuthenticationClient(ffi, config)
         self.payment_method = GrpcPaymentMethodClient(ffi, config)
+        self.payment = GrpcPaymentClient(ffi, config)
         self.payout = GrpcPayoutClient(ffi, config)
-        self.proxied_payment = GrpcProxiedPaymentClient(ffi, config)
         self.recurring_payment = GrpcRecurringPaymentClient(ffi, config)
         self.refund = GrpcRefundClient(ffi, config)
-        self.tokenized_payment = GrpcTokenizedPaymentClient(ffi, config)

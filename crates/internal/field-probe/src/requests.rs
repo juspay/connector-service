@@ -17,12 +17,14 @@
 //   it belongs in patch_get_request or patch-config.toml [get] section.
 // ─────────────────────────────────────────────────────────────────────────────
 
+use cards::CardNumber;
 use grpc_api_types::payments::{
     self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
-    AcceptanceType, Address, AuthenticationType, CaptureMethod, ConnectorMandateReferenceId,
-    CustomerAcceptance, CustomerServiceCreateRequest, DisputeServiceAcceptRequest,
-    DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest, EvidenceDocument,
-    EvidenceType, MandateReference, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails,
+    ConnectorMandateReferenceId, CustomerAcceptance, CustomerServiceCreateRequest,
+    DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
+    EvidenceDocument, EvidenceType, MandateReference,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest, PaymentAddress, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
@@ -30,11 +32,12 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,
-    ProxiedPaymentServiceAuthorizeRequest, ProxiedPaymentServiceSetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
-    TokenizedPaymentServiceSetupRecurringRequest, VaultAliasCard,
+    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
+    RecurringPaymentServiceChargeRequest, PaymentServiceTokenAuthorizeRequest,
+    PaymentServiceTokenSetupRecurringRequest,
 };
 use hyperswitch_masking::Secret;
+use std::str::FromStr;
 
 use crate::sample_data::{card_payment_method, usd_money};
 
@@ -306,19 +309,19 @@ pub(crate) fn base_defend_dispute_request() -> DisputeServiceDefendRequest {
 
 // ── Non-PCI (Tokenized / Proxy) request builders ──────────────────────────────
 
-fn base_vault_alias_card() -> VaultAliasCard {
-    VaultAliasCard {
-        card_number_alias: Some(Secret::new("tok_sandbox_abc123".to_string())),
-        exp_month: "03".to_string(),
-        exp_year: "2030".to_string(),
-        cvc_alias: Some(Secret::new("tok_sandbox_cvc456".to_string())),
-        card_holder_name: Some("John Doe".to_string()),
+fn base_card_proxy() -> CardDetails {
+    CardDetails {
+        card_number: Some(CardNumber::from_str("4111111111111111").unwrap()),
+        card_exp_month: Some(Secret::new("03".to_string())),
+        card_exp_year: Some(Secret::new("2030".to_string())),
+        card_cvc: Some(Secret::new("123".to_string())),
+        card_holder_name: Some(Secret::new("John Doe".to_string())),
         ..Default::default()
     }
 }
 
-pub(crate) fn base_tokenized_authorize_request() -> TokenizedPaymentServiceAuthorizeRequest {
-    TokenizedPaymentServiceAuthorizeRequest {
+pub(crate) fn base_tokenized_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
+    PaymentServiceTokenAuthorizeRequest {
         merchant_transaction_id: Some("probe_tokenized_txn_001".to_string()),
         amount: Some(usd_money(1000)),
         connector_token: Some(Secret::new("pm_1AbcXyzStripeTestToken".to_string())),
@@ -333,8 +336,8 @@ pub(crate) fn base_tokenized_authorize_request() -> TokenizedPaymentServiceAutho
 }
 
 pub(crate) fn base_tokenized_setup_recurring_request(
-) -> TokenizedPaymentServiceSetupRecurringRequest {
-    TokenizedPaymentServiceSetupRecurringRequest {
+) -> PaymentServiceTokenSetupRecurringRequest {
+    PaymentServiceTokenSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_tokenized_mandate_001".to_string(),
         amount: Some(usd_money(0)),
         connector_token: Some(Secret::new("pm_1AbcXyzStripeTestToken".to_string())),
@@ -354,11 +357,11 @@ pub(crate) fn base_tokenized_setup_recurring_request(
     }
 }
 
-pub(crate) fn base_proxied_authorize_request() -> ProxiedPaymentServiceAuthorizeRequest {
-    ProxiedPaymentServiceAuthorizeRequest {
+pub(crate) fn base_proxied_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
+    PaymentServiceProxyAuthorizeRequest {
         merchant_transaction_id: Some("probe_proxy_txn_001".to_string()),
         amount: Some(usd_money(1000)),
-        vault_card: Some(base_vault_alias_card()),
+        card_proxy: Some(base_card_proxy()),
         capture_method: Some(CaptureMethod::Automatic as i32),
         auth_type: AuthenticationType::NoThreeDs as i32,
         address: Some(PaymentAddress {
@@ -370,11 +373,11 @@ pub(crate) fn base_proxied_authorize_request() -> ProxiedPaymentServiceAuthorize
     }
 }
 
-pub(crate) fn base_proxied_setup_recurring_request() -> ProxiedPaymentServiceSetupRecurringRequest {
-    ProxiedPaymentServiceSetupRecurringRequest {
+pub(crate) fn base_proxied_setup_recurring_request() -> PaymentServiceProxySetupRecurringRequest {
+    PaymentServiceProxySetupRecurringRequest {
         merchant_recurring_payment_id: "probe_proxy_mandate_001".to_string(),
         amount: Some(usd_money(0)),
-        vault_card: Some(base_vault_alias_card()),
+        card_proxy: Some(base_card_proxy()),
         auth_type: AuthenticationType::NoThreeDs as i32,
         address: Some(PaymentAddress {
             billing_address: Some(Address::default()),

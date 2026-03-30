@@ -79,11 +79,9 @@ def to_snake_case(name: str) -> str:
 def _service_flow_prefix(service_name: str) -> str | None:
     """
     Derive the transformer name prefix for services whose RPCs collide with
-    DirectPaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
-    prefix — e.g. ``TokenizedPaymentService`` → ``"tokenized"``,
-    ``ProxiedPaymentService`` → ``"proxied"``.
+    PaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
 
-    Base services (``DirectPaymentService``, ``RecurringPaymentService``,
+    Base services (``PaymentService``, ``RecurringPaymentService``,
     ``PaymentMethodAuthenticationService``, etc.) return ``None``.
     
     Also handles standalone services like ``PayoutService`` → ``"payout"``.
@@ -110,8 +108,7 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
 
     Returns {snake_case_rpc_name: {...}}.
     First-occurrence wins for the plain snake key.  When a service-variant
-    RPC collides with an existing plain key (e.g. ``TokenizedPaymentService.
-    Authorize`` collides with ``PaymentService.Authorize``), the entry is
+    RPC collides with an existing plain key, the entry is
     *also* stored under ``{service_prefix}_{rpc_snake}`` so that transformer
     names like ``proxied_authorize`` or ``tokenized_setup_recurring`` can be
     matched by ``discover_flows()``.
@@ -214,7 +211,6 @@ def parse_service_flows(services_dir: Path) -> dict[str, str]:
        invocation (the standard codegen path).
     2. ``pub fn {flow}_req_transformer`` — an explicit wrapper function used when
        a pre-conversion step is needed before delegating to the standard transformer
-       (e.g. TokenizedPaymentService, ProxiedPaymentService).
     """
     flows = {}
     for service_file in services_dir.glob("*.rs"):

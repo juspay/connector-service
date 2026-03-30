@@ -66,6 +66,19 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
+function _buildRefundRequest(connectorTransactionId) {
+    return {
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": connectorTransactionId,
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "customer_request"  // Reason for the refund
+    };
+}
+
 function _buildVoidRequest(connectorTransactionId) {
     return {
         "merchantVoidId": "probe_void_001",  // Identification
@@ -73,6 +86,8 @@ function _buildVoidRequest(connectorTransactionId) {
     };
 }
 
+
+// ANCHOR: scenario_functions
 // Card Payment (Authorize + Capture)
 // Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
 async function processCheckoutCard(merchantTransactionId, config = _defaultConfig) {
@@ -183,16 +198,7 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     }
 
     // Step 2: Refund — return funds to the customer
-    const refundResponse = await paymentClient.refund({
-        "merchantRefundId": "probe_refund_001",  // Identification
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-        "paymentAmount": 1000,  // Amount Information
-        "refundAmount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "reason": "customer_request"  // Reason for the refund
-    });
+    const refundResponse = await paymentClient.refund(_buildRefundRequest(authorizeResponse.connectorTransactionId));
 
     if (refundResponse.status === 'FAILED') {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
@@ -272,6 +278,43 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: PaymentService.proxy_authorize
+async function proxyAuthorize(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: proxy_authorize
+    const proxyResponse = await paymentClient.proxyAuthorize({
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        },
+        "cardProxy": {
+            "cardNumber": "4111111111111111",
+            "cardExpMonth": "03",
+            "cardExpYear": "2030",
+            "cardCvc": "123",
+            "cardHolderName": "John Doe"
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "returnUrl": "https://example.com/return"
+    });
+
+    return { status: proxyResponse.status };
+}
+
+// Flow: PaymentService.Refund
+async function refund(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const refundResponse = await paymentClient.refund(_buildRefundRequest('probe_connector_txn_001'));
+
+    return { status: refundResponse.status };
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -282,7 +325,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, voidPayment };
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, proxyAuthorize, refund, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildRefundRequest, _buildVoidRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

@@ -7,16 +7,13 @@
 
 from payments._generated_service_clients import (
     CustomerClient,
-    DirectPaymentClient,
+    PaymentClient,
     DisputeClient,
     MerchantAuthenticationClient,
     PaymentMethodAuthenticationClient,
     PaymentMethodClient,
     RecurringPaymentClient,
 )
-
-# Backward compatibility alias
-PaymentClient = DirectPaymentClient
 from payments.grpc_client import GrpcClient, GrpcConfig
 
 # Direct access to all types via wildcard imports
