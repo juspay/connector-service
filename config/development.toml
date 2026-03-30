@@ -141,7 +141,6 @@ truelayer.base_url = "https://api.truelayer-sandbox.com"
 truelayer.secondary_base_url = "https://auth.truelayer-sandbox.com"
 itaubank.base_url = "https://sandbox.devportal.itau.com.br"
 
-
 # Generic Events Configuration
 [events]
 enabled = false
