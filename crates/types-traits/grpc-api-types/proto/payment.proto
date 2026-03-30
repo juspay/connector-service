@@ -1270,20 +1270,17 @@ message NmiData {
   // Transaction amount
   Money amount = 1;
 
-  // Transaction currency
-  Currency currency = 2;
-
   // NMI public key for 3DS
-  SecretString public_key = 3;
+  SecretString public_key = 2;
 
   // Customer vault ID for the tokenized card
-  string customer_vault_id = 4;
+  string customer_vault_id = 3;
 
   // Order ID for the transaction
-  string order_id = 5;
+  string order_id = 4;
 
   // URL to redirect to after 3DS completion
-  string continue_redirection_url = 6;
+  string continue_redirection_url = 5;
 }
 
 // Details of an HTTP request, typically for incoming webhooks
