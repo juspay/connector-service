@@ -2941,6 +2941,34 @@ message PaymentServiceVerifyRedirectResponseResponse {
 }
 
 // ============================================================================
+// WALLET SERVICE MESSAGES — Wallet topup webhook verification
+// ============================================================================
+
+// Request message for verifying an inbound wallet topup webhook
+message WalletServiceVerifyTopupWebhookRequest {
+  // Raw webhook body from the connector callback
+  bytes webhook_body = 1;
+
+  // Expected order ID to match against the webhook payload
+  string order_id = 2;
+
+  // Expected amount to match against the webhook payload (string, major units)
+  string amount = 3;
+}
+
+// Response message for wallet topup webhook verification
+message WalletServiceVerifyTopupWebhookResponse {
+  // Whether the webhook verification passed all checks
+  bool verification_result = 1;
+
+  // Human-readable verification result message
+  string message = 2;
+
+  // Error information if verification failed
+  optional ErrorInfo error = 3;
+}
+
+// ============================================================================
 // REFUND SERVICE MESSAGES
 // ============================================================================
 

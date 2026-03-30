@@ -256,8 +256,19 @@ service PaymentMethodAuthenticationService {
 }
 
 // ============================================================================
+// WALLET SERVICE — Manages wallet topup webhook verification.
+// ============================================================================
+
+service WalletService {
+  // Verify an inbound wallet topup webhook callback. Validates checksum integrity,
+  // order ID match, and amount match for the topup transaction.
+  rpc VerifyTopupWebhook(WalletServiceVerifyTopupWebhookRequest) returns (WalletServiceVerifyTopupWebhookResponse);
+}
+
+// ============================================================================
 // PAYOUT SERVICE — Manages payout lifecycle operations.
 // ============================================================================
+
 
 service PayoutService {
   // Creates a payout.

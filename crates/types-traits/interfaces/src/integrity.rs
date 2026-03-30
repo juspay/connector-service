@@ -21,7 +21,7 @@ use domain_types::payouts::payouts_types::{
     PayoutEnrollDisburseAccountRequest, PayoutGetRequest, PayoutStageRequest,
     PayoutTransferRequest, PayoutVoidRequest,
 };
-use domain_types::router_request_types::VerifyWebhookSourceRequestData;
+use domain_types::router_request_types::{VerifyTopupWebhookData, VerifyWebhookSourceRequestData};
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     payouts::router_request_types::{
@@ -39,7 +39,8 @@ use domain_types::{
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        SubmitEvidenceIntegrityObject, VerifyTopupWebhookIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -184,6 +185,7 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(VerifyTopupWebhookData);
 impl_check_integrity!(PayoutCreateRequest);
 impl_check_integrity!(PayoutTransferRequest);
 impl_check_integrity!(PayoutStageRequest);
@@ -404,6 +406,18 @@ impl GetIntegrityObject<VerifyWebhookSourceIntegrityObject> for VerifyWebhookSou
         let webhook_id =
             String::from_utf8(self.merchant_secret.secret.to_vec()).unwrap_or_default();
         VerifyWebhookSourceIntegrityObject { webhook_id }
+    }
+}
+
+impl GetIntegrityObject<VerifyTopupWebhookIntegrityObject> for VerifyTopupWebhookData {
+    fn get_response_integrity_object(&self) -> Option<VerifyTopupWebhookIntegrityObject> {
+        None // Topup webhook verification responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> VerifyTopupWebhookIntegrityObject {
+        VerifyTopupWebhookIntegrityObject {
+            order_id: self.order_id.clone(),
+        }
     }
 }
 
@@ -963,6 +977,28 @@ impl FlowIntegrity for VerifyWebhookSourceIntegrityObject {
                 "webhook_id",
                 &req_integrity_object.webhook_id,
                 &res_integrity_object.webhook_id,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for VerifyTopupWebhookIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.order_id != res_integrity_object.order_id {
+            mismatched_fields.push(format_mismatch(
+                "order_id",
+                &req_integrity_object.order_id,
+                &res_integrity_object.order_id,
             ));
         }
 

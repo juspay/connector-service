@@ -95,3 +95,9 @@ pub enum VerifyWebhookStatus {
     SourceVerified,
     SourceNotVerified,
 }
+
+#[derive(Debug, Clone)]
+pub struct VerifyTopupWebhookResponseData {
+    pub verification_result: bool,
+    pub message: String,
+}

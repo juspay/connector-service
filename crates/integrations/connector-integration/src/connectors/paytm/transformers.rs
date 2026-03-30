@@ -1107,3 +1107,149 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
     })
     .ok()
 }
+
+// ============================================================================
+// VERIFY TOPUP WEBHOOK — Checksum verification for Paytm wallet topup webhooks
+// ============================================================================
+
+/// AES-CBC decryption implementation for PayTM checksum verification.
+/// Mirrors the encrypt function but in reverse:
+/// - Fixed IV: "@@@@&&&&####$$$$" (16 bytes)
+/// - Key length determines AES variant: 16→AES-128, 24→AES-192, other→AES-256
+/// - Mode: CBC with PKCS7 padding
+/// - Input: Base64 encoded encrypted data
+/// - Output: decrypted UTF-8 string
+fn aes_decrypt(encrypted_b64: &str, key: &str) -> CustomResult<String, ConnectorError> {
+    use cbc::cipher::BlockDecryptMut;
+    use cbc::Decryptor;
+
+    let iv = get_paytm_iv();
+    let key_bytes = key.as_bytes();
+    let encrypted_bytes = general_purpose::STANDARD
+        .decode(encrypted_b64)
+        .map_err(|_| ConnectorError::WebhookBodyDecodingFailed)?;
+
+    match key_bytes.len() {
+        constants::AES_128_KEY_LENGTH => {
+            type Aes128CbcDec = Decryptor<Aes128>;
+            let mut key_array = [0u8; constants::AES_128_KEY_LENGTH];
+            key_array.copy_from_slice(key_bytes);
+
+            let decryptor = Aes128CbcDec::new(&key_array.into(), &iv.into());
+            let mut buffer = encrypted_bytes;
+            let decrypted = decryptor
+                .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed)?;
+            String::from_utf8(decrypted.to_vec())
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed.into())
+        }
+        constants::AES_192_KEY_LENGTH => {
+            type Aes192CbcDec = Decryptor<Aes192>;
+            let mut key_array = [0u8; constants::AES_192_KEY_LENGTH];
+            key_array.copy_from_slice(key_bytes);
+
+            let decryptor = Aes192CbcDec::new(&key_array.into(), &iv.into());
+            let mut buffer = encrypted_bytes;
+            let decrypted = decryptor
+                .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed)?;
+            String::from_utf8(decrypted.to_vec())
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed.into())
+        }
+        _ => {
+            type Aes256CbcDec = Decryptor<Aes256>;
+            let mut aes256_key = [0u8; constants::AES_256_KEY_LENGTH];
+            let copy_len = cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
+            if let (Some(dest), Some(src)) =
+                (aes256_key.get_mut(..copy_len), key_bytes.get(..copy_len))
+            {
+                dest.copy_from_slice(src);
+            }
+
+            let decryptor = Aes256CbcDec::new(&aes256_key.into(), &iv.into());
+            let mut buffer = encrypted_bytes;
+            let decrypted = decryptor
+                .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed)?;
+            String::from_utf8(decrypted.to_vec())
+                .map_err(|_| ConnectorError::WebhookBodyDecodingFailed.into())
+        }
+    }
+}
+
+/// Verify a Paytm checksum following the exact Haskell algorithm:
+/// 1. Sort all JSON keys alphabetically
+/// 2. Build pipe-delimited canonical string (skip CHECKSUMHASH key)
+/// 3. URL-decode the CHECKSUMHASH value, strip newlines
+/// 4. AES-CBC decrypt with merchant key
+/// 5. Split: last 4 chars = salt, rest = expected SHA256
+/// 6. Recompute: SHA256(canonical_string + salt)
+/// 7. Compare recomputed vs expected
+pub fn verify_paytm_checksum(
+    json_body: &serde_json::Value,
+    merchant_key: &str,
+) -> CustomResult<bool, ConnectorError> {
+    let obj = match json_body.as_object() {
+        Some(o) => o,
+        None => return Ok(false),
+    };
+
+    // Extract CHECKSUMHASH
+    let checksum_hash = match obj.get("CHECKSUMHASH").and_then(|v| v.as_str()) {
+        Some(cs) => cs.to_string(),
+        None => return Ok(false),
+    };
+
+    // Build canonical string: sort keys alphabetically, skip CHECKSUMHASH,
+    // concatenate values with "|" separator
+    let mut sorted_keys: Vec<&String> = obj.keys().collect();
+    sorted_keys.sort();
+
+    let mut canonical = String::new();
+    for key in &sorted_keys {
+        if key.as_str() == "CHECKSUMHASH" {
+            continue;
+        }
+        let val_str = match obj.get(key.as_str()) {
+            Some(serde_json::Value::String(s)) => {
+                // Skip values containing REFUND or pipe character (per Haskell logic)
+                if s.contains("REFUND") || s.contains('|') {
+                    String::new()
+                } else {
+                    s.clone()
+                }
+            }
+            Some(serde_json::Value::Null) => String::new(),
+            Some(other) => other.to_string(),
+            None => String::new(),
+        };
+        canonical.push_str(&val_str);
+        canonical.push('|');
+    }
+
+    // URL-decode and strip newlines from CHECKSUMHASH
+    let decoded_checksum = urlencoding::decode(&checksum_hash)
+        .unwrap_or(std::borrow::Cow::Borrowed(&checksum_hash))
+        .replace('\n', "")
+        .replace('\r', "");
+
+    // AES decrypt the checksum
+    let decrypted = match aes_decrypt(&decoded_checksum, merchant_key) {
+        Ok(d) => d,
+        Err(_) => return Ok(false),
+    };
+
+    // Split: last 4 chars = salt, rest = expected SHA256
+    if decrypted.len() <= 4 {
+        return Ok(false);
+    }
+    let expected_sha256 = &decrypted[..decrypted.len() - 4];
+    let salt = &decrypted[decrypted.len() - 4..];
+
+    // Recompute hash: SHA256(canonical_string + salt)
+    let hash_input = format!("{canonical}{salt}");
+    let hash_digest = digest::digest(&digest::SHA256, hash_input.as_bytes());
+    let recomputed_sha256 = hex::encode(hash_digest.as_ref());
+
+    Ok(recomputed_sha256 == expected_sha256)
+}

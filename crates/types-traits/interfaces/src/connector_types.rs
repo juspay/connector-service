@@ -18,7 +18,8 @@ use domain_types::{
         PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        SubmitEvidenceData, VerifyTopupWebhookFlowData, VerifyWebhookSourceFlowData,
+        WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
@@ -29,8 +30,8 @@ use domain_types::{
         PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
     },
     router_data::ConnectorSpecificConfig,
-    router_request_types::VerifyWebhookSourceRequestData,
-    router_response_types::VerifyWebhookSourceResponseData,
+    router_request_types::{VerifyTopupWebhookData, VerifyWebhookSourceRequestData},
+    router_response_types::{VerifyTopupWebhookResponseData, VerifyWebhookSourceResponseData},
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
@@ -77,6 +78,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
     + VerifyWebhookSourceV2
+    + VerifyTopupWebhookV2
     + VerifyRedirectResponse
     + PayoutCreateV2
     + PayoutTransferV2
@@ -354,6 +356,16 @@ pub trait VerifyWebhookSourceV2:
     VerifyWebhookSourceFlowData,
     VerifyWebhookSourceRequestData,
     VerifyWebhookSourceResponseData,
+>
+{
+}
+
+pub trait VerifyTopupWebhookV2:
+    ConnectorIntegrationV2<
+    connector_flow::VerifyTopupWebhook,
+    VerifyTopupWebhookFlowData,
+    VerifyTopupWebhookData,
+    VerifyTopupWebhookResponseData,
 >
 {
 }
