@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -119,7 +120,7 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L53)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L56)
 
 ### Other
 
@@ -166,12 +167,12 @@ Generate short-lived connector authentication token. Provides secure credentials
 }
 ```
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L18)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L23) · [Rust](../../examples/iatapay/rust/iatapay.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L60)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L37) · [Rust](../../examples/iatapay/rust/iatapay.rs#L63)
 
 #### refund
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L85)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L44) · [Rust](../../examples/iatapay/rust/iatapay.rs#L88)

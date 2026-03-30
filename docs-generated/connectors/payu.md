@@ -40,13 +40,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -140,8 +141,8 @@ let client = ConnectorClient::new(config, None).unwrap();
 }
 ```
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt) · [Rust](../../examples/payu/rust/payu.rs#L18)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt#L20) · [Rust](../../examples/payu/rust/payu.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt) · [Rust](../../examples/payu/rust/payu.rs#L53)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt#L27) · [Rust](../../examples/payu/rust/payu.rs#L56)

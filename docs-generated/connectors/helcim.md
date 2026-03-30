@@ -39,13 +39,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -111,13 +112,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L5) · [JavaScript](../../examples/helcim/javascript/helcim.js#L27) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L6) · [Rust](../../examples/helcim/rust/helcim.rs#L18)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L22) · [JavaScript](../../examples/helcim/javascript/helcim.js#L27) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L21) · [Rust](../../examples/helcim/rust/helcim.rs#L18)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L11) · [JavaScript](../../examples/helcim/javascript/helcim.js#L75) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L10) · [Rust](../../examples/helcim/rust/helcim.rs#L27)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L56) · [JavaScript](../../examples/helcim/javascript/helcim.js#L75) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L30) · [Rust](../../examples/helcim/rust/helcim.rs#L61)
 
 ## API Reference
 
@@ -166,8 +167,8 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L131) · [Kotlin](../../examples/helcim/kotlin/helcim.kt) · [Rust](../../examples/helcim/rust/helcim.rs#L39)
+**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L131) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L42) · [Rust](../../examples/helcim/rust/helcim.rs#L117)
 
 #### get
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L175) · [Kotlin](../../examples/helcim/kotlin/helcim.kt) · [Rust](../../examples/helcim/rust/helcim.rs#L77)
+**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L175) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L49) · [Rust](../../examples/helcim/rust/helcim.rs#L158)

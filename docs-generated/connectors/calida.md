@@ -39,13 +39,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -105,4 +106,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/calida/python/calida.py) · [JavaScript](../../examples/calida/javascript/calida.ts) · [Kotlin](../../examples/calida/kotlin/calida.kt) · [Rust](../../examples/calida/rust/calida.rs#L18)
+**Examples:** [Python](../../examples/calida/python/calida.py) · [JavaScript](../../examples/calida/javascript/calida.ts) · [Kotlin](../../examples/calida/kotlin/calida.kt#L11) · [Rust](../../examples/calida/rust/calida.rs#L18)

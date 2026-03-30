@@ -18,7 +18,41 @@ fn build_client() -> ConnectorClient {
 pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Card Payment (Automatic Capture)
     // Step 1: Authorize — reserve funds on the payment method
-    let response = client.authorize(todo!(), &HashMap::new(), None).await?;
+    let response = client.authorize(
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
+        }
+    },
+    "capture_method": "AUTOMATIC",
+    "address": {
+        "billing_address": {
+            "first_name": "John",
+            "line1": "123 Main St",
+            "zip_code": "98101",
+        },
+    },
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "browser_info": {
+        "ip_address": "1.2.3.4",
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     Ok("success".to_string())
 }
@@ -27,10 +61,54 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_id
 pub async fn process_get_payment(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Get Payment Status
     // Step 1: Authorize — reserve funds on the payment method
-    let response = client.authorize(todo!(), &HashMap::new(), None).await?;
+    let response = client.authorize(
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
+        }
+    },
+    "capture_method": "MANUAL",
+    "address": {
+        "billing_address": {
+            "first_name": "John",
+            "line1": "123 Main St",
+            "zip_code": "98101",
+        },
+    },
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "browser_info": {
+        "ip_address": "1.2.3.4",
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     // Step 2: Get — retrieve current payment status from the connector
-    let response = client.get(todo!(), &HashMap::new(), None).await?;
+    let response = client.get(
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",
+    "connector_transaction_id": "probe_connector_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     Ok("success".to_string())
 }
@@ -39,19 +117,21 @@ pub async fn process_get_payment(client: &ConnectorClient, _merchant_id: &str) -
 pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.authorize (Card)
     let response = client.authorize(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "payment_method": {
-        "card": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
         }
     },
     "capture_method": "AUTOMATIC",
@@ -59,35 +139,36 @@ pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<S
         "billing_address": {
             "first_name": "John",
             "line1": "123 Main St",
-            "zip_code": "98101"
-        }
+            "zip_code": "98101",
+        },
     },
     "auth_type": "NO_THREE_DS",
     "return_url": "https://example.com/return",
     "browser_info": {
-        "ip_address": "1.2.3.4"
-    }
-        }).into(),
+        "ip_address": "1.2.3.4",
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.get
     let response = client.get(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
-    }
-        }).into(),
+        "currency": "USD",
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[tokio::main]

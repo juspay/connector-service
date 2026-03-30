@@ -35,13 +35,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -112,16 +113,16 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 
 #### capture
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt) · [Rust](../../examples/payload/rust/payload.rs#L17)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L24) · [Rust](../../examples/payload/rust/payload.rs#L17)
 
 #### get
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt) · [Rust](../../examples/payload/rust/payload.rs#L41)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L31) · [Rust](../../examples/payload/rust/payload.rs#L41)
 
 #### refund
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt) · [Rust](../../examples/payload/rust/payload.rs#L105)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L45) · [Rust](../../examples/payload/rust/payload.rs#L105)
 
 #### void
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt) · [Rust](../../examples/payload/rust/payload.rs#L131)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L52) · [Rust](../../examples/payload/rust/payload.rs#L131)

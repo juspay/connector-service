@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -115,7 +116,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L5) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L29) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L6) · [Rust](../../examples/fiserv/rust/fiserv.rs#L18)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L24) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L29) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L23) · [Rust](../../examples/fiserv/rust/fiserv.rs#L18)
 
 ### Card Payment (Automatic Capture)
 
@@ -129,25 +130,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L13) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L85) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L10) · [Rust](../../examples/fiserv/rust/fiserv.rs#L30)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L60) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L85) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L35) · [Rust](../../examples/fiserv/rust/fiserv.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L19) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L127) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L14) · [Rust](../../examples/fiserv/rust/fiserv.rs#L39)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L87) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L127) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L44) · [Rust](../../examples/fiserv/rust/fiserv.rs#L105)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L27) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L185) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L18) · [Rust](../../examples/fiserv/rust/fiserv.rs#L51)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L125) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L185) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L56) · [Rust](../../examples/fiserv/rust/fiserv.rs#L157)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L35) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L233) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L22) · [Rust](../../examples/fiserv/rust/fiserv.rs#L63)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L157) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L233) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L68) · [Rust](../../examples/fiserv/rust/fiserv.rs#L203)
 
 ## API Reference
 
@@ -199,20 +200,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L283) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt) · [Rust](../../examples/fiserv/rust/fiserv.rs#L75)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L283) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L80) · [Rust](../../examples/fiserv/rust/fiserv.rs#L253)
 
 #### capture
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L321) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt) · [Rust](../../examples/fiserv/rust/fiserv.rs#L107)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L321) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L87) · [Rust](../../examples/fiserv/rust/fiserv.rs#L288)
 
 #### get
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L340) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt) · [Rust](../../examples/fiserv/rust/fiserv.rs#L124)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L340) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L94) · [Rust](../../examples/fiserv/rust/fiserv.rs#L305)
 
 #### refund
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L355) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt) · [Rust](../../examples/fiserv/rust/fiserv.rs#L141)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L355) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L101) · [Rust](../../examples/fiserv/rust/fiserv.rs#L322)
 
 #### void
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L376) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt) · [Rust](../../examples/fiserv/rust/fiserv.rs#L160)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py) · [JavaScript](../../examples/fiserv/javascript/fiserv.ts#L376) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L108) · [Rust](../../examples/fiserv/rust/fiserv.rs#L341)

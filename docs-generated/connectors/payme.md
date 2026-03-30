@@ -39,13 +39,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -109,7 +110,7 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### capture
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L18)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L15) · [Rust](../../examples/payme/rust/payme.rs#L18)
 
 #### create_order
 
@@ -117,12 +118,12 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L51)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L29) · [Rust](../../examples/payme/rust/payme.rs#L51)
 
 #### refund
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L68)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L36) · [Rust](../../examples/payme/rust/payme.rs#L68)
 
 #### void
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L87)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L43) · [Rust](../../examples/payme/rust/payme.rs#L87)

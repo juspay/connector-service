@@ -5,7 +5,7 @@ from __future__ import annotations
 from .base import BaseRenderer
 from ._shared import (
     _SchemaDB, _conn_enum_rust, _CONNECTOR_CONFIG_FIELDS, _STEP_DESCRIPTIONS,
-    _FLOW_KEY_TO_METHOD, _json_scalar
+    _FLOW_KEY_TO_METHOD, _FLOW_KEY_TO_GRPC_REQUEST, _json_scalar
 )
 
 
@@ -63,7 +63,7 @@ let client = ConnectorClient::new(config, None).unwrap();'''
         items = list(proto_req.items())
         
         for idx, (key, val) in enumerate(items):
-            trailing = "," if idx < len(items) - 1 else ""
+            trailing = ","  # serde_json::json! allows trailing commas; always add for safety
             comment = db.get_comment(msg_name, key)
             child_msg = db.get_type(msg_name, key)
             cmt_part = f"  // {comment}" if comment else ""
@@ -172,8 +172,9 @@ async fn main() {{
         for step_num, flow_key in enumerate(scenario.flows, 1):
             desc = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
             meta = flow_metadata.get(flow_key, {})
-            grpc_req = meta.get("grpc_request", "")
-            
+            grpc_req = (meta.get("grpc_request", "")
+                        or _FLOW_KEY_TO_GRPC_REQUEST.get(flow_key, ""))
+
             # Get payload for this flow
             payload = flow_payloads.get(flow_key, {})
             if flow_key == "authorize":
@@ -187,13 +188,15 @@ async fn main() {{
             
             lines.append(f"    // Step {step_num}: {desc}")
             
-            if payload and grpc_req:
+            if grpc_req:
                 # Generate actual JSON body
                 json_lines = self._build_json_body(payload, grpc_req, {})
                 json_body = "\n".join(json_lines)
                 lines.append(f"    let response = client.{flow_key}(")
+                # Use ::from_value with proper JSON - json!({...}) produces Value, from_value converts it
                 lines.append(f"        serde_json::from_value::<{grpc_req}>(serde_json::json!({{")
-                lines.append(json_body)
+                if json_lines:
+                    lines.append(json_body)
                 lines.append("        })).unwrap_or_default(),")
                 lines.append("        &HashMap::new(), None")
                 lines.append("    ).await?;")
@@ -212,7 +215,8 @@ async fn main() {{
         meta = flow_metadata.get(flow_key, {})
         svc = meta.get("service_name", "PaymentService")
         rpc = meta.get("rpc_name", flow_key)
-        grpc_req = meta.get("grpc_request", "")
+        grpc_req = (meta.get("grpc_request", "")
+                    or _FLOW_KEY_TO_GRPC_REQUEST.get(flow_key, ""))
         
         comment = f"// Flow: {svc}.{rpc}"
         if pm_label:
@@ -243,7 +247,7 @@ async fn main() {{
         else:
             lines.append(f"    let response = client.{flow_key}(todo!(), &HashMap::new(), None).await?;")
         
-        lines.append('    Ok(format!("Flow completed: {:?}", response.status()))')
+        lines.append('    Ok("success".to_string())')
         lines.append("}")
         
         return "\n".join(lines)

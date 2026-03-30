@@ -44,13 +44,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -129,4 +130,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 
 #### get
 
-**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.ts) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt) · [Rust](../../examples/truelayer/rust/truelayer.rs#L25)
+**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.ts) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L22) · [Rust](../../examples/truelayer/rust/truelayer.rs#L25)

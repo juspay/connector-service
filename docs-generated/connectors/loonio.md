@@ -40,13 +40,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -107,4 +108,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/loonio/python/loonio.py) · [JavaScript](../../examples/loonio/javascript/loonio.ts) · [Kotlin](../../examples/loonio/kotlin/loonio.kt) · [Rust](../../examples/loonio/rust/loonio.rs#L18)
+**Examples:** [Python](../../examples/loonio/python/loonio.py) · [JavaScript](../../examples/loonio/javascript/loonio.ts) · [Kotlin](../../examples/loonio/kotlin/loonio.kt#L11) · [Rust](../../examples/loonio/rust/loonio.rs#L18)

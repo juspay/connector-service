@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -142,8 +143,8 @@ let client = ConnectorClient::new(config, None).unwrap();
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt) · [Rust](../../examples/phonepe/rust/phonepe.rs#L18)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L19) · [Rust](../../examples/phonepe/rust/phonepe.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt) · [Rust](../../examples/phonepe/rust/phonepe.rs#L47)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L26) · [Rust](../../examples/phonepe/rust/phonepe.rs#L50)

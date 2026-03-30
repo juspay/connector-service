@@ -39,13 +39,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -105,4 +106,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/mifinity/python/mifinity.py) · [JavaScript](../../examples/mifinity/javascript/mifinity.ts) · [Kotlin](../../examples/mifinity/kotlin/mifinity.kt) · [Rust](../../examples/mifinity/rust/mifinity.rs#L18)
+**Examples:** [Python](../../examples/mifinity/python/mifinity.py) · [JavaScript](../../examples/mifinity/javascript/mifinity.ts) · [Kotlin](../../examples/mifinity/kotlin/mifinity.kt#L11) · [Rust](../../examples/mifinity/rust/mifinity.rs#L18)

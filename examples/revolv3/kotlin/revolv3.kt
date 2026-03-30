@@ -1,21 +1,105 @@
 // Auto-generated for revolv3
 package examples.revolv3
 
-import payments.PaymentClient
+import payments.AcceptanceType
+import payments.Address
+import payments.AuthenticationType
+import payments.CaptureMethod
+import payments.CardDetails
+import payments.CardNumberType
+import payments.ConnectorConfig
+import payments.Currency
+import payments.CustomerAcceptance
+import payments.DirectPaymentClient
+import payments.Environment
+import payments.FutureUsage
+import payments.Money
+import payments.PaymentAddress
+import payments.PaymentMethod
+import payments.PaymentServiceAuthorizeRequest
+import payments.PaymentServiceCaptureRequest
+import payments.PaymentServiceRefundRequest
+import payments.PaymentServiceSetupRecurringRequest
+import payments.PaymentServiceVoidRequest
+import payments.SecretString
 
-fun processCheckoutCard(txnId: String, config: ConnectorConfig) {
+fun processCheckoutCard(txnId: String, config: ConnectorConfig): Map<String, Any?> {
     // Card Payment (Authorize + Capture)
-    val client = PaymentClient(config)
+    val directPaymentClient = DirectPaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val result1 = directPaymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().setMerchantTransactionId("probe_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setCaptureMethod(CaptureMethod.MANUAL).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setReturnUrl("https://example.com/return").build())
+
+    // Step 2: Capture — settle the reserved funds
+    val result2 = directPaymentClient.capture(PaymentServiceCaptureRequest.newBuilder().setMerchantCaptureId("probe_capture_001").setConnectorTransactionId("probe_connector_txn_001").setAmountToCapture(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).build())
+
+    return mapOf("status" to "ok")
 }
-fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig) {
+fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig): Map<String, Any?> {
     // Card Payment (Automatic Capture)
-    val client = PaymentClient(config)
+    val directPaymentClient = DirectPaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val result = directPaymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().setMerchantTransactionId("probe_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setCaptureMethod(CaptureMethod.AUTOMATIC).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setReturnUrl("https://example.com/return").build())
+
+    return mapOf("status" to "ok")
 }
-fun processRefund(txnId: String, config: ConnectorConfig) {
+fun processRefund(txnId: String, config: ConnectorConfig): Map<String, Any?> {
     // Refund a Payment
-    val client = PaymentClient(config)
+    val directPaymentClient = DirectPaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val result1 = directPaymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().setMerchantTransactionId("probe_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setCaptureMethod(CaptureMethod.AUTOMATIC).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setReturnUrl("https://example.com/return").build())
+
+    // Step 2: Refund — return funds to the customer
+    val result2 = directPaymentClient.refund(PaymentServiceRefundRequest.newBuilder().setMerchantRefundId("probe_refund_001").setConnectorTransactionId("probe_connector_txn_001").setPaymentAmount(1000).setRefundAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setReason("customer_request").build())
+
+    return mapOf("status" to "ok")
 }
-fun processVoidPayment(txnId: String, config: ConnectorConfig) {
+fun processVoidPayment(txnId: String, config: ConnectorConfig): Map<String, Any?> {
     // Void a Payment
-    val client = PaymentClient(config)
+    val directPaymentClient = DirectPaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val result1 = directPaymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().setMerchantTransactionId("probe_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setCaptureMethod(CaptureMethod.MANUAL).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setReturnUrl("https://example.com/return").build())
+
+    // Step 2: Void — release reserved funds (cancel authorization)
+    val result2 = directPaymentClient.void(PaymentServiceVoidRequest.newBuilder().setMerchantVoidId("probe_void_001").setConnectorTransactionId("probe_connector_txn_001").build())
+
+    return mapOf("status" to "ok")
+}
+fun authorize(txnId: String, config: ConnectorConfig): Map<String, Any?> {
+    // Flow: PaymentService.authorize (Card)
+    val directPaymentClient = DirectPaymentClient(config)
+
+    val result = directPaymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().setMerchantTransactionId("probe_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setCaptureMethod(CaptureMethod.AUTOMATIC).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setReturnUrl("https://example.com/return").build())
+    return mapOf("status" to "ok")
+}
+fun capture(txnId: String, config: ConnectorConfig): Map<String, Any?> {
+    // Flow: PaymentService.capture
+    val directPaymentClient = DirectPaymentClient(config)
+
+    val result = directPaymentClient.capture(PaymentServiceCaptureRequest.newBuilder().setMerchantCaptureId("probe_capture_001").setConnectorTransactionId("probe_connector_txn_001").setAmountToCapture(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).build())
+    return mapOf("status" to "ok")
+}
+fun refund(txnId: String, config: ConnectorConfig): Map<String, Any?> {
+    // Flow: PaymentService.refund
+    val directPaymentClient = DirectPaymentClient(config)
+
+    val result = directPaymentClient.refund(PaymentServiceRefundRequest.newBuilder().setMerchantRefundId("probe_refund_001").setConnectorTransactionId("probe_connector_txn_001").setPaymentAmount(1000).setRefundAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).setReason("customer_request").build())
+    return mapOf("status" to "ok")
+}
+fun setup_recurring(txnId: String, config: ConnectorConfig): Map<String, Any?> {
+    // Flow: PaymentService.setup_recurring
+    val directPaymentClient = DirectPaymentClient(config)
+
+    val result = directPaymentClient.setup_recurring(PaymentServiceSetupRecurringRequest.newBuilder().setMerchantRecurringPaymentId("probe_mandate_001").setAmount(Money.newBuilder().setMinorAmount(0).setCurrency(Currency.USD).build()).setPaymentMethod(PaymentMethod.newBuilder().setCard(CardDetails.newBuilder().setCardNumber(CardNumberType.newBuilder().setValue("4111111111111111").build()).setCardExpMonth(SecretString.newBuilder().setValue("03").build()).setCardExpYear(SecretString.newBuilder().setValue("2030").build()).setCardCvc(SecretString.newBuilder().setValue("737").build()).setCardHolderName(SecretString.newBuilder().setValue("John Doe").build()).build()).build()).setAddress(PaymentAddress.newBuilder().setBillingAddress(Address.newBuilder().build()).build()).setAuthType(AuthenticationType.NO_THREE_DS).setEnrolledFor3Ds(false).setReturnUrl("https://example.com/mandate-return").setSetupFutureUsage(FutureUsage.OFF_SESSION).setRequestIncrementalAuthorization(false).setCustomerAcceptance(CustomerAcceptance.newBuilder().setAcceptanceType(AcceptanceType.OFFLINE).setAcceptedAt(0).build()).build())
+    return mapOf("status" to "ok")
+}
+fun void(txnId: String, config: ConnectorConfig): Map<String, Any?> {
+    // Flow: PaymentService.void
+    val directPaymentClient = DirectPaymentClient(config)
+
+    val result = directPaymentClient.void(PaymentServiceVoidRequest.newBuilder().setMerchantVoidId("probe_void_001").setConnectorTransactionId("probe_connector_txn_001").build())
+    return mapOf("status" to "ok")
 }

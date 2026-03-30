@@ -18,29 +18,32 @@ fn build_client() -> ConnectorClient {
 pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.authorize (UpiCollect)
     let response = client.authorize(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "payment_method": {
-        "upi_collect": {
-            "vpa_id": "test@upi"
+        "payment_method": {
+            "upi_collect": {
+                "vpa_id": "test@upi",
+            },
         }
     },
     "capture_method": "AUTOMATIC",
     "address": {
         "billing_address": {
-        }
+        },
     },
     "auth_type": "NO_THREE_DS",
     "return_url": "https://example.com/return",
-    "session_token": "probe_session_token"
-        }).into(),
+    "session_token": "probe_session_token",
+    "order_details": [],
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
@@ -50,29 +53,29 @@ pub async fn create_session_token(client: &ConnectorClient, _merchant_id: &str) 
         serde_json::from_value::<MerchantAuthenticationServiceCreateSessionTokenRequest>(serde_json::json!({
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
-    }
+        "currency": "USD",
+    },
         })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.get
     let response = client.get(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
-    }
-        }).into(),
+        "currency": "USD",
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[tokio::main]

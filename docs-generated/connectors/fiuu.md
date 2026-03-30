@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -115,7 +116,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L5) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L61) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L6) · [Rust](../../examples/fiuu/rust/fiuu.rs#L18)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L26) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L61) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L31) · [Rust](../../examples/fiuu/rust/fiuu.rs#L18)
 
 ### Card Payment (Automatic Capture)
 
@@ -129,7 +130,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L13) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L118) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L10) · [Rust](../../examples/fiuu/rust/fiuu.rs#L30)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L63) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L118) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L43) · [Rust](../../examples/fiuu/rust/fiuu.rs#L69)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -143,25 +144,25 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L19) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L161) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L14) · [Rust](../../examples/fiuu/rust/fiuu.rs#L39)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L91) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L161) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L52) · [Rust](../../examples/fiuu/rust/fiuu.rs#L107)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L25) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L211) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L18) · [Rust](../../examples/fiuu/rust/fiuu.rs#L48)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L126) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L211) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L61) · [Rust](../../examples/fiuu/rust/fiuu.rs#L152)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L33) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L271) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L22) · [Rust](../../examples/fiuu/rust/fiuu.rs#L60)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L166) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L271) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L73) · [Rust](../../examples/fiuu/rust/fiuu.rs#L206)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L41) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L320) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L26) · [Rust](../../examples/fiuu/rust/fiuu.rs#L72)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L199) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L320) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L85) · [Rust](../../examples/fiuu/rust/fiuu.rs#L253)
 
 ## API Reference
 
@@ -185,7 +186,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L444) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L151)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L444) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L374)
 
 ### Other
 
@@ -248,20 +249,20 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 }
 ```
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L371) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L84)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L371) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L97) · [Rust](../../examples/fiuu/rust/fiuu.rs#L304)
 
 #### capture
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L410) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L117)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L410) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L104) · [Rust](../../examples/fiuu/rust/fiuu.rs#L340)
 
 #### get
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L429) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L134)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L429) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L111) · [Rust](../../examples/fiuu/rust/fiuu.rs#L357)
 
 #### refund
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L453) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L190)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L453) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L125) · [Rust](../../examples/fiuu/rust/fiuu.rs#L413)
 
 #### void
 
-**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L475) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt) · [Rust](../../examples/fiuu/rust/fiuu.rs#L210)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.ts#L475) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L132) · [Rust](../../examples/fiuu/rust/fiuu.rs#L433)

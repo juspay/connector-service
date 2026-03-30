@@ -39,13 +39,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -122,16 +123,16 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 
 #### capture
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L18)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L22) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L35)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L29) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L35)
 
 #### refund
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L84)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L43) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L84)
 
 #### void
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L103)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.ts) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L50) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L103)

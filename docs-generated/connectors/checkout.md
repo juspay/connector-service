@@ -35,13 +35,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -101,7 +102,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L6) · [JavaScript](../../examples/checkout/javascript/checkout.js#L51) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L6) · [Rust](../../examples/checkout/rust/checkout.rs#L17)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L35) · [JavaScript](../../examples/checkout/javascript/checkout.js#L51) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L34) · [Rust](../../examples/checkout/rust/checkout.rs#L17)
 
 ### Card Payment (Automatic Capture)
 
@@ -115,7 +116,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L14) · [JavaScript](../../examples/checkout/javascript/checkout.js#L107) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L10) · [Rust](../../examples/checkout/rust/checkout.rs#L29)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L71) · [JavaScript](../../examples/checkout/javascript/checkout.js#L107) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L46) · [Rust](../../examples/checkout/rust/checkout.rs#L67)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -129,13 +130,13 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L20) · [JavaScript](../../examples/checkout/javascript/checkout.js#L149) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L14) · [Rust](../../examples/checkout/rust/checkout.rs#L38)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L98) · [JavaScript](../../examples/checkout/javascript/checkout.js#L149) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L55) · [Rust](../../examples/checkout/rust/checkout.rs#L104)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L26) · [JavaScript](../../examples/checkout/javascript/checkout.js#L189) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L18) · [Rust](../../examples/checkout/rust/checkout.rs#L47)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L123) · [JavaScript](../../examples/checkout/javascript/checkout.js#L189) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L64) · [Rust](../../examples/checkout/rust/checkout.rs#L139)
 
 ### Recurring / Mandate Payments
 
@@ -148,19 +149,19 @@ Store a payment mandate with SetupRecurring, then charge it repeatedly with Recu
 | `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
 | `FAILED` | Setup failed — customer must re-enter payment details |
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L34) · [JavaScript](../../examples/checkout/javascript/checkout.js#L247) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L22) · [Rust](../../examples/checkout/rust/checkout.rs#L59)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L161) · [JavaScript](../../examples/checkout/javascript/checkout.js#L247) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L76) · [Rust](../../examples/checkout/rust/checkout.rs#L191)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L43) · [JavaScript](../../examples/checkout/javascript/checkout.js#L308) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L26) · [Rust](../../examples/checkout/rust/checkout.rs#L97)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L216) · [JavaScript](../../examples/checkout/javascript/checkout.js#L308) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L89) · [Rust](../../examples/checkout/rust/checkout.rs#L262)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py#L51) · [JavaScript](../../examples/checkout/javascript/checkout.js#L356) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L30) · [Rust](../../examples/checkout/rust/checkout.rs#L109)
+**Examples:** [Python](../../examples/checkout/python/checkout.py#L248) · [JavaScript](../../examples/checkout/javascript/checkout.js#L356) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L101) · [Rust](../../examples/checkout/rust/checkout.rs#L308)
 
 ## API Reference
 
@@ -185,7 +186,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L478) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L187)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L478) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L427)
 
 ### Other
 
@@ -239,24 +240,24 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 }
 ```
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L406) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L121)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L406) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L113) · [Rust](../../examples/checkout/rust/checkout.rs#L358)
 
 #### capture
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L444) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L153)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L444) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L120) · [Rust](../../examples/checkout/rust/checkout.rs#L393)
 
 #### get
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L463) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L170)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L463) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L127) · [Rust](../../examples/checkout/rust/checkout.rs#L410)
 
 #### refund
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L487) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L220)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L487) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L141) · [Rust](../../examples/checkout/rust/checkout.rs#L460)
 
 #### setup_recurring
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L508) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L239)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L508) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L479)
 
 #### void
 
-**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L548) · [Kotlin](../../examples/checkout/kotlin/checkout.kt) · [Rust](../../examples/checkout/rust/checkout.rs#L277)
+**Examples:** [Python](../../examples/checkout/python/checkout.py) · [JavaScript](../../examples/checkout/javascript/checkout.ts#L548) · [Kotlin](../../examples/checkout/kotlin/checkout.kt#L155) · [Rust](../../examples/checkout/rust/checkout.rs#L519)

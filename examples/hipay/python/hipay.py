@@ -1,60 +1,248 @@
 # Auto-generated for hipay
 import asyncio
-from payments import TokenizedPaymentClient
-from payments import PaymentClient
 from payments import PaymentMethodClient
+from payments import PaymentClient
+from payments import TokenizedPaymentClient
+from payments.generated.payment_methods_pb2 import (
+    CardDetails,
+    CardNumberType,
+    PaymentMethod,
+    SecretString,
+)
+from payments.generated.payment_pb2 import (
+    Address,
+    AuthenticationType,
+    CaptureMethod,
+    Currency,
+    Money,
+    PaymentAddress,
+    PaymentMethodServiceTokenizeRequest,
+    PaymentServiceAuthorizeRequest,
+    PaymentServiceCaptureRequest,
+    PaymentServiceGetRequest,
+    PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest,
+    TokenizedPaymentServiceAuthorizeRequest,
+)
 
 async def process_checkout_card(merchant_id, config):
     """Card Payment (Authorize + Capture)"""
     client = PaymentClient(config)
     # Step 1: Authorize — reserve funds on the payment method
-    result = await client.authorize(...)
+    result = await client.authorize(PaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            capture_method=CaptureMethod.Value('MANUAL'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            auth_type=AuthenticationType.Value('NO_THREE_DS'),
+            return_url='https://example.com/return',
+        ))
     # Step 2: Capture — settle the reserved funds
-    result = await client.capture(...)
+    result = await client.capture(PaymentServiceCaptureRequest(
+            merchant_capture_id='probe_capture_001',
+            connector_transaction_id='probe_connector_txn_001',
+            amount_to_capture=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+        ))
     return result
 async def process_checkout_autocapture(merchant_id, config):
     """Card Payment (Automatic Capture)"""
     client = PaymentClient(config)
     # Step 1: Authorize — reserve funds on the payment method
-    result = await client.authorize(...)
+    result = await client.authorize(PaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            capture_method=CaptureMethod.Value('AUTOMATIC'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            auth_type=AuthenticationType.Value('NO_THREE_DS'),
+            return_url='https://example.com/return',
+        ))
     return result
 async def process_refund(merchant_id, config):
     """Refund a Payment"""
     client = PaymentClient(config)
     # Step 1: Authorize — reserve funds on the payment method
-    result = await client.authorize(...)
+    result = await client.authorize(PaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            capture_method=CaptureMethod.Value('AUTOMATIC'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            auth_type=AuthenticationType.Value('NO_THREE_DS'),
+            return_url='https://example.com/return',
+        ))
     # Step 2: Refund — return funds to the customer
-    result = await client.refund(...)
+    result = await client.refund(PaymentServiceRefundRequest(
+            merchant_refund_id='probe_refund_001',
+            connector_transaction_id='probe_connector_txn_001',
+            payment_amount=1000,
+            refund_amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            reason='customer_request',
+        ))
     return result
 async def process_void_payment(merchant_id, config):
     """Void a Payment"""
     client = PaymentClient(config)
     # Step 1: Authorize — reserve funds on the payment method
-    result = await client.authorize(...)
+    result = await client.authorize(PaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            capture_method=CaptureMethod.Value('MANUAL'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            auth_type=AuthenticationType.Value('NO_THREE_DS'),
+            return_url='https://example.com/return',
+        ))
     # Step 2: Void — release reserved funds (cancel authorization)
-    result = await client.void(...)
+    result = await client.void(PaymentServiceVoidRequest(
+            merchant_void_id='probe_void_001',
+            connector_transaction_id='probe_connector_txn_001',
+        ))
     return result
 async def process_get_payment(merchant_id, config):
     """Get Payment Status"""
     client = PaymentClient(config)
     # Step 1: Authorize — reserve funds on the payment method
-    result = await client.authorize(...)
+    result = await client.authorize(PaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            capture_method=CaptureMethod.Value('MANUAL'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            auth_type=AuthenticationType.Value('NO_THREE_DS'),
+            return_url='https://example.com/return',
+        ))
     # Step 2: Get — retrieve current payment status from the connector
-    result = await client.get(...)
+    result = await client.get(PaymentServiceGetRequest(
+            merchant_transaction_id='probe_merchant_txn_001',
+            connector_transaction_id='probe_connector_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+        ))
     return result
 async def process_tokenize(merchant_id, config):
     """Tokenize Payment Method"""
     pm_client = PaymentMethodClient(config)
     # Step 1: Tokenize — store card details and return a reusable token
-    result = await pm_client.tokenize(...)
+    result = await pm_client.tokenize(PaymentMethodServiceTokenizeRequest(
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            payment_method=PaymentMethod(
+                card=CardDetails(
+                    card_number=CardNumberType(value='4111111111111111'),
+                    card_exp_month=SecretString(value='03'),
+                    card_exp_year=SecretString(value='2030'),
+                    card_cvc=SecretString(value='737'),
+                    card_holder_name=SecretString(value='John Doe'),
+                ),
+            ),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+        ))
     return result
 async def process_tokenized_checkout(merchant_id, config):
     """Tokenized Payment (Authorize + Capture)"""
     client = PaymentClient(config)
     # Step 1: Tokenized Authorize — reserve funds using a connector-issued payment method token
-    result = await client.tokenized_authorize(...)
+    result = await client.tokenized_authorize(TokenizedPaymentServiceAuthorizeRequest(
+            merchant_transaction_id='probe_tokenized_txn_001',
+            amount=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+            connector_token=SecretString(value='pm_1AbcXyzStripeTestToken'),
+            address=PaymentAddress(
+                billing_address=Address(),
+            ),
+            capture_method=CaptureMethod.Value('AUTOMATIC'),
+            return_url='https://example.com/return',
+        ))
     # Step 2: Capture — settle the reserved funds
-    result = await client.capture(...)
+    result = await client.capture(PaymentServiceCaptureRequest(
+            merchant_capture_id='probe_capture_001',
+            connector_transaction_id='probe_connector_txn_001',
+            amount_to_capture=Money(
+                minor_amount=1000,
+                currency=Currency.Value('USD'),
+            ),
+        ))
     return result
 
 if __name__ == "__main__":

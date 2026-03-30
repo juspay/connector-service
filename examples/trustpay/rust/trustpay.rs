@@ -18,7 +18,54 @@ fn build_client() -> ConnectorClient {
 pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Card Payment (Automatic Capture)
     // Step 1: Authorize — reserve funds on the payment method
-    let response = client.authorize(todo!(), &HashMap::new(), None).await?;
+    let response = client.authorize(
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
+        }
+    },
+    "capture_method": "AUTOMATIC",
+    "customer": {
+        "email": "test@example.com",
+    },
+    "address": {
+        "billing_address": {
+            "first_name": "John",
+            "line1": "123 Main St",
+            "city": "Seattle",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+        },
+    },
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "browser_info": {
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "ip_address": "1.2.3.4",
+    },
+    "state": {
+        "access_token": {
+            "token": "probe_access_token",
+            "expires_in_seconds": 3600,
+            "token_type": "Bearer",
+        },
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     Ok("success".to_string())
 }
@@ -27,10 +74,76 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_id
 pub async fn process_refund(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Refund a Payment
     // Step 1: Authorize — reserve funds on the payment method
-    let response = client.authorize(todo!(), &HashMap::new(), None).await?;
+    let response = client.authorize(
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
+        }
+    },
+    "capture_method": "AUTOMATIC",
+    "customer": {
+        "email": "test@example.com",
+    },
+    "address": {
+        "billing_address": {
+            "first_name": "John",
+            "line1": "123 Main St",
+            "city": "Seattle",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+        },
+    },
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "browser_info": {
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "ip_address": "1.2.3.4",
+    },
+    "state": {
+        "access_token": {
+            "token": "probe_access_token",
+            "expires_in_seconds": 3600,
+            "token_type": "Bearer",
+        },
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     // Step 2: Refund — return funds to the customer
-    let response = client.refund(todo!(), &HashMap::new(), None).await?;
+    let response = client.refund(
+        serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",
+    "connector_transaction_id": "probe_connector_txn_001",
+    "payment_amount": 1000,
+    "refund_amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "reason": "customer_request",
+    "state": {
+        "access_token": {
+            "token": "probe_access_token",
+            "expires_in_seconds": 3600,
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     Ok("success".to_string())
 }
@@ -39,10 +152,74 @@ pub async fn process_refund(client: &ConnectorClient, _merchant_id: &str) -> Res
 pub async fn process_get_payment(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Get Payment Status
     // Step 1: Authorize — reserve funds on the payment method
-    let response = client.authorize(todo!(), &HashMap::new(), None).await?;
+    let response = client.authorize(
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
+        }
+    },
+    "capture_method": "MANUAL",
+    "customer": {
+        "email": "test@example.com",
+    },
+    "address": {
+        "billing_address": {
+            "first_name": "John",
+            "line1": "123 Main St",
+            "city": "Seattle",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+        },
+    },
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "browser_info": {
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "ip_address": "1.2.3.4",
+    },
+    "state": {
+        "access_token": {
+            "token": "probe_access_token",
+            "expires_in_seconds": 3600,
+            "token_type": "Bearer",
+        },
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     // Step 2: Get — retrieve current payment status from the connector
-    let response = client.get(todo!(), &HashMap::new(), None).await?;
+    let response = client.get(
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",
+    "connector_transaction_id": "probe_connector_txn_001",
+    "amount": {
+        "minor_amount": 1000,
+        "currency": "USD",
+    },
+    "state": {
+        "access_token": {
+            "token": "probe_access_token",
+            "expires_in_seconds": 3600,
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
+        &HashMap::new(), None
+    ).await?;
 
     Ok("success".to_string())
 }
@@ -51,24 +228,26 @@ pub async fn process_get_payment(client: &ConnectorClient, _merchant_id: &str) -
 pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.authorize (Card)
     let response = client.authorize(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "payment_method": {
-        "card": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"
+        "payment_method": {
+            "card": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",
+            },
         }
     },
     "capture_method": "AUTOMATIC",
     "customer": {
-        "email": "test@example.com"
+        "email": "test@example.com",
     },
     "address": {
         "billing_address": {
@@ -76,106 +255,107 @@ pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<S
             "line1": "123 Main St",
             "city": "Seattle",
             "zip_code": "98101",
-            "country_alpha2_code": "US"
-        }
+            "country_alpha2_code": "US",
+        },
     },
     "auth_type": "NO_THREE_DS",
     "return_url": "https://example.com/return",
     "browser_info": {
         "user_agent": "Mozilla/5.0 (probe-bot)",
-        "ip_address": "1.2.3.4"
+        "ip_address": "1.2.3.4",
     },
     "state": {
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn create_access_token(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: MerchantAuthenticationService.CreateAccessToken
     let response = client.create_access_token(todo!(), &HashMap::new(), None).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn create_order(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.create_order
     let response = client.create_order(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceCreateOrderRequest>(serde_json::json!({
     "merchant_order_id": "probe_order_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "state": {
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.get
     let response = client.get(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "state": {
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.refund
     let response = client.refund(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "payment_amount": 1000,
     "refund_amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "reason": "customer_request",
     "state": {
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[tokio::main]

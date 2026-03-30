@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from .base import BaseRenderer
 from ._shared import (
-    _SchemaDB, _client_class, _FLOW_KEY_TO_METHOD, _STEP_DESCRIPTIONS,
-    _FLOW_BUILDER_EXTRA_PARAM,
-    _PROTO_FIELD_TYPES, _PROTO_TYPE_SOURCE, _PROTO_WRAPPER_TYPES,
+    _SchemaDB, _client_class, _FLOW_KEY_TO_METHOD, _FLOW_KEY_TO_GRPC_REQUEST,
+    _STEP_DESCRIPTIONS, _FLOW_BUILDER_EXTRA_PARAM,
+    _PROTO_FIELD_TYPES, _PROTO_TYPE_SOURCE, _PROTO_WRAPPER_TYPES, _PROTO_NESTED_IN,
     _KOTLIN_PRIMITIVES,
 )
 
@@ -113,7 +113,8 @@ client = PaymentClient(config)'''
             desc = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
             _, var = flow_client_var[flow_key]
             method = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
-            grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+            grpc_req = (flow_metadata.get(flow_key, {}).get("grpc_request", "")
+                        or _FLOW_KEY_TO_GRPC_REQUEST.get(flow_key, ""))
             payload = dict(flow_payloads.get(flow_key, {}))
 
             # Adjust capture_method based on scenario
@@ -175,6 +176,25 @@ client = PaymentClient(config)'''
                 next(iter(val.values())) if val else ""
             )
             return f"{type_name}(value={inner})"
+
+        # ── Nested message (e.g. GoogleWallet.PaymentMethodInfo) ───────────────
+        # Python protobuf exposes nested types as Parent.NestedType, not as
+        # top-level module symbols, so we import the parent and qualify the name.
+        if type_name in _PROTO_NESTED_IN:
+            parent_name = _PROTO_NESTED_IN[type_name]
+            mod = _PROTO_TYPE_SOURCE.get(parent_name, _DEFAULT_MODULE)
+            imports.setdefault(mod, set()).add(parent_name)
+            qualified = f"{parent_name}.{type_name}"
+            known_fields = _PROTO_FIELD_TYPES.get(type_name, {})
+            if not isinstance(val, dict) or not val:
+                return f"{qualified}()"
+            field_parts: list[str] = []
+            for k, v in val.items():
+                ftype = known_fields.get(k, "")
+                fexpr = self._build_py_constructor(v, ftype, imports, indent + 1)
+                field_parts.append(f"{pad}    {k}={fexpr},")
+            inner_str = "\n".join(field_parts)
+            return f"{qualified}(\n{inner_str}\n{pad})"
 
         # ── Dict value → message constructor ───────────────────────────────────
         if isinstance(val, dict):

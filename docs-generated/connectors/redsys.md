@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -126,16 +127,16 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 
 #### capture
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt) · [Rust](../../examples/redsys/rust/redsys.rs#L18)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L22) · [Rust](../../examples/redsys/rust/redsys.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt) · [Rust](../../examples/redsys/rust/redsys.rs#L35)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L29) · [Rust](../../examples/redsys/rust/redsys.rs#L35)
 
 #### refund
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt) · [Rust](../../examples/redsys/rust/redsys.rs#L84)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L43) · [Rust](../../examples/redsys/rust/redsys.rs#L84)
 
 #### void
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt) · [Rust](../../examples/redsys/rust/redsys.rs#L103)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L50) · [Rust](../../examples/redsys/rust/redsys.rs#L103)

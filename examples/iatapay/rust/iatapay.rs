@@ -18,20 +18,22 @@ fn build_client() -> ConnectorClient {
 pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.authorize (Ideal)
     let response = client.authorize(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "payment_method": {
-        "ideal": {
+        "payment_method": {
+            "ideal": {
+            },
         }
     },
     "capture_method": "AUTOMATIC",
     "address": {
         "billing_address": {
-        }
+        },
     },
     "auth_type": "NO_THREE_DS",
     "return_url": "https://example.com/return",
@@ -40,58 +42,59 @@ pub async fn authorize(client: &ConnectorClient, _merchant_id: &str) -> Result<S
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+    "order_details": [],
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn create_access_token(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: MerchantAuthenticationService.CreateAccessToken
     let response = client.create_access_token(todo!(), &HashMap::new(), None).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.get
     let response = client.get(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "state": {
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
+            "token_type": "Bearer",
+        },
     },
-    "connector_order_reference_id": "probe_order_ref_001"
-        }).into(),
+    "connector_order_reference_id": "probe_order_ref_001",
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Flow: PaymentService.refund
     let response = client.refund(
-        serde_json::json!({
+        serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",
     "connector_transaction_id": "probe_connector_txn_001",
     "payment_amount": 1000,
     "refund_amount": {
         "minor_amount": 1000,
-        "currency": "USD"
+        "currency": "USD",
     },
     "reason": "customer_request",
     "webhook_url": "https://example.com/webhook",
@@ -99,13 +102,13 @@ pub async fn refund(client: &ConnectorClient, _merchant_id: &str) -> Result<Stri
         "access_token": {
             "token": "probe_access_token",
             "expires_in_seconds": 3600,
-            "token_type": "Bearer"
-        }
-    }
-        }).into(),
+            "token_type": "Bearer",
+        },
+    },
+        })).unwrap_or_default(),
         &HashMap::new(), None
     ).await?;
-    Ok(format!("Flow completed: {:?}", response.status()))
+    Ok("success".to_string())
 }
 
 #[tokio::main]

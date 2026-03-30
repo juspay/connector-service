@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -115,19 +116,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L5) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L35) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L6) · [Rust](../../examples/trustpay/rust/trustpay.rs#L18)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L27) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L35) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L28) · [Rust](../../examples/trustpay/rust/trustpay.rs#L18)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L11) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L96) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L10) · [Rust](../../examples/trustpay/rust/trustpay.rs#L27)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L74) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L96) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L37) · [Rust](../../examples/trustpay/rust/trustpay.rs#L74)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L19) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L180) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L14) · [Rust](../../examples/trustpay/rust/trustpay.rs#L39)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L139) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L180) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L49) · [Rust](../../examples/trustpay/rust/trustpay.rs#L152)
 
 ## API Reference
 
@@ -150,7 +151,7 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L313) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L102)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L313) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L282)
 
 ### Other
 
@@ -211,16 +212,16 @@ Generate short-lived connector authentication token. Provides secure credentials
 }
 ```
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L256) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L51)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L256) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L61) · [Rust](../../examples/trustpay/rust/trustpay.rs#L228)
 
 #### create_order
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L322) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L109)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L322) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L289)
 
 #### get
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L343) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L132)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L343) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L82) · [Rust](../../examples/trustpay/rust/trustpay.rs#L312)
 
 #### refund
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L365) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt) · [Rust](../../examples/trustpay/rust/trustpay.rs#L156)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L365) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L89) · [Rust](../../examples/trustpay/rust/trustpay.rs#L336)

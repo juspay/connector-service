@@ -40,13 +40,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -113,7 +114,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py#L5) · [JavaScript](../../examples/bambora/javascript/bambora.js#L28) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L6) · [Rust](../../examples/bambora/rust/bambora.rs#L18)
+**Examples:** [Python](../../examples/bambora/python/bambora.py#L24) · [JavaScript](../../examples/bambora/javascript/bambora.js#L28) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L23) · [Rust](../../examples/bambora/rust/bambora.rs#L18)
 
 ### Card Payment (Automatic Capture)
 
@@ -127,25 +128,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py#L13) · [JavaScript](../../examples/bambora/javascript/bambora.js#L85) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L10) · [Rust](../../examples/bambora/rust/bambora.rs#L30)
+**Examples:** [Python](../../examples/bambora/python/bambora.py#L62) · [JavaScript](../../examples/bambora/javascript/bambora.js#L85) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L35) · [Rust](../../examples/bambora/rust/bambora.rs#L69)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py#L19) · [JavaScript](../../examples/bambora/javascript/bambora.js#L128) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L14) · [Rust](../../examples/bambora/rust/bambora.rs#L39)
+**Examples:** [Python](../../examples/bambora/python/bambora.py#L91) · [JavaScript](../../examples/bambora/javascript/bambora.js#L128) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L44) · [Rust](../../examples/bambora/rust/bambora.rs#L107)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py#L27) · [JavaScript](../../examples/bambora/javascript/bambora.js#L187) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L18) · [Rust](../../examples/bambora/rust/bambora.rs#L51)
+**Examples:** [Python](../../examples/bambora/python/bambora.py#L131) · [JavaScript](../../examples/bambora/javascript/bambora.js#L187) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L56) · [Rust](../../examples/bambora/rust/bambora.rs#L160)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py#L35) · [JavaScript](../../examples/bambora/javascript/bambora.js#L240) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L22) · [Rust](../../examples/bambora/rust/bambora.rs#L63)
+**Examples:** [Python](../../examples/bambora/python/bambora.py#L169) · [JavaScript](../../examples/bambora/javascript/bambora.js#L240) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L68) · [Rust](../../examples/bambora/rust/bambora.rs#L211)
 
 ## API Reference
 
@@ -197,20 +198,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L291) · [Kotlin](../../examples/bambora/kotlin/bambora.kt) · [Rust](../../examples/bambora/rust/bambora.rs#L75)
+**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L291) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L80) · [Rust](../../examples/bambora/rust/bambora.rs#L262)
 
 #### capture
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L330) · [Kotlin](../../examples/bambora/kotlin/bambora.kt) · [Rust](../../examples/bambora/rust/bambora.rs#L108)
+**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L330) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L87) · [Rust](../../examples/bambora/rust/bambora.rs#L298)
 
 #### get
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L349) · [Kotlin](../../examples/bambora/kotlin/bambora.kt) · [Rust](../../examples/bambora/rust/bambora.rs#L125)
+**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L349) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L94) · [Rust](../../examples/bambora/rust/bambora.rs#L315)
 
 #### refund
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L364) · [Kotlin](../../examples/bambora/kotlin/bambora.kt) · [Rust](../../examples/bambora/rust/bambora.rs#L142)
+**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L364) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L101) · [Rust](../../examples/bambora/rust/bambora.rs#L332)
 
 #### void
 
-**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L385) · [Kotlin](../../examples/bambora/kotlin/bambora.kt) · [Rust](../../examples/bambora/rust/bambora.rs#L161)
+**Examples:** [Python](../../examples/bambora/python/bambora.py) · [JavaScript](../../examples/bambora/javascript/bambora.ts#L385) · [Kotlin](../../examples/bambora/kotlin/bambora.kt#L108) · [Rust](../../examples/bambora/rust/bambora.rs#L351)

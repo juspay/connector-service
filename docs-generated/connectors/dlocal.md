@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -115,7 +116,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L5) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L29) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L6) · [Rust](../../examples/dlocal/rust/dlocal.rs#L18)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L26) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L29) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L25) · [Rust](../../examples/dlocal/rust/dlocal.rs#L18)
 
 ### Card Payment (Automatic Capture)
 
@@ -129,25 +130,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L13) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L90) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L10) · [Rust](../../examples/dlocal/rust/dlocal.rs#L30)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L68) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L90) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L37) · [Rust](../../examples/dlocal/rust/dlocal.rs#L73)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L19) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L137) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L14) · [Rust](../../examples/dlocal/rust/dlocal.rs#L39)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L101) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L137) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L46) · [Rust](../../examples/dlocal/rust/dlocal.rs#L115)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L27) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L200) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L18) · [Rust](../../examples/dlocal/rust/dlocal.rs#L51)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L145) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L200) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L58) · [Rust](../../examples/dlocal/rust/dlocal.rs#L172)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L35) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L253) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L22) · [Rust](../../examples/dlocal/rust/dlocal.rs#L63)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L183) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L253) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L70) · [Rust](../../examples/dlocal/rust/dlocal.rs#L223)
 
 ## API Reference
 
@@ -199,20 +200,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L308) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt) · [Rust](../../examples/dlocal/rust/dlocal.rs#L75)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L308) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L82) · [Rust](../../examples/dlocal/rust/dlocal.rs#L278)
 
 #### capture
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L351) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt) · [Rust](../../examples/dlocal/rust/dlocal.rs#L112)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L351) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L89) · [Rust](../../examples/dlocal/rust/dlocal.rs#L318)
 
 #### get
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L370) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt) · [Rust](../../examples/dlocal/rust/dlocal.rs#L129)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L370) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L96) · [Rust](../../examples/dlocal/rust/dlocal.rs#L335)
 
 #### refund
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L385) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt) · [Rust](../../examples/dlocal/rust/dlocal.rs#L146)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L385) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L103) · [Rust](../../examples/dlocal/rust/dlocal.rs#L352)
 
 #### void
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L406) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt) · [Rust](../../examples/dlocal/rust/dlocal.rs#L165)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L406) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L110) · [Rust](../../examples/dlocal/rust/dlocal.rs#L371)

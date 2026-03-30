@@ -41,13 +41,14 @@ const client = new DirectPaymentClient(config);
 <details><summary>Kotlin</summary>
 
 ```kotlin
-import payments.PaymentClient
+import payments.DirectPaymentClient
 import payments.ConnectorConfig
+import payments.Environment
 
 val config = ConnectorConfig.newBuilder()
     .setEnvironment(Environment.SANDBOX)
     .build()
-val client = PaymentClient(config)
+val client = DirectPaymentClient(config)
 ```
 
 </details>
@@ -118,7 +119,7 @@ Create session token for payment processing. Maintains session state across mult
 | **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt) · [Rust](../../examples/paytm/rust/paytm.rs#L47)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt) · [Rust](../../examples/paytm/rust/paytm.rs#L50)
 
 ### Other
 
@@ -156,8 +157,8 @@ Create session token for payment processing. Maintains session state across mult
 }
 ```
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt) · [Rust](../../examples/paytm/rust/paytm.rs#L18)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L21) · [Rust](../../examples/paytm/rust/paytm.rs#L18)
 
 #### get
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt) · [Rust](../../examples/paytm/rust/paytm.rs#L62)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L35) · [Rust](../../examples/paytm/rust/paytm.rs#L65)

@@ -117,6 +117,10 @@ _CONNECTOR_CONFIG_FIELDS: dict[str, dict] = {}
 # Maps proto type name → Python import module path (populated by load_proto_type_map)
 _PROTO_TYPE_SOURCE: dict[str, str] = {}
 
+# Maps nested message type name → its parent message name (e.g. 'PaymentMethodInfo' → 'GoogleWallet')
+# Nested types are accessed as Parent.NestedType in Python protobuf, not as top-level imports.
+_PROTO_NESTED_IN: dict[str, str] = {}
+
 # Scenario groups (populated by docs/generate.py via set_scenario_groups())
 _SCENARIO_GROUPS: list[dict] = []
 
@@ -160,6 +164,19 @@ _FLOW_KEY_TO_METHOD: dict[str, str] = {
     "dispute_accept":            "accept",
     "dispute_defend":            "defend",
     "dispute_submit_evidence":   "submit_evidence",
+}
+
+# Fallback grpc_request type for flows not listed in manifest flow_metadata
+# (payment-service flows are not in the manifest — they live in per-connector probe JSON)
+_FLOW_KEY_TO_GRPC_REQUEST: dict[str, str] = {
+    "authorize":              "PaymentServiceAuthorizeRequest",
+    "capture":                "PaymentServiceCaptureRequest",
+    "refund":                 "PaymentServiceRefundRequest",
+    "void":                   "PaymentServiceVoidRequest",
+    "get":                    "PaymentServiceGetRequest",
+    "setup_recurring":        "PaymentServiceSetupRecurringRequest",
+    "create_order":           "PaymentServiceCreateOrderRequest",
+    "reverse":                "PaymentServiceReverseRequest",
 }
 
 _FLOW_VAR_NAME: dict[str, str] = {
@@ -527,8 +544,9 @@ def load_proto_type_map(proto_dir: Path) -> None:
     type_map: dict[str, dict[str, str]] = {}
     repeated_map: dict[str, set[str]] = {}
     source_map: dict[str, str] = {}
+    nested_in: dict[str, str] = {}  # nested_type_name → parent_message_name
     _FIELD_RE = re.compile(
-        r"^\s*(repeated\s+)?(?:optional\s+)?(\w+)\s+(\w+)\s*=\s*\d+"
+        r"^\s*(repeated\s+)?(?:optional\s+)?(\w+)\s+(\w+)\s*(?:=\s*\d+)?"
     )
     _SKIP_KEYWORDS = frozenset(
         ["message", "enum", "oneof", "reserved", "option", "extensions",
@@ -593,9 +611,19 @@ def load_proto_type_map(proto_dir: Path) -> None:
                         if ftype not in _SKIP_KEYWORDS and fname not in _SKIP_KEYWORDS:
                             fields[fname] = ftype
 
-            type_map[msg_name] = fields
-            repeated_map[msg_name] = repeated_fields
-            source_map[msg_name] = module_path
+            # Track directly-nested message definitions (first level only).
+            # Skip any name already recorded as a top-level type — a same-named
+            # nested message (e.g. AppleWallet.PaymentMethod) must not shadow
+            # the real top-level PaymentMethod that was parsed earlier.
+            for nested_m in re.finditer(r"\bmessage\s+(\w+)\s*\{", body):
+                nested_name = nested_m.group(1)
+                if nested_name not in nested_in and nested_name not in type_map:
+                    nested_in[nested_name] = msg_name
+
+            if msg_name not in type_map:
+                type_map[msg_name] = fields
+                repeated_map[msg_name] = repeated_fields
+                source_map[msg_name] = module_path
             pos = pos + m.start() + 1
 
     # Mutate in-place so module-level imports in renderers stay valid
@@ -610,6 +638,8 @@ def load_proto_type_map(proto_dir: Path) -> None:
         name for name, fields in type_map.items()
         if set(fields.keys()) == {"value"}
     )
+    _PROTO_NESTED_IN.clear()
+    _PROTO_NESTED_IN.update(nested_in)
 
     _build_connector_config_fields(proto_dir)
 
