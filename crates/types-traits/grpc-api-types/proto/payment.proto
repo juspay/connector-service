@@ -1268,10 +1268,10 @@ message MifinityData {
 // Represents NMI-specific redirection data for 3DS flows
 message NmiData {
   // Transaction amount
-  string amount = 1;
+  Money amount = 1;
 
   // Transaction currency
-  string currency = 2;
+  Currency currency = 2;
 
   // NMI public key for 3DS
   SecretString public_key = 3;

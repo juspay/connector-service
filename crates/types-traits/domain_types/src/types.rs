@@ -5648,8 +5648,9 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
             } => Ok(Self {
                 form_type: Some(grpc_api_types::payments::redirect_form::FormType::Nmi(
                     grpc_api_types::payments::NmiData {
-                        amount,
-                        currency: currency.to_string(),
+                        amount: Some(amount),
+                        currency: grpc_api_types::payments::Currency::foreign_try_from(currency)?
+                            .into(),
                         public_key: Some(public_key),
                         customer_vault_id,
                         order_id,
@@ -8171,8 +8172,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                 } => Ok(grpc_api_types::payments::RedirectForm {
                                     form_type: Some(grpc_api_types::payments::redirect_form::FormType::Nmi(
                                         grpc_api_types::payments::NmiData {
-                                            amount,
-                                            currency: currency.to_string(),
+                                            amount: Some(amount),
+                                            currency: grpc_api_types::payments::Currency::foreign_try_from(currency).map_err(|error| Box::new(error.current_context().clone()))?.into(),
                                             public_key: Some(public_key),
                                             customer_vault_id,
                                             order_id,
@@ -11207,8 +11208,13 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                             form_type: Some(
                                 grpc_api_types::payments::redirect_form::FormType::Nmi(
                                     grpc_api_types::payments::NmiData {
-                                        amount,
-                                        currency: currency.to_string(),
+                                        amount: Some(amount),
+                                        currency:
+                                            grpc_api_types::payments::Currency::foreign_try_from(
+                                                currency,
+                                            )
+                                            .map_err(|error| error.current_context().clone())?
+                                            .into(),
                                         public_key: Some(public_key),
                                         customer_vault_id,
                                         order_id,

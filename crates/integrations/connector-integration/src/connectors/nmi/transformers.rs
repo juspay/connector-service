@@ -15,8 +15,11 @@ use domain_types::{
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{get_unimplemented_payment_method_error_message, to_currency_base_unit},
+    utils::{
+        get_unimplemented_payment_method_error_message, to_currency_base_unit, ForeignTryFrom,
+    },
 };
+use grpc_api_types::payments::{Currency, Money};
 
 // Note: Refund and RefundsData are used for the Refund flow implementation
 use error_stack::ResultExt;
@@ -1386,7 +1389,18 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     Ok(PaymentsResponseData::PreAuthenticateResponse {
                         authentication_data: None,
                         redirection_data: Some(Box::new(RedirectForm::Nmi {
-                            amount: to_currency_base_unit(amount_data, currency_data)?,
+                            amount: Money {
+                                minor_amount: amount_data.get_amount_as_i64(),
+                                currency: Currency::foreign_try_from(currency_data)
+                                    .map_err(|| {
+                                        error_stack::report!(
+                                            errors::ConnectorError::MissingRequiredField {
+                                                field_name: "currency"
+                                            }
+                                        )
+                                    })?
+                                    .into(),
+                            },
                             currency: currency_data,
                             public_key: auth_type.public_key.ok_or(
                                 errors::ConnectorError::InvalidConnectorConfig {
