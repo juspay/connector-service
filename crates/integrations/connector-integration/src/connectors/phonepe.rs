@@ -7,18 +7,19 @@ use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::Mi
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, DelinkWallet, IncrementalAuthorization,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        ConnectorCustomerResponse, ConnectorSpecifications, DelinkWalletData,
+        DelinkWalletResponseData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
@@ -177,6 +178,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Phonepe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::DelinkWalletV2 for Phonepe<T>
 {
 }
 
@@ -440,6 +446,171 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+// ===== DELINK WALLET FLOW IMPLEMENTATION =====
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        DelinkWallet,
+        PaymentFlowData,
+        DelinkWalletData,
+        DelinkWalletResponseData,
+    > for Phonepe<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            DelinkWallet,
+            PaymentFlowData,
+            DelinkWalletData,
+            DelinkWalletResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let delink_req = phonepe::build_delink_wallet_request(&req.request, &req.connector_config)?;
+
+        Ok(vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ),
+            (headers::X_VERIFY.to_string(), delink_req.checksum.into()),
+        ])
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            DelinkWallet,
+            PaymentFlowData,
+            DelinkWalletData,
+            DelinkWalletResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = self.connector_base_url(req);
+        Ok(format!(
+            "{}{}",
+            base_url,
+            constants::API_DELINK_WALLET_ENDPOINT
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            DelinkWallet,
+            PaymentFlowData,
+            DelinkWalletData,
+            DelinkWalletResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+        let delink_req = phonepe::build_delink_wallet_request(&req.request, &req.connector_config)?;
+
+        // Wrap in the S2S format: {"request": "<base64_payload>"}
+        let s2s_request = serde_json::json!({
+            "request": delink_req.request
+        });
+
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            s2s_request,
+        ))))
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            DelinkWallet,
+            PaymentFlowData,
+            DelinkWalletData,
+            DelinkWalletResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Ok(Some(
+            common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::Method::Post)
+                .url(self.get_url(req)?.as_str())
+                .attach_default_headers()
+                .headers(self.get_headers(req)?)
+                .set_optional_body(self.get_request_body(req)?)
+                .build(),
+        ))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            DelinkWallet,
+            PaymentFlowData,
+            DelinkWalletData,
+            DelinkWalletResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<DelinkWallet, PaymentFlowData, DelinkWalletData, DelinkWalletResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: phonepe::PhonepeDelinkWalletResponse = res
+            .response
+            .parse_struct("PhonepeDelinkWalletResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        event_builder.map(|i| i.set_connector_response(&response));
+
+        let delink_response_data = DelinkWalletResponseData::try_from(response)
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+
+        Ok(RouterDataV2 {
+            response: Ok(delink_response_data),
+            ..data.clone()
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let error_message = match res.status_code {
+            500 => "internal_server_error",
+            501 => "not_implemented",
+            502 => "bad_gateway",
+            503 => "service_unavailable",
+            504 => "gateway_timeout",
+            _ => "unknown_error",
+        };
+
+        if let Some(event) = event_builder {
+            event.set_connector_response(&serde_json::json!({
+                "error": error_message,
+                "status_code": res.status_code,
+            }));
+        }
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: error_message.to_string(),
+            message: error_message.to_string(),
+            reason: Some(error_message.to_string()),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        })
+    }
+}
 
 // Type alias for non-generic trait implementations
 // Implement ConnectorServiceTrait by virtue of implementing all required traits

@@ -242,20 +242,20 @@ use crate::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
         ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
-        CustomerInfo, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods, GpayBillingAddressFormat,
-        GpaySessionTokenResponse, L2L3Data, MandateReferenceId, MandateRevokeRequestData,
-        MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall, OrderInfo,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
-        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,
+        CustomerInfo, DelinkWalletData, DelinkWalletResponseData, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
+        GpayAllowedPaymentMethods, GpayBillingAddressFormat, GpaySessionTokenResponse, L2L3Data,
+        MandateReferenceId, MandateRevokeRequestData, MultipleCaptureRequestData,
+        NetworkTokenWithNTIRef, NextActionCall, OrderInfo, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalFlow, PaypalTransactionInfo,
+        RawConnectorRequestResponse, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionToken, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -11485,6 +11485,139 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             }
         }
+    };
+    Ok(response)
+}
+
+// ============================================================================
+// DELINK WALLET CONVERSIONS
+// ============================================================================
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceDelinkWalletRequest>
+    for DelinkWalletData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceDelinkWalletRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            wallet_id: value.wallet_id,
+            user_auth_token: value.user_auth_token,
+            merchant_id: value.merchant_id,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceDelinkWalletRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (_value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceDelinkWalletRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "DELINK_WALLET_ID".to_string(),
+            attempt_id: "DELINK_WALLET_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Wallet,
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(&None),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("Delink wallet operation".to_string()),
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            amount: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
+}
+
+pub fn generate_delink_wallet_response(
+    router_data_v2: RouterDataV2<
+        crate::connector_flow::DelinkWallet,
+        PaymentFlowData,
+        DelinkWalletData,
+        DelinkWalletResponseData,
+    >,
+) -> Result<
+    grpc_api_types::payments::PaymentServiceDelinkWalletResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .raw_connector_response
+        .clone()
+        .map(|r| r.into());
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .raw_connector_request
+        .clone()
+        .map(|r| r.into());
+
+    let response = match router_data_v2.response {
+        Ok(data) => grpc_api_types::payments::PaymentServiceDelinkWalletResponse {
+            success: data.success,
+            error_code: data.error_code,
+            error_message: data.error_message,
+            status_code: router_data_v2
+                .resource_common_data
+                .connector_http_status_code
+                .unwrap_or(200)
+                .into(),
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        },
+        Err(err) => grpc_api_types::payments::PaymentServiceDelinkWalletResponse {
+            success: false,
+            error_code: Some(err.code.clone()),
+            error_message: Some(err.message.clone()),
+            status_code: err.status_code.into(),
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        },
     };
     Ok(response)
 }

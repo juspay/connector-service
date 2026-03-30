@@ -74,6 +74,9 @@ pub struct VerifyWebhookSource;
 pub struct PayoutCreate;
 
 #[derive(Debug, Clone)]
+pub struct DelinkWallet;
+
+#[derive(Debug, Clone)]
 pub struct PayoutTransfer;
 
 #[derive(Debug, Clone)]
@@ -123,6 +126,7 @@ pub enum FlowName {
     IncrementalAuthorization,
     MandateRevoke,
     PayoutCreate,
+    DelinkWallet,
     PayoutTransfer,
     PayoutGet,
     PayoutVoid,

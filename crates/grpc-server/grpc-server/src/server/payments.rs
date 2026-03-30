@@ -12,21 +12,22 @@ use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        Void, VoidPC,
+        CreateSessionToken, DelinkWallet, IncrementalAuthorization, MandateRevoke, PSync,
+        PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorResponseHeaders, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData,
+        ConnectorCustomerResponse, ConnectorResponseHeaders, DelinkWalletData,
+        DelinkWalletResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -34,7 +35,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     types::{
         generate_access_token_response_data, generate_create_order_response,
-        generate_payment_authenticate_response, generate_payment_capture_response,
+        generate_delink_wallet_response, generate_payment_authenticate_response,
+        generate_payment_capture_response,
         generate_payment_incremental_authorization_response,
         generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response,
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
@@ -63,10 +65,12 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
-    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentMethodServiceTokenizeResponse,     PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
+    PaymentServiceDelinkWalletRequest, PaymentServiceDelinkWalletResponse,
+    PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest,
     PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
@@ -185,6 +189,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServiceCreateOrderRequest>,
     ) -> Result<tonic::Response<PaymentServiceCreateOrderResponse>, tonic::Status>;
+
+    async fn internal_delink_wallet(
+        &self,
+        request: RequestData<PaymentServiceDelinkWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceDelinkWalletResponse>, tonic::Status>;
 }
 
 trait PaymentMethodAuthOperational {
@@ -1373,6 +1382,21 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_create_order_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_delink_wallet,
+        log_prefix: "DELINK_WALLET",
+        request_type: PaymentServiceDelinkWalletRequest,
+        response_type: PaymentServiceDelinkWalletResponse,
+        flow_marker: DelinkWallet,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: DelinkWalletData,
+        response_data_type: DelinkWalletResponseData,
+        request_data_constructor: DelinkWalletData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_delink_wallet_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -2385,6 +2409,50 @@ impl PaymentService for Payments {
             FlowName::IncrementalAuthorization,
             |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
                 self.internal_incremental_authorization(request_data).await
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "delink_wallet",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::DelinkWallet.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::DelinkWallet.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn delink_wallet(
+        &self,
+        request: tonic::Request<PaymentServiceDelinkWalletRequest>,
+    ) -> Result<tonic::Response<PaymentServiceDelinkWalletResponse>, tonic::Status> {
+        info!("DELINK_WALLET_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::DelinkWallet,
+            |request_data: RequestData<PaymentServiceDelinkWalletRequest>| async move {
+                self.internal_delink_wallet(request_data).await
             },
         )
         .await
