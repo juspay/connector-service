@@ -122,13 +122,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L74) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L96) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L37) · [Rust](../../examples/trustpay/rust/trustpay.rs#L74)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L74) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L96) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L38) · [Rust](../../examples/trustpay/rust/trustpay.rs#L74)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L139) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L180) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L49) · [Rust](../../examples/trustpay/rust/trustpay.rs#L152)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py#L139) · [JavaScript](../../examples/trustpay/javascript/trustpay.js#L180) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L52) · [Rust](../../examples/trustpay/rust/trustpay.rs#L152)
 
 ## API Reference
 
@@ -212,7 +212,7 @@ Generate short-lived connector authentication token. Provides secure credentials
 }
 ```
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L256) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L61) · [Rust](../../examples/trustpay/rust/trustpay.rs#L228)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L256) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L66) · [Rust](../../examples/trustpay/rust/trustpay.rs#L228)
 
 #### create_order
 
@@ -220,8 +220,8 @@ Generate short-lived connector authentication token. Provides secure credentials
 
 #### get
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L343) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L82) · [Rust](../../examples/trustpay/rust/trustpay.rs#L312)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L343) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L90) · [Rust](../../examples/trustpay/rust/trustpay.rs#L312)
 
 #### refund
 
-**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L365) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L89) · [Rust](../../examples/trustpay/rust/trustpay.rs#L336)
+**Examples:** [Python](../../examples/trustpay/python/trustpay.py) · [JavaScript](../../examples/trustpay/javascript/trustpay.ts#L365) · [Kotlin](../../examples/trustpay/kotlin/trustpay.kt#L98) · [Rust](../../examples/trustpay/rust/trustpay.rs#L336)

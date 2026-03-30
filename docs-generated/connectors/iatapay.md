@@ -171,8 +171,8 @@ Generate short-lived connector authentication token. Provides secure credentials
 
 #### get
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L37) · [Rust](../../examples/iatapay/rust/iatapay.rs#L63)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L39) · [Rust](../../examples/iatapay/rust/iatapay.rs#L63)
 
 #### refund
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L44) · [Rust](../../examples/iatapay/rust/iatapay.rs#L88)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.ts) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L47) · [Rust](../../examples/iatapay/rust/iatapay.rs#L88)

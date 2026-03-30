@@ -130,25 +130,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L68) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L90) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L37) · [Rust](../../examples/dlocal/rust/dlocal.rs#L73)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L68) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L90) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L39) · [Rust](../../examples/dlocal/rust/dlocal.rs#L73)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L101) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L137) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L46) · [Rust](../../examples/dlocal/rust/dlocal.rs#L115)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L101) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L137) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L49) · [Rust](../../examples/dlocal/rust/dlocal.rs#L115)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L145) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L200) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L58) · [Rust](../../examples/dlocal/rust/dlocal.rs#L172)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L145) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L200) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L63) · [Rust](../../examples/dlocal/rust/dlocal.rs#L172)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L183) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L253) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L70) · [Rust](../../examples/dlocal/rust/dlocal.rs#L223)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L183) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L253) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L77) · [Rust](../../examples/dlocal/rust/dlocal.rs#L223)
 
 ## API Reference
 
@@ -200,20 +200,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L308) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L82) · [Rust](../../examples/dlocal/rust/dlocal.rs#L278)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L308) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L91) · [Rust](../../examples/dlocal/rust/dlocal.rs#L278)
 
 #### capture
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L351) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L89) · [Rust](../../examples/dlocal/rust/dlocal.rs#L318)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L351) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L99) · [Rust](../../examples/dlocal/rust/dlocal.rs#L318)
 
 #### get
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L370) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L96) · [Rust](../../examples/dlocal/rust/dlocal.rs#L335)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L370) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L107) · [Rust](../../examples/dlocal/rust/dlocal.rs#L335)
 
 #### refund
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L385) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L103) · [Rust](../../examples/dlocal/rust/dlocal.rs#L352)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L385) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L115) · [Rust](../../examples/dlocal/rust/dlocal.rs#L352)
 
 #### void
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L406) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L110) · [Rust](../../examples/dlocal/rust/dlocal.rs#L371)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py) · [JavaScript](../../examples/dlocal/javascript/dlocal.ts#L406) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L123) · [Rust](../../examples/dlocal/rust/dlocal.rs#L371)

@@ -130,25 +130,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L62) · [JavaScript](../../examples/zift/javascript/zift.js#L86) · [Kotlin](../../examples/zift/kotlin/zift.kt#L39) · [Rust](../../examples/zift/rust/zift.rs#L69)
+**Examples:** [Python](../../examples/zift/python/zift.py#L62) · [JavaScript](../../examples/zift/javascript/zift.js#L86) · [Kotlin](../../examples/zift/kotlin/zift.kt#L41) · [Rust](../../examples/zift/rust/zift.rs#L69)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L91) · [JavaScript](../../examples/zift/javascript/zift.js#L129) · [Kotlin](../../examples/zift/kotlin/zift.kt#L48) · [Rust](../../examples/zift/rust/zift.rs#L107)
+**Examples:** [Python](../../examples/zift/python/zift.py#L91) · [JavaScript](../../examples/zift/javascript/zift.js#L129) · [Kotlin](../../examples/zift/kotlin/zift.kt#L51) · [Rust](../../examples/zift/rust/zift.rs#L107)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L131) · [JavaScript](../../examples/zift/javascript/zift.js#L188) · [Kotlin](../../examples/zift/kotlin/zift.kt#L60) · [Rust](../../examples/zift/rust/zift.rs#L160)
+**Examples:** [Python](../../examples/zift/python/zift.py#L131) · [JavaScript](../../examples/zift/javascript/zift.js#L188) · [Kotlin](../../examples/zift/kotlin/zift.kt#L65) · [Rust](../../examples/zift/rust/zift.rs#L160)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L165) · [JavaScript](../../examples/zift/javascript/zift.js#L237) · [Kotlin](../../examples/zift/kotlin/zift.kt#L72) · [Rust](../../examples/zift/rust/zift.rs#L207)
+**Examples:** [Python](../../examples/zift/python/zift.py#L165) · [JavaScript](../../examples/zift/javascript/zift.js#L237) · [Kotlin](../../examples/zift/kotlin/zift.kt#L79) · [Rust](../../examples/zift/rust/zift.rs#L207)
 
 ## API Reference
 
@@ -201,19 +201,19 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L288) · [Kotlin](../../examples/zift/kotlin/zift.kt#L84) · [Rust](../../examples/zift/rust/zift.rs#L258)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L288) · [Kotlin](../../examples/zift/kotlin/zift.kt#L93) · [Rust](../../examples/zift/rust/zift.rs#L258)
 
 #### capture
 
-**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L327) · [Kotlin](../../examples/zift/kotlin/zift.kt#L91) · [Rust](../../examples/zift/rust/zift.rs#L294)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L327) · [Kotlin](../../examples/zift/kotlin/zift.kt#L101) · [Rust](../../examples/zift/rust/zift.rs#L294)
 
 #### get
 
-**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L346) · [Kotlin](../../examples/zift/kotlin/zift.kt#L98) · [Rust](../../examples/zift/rust/zift.rs#L311)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L346) · [Kotlin](../../examples/zift/kotlin/zift.kt#L109) · [Rust](../../examples/zift/rust/zift.rs#L311)
 
 #### refund
 
-**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L361) · [Kotlin](../../examples/zift/kotlin/zift.kt#L105) · [Rust](../../examples/zift/rust/zift.rs#L328)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L361) · [Kotlin](../../examples/zift/kotlin/zift.kt#L117) · [Rust](../../examples/zift/rust/zift.rs#L328)
 
 #### setup_recurring
 
@@ -221,4 +221,4 @@ Authorize a payment, then poll the connector for its current status using Get. U
 
 #### void
 
-**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L423) · [Kotlin](../../examples/zift/kotlin/zift.kt#L119) · [Rust](../../examples/zift/rust/zift.rs#L388)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.ts#L423) · [Kotlin](../../examples/zift/kotlin/zift.kt#L133) · [Rust](../../examples/zift/rust/zift.rs#L388)

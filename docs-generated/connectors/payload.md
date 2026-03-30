@@ -117,12 +117,12 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 
 #### get
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L31) · [Rust](../../examples/payload/rust/payload.rs#L41)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L32) · [Rust](../../examples/payload/rust/payload.rs#L41)
 
 #### refund
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L45) · [Rust](../../examples/payload/rust/payload.rs#L105)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L48) · [Rust](../../examples/payload/rust/payload.rs#L105)
 
 #### void
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L52) · [Rust](../../examples/payload/rust/payload.rs#L131)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.ts) · [Kotlin](../../examples/payload/kotlin/payload.kt#L56) · [Rust](../../examples/payload/rust/payload.rs#L131)

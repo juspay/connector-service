@@ -132,19 +132,19 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/forte/python/forte.py#L52) · [JavaScript](../../examples/forte/javascript/forte.js#L73) · [Kotlin](../../examples/forte/kotlin/forte.kt#L31) · [Rust](../../examples/forte/rust/forte.rs#L56)
+**Examples:** [Python](../../examples/forte/python/forte.py#L52) · [JavaScript](../../examples/forte/javascript/forte.js#L73) · [Kotlin](../../examples/forte/kotlin/forte.kt#L32) · [Rust](../../examples/forte/rust/forte.rs#L56)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/forte/python/forte.py#L79) · [JavaScript](../../examples/forte/javascript/forte.js#L114) · [Kotlin](../../examples/forte/kotlin/forte.kt#L40) · [Rust](../../examples/forte/rust/forte.rs#L92)
+**Examples:** [Python](../../examples/forte/python/forte.py#L79) · [JavaScript](../../examples/forte/javascript/forte.js#L114) · [Kotlin](../../examples/forte/kotlin/forte.kt#L42) · [Rust](../../examples/forte/rust/forte.rs#L92)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/forte/python/forte.py#L113) · [JavaScript](../../examples/forte/javascript/forte.js#L163) · [Kotlin](../../examples/forte/kotlin/forte.kt#L52) · [Rust](../../examples/forte/rust/forte.rs#L139)
+**Examples:** [Python](../../examples/forte/python/forte.py#L113) · [JavaScript](../../examples/forte/javascript/forte.js#L163) · [Kotlin](../../examples/forte/kotlin/forte.kt#L56) · [Rust](../../examples/forte/rust/forte.rs#L139)
 
 ## API Reference
 
@@ -206,12 +206,12 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L214) · [Kotlin](../../examples/forte/kotlin/forte.kt#L64) · [Rust](../../examples/forte/rust/forte.rs#L190)
+**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L214) · [Kotlin](../../examples/forte/kotlin/forte.kt#L70) · [Rust](../../examples/forte/rust/forte.rs#L190)
 
 #### get
 
-**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L253) · [Kotlin](../../examples/forte/kotlin/forte.kt#L71) · [Rust](../../examples/forte/rust/forte.rs#L226)
+**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L253) · [Kotlin](../../examples/forte/kotlin/forte.kt#L78) · [Rust](../../examples/forte/rust/forte.rs#L226)
 
 #### void
 
-**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L268) · [Kotlin](../../examples/forte/kotlin/forte.kt#L78) · [Rust](../../examples/forte/rust/forte.rs#L243)
+**Examples:** [Python](../../examples/forte/python/forte.py) · [JavaScript](../../examples/forte/javascript/forte.ts#L268) · [Kotlin](../../examples/forte/kotlin/forte.kt#L86) · [Rust](../../examples/forte/rust/forte.rs#L243)

@@ -128,25 +128,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py#L62) · [JavaScript](../../examples/braintree/javascript/braintree.js#L108) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L36) · [Rust](../../examples/braintree/rust/braintree.rs#L69)
+**Examples:** [Python](../../examples/braintree/python/braintree.py#L62) · [JavaScript](../../examples/braintree/javascript/braintree.js#L108) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L38) · [Rust](../../examples/braintree/rust/braintree.rs#L69)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py#L90) · [JavaScript](../../examples/braintree/javascript/braintree.js#L151) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L45) · [Rust](../../examples/braintree/rust/braintree.rs#L107)
+**Examples:** [Python](../../examples/braintree/python/braintree.py#L90) · [JavaScript](../../examples/braintree/javascript/braintree.js#L151) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L48) · [Rust](../../examples/braintree/rust/braintree.rs#L107)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py#L123) · [JavaScript](../../examples/braintree/javascript/braintree.js#L200) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L57) · [Rust](../../examples/braintree/rust/braintree.rs#L154)
+**Examples:** [Python](../../examples/braintree/python/braintree.py#L123) · [JavaScript](../../examples/braintree/javascript/braintree.js#L200) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L62) · [Rust](../../examples/braintree/rust/braintree.rs#L154)
 
 ### Tokenize Payment Method
 
 Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py#L160) · [JavaScript](../../examples/braintree/javascript/braintree.js#L253) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L69) · [Rust](../../examples/braintree/rust/braintree.rs#L205)
+**Examples:** [Python](../../examples/braintree/python/braintree.py#L160) · [JavaScript](../../examples/braintree/javascript/braintree.js#L253) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L76) · [Rust](../../examples/braintree/rust/braintree.rs#L205)
 
 ## API Reference
 
@@ -169,7 +169,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L354) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L99) · [Rust](../../examples/braintree/rust/braintree.rs#L307)
+**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L354) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L110) · [Rust](../../examples/braintree/rust/braintree.rs#L307)
 
 ### Other
 
@@ -211,16 +211,16 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 }
 ```
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L281) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L78) · [Rust](../../examples/braintree/rust/braintree.rs#L237)
+**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L281) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L86) · [Rust](../../examples/braintree/rust/braintree.rs#L237)
 
 #### capture
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L320) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L85) · [Rust](../../examples/braintree/rust/braintree.rs#L273)
+**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L320) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L94) · [Rust](../../examples/braintree/rust/braintree.rs#L273)
 
 #### get
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L339) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L92) · [Rust](../../examples/braintree/rust/braintree.rs#L290)
+**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L339) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L102) · [Rust](../../examples/braintree/rust/braintree.rs#L290)
 
 #### void
 
-**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L363) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L106) · [Rust](../../examples/braintree/rust/braintree.rs#L337)
+**Examples:** [Python](../../examples/braintree/python/braintree.py) · [JavaScript](../../examples/braintree/javascript/braintree.ts#L363) · [Kotlin](../../examples/braintree/kotlin/braintree.kt#L118) · [Rust](../../examples/braintree/rust/braintree.rs#L337)

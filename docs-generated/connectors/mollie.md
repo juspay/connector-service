@@ -118,19 +118,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L51) · [JavaScript](../../examples/mollie/javascript/mollie.js#L70) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L31) · [Rust](../../examples/mollie/rust/mollie.rs#L56)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L51) · [JavaScript](../../examples/mollie/javascript/mollie.js#L70) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L32) · [Rust](../../examples/mollie/rust/mollie.rs#L56)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L90) · [JavaScript](../../examples/mollie/javascript/mollie.js#L129) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L43) · [Rust](../../examples/mollie/rust/mollie.rs#L109)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L90) · [JavaScript](../../examples/mollie/javascript/mollie.js#L129) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L46) · [Rust](../../examples/mollie/rust/mollie.rs#L109)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L123) · [JavaScript](../../examples/mollie/javascript/mollie.js#L178) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L55) · [Rust](../../examples/mollie/rust/mollie.rs#L156)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L123) · [JavaScript](../../examples/mollie/javascript/mollie.js#L178) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L60) · [Rust](../../examples/mollie/rust/mollie.rs#L156)
 
 ## API Reference
 
@@ -181,16 +181,16 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L229) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L67) · [Rust](../../examples/mollie/rust/mollie.rs#L207)
+**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L229) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L74) · [Rust](../../examples/mollie/rust/mollie.rs#L207)
 
 #### get
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L268) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L74) · [Rust](../../examples/mollie/rust/mollie.rs#L243)
+**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L268) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L82) · [Rust](../../examples/mollie/rust/mollie.rs#L243)
 
 #### refund
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L283) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L81) · [Rust](../../examples/mollie/rust/mollie.rs#L260)
+**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L283) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L90) · [Rust](../../examples/mollie/rust/mollie.rs#L260)
 
 #### void
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L304) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L88) · [Rust](../../examples/mollie/rust/mollie.rs#L279)
+**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.ts#L304) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L98) · [Rust](../../examples/mollie/rust/mollie.rs#L279)

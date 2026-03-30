@@ -118,7 +118,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L56) · [JavaScript](../../examples/helcim/javascript/helcim.js#L75) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L30) · [Rust](../../examples/helcim/rust/helcim.rs#L61)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L56) · [JavaScript](../../examples/helcim/javascript/helcim.js#L75) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L31) · [Rust](../../examples/helcim/rust/helcim.rs#L61)
 
 ## API Reference
 
@@ -167,8 +167,8 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L131) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L42) · [Rust](../../examples/helcim/rust/helcim.rs#L117)
+**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L131) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L45) · [Rust](../../examples/helcim/rust/helcim.rs#L117)
 
 #### get
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L175) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L49) · [Rust](../../examples/helcim/rust/helcim.rs#L158)
+**Examples:** [Python](../../examples/helcim/python/helcim.py) · [JavaScript](../../examples/helcim/javascript/helcim.ts#L175) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L53) · [Rust](../../examples/helcim/rust/helcim.rs#L158)

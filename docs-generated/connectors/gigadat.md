@@ -115,4 +115,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### refund
 
-**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.ts) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L19) · [Rust](../../examples/gigadat/rust/gigadat.rs#L35)
+**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.ts) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L20) · [Rust](../../examples/gigadat/rust/gigadat.rs#L35)

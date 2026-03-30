@@ -126,19 +126,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L59) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L83) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L38) · [Rust](../../examples/revolv3/rust/revolv3.rs#L68)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L59) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L83) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L40) · [Rust](../../examples/revolv3/rust/revolv3.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L86) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L125) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L47) · [Rust](../../examples/revolv3/rust/revolv3.rs#L105)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L86) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L125) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L50) · [Rust](../../examples/revolv3/rust/revolv3.rs#L105)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L124) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L183) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L59) · [Rust](../../examples/revolv3/rust/revolv3.rs#L157)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L124) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L183) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L64) · [Rust](../../examples/revolv3/rust/revolv3.rs#L157)
 
 ## API Reference
 
@@ -190,15 +190,15 @@ Authorize funds with a manual capture flag, then cancel the authorization with V
 }
 ```
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L229) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L71) · [Rust](../../examples/revolv3/rust/revolv3.rs#L203)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L229) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L78) · [Rust](../../examples/revolv3/rust/revolv3.rs#L203)
 
 #### capture
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L267) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L78) · [Rust](../../examples/revolv3/rust/revolv3.rs#L238)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L267) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L86) · [Rust](../../examples/revolv3/rust/revolv3.rs#L238)
 
 #### refund
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L286) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L85) · [Rust](../../examples/revolv3/rust/revolv3.rs#L255)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L286) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L94) · [Rust](../../examples/revolv3/rust/revolv3.rs#L255)
 
 #### setup_recurring
 
@@ -206,4 +206,4 @@ Authorize funds with a manual capture flag, then cancel the authorization with V
 
 #### void
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L347) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L99) · [Rust](../../examples/revolv3/rust/revolv3.rs#L314)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py) · [JavaScript](../../examples/revolv3/javascript/revolv3.ts#L347) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L110) · [Rust](../../examples/revolv3/rust/revolv3.rs#L314)

@@ -161,4 +161,4 @@ Create session token for payment processing. Maintains session state across mult
 
 #### get
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L35) · [Rust](../../examples/paytm/rust/paytm.rs#L65)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.ts) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L37) · [Rust](../../examples/paytm/rust/paytm.rs#L65)

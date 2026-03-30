@@ -116,13 +116,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L69) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L107) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L44) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L67)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L69) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L107) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L46) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L67)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L96) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L149) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L53) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L104)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L96) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L149) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L56) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L104)
 
 ### Recurring / Mandate Payments
 
@@ -135,13 +135,13 @@ Store a payment mandate with SetupRecurring, then charge it repeatedly with Recu
 | `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
 | `FAILED` | Setup failed — customer must re-enter payment details |
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L134) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L207) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L65) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L156)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L134) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L207) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L70) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L156)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L189) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L268) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L78) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L227)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L189) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L268) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L85) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L227)
 
 ## API Reference
 
@@ -207,19 +207,19 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 }
 ```
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L318) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L90) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L277)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L318) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L99) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L277)
 
 #### capture
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L356) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L97) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L312)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L356) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L107) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L312)
 
 #### get
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L375) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L104) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L329)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L375) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L115) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L329)
 
 #### refund
 
-**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L399) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L118) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L379)
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.ts#L399) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L131) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L379)
 
 #### setup_recurring
 

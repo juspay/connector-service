@@ -126,19 +126,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L66) · [JavaScript](../../examples/xendit/javascript/xendit.js#L88) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L35) · [Rust](../../examples/xendit/rust/xendit.rs#L73)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L66) · [JavaScript](../../examples/xendit/javascript/xendit.js#L88) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L37) · [Rust](../../examples/xendit/rust/xendit.rs#L73)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L99) · [JavaScript](../../examples/xendit/javascript/xendit.js#L135) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L44) · [Rust](../../examples/xendit/rust/xendit.rs#L115)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L99) · [JavaScript](../../examples/xendit/javascript/xendit.js#L135) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L47) · [Rust](../../examples/xendit/rust/xendit.rs#L115)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L143) · [JavaScript](../../examples/xendit/javascript/xendit.js#L198) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L56) · [Rust](../../examples/xendit/rust/xendit.rs#L172)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L143) · [JavaScript](../../examples/xendit/javascript/xendit.js#L198) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L61) · [Rust](../../examples/xendit/rust/xendit.rs#L172)
 
 ## API Reference
 
@@ -189,16 +189,16 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L253) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L68) · [Rust](../../examples/xendit/rust/xendit.rs#L227)
+**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L253) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L75) · [Rust](../../examples/xendit/rust/xendit.rs#L227)
 
 #### capture
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L296) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L75) · [Rust](../../examples/xendit/rust/xendit.rs#L267)
+**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L296) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L83) · [Rust](../../examples/xendit/rust/xendit.rs#L267)
 
 #### get
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L315) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L82) · [Rust](../../examples/xendit/rust/xendit.rs#L284)
+**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L315) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L91) · [Rust](../../examples/xendit/rust/xendit.rs#L284)
 
 #### refund
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L330) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L89) · [Rust](../../examples/xendit/rust/xendit.rs#L301)
+**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.ts#L330) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L99) · [Rust](../../examples/xendit/rust/xendit.rs#L301)

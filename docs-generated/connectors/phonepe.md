@@ -147,4 +147,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L26) · [Rust](../../examples/phonepe/rust/phonepe.rs#L50)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.ts) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L27) · [Rust](../../examples/phonepe/rust/phonepe.rs#L50)

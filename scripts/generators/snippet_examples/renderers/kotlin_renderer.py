@@ -179,9 +179,11 @@ package examples.{connector_name}
             else:
                 lines.append(f"    val {result_var} = {var}.{method}()")
 
+            lines.append(f'    println("[{flow_key}] HTTP ${{{result_var}.statusCode}}")')
             lines.append("")
 
-        lines.append("    return mapOf(\"status\" to \"ok\")")
+        last_var = (f"result{len(scenario.flows)}" if len(scenario.flows) > 1 else "result")
+        lines.append(f"    return mapOf(\"statusCode\" to {last_var}.statusCode)")
         lines.append("}")
         return "\n".join(lines)
 
@@ -217,7 +219,8 @@ package examples.{connector_name}
         else:
             lines.append(f"    val result = {var}.{method}()")
 
-        lines.append("    return mapOf(\"status\" to \"ok\")")
+        lines.append(f'    println("[{flow_key}] HTTP ${{result.statusCode}}")')
+        lines.append("    return mapOf(\"statusCode\" to result.statusCode)")
         lines.append("}")
         return "\n".join(lines)
 

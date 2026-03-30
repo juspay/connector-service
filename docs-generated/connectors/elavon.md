@@ -130,19 +130,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py#L59) · [JavaScript](../../examples/elavon/javascript/elavon.js#L85) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L34) · [Rust](../../examples/elavon/rust/elavon.rs#L68)
+**Examples:** [Python](../../examples/elavon/python/elavon.py#L59) · [JavaScript](../../examples/elavon/javascript/elavon.js#L85) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L36) · [Rust](../../examples/elavon/rust/elavon.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py#L86) · [JavaScript](../../examples/elavon/javascript/elavon.js#L127) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L43) · [Rust](../../examples/elavon/rust/elavon.rs#L105)
+**Examples:** [Python](../../examples/elavon/python/elavon.py#L86) · [JavaScript](../../examples/elavon/javascript/elavon.js#L127) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L46) · [Rust](../../examples/elavon/rust/elavon.rs#L105)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py#L124) · [JavaScript](../../examples/elavon/javascript/elavon.js#L185) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L55) · [Rust](../../examples/elavon/rust/elavon.rs#L157)
+**Examples:** [Python](../../examples/elavon/python/elavon.py#L124) · [JavaScript](../../examples/elavon/javascript/elavon.js#L185) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L60) · [Rust](../../examples/elavon/rust/elavon.rs#L157)
 
 ## API Reference
 
@@ -193,16 +193,16 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L235) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L67) · [Rust](../../examples/elavon/rust/elavon.rs#L207)
+**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L235) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L74) · [Rust](../../examples/elavon/rust/elavon.rs#L207)
 
 #### capture
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L273) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L74) · [Rust](../../examples/elavon/rust/elavon.rs#L242)
+**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L273) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L82) · [Rust](../../examples/elavon/rust/elavon.rs#L242)
 
 #### get
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L292) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L81) · [Rust](../../examples/elavon/rust/elavon.rs#L259)
+**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L292) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L90) · [Rust](../../examples/elavon/rust/elavon.rs#L259)
 
 #### refund
 
-**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L307) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L88) · [Rust](../../examples/elavon/rust/elavon.rs#L276)
+**Examples:** [Python](../../examples/elavon/python/elavon.py) · [JavaScript](../../examples/elavon/javascript/elavon.ts#L307) · [Kotlin](../../examples/elavon/kotlin/elavon.kt#L98) · [Rust](../../examples/elavon/rust/elavon.rs#L276)

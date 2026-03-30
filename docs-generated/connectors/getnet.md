@@ -130,25 +130,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py#L76) · [JavaScript](../../examples/getnet/javascript/getnet.js#L105) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L38) · [Rust](../../examples/getnet/rust/getnet.rs#L82)
+**Examples:** [Python](../../examples/getnet/python/getnet.py#L76) · [JavaScript](../../examples/getnet/javascript/getnet.js#L105) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L40) · [Rust](../../examples/getnet/rust/getnet.rs#L82)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py#L110) · [JavaScript](../../examples/getnet/javascript/getnet.js#L154) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L47) · [Rust](../../examples/getnet/rust/getnet.rs#L126)
+**Examples:** [Python](../../examples/getnet/python/getnet.py#L110) · [JavaScript](../../examples/getnet/javascript/getnet.js#L154) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L50) · [Rust](../../examples/getnet/rust/getnet.rs#L126)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py#L162) · [JavaScript](../../examples/getnet/javascript/getnet.js#L226) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L59) · [Rust](../../examples/getnet/rust/getnet.rs#L192)
+**Examples:** [Python](../../examples/getnet/python/getnet.py#L162) · [JavaScript](../../examples/getnet/javascript/getnet.js#L226) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L64) · [Rust](../../examples/getnet/rust/getnet.rs#L192)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py#L212) · [JavaScript](../../examples/getnet/javascript/getnet.js#L292) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L71) · [Rust](../../examples/getnet/rust/getnet.rs#L256)
+**Examples:** [Python](../../examples/getnet/python/getnet.py#L212) · [JavaScript](../../examples/getnet/javascript/getnet.js#L292) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L78) · [Rust](../../examples/getnet/rust/getnet.rs#L256)
 
 ## API Reference
 
@@ -214,20 +214,20 @@ Generate short-lived connector authentication token. Provides secure credentials
 }
 ```
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L356) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L83) · [Rust](../../examples/getnet/rust/getnet.rs#L320)
+**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L356) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L92) · [Rust](../../examples/getnet/rust/getnet.rs#L320)
 
 #### capture
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L401) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L90) · [Rust](../../examples/getnet/rust/getnet.rs#L362)
+**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L401) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L100) · [Rust](../../examples/getnet/rust/getnet.rs#L362)
 
 #### get
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L436) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L104) · [Rust](../../examples/getnet/rust/getnet.rs#L393)
+**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L436) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L116) · [Rust](../../examples/getnet/rust/getnet.rs#L393)
 
 #### refund
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L458) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L111) · [Rust](../../examples/getnet/rust/getnet.rs#L417)
+**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L458) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L124) · [Rust](../../examples/getnet/rust/getnet.rs#L417)
 
 #### void
 
-**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L486) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L118) · [Rust](../../examples/getnet/rust/getnet.rs#L443)
+**Examples:** [Python](../../examples/getnet/python/getnet.py) · [JavaScript](../../examples/getnet/javascript/getnet.ts#L486) · [Kotlin](../../examples/getnet/kotlin/getnet.kt#L132) · [Rust](../../examples/getnet/rust/getnet.rs#L443)

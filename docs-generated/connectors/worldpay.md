@@ -130,7 +130,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L62) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L111) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L43) · [Rust](../../examples/worldpay/rust/worldpay.rs#L68)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L62) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L111) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L45) · [Rust](../../examples/worldpay/rust/worldpay.rs#L68)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -144,25 +144,25 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L89) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L153) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L52) · [Rust](../../examples/worldpay/rust/worldpay.rs#L105)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L89) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L153) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L55) · [Rust](../../examples/worldpay/rust/worldpay.rs#L105)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L123) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L202) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L61) · [Rust](../../examples/worldpay/rust/worldpay.rs#L149)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L123) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L202) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L65) · [Rust](../../examples/worldpay/rust/worldpay.rs#L149)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L161) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L260) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L73) · [Rust](../../examples/worldpay/rust/worldpay.rs#L201)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L161) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L260) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L79) · [Rust](../../examples/worldpay/rust/worldpay.rs#L201)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L193) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L308) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L85) · [Rust](../../examples/worldpay/rust/worldpay.rs#L247)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py#L193) · [JavaScript](../../examples/worldpay/javascript/worldpay.js#L308) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L93) · [Rust](../../examples/worldpay/rust/worldpay.rs#L247)
 
 ## API Reference
 
@@ -267,20 +267,20 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 }
 ```
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L358) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L97) · [Rust](../../examples/worldpay/rust/worldpay.rs#L297)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L358) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L107) · [Rust](../../examples/worldpay/rust/worldpay.rs#L297)
 
 #### capture
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L396) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L104) · [Rust](../../examples/worldpay/rust/worldpay.rs#L332)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L396) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L115) · [Rust](../../examples/worldpay/rust/worldpay.rs#L332)
 
 #### get
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L415) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L111) · [Rust](../../examples/worldpay/rust/worldpay.rs#L349)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L415) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L123) · [Rust](../../examples/worldpay/rust/worldpay.rs#L349)
 
 #### refund
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L439) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L125) · [Rust](../../examples/worldpay/rust/worldpay.rs#L399)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L439) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L139) · [Rust](../../examples/worldpay/rust/worldpay.rs#L399)
 
 #### void
 
-**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L460) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L132) · [Rust](../../examples/worldpay/rust/worldpay.rs#L418)
+**Examples:** [Python](../../examples/worldpay/python/worldpay.py) · [JavaScript](../../examples/worldpay/javascript/worldpay.ts#L460) · [Kotlin](../../examples/worldpay/kotlin/worldpay.kt#L147) · [Rust](../../examples/worldpay/rust/worldpay.rs#L418)

@@ -145,4 +145,4 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt#L27) · [Rust](../../examples/payu/rust/payu.rs#L56)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.ts) · [Kotlin](../../examples/payu/kotlin/payu.kt#L28) · [Rust](../../examples/payu/rust/payu.rs#L56)

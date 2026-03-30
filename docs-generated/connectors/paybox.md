@@ -132,25 +132,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L60) · [JavaScript](../../examples/paybox/javascript/paybox.js#L86) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L35) · [Rust](../../examples/paybox/rust/paybox.rs#L68)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L60) · [JavaScript](../../examples/paybox/javascript/paybox.js#L86) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L37) · [Rust](../../examples/paybox/rust/paybox.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L87) · [JavaScript](../../examples/paybox/javascript/paybox.js#L128) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L44) · [Rust](../../examples/paybox/rust/paybox.rs#L105)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L87) · [JavaScript](../../examples/paybox/javascript/paybox.js#L128) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L47) · [Rust](../../examples/paybox/rust/paybox.rs#L105)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L125) · [JavaScript](../../examples/paybox/javascript/paybox.js#L186) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L56) · [Rust](../../examples/paybox/rust/paybox.rs#L157)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L125) · [JavaScript](../../examples/paybox/javascript/paybox.js#L186) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L61) · [Rust](../../examples/paybox/rust/paybox.rs#L157)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L161) · [JavaScript](../../examples/paybox/javascript/paybox.js#L238) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L68) · [Rust](../../examples/paybox/rust/paybox.rs#L207)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L161) · [JavaScript](../../examples/paybox/javascript/paybox.js#L238) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L75) · [Rust](../../examples/paybox/rust/paybox.rs#L207)
 
 ## API Reference
 
@@ -202,20 +202,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L288) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L80) · [Rust](../../examples/paybox/rust/paybox.rs#L257)
+**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L288) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L89) · [Rust](../../examples/paybox/rust/paybox.rs#L257)
 
 #### capture
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L326) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L87) · [Rust](../../examples/paybox/rust/paybox.rs#L292)
+**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L326) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L97) · [Rust](../../examples/paybox/rust/paybox.rs#L292)
 
 #### get
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L345) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L94) · [Rust](../../examples/paybox/rust/paybox.rs#L309)
+**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L345) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L105) · [Rust](../../examples/paybox/rust/paybox.rs#L309)
 
 #### refund
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L360) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L101) · [Rust](../../examples/paybox/rust/paybox.rs#L326)
+**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L360) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L113) · [Rust](../../examples/paybox/rust/paybox.rs#L326)
 
 #### void
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L381) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L108) · [Rust](../../examples/paybox/rust/paybox.rs#L345)
+**Examples:** [Python](../../examples/paybox/python/paybox.py) · [JavaScript](../../examples/paybox/javascript/paybox.ts#L381) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L121) · [Rust](../../examples/paybox/rust/paybox.rs#L345)

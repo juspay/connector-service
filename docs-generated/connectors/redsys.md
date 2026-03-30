@@ -131,12 +131,12 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 
 #### get
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L29) · [Rust](../../examples/redsys/rust/redsys.rs#L35)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L30) · [Rust](../../examples/redsys/rust/redsys.rs#L35)
 
 #### refund
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L43) · [Rust](../../examples/redsys/rust/redsys.rs#L84)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L46) · [Rust](../../examples/redsys/rust/redsys.rs#L84)
 
 #### void
 
-**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L50) · [Rust](../../examples/redsys/rust/redsys.rs#L103)
+**Examples:** [Python](../../examples/redsys/python/redsys.py) · [JavaScript](../../examples/redsys/javascript/redsys.ts) · [Kotlin](../../examples/redsys/kotlin/redsys.kt#L54) · [Rust](../../examples/redsys/rust/redsys.rs#L103)

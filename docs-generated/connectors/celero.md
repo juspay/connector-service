@@ -126,25 +126,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/celero/python/celero.py#L60) · [JavaScript](../../examples/celero/javascript/celero.js#L83) · [Kotlin](../../examples/celero/kotlin/celero.kt#L35) · [Rust](../../examples/celero/rust/celero.rs#L68)
+**Examples:** [Python](../../examples/celero/python/celero.py#L60) · [JavaScript](../../examples/celero/javascript/celero.js#L83) · [Kotlin](../../examples/celero/kotlin/celero.kt#L37) · [Rust](../../examples/celero/rust/celero.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/celero/python/celero.py#L87) · [JavaScript](../../examples/celero/javascript/celero.js#L125) · [Kotlin](../../examples/celero/kotlin/celero.kt#L44) · [Rust](../../examples/celero/rust/celero.rs#L105)
+**Examples:** [Python](../../examples/celero/python/celero.py#L87) · [JavaScript](../../examples/celero/javascript/celero.js#L125) · [Kotlin](../../examples/celero/kotlin/celero.kt#L47) · [Rust](../../examples/celero/rust/celero.rs#L105)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/celero/python/celero.py#L125) · [JavaScript](../../examples/celero/javascript/celero.js#L183) · [Kotlin](../../examples/celero/kotlin/celero.kt#L56) · [Rust](../../examples/celero/rust/celero.rs#L157)
+**Examples:** [Python](../../examples/celero/python/celero.py#L125) · [JavaScript](../../examples/celero/javascript/celero.js#L183) · [Kotlin](../../examples/celero/kotlin/celero.kt#L61) · [Rust](../../examples/celero/rust/celero.rs#L157)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/celero/python/celero.py#L157) · [JavaScript](../../examples/celero/javascript/celero.js#L231) · [Kotlin](../../examples/celero/kotlin/celero.kt#L68) · [Rust](../../examples/celero/rust/celero.rs#L203)
+**Examples:** [Python](../../examples/celero/python/celero.py#L157) · [JavaScript](../../examples/celero/javascript/celero.js#L231) · [Kotlin](../../examples/celero/kotlin/celero.kt#L75) · [Rust](../../examples/celero/rust/celero.rs#L203)
 
 ## API Reference
 
@@ -196,20 +196,20 @@ Authorize a payment, then poll the connector for its current status using Get. U
 }
 ```
 
-**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L281) · [Kotlin](../../examples/celero/kotlin/celero.kt#L80) · [Rust](../../examples/celero/rust/celero.rs#L253)
+**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L281) · [Kotlin](../../examples/celero/kotlin/celero.kt#L89) · [Rust](../../examples/celero/rust/celero.rs#L253)
 
 #### capture
 
-**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L319) · [Kotlin](../../examples/celero/kotlin/celero.kt#L87) · [Rust](../../examples/celero/rust/celero.rs#L288)
+**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L319) · [Kotlin](../../examples/celero/kotlin/celero.kt#L97) · [Rust](../../examples/celero/rust/celero.rs#L288)
 
 #### get
 
-**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L338) · [Kotlin](../../examples/celero/kotlin/celero.kt#L94) · [Rust](../../examples/celero/rust/celero.rs#L305)
+**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L338) · [Kotlin](../../examples/celero/kotlin/celero.kt#L105) · [Rust](../../examples/celero/rust/celero.rs#L305)
 
 #### refund
 
-**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L353) · [Kotlin](../../examples/celero/kotlin/celero.kt#L101) · [Rust](../../examples/celero/rust/celero.rs#L322)
+**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L353) · [Kotlin](../../examples/celero/kotlin/celero.kt#L113) · [Rust](../../examples/celero/rust/celero.rs#L322)
 
 #### void
 
-**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L374) · [Kotlin](../../examples/celero/kotlin/celero.kt#L108) · [Rust](../../examples/celero/rust/celero.rs#L341)
+**Examples:** [Python](../../examples/celero/python/celero.py) · [JavaScript](../../examples/celero/javascript/celero.ts#L374) · [Kotlin](../../examples/celero/kotlin/celero.kt#L121) · [Rust](../../examples/celero/rust/celero.rs#L341)

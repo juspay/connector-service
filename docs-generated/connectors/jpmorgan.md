@@ -128,7 +128,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L77) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L104) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L39) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L82)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L77) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L104) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L41) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L82)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -142,25 +142,25 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L111) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L153) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L48) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L126)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L111) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L153) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L51) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L126)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L143) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L200) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L57) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L168)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L143) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L200) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L61) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L168)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L195) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L272) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L69) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L234)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L195) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L272) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L75) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L234)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L241) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L334) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L81) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L294)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L241) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L334) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L89) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L294)
 
 ## API Reference
 
@@ -238,20 +238,20 @@ Generate short-lived connector authentication token. Provides secure credentials
 }
 ```
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L398) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L93) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L358)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L398) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L103) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L358)
 
 #### capture
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L443) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L100) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L400)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L443) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L111) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L400)
 
 #### get
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L478) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L114) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L431)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L478) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L127) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L431)
 
 #### refund
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L500) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L121) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L455)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L500) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L135) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L455)
 
 #### void
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L528) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L128) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L481)
+**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.ts#L528) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L143) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L481)

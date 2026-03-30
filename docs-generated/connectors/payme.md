@@ -118,12 +118,12 @@ let client = ConnectorClient::new(config, None).unwrap();
 
 #### get
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L29) · [Rust](../../examples/payme/rust/payme.rs#L51)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L31) · [Rust](../../examples/payme/rust/payme.rs#L51)
 
 #### refund
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L36) · [Rust](../../examples/payme/rust/payme.rs#L68)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L39) · [Rust](../../examples/payme/rust/payme.rs#L68)
 
 #### void
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L43) · [Rust](../../examples/payme/rust/payme.rs#L87)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.ts) · [Kotlin](../../examples/payme/kotlin/payme.kt#L47) · [Rust](../../examples/payme/rust/payme.rs#L87)

@@ -13,5 +13,6 @@ fun get(txnId: String, config: ConnectorConfig): Map<String, Any?> {
     val directPaymentClient = DirectPaymentClient(config)
 
     val result = directPaymentClient.get(PaymentServiceGetRequest.newBuilder().setMerchantTransactionId("probe_merchant_txn_001").setConnectorTransactionId("probe_connector_txn_001").setAmount(Money.newBuilder().setMinorAmount(1000).setCurrency(Currency.USD).build()).build())
-    return mapOf("status" to "ok")
+    println("[get] HTTP ${result.statusCode}")
+    return mapOf("statusCode" to result.statusCode)
 }

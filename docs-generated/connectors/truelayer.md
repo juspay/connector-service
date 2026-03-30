@@ -130,4 +130,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 
 #### get
 
-**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.ts) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L22) · [Rust](../../examples/truelayer/rust/truelayer.rs#L25)
+**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.ts) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L23) · [Rust](../../examples/truelayer/rust/truelayer.rs#L25)
