@@ -4,6 +4,8 @@
 package payments
 
 import types.Payment.*
+import types.Payouts.*
+import types.PaymentMethods.*
 
 import uniffi.connector_service_ffi.acceptReqTransformer
 import uniffi.connector_service_ffi.acceptResTransformer
@@ -27,6 +29,22 @@ import uniffi.connector_service_ffi.defendReqTransformer
 import uniffi.connector_service_ffi.defendResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
+import uniffi.connector_service_ffi.payoutCreateReqTransformer
+import uniffi.connector_service_ffi.payoutCreateResTransformer
+import uniffi.connector_service_ffi.payoutCreateLinkReqTransformer
+import uniffi.connector_service_ffi.payoutCreateLinkResTransformer
+import uniffi.connector_service_ffi.payoutCreateRecipientReqTransformer
+import uniffi.connector_service_ffi.payoutCreateRecipientResTransformer
+import uniffi.connector_service_ffi.payoutEnrollDisburseAccountReqTransformer
+import uniffi.connector_service_ffi.payoutEnrollDisburseAccountResTransformer
+import uniffi.connector_service_ffi.payoutGetReqTransformer
+import uniffi.connector_service_ffi.payoutGetResTransformer
+import uniffi.connector_service_ffi.payoutStageReqTransformer
+import uniffi.connector_service_ffi.payoutStageResTransformer
+import uniffi.connector_service_ffi.payoutTransferReqTransformer
+import uniffi.connector_service_ffi.payoutTransferResTransformer
+import uniffi.connector_service_ffi.payoutVoidReqTransformer
+import uniffi.connector_service_ffi.payoutVoidResTransformer
 import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
@@ -58,6 +76,14 @@ object FlowRegistry {
         "create_session_token" to ::createSessionTokenReqTransformer,
         "defend" to ::defendReqTransformer,
         "get" to ::getReqTransformer,
+        "payout_create" to ::payoutCreateReqTransformer,
+        "payout_create_link" to ::payoutCreateLinkReqTransformer,
+        "payout_create_recipient" to ::payoutCreateRecipientReqTransformer,
+        "payout_enroll_disburse_account" to ::payoutEnrollDisburseAccountReqTransformer,
+        "payout_get" to ::payoutGetReqTransformer,
+        "payout_stage" to ::payoutStageReqTransformer,
+        "payout_transfer" to ::payoutTransferReqTransformer,
+        "payout_void" to ::payoutVoidReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
         "refund" to ::refundReqTransformer,
@@ -80,6 +106,14 @@ object FlowRegistry {
         "create_session_token" to ::createSessionTokenResTransformer,
         "defend" to ::defendResTransformer,
         "get" to ::getResTransformer,
+        "payout_create" to ::payoutCreateResTransformer,
+        "payout_create_link" to ::payoutCreateLinkResTransformer,
+        "payout_create_recipient" to ::payoutCreateRecipientResTransformer,
+        "payout_enroll_disburse_account" to ::payoutEnrollDisburseAccountResTransformer,
+        "payout_get" to ::payoutGetResTransformer,
+        "payout_stage" to ::payoutStageResTransformer,
+        "payout_transfer" to ::payoutTransferResTransformer,
+        "payout_void" to ::payoutVoidResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
         "refund" to ::refundResTransformer,
@@ -221,6 +255,45 @@ class PaymentClient(
     // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
     fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
+
+}
+
+class PayoutClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // payout_create: PayoutService.Create — Creates a payout.
+    fun payout_create(request: PayoutServiceCreateRequest, options: RequestConfig? = null): PayoutServiceCreateResponse =
+        executeFlow("payout_create", request.toByteArray(), PayoutServiceCreateResponse.parser(), options)
+
+    // payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+    fun payout_create_link(request: PayoutServiceCreateLinkRequest, options: RequestConfig? = null): PayoutServiceCreateLinkResponse =
+        executeFlow("payout_create_link", request.toByteArray(), PayoutServiceCreateLinkResponse.parser(), options)
+
+    // payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+    fun payout_create_recipient(request: PayoutServiceCreateRecipientRequest, options: RequestConfig? = null): PayoutServiceCreateRecipientResponse =
+        executeFlow("payout_create_recipient", request.toByteArray(), PayoutServiceCreateRecipientResponse.parser(), options)
+
+    // payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+    fun payout_enroll_disburse_account(request: PayoutServiceEnrollDisburseAccountRequest, options: RequestConfig? = null): PayoutServiceEnrollDisburseAccountResponse =
+        executeFlow("payout_enroll_disburse_account", request.toByteArray(), PayoutServiceEnrollDisburseAccountResponse.parser(), options)
+
+    // payout_get: PayoutService.Get — Retrieve payout details.
+    fun payout_get(request: PayoutServiceGetRequest, options: RequestConfig? = null): PayoutServiceGetResponse =
+        executeFlow("payout_get", request.toByteArray(), PayoutServiceGetResponse.parser(), options)
+
+    // payout_stage: PayoutService.Stage — Stage the payout.
+    fun payout_stage(request: PayoutServiceStageRequest, options: RequestConfig? = null): PayoutServiceStageResponse =
+        executeFlow("payout_stage", request.toByteArray(), PayoutServiceStageResponse.parser(), options)
+
+    // payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+    fun payout_transfer(request: PayoutServiceTransferRequest, options: RequestConfig? = null): PayoutServiceTransferResponse =
+        executeFlow("payout_transfer", request.toByteArray(), PayoutServiceTransferResponse.parser(), options)
+
+    // payout_void: PayoutService.Void — Void a payout.
+    fun payout_void(request: PayoutServiceVoidRequest, options: RequestConfig? = null): PayoutServiceVoidResponse =
+        executeFlow("payout_void", request.toByteArray(), PayoutServiceVoidResponse.parser(), options)
 
 }
 

@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
+superposition_core = { git = "https://github.com/juspay/superposition", branch = "main" }
+superposition_types = { git = "https://github.com/juspay/superposition", branch = "main" }
 config_patch_derive = { path = "../config_patch_derive" }
 anyhow = "1.0"
 rdkafka = { version = "0.36", optional = true }
@@ -24,7 +26,7 @@ strum = { version = "0.26", features = ["derive"] }
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 rust_decimal = { version = "1.0" }
-time = { version = "0.3.36", features = ["parsing"] }
+time = { version = "0.3.36", features = ["parsing", "macros"] }
 url = "2.5.0"
 uuid = { version = "1", features = ["v4", "v7"] }
 http = "1.2.0"

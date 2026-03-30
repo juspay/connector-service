@@ -327,8 +327,9 @@ fn build_ffi_options(
 
 fn environment_discriminant(environment: Environment) -> i32 {
     match environment {
-        Environment::Sandbox => 0,
-        Environment::Production => 1,
+        Environment::Unspecified => 0,
+        Environment::Sandbox => 1,
+        Environment::Production => 2,
     }
 }
 

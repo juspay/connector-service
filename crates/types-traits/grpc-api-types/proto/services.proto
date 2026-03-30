@@ -66,7 +66,7 @@ package types;
 import "payment.proto";
 import "payouts.proto";
 
-option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+option go_package = "github.com/juspay/connector-service/crates/types-traits/grpc-api-types/proto;proto";
 
 // ============================================================================
 // SERVICE DEFINITIONS
@@ -137,10 +137,6 @@ service PaymentService {
   // Setup a recurring payment instruction for future payments/ debits. This could be
   // for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
   rpc SetupRecurring(PaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
-
-  // Handle incoming webhooks from payment processors.
-  // This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ======================================================================================
@@ -167,10 +163,6 @@ service RefundService {
   // Retrieve refund status from the payment processor. Tracks refund progress
   // through processor settlement for accurate customer communication.
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
-
-  // Handle incoming webhooks from payment processor.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
-
 }
 
 // ============================================================================
@@ -195,9 +187,6 @@ service DisputeService {
   // Concede dispute and accepts chargeback loss. Acknowledges liability
   // and stops dispute defense process when evidence is insufficient.
   rpc Accept(DisputeServiceAcceptRequest) returns (DisputeServiceAcceptResponse);
-
-  // Handle incoming webhooks from connectors.
-  rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
 // ============================================================================
@@ -274,6 +263,10 @@ service PaymentMethodAuthenticationService {
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
 }
 
+// ============================================================================
+// PAYOUT SERVICE — Manages payout lifecycle operations.
+// ============================================================================
+
 service PayoutService {
   // Creates a payout.
   rpc Create(PayoutServiceCreateRequest) returns (PayoutServiceCreateResponse);
@@ -289,7 +282,7 @@ service PayoutService {
 
   // Stage the payout.
   rpc Stage(PayoutServiceStageRequest) returns (PayoutServiceStageResponse);
-  
+
   // Creates a link between the recipient and the payout.
   rpc CreateLink(PayoutServiceCreateLinkRequest) returns (PayoutServiceCreateLinkResponse);
 
