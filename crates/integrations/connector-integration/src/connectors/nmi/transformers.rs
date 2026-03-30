@@ -1405,7 +1405,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .continue_redirection_url
                                 .as_ref()
                                 .map(|url| url.to_string())
-                                .unwrap_or_default(),
+                                .ok_or_else(|| {
+                                    error_stack::report!(
+                                        errors::ConnectorError::MissingRequiredField {
+                                            field_name: "continue_redirection_url",
+                                        }
+                                    )
+                                })?,
                         })),
                         connector_response_reference_id: Some(response.transactionid.clone()),
                         status_code: item.http_code,
