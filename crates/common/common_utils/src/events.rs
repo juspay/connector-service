@@ -323,6 +323,7 @@ pub enum FlowName {
     Unknown,
     IncrementalAuthorization,
     PayoutCreate,
+    InitiateTopup,
     PayoutTransfer,
     PayoutGet,
     PayoutVoid,
@@ -369,6 +370,7 @@ impl FlowName {
             Self::PayoutCreateRecipient => "PayoutCreateRecipient",
             Self::PayoutEnrollDisburseAccount => "PayoutEnrollDisburseAccount",
             Self::MandateRevoke => "MandateRevoke",
+            Self::InitiateTopup => "InitiateTopup",
             Self::Unknown => "Unknown",
         }
     }

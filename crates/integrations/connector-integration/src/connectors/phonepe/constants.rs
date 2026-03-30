@@ -3,6 +3,7 @@
 // ===== API ENDPOINTS =====
 pub const API_PAY_ENDPOINT: &str = "pg/v1/pay";
 pub const API_STATUS_ENDPOINT: &str = "pg/v1/status";
+pub const API_WALLET_TOPUP_ENDPOINT: &str = "v3/wallet/topup";
 
 // ===== IRCTC MERCHANT-BASED ENDPOINTS =====
 pub const API_IRCTC_PAY_ENDPOINT: &str = "pg/v1/irctc-pay";
@@ -25,6 +26,10 @@ pub const CARD_NETWORK_RUPAY: &str = "RUPAY";
 // ===== RESPONSE CODES =====
 pub const RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED: &str = "CREDIT_ACCOUNT_NOT_ALLOWED_FOR_SENDER";
 pub const RESPONSE_CODE_PAY0071: &str = "PAY0071";
+
+// ===== WALLET TOPUP =====
+pub const WALLET_TOPUP_DEEPLINK: &str = "WALLET_TOPUP_DEEPLINK";
+pub const TOPUP_WORKFLOW_TRANSACTIONAL: &str = "TRANSACTIONAL";
 
 // ===== DEFAULT VALUES =====
 pub const DEFAULT_KEY_INDEX: &str = "1";

@@ -8,6 +8,7 @@ use grpc_api_types::{
         dispute_service_server, event_service_server, merchant_authentication_service_server,
         payment_method_authentication_service_server, payment_method_service_server,
         payment_service_server, recurring_payment_service_server, refund_service_server,
+        wallet_service_server,
     },
     payouts::payout_service_server,
 };
@@ -116,6 +117,7 @@ pub struct Service {
     pub customer_service: crate::server::payments::Customer,
     pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
     pub payouts_service: crate::server::payouts::Payouts,
+    pub wallet_service: crate::server::wallet::Wallet,
 }
 
 impl Service {
@@ -163,6 +165,7 @@ impl Service {
             payment_method_authentication_service:
                 crate::server::payments::PaymentMethodAuthentication,
             payouts_service: crate::server::payouts::Payouts,
+            wallet_service: crate::server::wallet::Wallet,
         }
     }
 
@@ -313,6 +316,9 @@ impl Service {
             )
             .add_service(payout_service_server::PayoutServiceServer::new(
                 self.payouts_service,
+            ))
+            .add_service(wallet_service_server::WalletServiceServer::new(
+                self.wallet_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;

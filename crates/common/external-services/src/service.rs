@@ -98,6 +98,19 @@ impl AdditionalHeaders for domain_types::payouts::payouts_types::PayoutFlowData 
         None
     }
 }
+
+impl ConnectorRequestReference for domain_types::connector_types::WalletFlowData {
+    fn get_connector_request_reference_id(&self) -> &str {
+        &self.connector_name
+    }
+}
+
+impl AdditionalHeaders for domain_types::connector_types::WalletFlowData {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        None
+    }
+}
+
 use common_utils::events::{Event, EventConfig, FlowName};
 #[cfg(feature = "injector-client")]
 // TokenData is now imported from hyperswitch_injector

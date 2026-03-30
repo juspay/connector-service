@@ -9,16 +9,17 @@ use domain_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        EventType, InitiateTopupData, InitiateTopupResponseData, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RedirectDetailsResponse, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData, WalletFlowData,
+        WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
@@ -79,6 +80,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
     + PayoutCreateV2
+    + InitiateTopupV2
     + PayoutTransferV2
     + PayoutGetV2
     + PayoutVoidV2
@@ -379,6 +381,29 @@ impl<T>
     > for T
 where
     T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait InitiateTopupV2:
+    ConnectorIntegrationV2<
+    connector_flow::InitiateTopup,
+    WalletFlowData,
+    InitiateTopupData,
+    InitiateTopupResponseData,
+>
+{
+}
+
+impl<T> InitiateTopupV2 for T where
+    T: ConnectorCommon
+        + ConnectorIntegrationV2<
+            connector_flow::InitiateTopup,
+            WalletFlowData,
+            InitiateTopupData,
+            InitiateTopupResponseData,
+        > + Sync
+        + Send
+        + 'static
 {
 }
 

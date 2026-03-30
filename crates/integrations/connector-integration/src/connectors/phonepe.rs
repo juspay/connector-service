@@ -7,22 +7,23 @@ use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::Mi
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, InitiateTopup,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        DisputeResponseData, InitiateTopupData, InitiateTopupResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, WalletFlowData,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
@@ -42,6 +43,7 @@ use transformers as phonepe;
 
 use self::transformers::{
     PhonepePaymentsRequest, PhonepePaymentsResponse, PhonepeSyncRequest, PhonepeSyncResponse,
+    PhonepeTopupRequest, PhonepeTopupResponse,
 };
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -196,6 +198,12 @@ macros::create_all_prerequisites!(
             request_body: PhonepeSyncRequest,
             response_body: PhonepeSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: InitiateTopup,
+            request_body: PhonepeTopupRequest,
+            response_body: PhonepeTopupResponse,
+            router_data: RouterDataV2<InitiateTopup, WalletFlowData, InitiateTopupData, InitiateTopupResponseData>,
         )
     ],
     amount_converters: [
@@ -221,6 +229,13 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.phonepe.base_url
+        }
+
+        pub fn connector_base_url_wallet<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, WalletFlowData, Req, Res>,
+        ) -> String {
+            req.resource_common_data.connectors.phonepe.base_url.to_string()
         }
 
         pub fn build_headers<F, FCD, Req, Res>(
@@ -437,6 +452,53 @@ macros::macro_connector_implementation!(
             };
 
             Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
+        }
+    }
+);
+
+// InitiateTopup flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Phonepe,
+    curl_request: Json(PhonepeTopupRequest),
+    curl_response: PhonepeTopupResponse,
+    flow_name: InitiateTopup,
+    resource_common_data: WalletFlowData,
+    flow_request: InitiateTopupData,
+    flow_response: InitiateTopupResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<InitiateTopup, WalletFlowData, InitiateTopupData, InitiateTopupResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+            ];
+
+            // Build the request to get the checksum for X-VERIFY header
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
+                router_data: req,
+            };
+            let connector_req = PhonepeTopupRequest::try_from(&connector_router_data)?;
+
+            headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
+
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<InitiateTopup, WalletFlowData, InitiateTopupData, InitiateTopupResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_wallet(req);
+            Ok(format!("{}{}", base_url, constants::API_WALLET_TOPUP_ENDPOINT))
         }
     }
 );
