@@ -33,8 +33,6 @@ use domain_types::{
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::VerifyWebhookSourceRequestData,
-    router_response_types::{VerifyWebhookSourceResponseData, VerifyWebhookStatus},
     types::{
         generate_access_token_response_data, generate_create_order_response,
         generate_payment_authenticate_response, generate_payment_capture_response,
@@ -53,8 +51,8 @@ use grpc_api_types::payments::{
     merchant_authentication_service_server::MerchantAuthenticationService, payment_method,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
-    recurring_payment_service_server::RecurringPaymentService, EventServiceHandleRequest,
-    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    recurring_payment_service_server::RecurringPaymentService,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenResponse,
@@ -710,18 +708,22 @@ impl Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
-                |err| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to resolve connector overrides".to_string()),
-                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                        None,
-                    )
-                },
-            )?;
+        let connectors = utils::get_resolved_connectors(
+            config,
+            &connector,
+            &connector_config,
+            metadata_payload.environment.as_deref(),
+        )
+        .map_err(|e| {
+            tracing::error!("Failed to resolve connector overrides: {:?}", e);
+            let api_error = e.get_api_error();
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(api_error.error_message.clone()),
+                Some(api_error.sub_code.clone()),
+                Some(api_error.error_identifier.into()),
+            )
+        })?;
 
         // Create common request data
         let payment_flow_data =
@@ -1571,11 +1573,13 @@ impl PaymentService for Payments {
                     let payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
-                    let connectors = utils::connectors_with_connector_config_overrides(
-                        &metadata_payload.connector_config,
+                    let connectors = utils::get_resolved_connectors(
                         &config,
+                        &connector,
+                        &metadata_payload.connector_config,
+                        metadata_payload.environment.as_deref(),
                     )
-                    .into_grpc_status()?;
+                    .map_err(|e| error_stack::Report::new(e).into_grpc_status())?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -1911,127 +1915,6 @@ impl PaymentService for Payments {
             config.clone(),
             FlowName::VoidPostCapture,
             |request_data| async move { self.internal_void_post_capture(request_data).await },
-        )
-        .await
-    }
-
-    #[tracing::instrument(
-        name = "incoming_webhook",
-        fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::IncomingWebhook.as_str(),
-            request_body = tracing::field::Empty,
-            response_body = tracing::field::Empty,
-            error_message = tracing::field::Empty,
-            merchant_id = tracing::field::Empty,
-            gateway = tracing::field::Empty,
-            request_id = tracing::field::Empty,
-            status_code = tracing::field::Empty,
-            message_ = "Golden Log Line (incoming)",
-            response_time = tracing::field::Empty,
-            tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.as_str(),
-            flow_specific_fields.status = tracing::field::Empty,
-        )
-        skip(self, request)
-    )]
-    async fn handle_event(
-        &self,
-        request: tonic::Request<EventServiceHandleRequest>,
-    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
-        let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
-            request,
-            &service_name,
-            config.clone(),
-            FlowName::IncomingWebhook,
-            |request_data| {
-                let service_name_clone = service_name.clone();
-                async move {
-                    let payload = request_data.payload;
-                    let metadata_payload = request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
-                    let _request_id = &metadata_payload.request_id;
-                    let connector_config = &metadata_payload.connector_config;
-                    let request_details = payload
-                        .request_details
-                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
-                        })?
-                        .map_err(|e| e.into_grpc_status())?;
-                    let webhook_secrets = payload
-                        .webhook_secrets
-                        .clone()
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
-                    //get connector data
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    let requires_external_verification = connector_data
-                        .connector
-                        .requires_external_webhook_verification(config
-                            .webhook_source_verification_call
-                            .connectors_with_webhook_source_verification_call
-                            .as_ref());
-
-                    let source_verified = if requires_external_verification {
-                        verify_webhook_source_external(
-                            config.as_ref(),
-                            &connector_data,
-                            &request_details,
-                            webhook_secrets.clone(),
-                            connector_config,
-                            &metadata_payload,
-                            &service_name_clone,
-                        )
-                        .await?
-                     } else {
-                        match connector_data
-                            .connector
-                            .verify_webhook_source(
-                                request_details.clone(),
-                                webhook_secrets.clone(),
-                                Some(connector_config.clone()),
-                            )
-                        {
-                            Ok(result) => result,
-                            Err(err) => {
-                                tracing::warn!(
-                                    target: "webhook",
-                                    "{:?}",
-                                    err
-                                );
-                                false
-                            }
-                        }
-                    };
-
-                    let response =
-                        connector_integration::webhook_utils::process_webhook_event(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_config.clone()),
-                            source_verified,
-                        )
-                        .into_grpc_status()?;
-
-                    Ok(tonic::Response::new(response))
-                }
-            },
         )
         .await
     }
@@ -3671,13 +3554,13 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             config.clone(),
             FlowName::PreAuthenticate,
             |request_data| async move { self.internal_pre_authenticate(request_data).await },
-        )
+        ))
         .await
     }
 
@@ -3767,118 +3650,6 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             |request_data| async move { self.internal_post_authenticate(request_data).await },
         ))
         .await
-    }
-}
-
-/// For connectors requiring external webhook source verification (e.g., PayPal).
-/// Executes the VerifyWebhookSource flow via the connector integration.
-async fn verify_webhook_source_external(
-    config: &Config,
-    connector_data: &ConnectorData<DefaultPCIHolder>,
-    request_details: &domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_config: &ConnectorSpecificConfig,
-    metadata_payload: &utils::MetadataPayload,
-    service_name: &str,
-) -> Result<bool, tonic::Status> {
-    let connectors = utils::connectors_with_connector_config_overrides(connector_config, config)
-        .into_grpc_status()?;
-
-    let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
-        connectors,
-        connector_request_reference_id: format!("webhook_verify_{}", metadata_payload.request_id),
-        raw_connector_response: None,
-        raw_connector_request: None,
-        connector_response_headers: None,
-    };
-
-    let merchant_secret =
-        webhook_secrets.unwrap_or_else(|| domain_types::connector_types::ConnectorWebhookSecrets {
-            secret: "default_secret".to_string().into_bytes(),
-            additional_secret: None,
-        });
-
-    let verify_webhook_request = VerifyWebhookSourceRequestData {
-        webhook_headers: request_details.headers.clone(),
-        webhook_body: request_details.body.clone(),
-        merchant_secret,
-        webhook_uri: request_details.uri.clone(),
-    };
-
-    let verify_webhook_router_data = RouterDataV2::<
-        VerifyWebhookSource,
-        VerifyWebhookSourceFlowData,
-        VerifyWebhookSourceRequestData,
-        VerifyWebhookSourceResponseData,
-    > {
-        flow: std::marker::PhantomData,
-        resource_common_data: verify_webhook_flow_data,
-        connector_config: connector_config.clone(),
-        request: verify_webhook_request,
-        response: Err(ErrorResponse::default()),
-    };
-
-    let connector_integration: BoxedConnectorIntegrationV2<
-        '_,
-        VerifyWebhookSource,
-        VerifyWebhookSourceFlowData,
-        VerifyWebhookSourceRequestData,
-        VerifyWebhookSourceResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
-
-    let event_params = EventProcessingParams {
-        connector_name: connector_data.connector.id(),
-        service_name,
-        service_type: utils::service_type_str(&config.server.type_),
-        flow_name: FlowName::IncomingWebhook,
-        event_config: &config.events,
-        request_id: &metadata_payload.request_id,
-        lineage_ids: &metadata_payload.lineage_ids,
-        reference_id: &metadata_payload.reference_id,
-        resource_id: &metadata_payload.resource_id,
-        shadow_mode: metadata_payload.shadow_mode,
-    };
-
-    match Box::pin(
-        external_services::service::execute_connector_processing_step(
-            &config.proxy,
-            connector_integration,
-            verify_webhook_router_data,
-            None,
-            event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-            None,
-            None,
-        ),
-    )
-    .await
-    {
-        Ok(verify_result) => Ok(match verify_result.response {
-            Ok(response_data) => {
-                matches!(
-                    response_data.verify_webhook_status,
-                    VerifyWebhookStatus::SourceVerified
-                )
-            }
-            Err(_) => {
-                tracing::warn!(
-                    target: "webhook",
-                    "Webhook verification returned error response for connector {}",
-                    connector_data.connector.id()
-                );
-                false
-            }
-        }),
-        Err(e) => {
-            tracing::warn!(
-                target: "webhook",
-                "Webhook verification failed for connector {}: {:?}. Setting source_verified=false",
-                connector_data.connector.id(),
-                e
-            );
-            Ok(false)
-        }
     }
 }
 

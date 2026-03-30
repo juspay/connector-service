@@ -22,19 +22,33 @@ use domain_types::{
         VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payouts::payouts_types::{
+        PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
+        PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,
+        PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,
+        PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
+        PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
+    },
     router_data::ConnectorSpecificConfig,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
+use serde_json::Value;
 
 use crate::{
-    api::ConnectorCommon,
+    api::{ApplicationResponse, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
     decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub enum IncomingWebhookFlowError {
+    ResourceNotFound,
+    InternalError,
+}
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
@@ -66,6 +80,14 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + UpdateMandateTokenV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
+    + PayoutCreateV2
+    + PayoutTransferV2
+    + PayoutGetV2
+    + PayoutVoidV2
+    + PayoutStageV2
+    + PayoutCreateLinkV2
+    + PayoutCreateRecipientV2
+    + PayoutEnrollDisburseAccountV2
 {
 }
 
@@ -348,6 +370,30 @@ pub trait VerifyWebhookSourceV2:
 {
 }
 
+pub trait PayoutCreateV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreate,
+    PayoutFlowData,
+    PayoutCreateRequest,
+    PayoutCreateResponse,
+>
+{
+}
+
+impl<T> PayoutCreateV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutCreate,
+        PayoutFlowData,
+        PayoutCreateRequest,
+        PayoutCreateResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
 pub trait IncomingWebhook {
     fn verify_webhook_source(
         &self,
@@ -442,6 +488,19 @@ pub trait IncomingWebhook {
             "get_webhook_resource_object".to_string(),
         )
         .into())
+    }
+
+    /// fn get_webhook_api_response
+    ///
+    /// This is used by callers to decide what HTTP response
+    /// should be sent back to the connector for webhook acknowledgement.
+    fn get_webhook_api_response(
+        &self,
+        _request: RequestDetails,
+        _error_kind: Option<IncomingWebhookFlowError>,
+    ) -> Result<ApplicationResponse<Value>, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
+        Ok(ApplicationResponse::StatusOk)
     }
 }
 
@@ -611,4 +670,174 @@ pub fn is_mandate_supported<T: PaymentMethodDataTypes>(
             .into()),
         }
     }
+}
+
+// --- GENERATED PAYOUT TRAITS ---
+
+pub trait PayoutTransferV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutTransfer,
+    PayoutFlowData,
+    PayoutTransferRequest,
+    PayoutTransferResponse,
+>
+{
+}
+
+impl<T> PayoutTransferV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutTransfer,
+        PayoutFlowData,
+        PayoutTransferRequest,
+        PayoutTransferResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutGetV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutGet,
+    PayoutFlowData,
+    PayoutGetRequest,
+    PayoutGetResponse,
+>
+{
+}
+
+impl<T> PayoutGetV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutGet,
+        PayoutFlowData,
+        PayoutGetRequest,
+        PayoutGetResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutVoidV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutVoid,
+    PayoutFlowData,
+    PayoutVoidRequest,
+    PayoutVoidResponse,
+>
+{
+}
+
+impl<T> PayoutVoidV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutVoid,
+        PayoutFlowData,
+        PayoutVoidRequest,
+        PayoutVoidResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutStageV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutStage,
+    PayoutFlowData,
+    PayoutStageRequest,
+    PayoutStageResponse,
+>
+{
+}
+
+impl<T> PayoutStageV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutStage,
+        PayoutFlowData,
+        PayoutStageRequest,
+        PayoutStageResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutCreateLinkV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreateLink,
+    PayoutFlowData,
+    PayoutCreateLinkRequest,
+    PayoutCreateLinkResponse,
+>
+{
+}
+
+impl<T> PayoutCreateLinkV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutCreateLink,
+        PayoutFlowData,
+        PayoutCreateLinkRequest,
+        PayoutCreateLinkResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutCreateRecipientV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreateRecipient,
+    PayoutFlowData,
+    PayoutCreateRecipientRequest,
+    PayoutCreateRecipientResponse,
+>
+{
+}
+
+impl<T> PayoutCreateRecipientV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutCreateRecipient,
+        PayoutFlowData,
+        PayoutCreateRecipientRequest,
+        PayoutCreateRecipientResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
+}
+
+pub trait PayoutEnrollDisburseAccountV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutEnrollDisburseAccount,
+    PayoutFlowData,
+    PayoutEnrollDisburseAccountRequest,
+    PayoutEnrollDisburseAccountResponse,
+>
+{
+}
+
+impl<T> PayoutEnrollDisburseAccountV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T>
+    ConnectorIntegrationV2<
+        connector_flow::PayoutEnrollDisburseAccount,
+        PayoutFlowData,
+        PayoutEnrollDisburseAccountRequest,
+        PayoutEnrollDisburseAccountResponse,
+    > for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
+{
 }
