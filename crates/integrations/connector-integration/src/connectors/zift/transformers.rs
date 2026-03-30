@@ -1,9 +1,10 @@
 use crate::{connectors::zift::ZiftRouterData, types::ResponseRouterData};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
     types::{MinorUnit, StringMinorUnit},
 };
-use error_stack::{Report, ResultExt};
+use error_stack::{report, Report, ResultExt};
 use std::fmt::Debug;
 
 use domain_types::{
@@ -13,11 +14,56 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+
+pub trait ConnectorTransactionIdExt {
+    fn get_connector_transaction_id_i64(&self) -> CustomResult<i64, IntegrationError>;
+}
+
+impl ConnectorTransactionIdExt for String {
+    fn get_connector_transaction_id_i64(&self) -> CustomResult<i64, IntegrationError> {
+        self.parse::<i64>()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "connector_transaction_id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected numeric transaction ID".to_owned()),
+                    ..Default::default()
+                },
+            })
+            .attach_printable(format!(
+                "Failed to parse connector_transaction_id: {} as i64",
+                self
+            ))
+    }
+}
+
+impl ConnectorTransactionIdExt for Option<String> {
+    fn get_connector_transaction_id_i64(&self) -> CustomResult<i64, IntegrationError> {
+        self.as_ref()
+            .ok_or_else(|| {
+                report!(IntegrationError::MissingRequiredField {
+                    field_name: "connector_transaction_id",
+                    context: Default::default(),
+                })
+            })?
+            .get_connector_transaction_id_i64()
+    }
+}
+
+impl ConnectorTransactionIdExt for ResponseId {
+    fn get_connector_transaction_id_i64(&self) -> CustomResult<i64, IntegrationError> {
+        self.get_connector_transaction_id()
+            .change_context(IntegrationError::MissingRequiredField {
+                field_name: "connector_transaction_id",
+                context: Default::default(),
+            })?
+            .get_connector_transaction_id_i64()
+    }
+}
 
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -237,6 +283,22 @@ pub struct ZiftAuthPaymentsResponse {
     pub token: Option<String>,
 }
 
+impl ZiftAuthPaymentsResponse {
+    pub fn get_transaction_id(
+        &self,
+        http_code: u16,
+    ) -> CustomResult<String, ConnectorResponseTransformationError> {
+        self.transaction_id.clone().ok_or_else(|| {
+            Report::new(
+                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                    http_code,
+                    Some("missing transaction_id in connector response".to_string()),
+                ),
+            )
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ZiftCaptureResponse {
@@ -262,6 +324,22 @@ pub struct ZiftRefundResponse {
     response_code: String,
     response_message: Option<String>,
     transaction_code: Option<String>,
+}
+
+impl ZiftRefundResponse {
+    pub fn get_transaction_id(
+        &self,
+        http_code: u16,
+    ) -> CustomResult<String, ConnectorResponseTransformationError> {
+        self.transaction_id.clone().ok_or_else(|| {
+            Report::new(
+                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                    http_code,
+                    Some("missing transaction_id in connector response".to_string()),
+                ),
+            )
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -589,14 +667,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                     None
                 };
 
-                let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                    Report::new(
-                        ConnectorResponseTransformationError::response_handling_failed_with_context(
-                            item.http_code,
-                            Some("missing transaction_id in connector response".to_string()),
-                        ),
-                    )
-                })?;
+                let transaction_id = item.response.get_transaction_id(item.http_code)?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -744,14 +815,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
             }),
 
             _ => {
-                let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                    Report::new(
-                        ConnectorResponseTransformationError::response_handling_failed_with_context(
-                            item.http_code,
-                            Some("missing transaction_id in connector response".to_string()),
-                        ),
-                    )
-                })?;
+                let transaction_id = item.response.get_transaction_id(item.http_code)?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -868,24 +932,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
-        let transaction_id = item
-            .router_data
-            .request
-            .connector_transaction_id
-            .clone()
-            .get_connector_transaction_id()
-            .change_context(IntegrationError::MissingConnectorTransactionID {
-                context: Default::default(),
-            })?;
-
         Ok(Self {
             request_type: RequestType::Find,
             auth,
-            transaction_id: transaction_id.parse::<i64>().map_err(|_| {
-                IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
-                }
-            })?,
+            transaction_id: item
+                .router_data
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id_i64()?,
         })
     }
 }
@@ -923,15 +977,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .router_data
                 .request
                 .connector_transaction_id
-                .clone()
-                .get_connector_transaction_id()
-                .change_context(IntegrationError::MissingConnectorTransactionID {
-                    context: Default::default(),
-                })?
-                .parse::<i64>()
-                .map_err(|_| IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
-                })?,
+                .get_connector_transaction_id_i64()?,
             amount,
         })
     }
@@ -1081,14 +1127,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             common_enums::AttemptStatus::Failure
         };
         if status != common_enums::AttemptStatus::Failure {
-            let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                Report::new(
-                    ConnectorResponseTransformationError::response_handling_failed_with_context(
-                        item.http_code,
-                        Some("missing transaction_id in connector response".to_string()),
-                    ),
-                )
-            })?;
+            let transaction_id = item.response.get_transaction_id(item.http_code)?;
 
             Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1159,11 +1198,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .router_data
                 .request
                 .connector_transaction_id
-                .clone()
-                .parse::<i64>()
-                .map_err(|_| IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
-                })?,
+                .get_connector_transaction_id_i64()?,
         })
     }
 }

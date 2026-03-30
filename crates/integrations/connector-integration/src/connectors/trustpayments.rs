@@ -48,8 +48,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::types::ResponseRouterData;
-use crate::with_error_response_body;
+use crate::{types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
 use domain_types::errors::IntegrationError;
 

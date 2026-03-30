@@ -8750,12 +8750,9 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for SessionTokenRequestData 
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let amount = value.amount.ok_or_else(|| {
-            report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))
+            report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))
         })?;
         let amount = common_utils::types::Money {
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -8894,12 +8891,9 @@ impl
         value: grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let amount = value.amount.ok_or_else(|| {
-            report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for session token creation".to_owned(),
-                error_object: None,
-            }))
+            report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for session token creation")
+            ))
         })?;
         let amount = common_utils::types::Money {
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),

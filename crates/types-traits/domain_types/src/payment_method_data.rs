@@ -14,7 +14,7 @@ use utoipa::ToSchema;
 
 pub use crate::router_data::PazeDecryptedData;
 use crate::{
-    errors::{ApiError, ApplicationErrorResponse, IntegrationError},
+    errors::{ApiError, ApplicationErrorResponse, IntegrationError, IntegrationErrorContext},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -72,8 +72,12 @@ impl PaymentMethodDataTypes for DefaultPCIHolder {
     fn is_cobadged_inner(inner: &Self::Inner) -> Result<bool, IntegrationError> {
         inner
             .is_cobadged_card()
-            .map_err(|_| IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+            .map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "is_cobadged_card",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to determine cobadged card status".to_owned()),
+                    ..Default::default()
+                },
             })
     }
 }
@@ -98,8 +102,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
+                .ok_or(IntegrationError::InvalidDataFormat {
+                    field_name: "payment_method_data.card.card_exp_year",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                        ..Default::default()
+                    },
                 })?
                 .to_string(),
         ))
@@ -113,12 +121,18 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<u8>()
             .map_err(|_| IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: MM".to_owned()),
+                    ..Default::default()
+                },
             })?;
         let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
             IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: MM".to_owned()),
+                    ..Default::default()
+                },
             }
         })?;
         Ok(Secret::new(month.two_digits()))
@@ -152,7 +166,10 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<i8>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: MM".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }
@@ -218,7 +235,10 @@ impl Card<DefaultPCIHolder> {
             .parse::<i32>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }
@@ -314,8 +334,12 @@ impl NetworkTokenData {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
+                .ok_or(IntegrationError::InvalidDataFormat {
+                    field_name: "payment_method_data.card.token_exp_year",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                        ..Default::default()
+                    },
                 })?
                 .to_string(),
         ))
@@ -1335,8 +1359,12 @@ impl DecryptedWalletTokenDetailsForNetworkTransactionId {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
+                .ok_or(IntegrationError::InvalidDataFormat {
+                    field_name: "payment_method_data.decrypted_wallet_token.token_exp_year",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                        ..Default::default()
+                    },
                 })?
                 .to_string(),
         ))
@@ -1384,7 +1412,10 @@ impl DecryptedWalletTokenDetailsForNetworkTransactionId {
             .parse::<i8>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.decrypted_wallet_token.token_exp_month",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: MM".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }
@@ -1395,7 +1426,10 @@ impl DecryptedWalletTokenDetailsForNetworkTransactionId {
             .parse::<i32>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.decrypted_wallet_token.token_exp_year",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }
@@ -1421,8 +1455,12 @@ impl CardDetailsForNetworkTransactionId {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
+                .ok_or(IntegrationError::InvalidDataFormat {
+                    field_name: "payment_method_data.card.card_exp_year",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                        ..Default::default()
+                    },
                 })?
                 .to_string(),
         ))
@@ -1484,7 +1522,10 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i8>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: MM".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }
@@ -1495,7 +1536,10 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i32>()
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                    ..Default::default()
+                },
             })
             .map(Secret::new)
     }

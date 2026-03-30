@@ -106,6 +106,17 @@ pub struct ApiError {
     pub error_object: Option<serde_json::Value>,
 }
 
+impl ApiError {
+    pub fn missing_amount(message: impl Into<String>) -> Self {
+        Self {
+            sub_code: "MISSING_AMOUNT".to_owned(),
+            error_identifier: 400,
+            error_message: message.into(),
+            error_object: None,
+        }
+    }
+}
+
 /// Fields used when mapping request-phase connector errors to gRPC `IntegrationError`.
 /// Does not depend on generated proto types.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
