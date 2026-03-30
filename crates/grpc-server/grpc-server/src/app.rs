@@ -5,7 +5,7 @@ use grpc_api_types::{
     health_check::health_server,
     payments::{
         composite_payment_service_server, composite_refund_service_server, customer_service_server,
-        dispute_service_server, merchant_authentication_service_server,
+        dispute_service_server, event_service_server, merchant_authentication_service_server,
         payment_method_authentication_service_server, payment_method_service_server,
         payment_service_server, recurring_payment_service_server, refund_service_server,
         wallet_service_server,
@@ -111,7 +111,7 @@ pub struct Service {
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
     pub recurring_payment_service: crate::server::payments::RecurringPayments,
-    pub event_service: crate::server::payments::Events,
+    pub event_service: crate::server::events::EventServiceImpl,
     pub payment_method_service: crate::server::payments::PaymentMethod,
     pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
     pub customer_service: crate::server::payments::Customer,
@@ -137,12 +137,13 @@ impl Service {
         }
         let customer_service = crate::server::payments::Customer;
         let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
+        let refunds_service = crate::server::refunds::Refunds;
 
         let payments_service = crate::server::payments::Payments {
             customer_service: customer_service.clone(),
             merchant_authentication_service: merchant_authentication_service.clone(),
         };
-        let refunds_service = crate::server::refunds::Refunds;
+
         let composite_payments_service = composite_service::payments::Payments::new(
             payments_service.clone(),
             merchant_authentication_service.clone(),
@@ -157,7 +158,7 @@ impl Service {
             refunds_service,
             disputes_service: crate::server::disputes::Disputes,
             recurring_payment_service: crate::server::payments::RecurringPayments,
-            event_service: crate::server::payments::Events,
+            event_service: crate::server::events::EventServiceImpl,
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
@@ -273,6 +274,15 @@ impl Service {
             .add_service(payment_service_server::PaymentServiceServer::new(
                 self.payments_service.clone(),
             ))
+            .add_service(refund_service_server::RefundServiceServer::new(
+                self.refunds_service,
+            ))
+            .add_service(dispute_service_server::DisputeServiceServer::new(
+                self.disputes_service,
+            ))
+            .add_service(event_service_server::EventServiceServer::new(
+                self.event_service,
+            ))
             .add_service(
                 composite_payment_service_server::CompositePaymentServiceServer::new(
                     self.composite_payments_service.clone(),
@@ -304,12 +314,6 @@ impl Service {
                     self.payment_method_authentication_service,
                 ),
             )
-            .add_service(refund_service_server::RefundServiceServer::new(
-                self.refunds_service,
-            ))
-            .add_service(dispute_service_server::DisputeServiceServer::new(
-                self.disputes_service,
-            ))
             .add_service(payout_service_server::PayoutServiceServer::new(
                 self.payouts_service,
             ))
