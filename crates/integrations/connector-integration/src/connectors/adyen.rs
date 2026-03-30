@@ -475,13 +475,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-            use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-
             // For wallet redirects, encoded_data may be None
             // In such cases, gracefully skip the psync request
-            let encoded_data = req.request.encoded_data.clone().get_required_value("encoded_data");
-
-            if encoded_data.is_ok() {
+            if let Some(_) = req.request.encoded_data.clone() {
                 // Build the request normally if encoded_data is present
                 let url = self.get_url(req)?;
                 let headers = self.get_headers(req)?;
