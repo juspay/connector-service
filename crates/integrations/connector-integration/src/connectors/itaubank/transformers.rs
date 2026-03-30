@@ -231,6 +231,8 @@ pub enum ItaubankPayoutStatus {
     Cancelado,
     #[serde(alias = "Sucesso", alias = "SUCESSO")]
     Sucesso,
+    #[serde(alias = "Nao incluido", alias = "NAO_INCLUIDO")]
+    NaoIncluido,
     #[serde(other)]
     Unknown,
 }
@@ -241,7 +243,6 @@ pub struct ItaubankTransferResponse {
     pub id: String,
     #[serde(alias = "status", alias = "status_pagamento")]
     pub transfer_status: Option<ItaubankPayoutStatus>,
-    pub mensagem: Option<String>,
 }
 
 impl ItaubankTransferResponse {
@@ -254,9 +255,9 @@ impl ItaubankTransferResponse {
             Some(ItaubankPayoutStatus::Pendente) | Some(ItaubankPayoutStatus::EmProcessamento) => {
                 common_enums::PayoutStatus::Pending
             }
-            Some(ItaubankPayoutStatus::Rejeitado) | Some(ItaubankPayoutStatus::Cancelado) => {
-                common_enums::PayoutStatus::Failure
-            }
+            Some(ItaubankPayoutStatus::Rejeitado)
+            | Some(ItaubankPayoutStatus::Cancelado)
+            | Some(ItaubankPayoutStatus::NaoIncluido) => common_enums::PayoutStatus::Failure,
             Some(ItaubankPayoutStatus::Unknown) | None => common_enums::PayoutStatus::Pending,
         }
     }
