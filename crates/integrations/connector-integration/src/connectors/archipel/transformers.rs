@@ -84,12 +84,20 @@ fn to_connector_meta(
 ) -> CustomResult<ArchipelConfigData, ConnectorError> {
     let meta_obj = connector_meta.ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
 
-    // Handle two cases:
+    // Handle three cases:
     // Case 1: Direct String (for Refund flow)
     // Case 2: Object with "connector_meta_data" key (for other flows)
+    // Case 3: Direct object with tenant_id and platform_url fields (from Hyperswitch)
+
+    // Case 3: Direct object format - try to deserialize directly
+    if let Ok(config_data) = serde_json::from_value::<ArchipelConfigData>(meta_obj.clone()) {
+        return Ok(config_data);
+    }
+
+    // Case 1 & 2: Need to extract string first
     let connector_meta_str = if let Some(direct_str) = meta_obj.as_str() {
         // Case 1: Direct string, use it as is
-        direct_str
+        direct_str.to_string()
     } else {
         // Case 2: Object with nested "connector_meta_data" key
         meta_obj
@@ -98,14 +106,14 @@ fn to_connector_meta(
             .ok_or_else(|| ConnectorError::InvalidDataFormat {
                 field_name: "connector_meta_data",
             })?
+            .to_string()
     };
 
     // Parse the JSON string to get ArchipelConfigData
-    let config_data: ArchipelConfigData = serde_json::from_str(connector_meta_str).change_context(
-        ConnectorError::InvalidDataFormat {
+    let config_data: ArchipelConfigData = serde_json::from_str(&connector_meta_str)
+        .change_context(ConnectorError::InvalidDataFormat {
             field_name: "ArchipelConfigData",
-        },
-    )?;
+        })?;
 
     Ok(config_data)
 }
