@@ -17,7 +17,7 @@ use domain_types::{
     utils::CardIssuer,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -48,9 +48,16 @@ impl TryFrom<&ConnectorSpecificConfig> for ArchipelAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(config: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match config {
-            ConnectorSpecificConfig::Archipel { api_key, .. } => Ok(Self {
-                ca_certificate: Some(api_key.to_owned()),
-            }),
+            ConnectorSpecificConfig::Archipel { api_key, .. } => {
+                // Only use api_key as CA certificate if it looks like a PEM file
+                let ca_certificate = api_key.peek().trim();
+                let ca_certificate = if ca_certificate.starts_with("-----BEGIN") {
+                    Some(api_key.to_owned())
+                } else {
+                    None
+                };
+                Ok(Self { ca_certificate })
+            }
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
