@@ -69,8 +69,11 @@ impl MandateAmountData {
         ))?;
         date_time::format_date(date, format).change_context(
             crate::errors::IntegrationError::InvalidDataFormat {
-                field_name: "date_format",
-                context: Default::default(),
+                field_name: "mandate_amount_data.end_date",
+                context: crate::errors::IntegrationErrorContext {
+                    additional_context: Some("Failed to format end date with specified format".to_owned()),
+                    ..Default::default()
+                },
             },
         )
     }

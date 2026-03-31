@@ -39,7 +39,7 @@ use responses::{
 };
 
 use super::macros::{self, GetSoapXml};
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, utils, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
 use domain_types::errors::IntegrationError;
 
@@ -711,7 +711,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("WorldpayxmlErrorResponse")
             .change_context(
-                crate::utils::response_deserialization_fail(
+                utils::response_deserialization_fail(
                     res.status_code,
                 "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
             )?;

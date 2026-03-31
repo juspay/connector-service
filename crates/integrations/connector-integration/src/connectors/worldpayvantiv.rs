@@ -60,7 +60,7 @@ use self::transformers::{
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_response_body};
+use crate::{types::ResponseRouterData, utils, with_response_body};
 use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
 use error_stack::report;
 
@@ -69,13 +69,14 @@ pub(crate) mod headers {
 }
 
 /// Helper function to unwrap JSON-wrapped XML responses
-/// Some responses might come as a JSON string containing XML, this function handles that case
+/// Helper function to unwrap JSON-wrapped XML responses.
+/// Some responses might come as a JSON string containing XML, this function handles that case.
 fn unwrap_json_wrapped_xml(
     response_bytes: &[u8],
     status_code: u16,
 ) -> CustomResult<String, ConnectorResponseTransformationError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(crate::utils::response_handling_fail_for_connector(
+        .change_context(utils::response_handling_fail_for_connector(
             status_code,
             "worldpayvantiv",
         ))
@@ -85,33 +86,10 @@ fn unwrap_json_wrapped_xml(
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(crate::utils::response_handling_fail_for_connector(
+            .change_context(utils::response_handling_fail_for_connector(
                 status_code,
                 "worldpayvantiv",
             ))
-            .attach_printable("Failed to parse JSON-wrapped XML response")?
-    } else {
-        response_str.to_string()
-    };
-
-    Ok(xml_str)
-}
-
-/// Same as [`unwrap_json_wrapped_xml`] but for preprocess (macro expects [`IntegrationError`]).
-fn unwrap_json_wrapped_xml_for_preprocess(
-    response_bytes: &[u8],
-) -> CustomResult<String, IntegrationError> {
-    let response_str = std::str::from_utf8(response_bytes)
-        .change_context(IntegrationError::RequestEncodingFailed {
-            context: Default::default(),
-        })
-        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
-
-    let xml_str = if response_str.trim().starts_with('"') {
-        serde_json::from_str::<String>(response_str)
-            .change_context(IntegrationError::BodySerializationFailed {
-                context: Default::default(),
-            })
             .attach_printable("Failed to parse JSON-wrapped XML response")?
     } else {
         response_str.to_string()
@@ -370,7 +348,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
+            utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
         )?;
 
         with_response_body!(event_builder, response);
@@ -419,24 +397,26 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
-            _status_code: u16,
-        ) -> CustomResult<bytes::Bytes, IntegrationError> {
+            status_code: u16,
+        ) -> CustomResult<bytes::Bytes, ConnectorResponseTransformationError> {
             // Convert XML responses to JSON format for the macro's JSON parser
-            let xml_str = unwrap_json_wrapped_xml_for_preprocess(&bytes)?;
+            let xml_str = unwrap_json_wrapped_xml(&bytes, status_code)?;
 
             // Parse XML to struct, then serialize back to JSON
             if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
                 // This is an XML response - convert to JSON
                 let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-                    .change_context(IntegrationError::BodySerializationFailed {
-                        context: Default::default(),
-                    })
+                    .change_context(utils::response_deserialization_fail(
+                        status_code,
+                        "worldpayvantiv: failed to parse XML response in preprocess"
+                    ))
                     .attach_printable("Failed to parse XML response in preprocess")?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(IntegrationError::BodySerializationFailed {
-                        context: Default::default(),
-                    })
+                    .change_context(utils::response_deserialization_fail(
+                        status_code,
+                        "worldpayvantiv: failed to serialize XML response to JSON in preprocess"
+                    ))
                     .attach_printable("Failed to serialize XML response to JSON in preprocess")?;
 
                 Ok(bytes::Bytes::from(json_bytes))
@@ -597,7 +577,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
+            utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -667,7 +647,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
+            utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -761,7 +741,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
+            utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -831,7 +811,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str).change_context(
-            crate::utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
+            utils::response_handling_fail_for_connector(res.status_code, "worldpayvantiv"),
         )?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
@@ -908,7 +888,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(crate::utils::response_handling_fail_for_connector(
+            .change_context(utils::response_handling_fail_for_connector(
                 res.status_code,
                 "worldpayvantiv",
             ))?;

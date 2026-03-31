@@ -50,12 +50,12 @@ use transformers::{
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, utils, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, IntegrationErrorContext};
 use error_stack::ResultExt;
 
 pub(crate) mod headers {
@@ -268,7 +268,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = xendit::XenditAuthType::try_from(auth_type).change_context(
             IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some("Xendit requires API key authentication".to_owned()),
+                    ..Default::default()
+                },
             },
         )?;
         let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", auth.api_key.peek()));
@@ -292,7 +295,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("XenditErrorResponse")
             .change_context(
-                crate::utils::response_deserialization_fail(
+                utils::response_deserialization_fail(
                     res.status_code,
                 "xendit: response body did not match the expected format; confirm API version and connector documentation."),
             )?;
