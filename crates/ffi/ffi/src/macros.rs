@@ -32,7 +32,6 @@ macro_rules! req_transformer {
                 + Clone
                 + serde::Serialize
                 + serde::de::DeserializeOwned
-                + domain_types::types::CardConversionHelper<T>
                 + 'static,
         >(
             payload: $request_type,
@@ -130,7 +129,6 @@ macro_rules! res_transformer {
                 + serde::de::DeserializeOwned
                 + Clone
                 + Sync
-                + domain_types::types::CardConversionHelper<T>
                 + 'static,
         >(
             payload: $request_type,
@@ -240,7 +238,6 @@ macro_rules! payout_req_transformer {
                 + std::fmt::Debug
                 + Send
                 + Sync
-                + domain_types::types::CardConversionHelper<T>
                 + Clone
                 + serde::Serialize
                 + serde::de::DeserializeOwned
@@ -343,7 +340,6 @@ macro_rules! payout_res_transformer {
                 + serde::de::DeserializeOwned
                 + Clone
                 + Sync
-                + domain_types::types::CardConversionHelper<T>
                 + 'static,
         >(
             payload: $request_type,

@@ -885,11 +885,10 @@ impl<
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(_) |
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
-                    //do proper error handling
-                    Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    Err(report!(ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                    error_identifier: 400,
-                    error_message: "This payment method type cannot use this flow".to_owned(),
+                    error_identifier: 500,
+                    error_message: "Unreachable: This flow should never be hit for card or cardproxy types. Please check payment method dispatch/branching logic.".to_owned(),
                     error_object: None,
                     })))
                 }

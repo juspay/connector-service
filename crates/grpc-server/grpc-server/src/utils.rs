@@ -689,7 +689,7 @@ macro_rules! implement_connector_operation {
             > {
                 flow: std::marker::PhantomData,
                 resource_common_data: common_flow_data,
-                connector_config: connector_config,
+                connector_config,
                 request: specific_request_data,
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
@@ -816,7 +816,7 @@ macro_rules! implement_connector_operation {
             > {
                 flow: std::marker::PhantomData,
                 resource_common_data: common_flow_data,
-                connector_config: connector_config,
+                connector_config,
                 request: specific_request_data,
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
