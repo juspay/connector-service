@@ -4621,11 +4621,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         value: grpc_api_types::payments::PaymentServiceGetRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let capture_method = Some(CaptureMethod::foreign_try_from(value.capture_method())?);
-        let amount = value
-            .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(
-                ApiError::missing_amount("Amount is required")
-            ))?;
+        let amount = value.amount.ok_or(ApplicationErrorResponse::BadRequest(
+            ApiError::missing_amount("Amount is required"),
+        ))?;
         let currency = common_enums::Currency::foreign_try_from(amount.currency())?;
         // Create ResponseId from resource_id
         let connector_transaction_id =
@@ -6239,11 +6237,9 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
                 error_object: None,
             }))?;
 
-        let amount = value
-            .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(
-                ApiError::missing_amount("Amount is required")
-            ))?;
+        let amount = value.amount.ok_or(ApplicationErrorResponse::BadRequest(
+            ApiError::missing_amount("Amount is required"),
+        ))?;
 
         Ok(Self {
             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -6436,7 +6432,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
         let refund_amount = value
             .refund_amount
             .ok_or(ApplicationErrorResponse::BadRequest(
-                ApiError::missing_amount("Refund amount is required")
+                ApiError::missing_amount("Refund amount is required"),
             ))?;
 
         let minor_refund_amount = common_utils::types::MinorUnit::new(refund_amount.minor_amount);
