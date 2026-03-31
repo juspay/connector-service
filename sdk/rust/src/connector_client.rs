@@ -48,7 +48,6 @@ pub struct ConnectorClient {
     base_http_config: NativeHttpOptions,
     client_cache: Arc<RwLock<HashMap<String, HttpClient>>>,
     config: ConnectorConfig,
-    defaults: RequestConfig,
 }
 
 // ── Internal macro: generate a ConnectorClient method for a payment flow ──────
@@ -161,7 +160,6 @@ impl ConnectorClient {
             base_http_config,
             client_cache: Arc::new(RwLock::new(HashMap::new())),
             config,
-            defaults,
         })
     }
 
