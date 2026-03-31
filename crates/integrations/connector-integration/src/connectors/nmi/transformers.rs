@@ -10,9 +10,10 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 
@@ -30,14 +31,15 @@ pub struct NmiAuthType {
     pub public_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NmiAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nmi {
+            ConnectorSpecificConfig::Nmi {
                 api_key,
                 public_key,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_key: public_key.to_owned(),
@@ -128,6 +130,7 @@ pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
     GooglePay(Box<GooglePayData>),
+    GooglePayDecrypt(Box<GooglePayDecryptedData>),
 }
 
 // ===== GOOGLE PAY DATA =====
@@ -136,6 +139,45 @@ pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
 pub struct GooglePayData {
     #[serde(rename = "payment_token")]
     payment_token: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayDecryptedData {
+    decrypted_googlepay_data: DecryptedDataIndicator,
+    ccnumber: String,
+    ccexp: String,
+    cavv: Option<Secret<String>>,
+    eci: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum DecryptedDataIndicator {
+    #[serde(rename = "1")]
+    Decrypted,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NmiBillingDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    firstname: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lastname: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    address1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    address2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    state: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    zip: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    country: Option<common_enums::CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    phone: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    email: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -217,6 +259,8 @@ pub struct NmiPaymentsRequest<T: PaymentMethodDataTypes> {
     payment_method: NmiPaymentMethod<T>,
     #[serde(flatten)]
     merchant_defined_field: Option<NmiMerchantDefinedField>,
+    #[serde(flatten)]
+    billing_details: Option<NmiBillingDetails>,
 }
 
 // Implementation for NmiRouterData wrapper (needed by macros)
@@ -247,7 +291,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Extract payment method data
         // Handle ACH Bank Debit separately to access billing info for account holder name fallback
@@ -261,23 +305,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
             }
             PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
-                // Google Pay uses payment_token from Collect.js
-                let google_pay_token = google_pay_data
-                    .tokenization_data
-                    .get_encrypted_google_pay_token()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "google_pay_token",
-                    })?;
-                (
-                    NmiPaymentMethod::GooglePay(Box::new(GooglePayData {
-                        payment_token: Secret::new(google_pay_token),
-                    })),
-                    if router_data.request.is_auto_capture()? {
-                        TransactionType::Sale
-                    } else {
-                        TransactionType::Auth
-                    },
-                )
+                match &google_pay_data.tokenization_data {
+                    GpayTokenizationData::Decrypted(decrypted_data) => {
+                        let year = decrypted_data.card_exp_year.peek();
+                        let year_short = if year.len() == 4 { &year[2..] } else { year };
+                        let ccexp =
+                            format!("{}{}", decrypted_data.card_exp_month.peek(), year_short);
+                        (
+                            NmiPaymentMethod::GooglePayDecrypt(Box::new(GooglePayDecryptedData {
+                                decrypted_googlepay_data: DecryptedDataIndicator::Decrypted,
+                                ccnumber: decrypted_data
+                                    .application_primary_account_number
+                                    .get_card_no(),
+                                ccexp,
+                                cavv: decrypted_data.cryptogram.clone(),
+                                eci: decrypted_data.eci_indicator.clone(),
+                            })),
+                            TransactionType::Sale,
+                        )
+                    }
+                    GpayTokenizationData::Encrypted(encrypted_data) => (
+                        NmiPaymentMethod::GooglePay(Box::new(GooglePayData {
+                            payment_token: Secret::new(encrypted_data.token.clone()),
+                        })),
+                        if router_data.request.is_auto_capture()? {
+                            TransactionType::Sale
+                        } else {
+                            TransactionType::Auth
+                        },
+                    ),
+                }
             }
             _ => {
                 // Determine transaction type based on auto_capture for card payments
@@ -302,6 +359,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
+        let billing_details = {
+            let billing = router_data
+                .resource_common_data
+                .address
+                .get_payment_billing();
+            let address = billing.and_then(|b| b.address.as_ref());
+            let email = billing
+                .and_then(|b| b.email.clone())
+                .or_else(|| router_data.request.email.clone())
+                .map(|e| e.peek().clone());
+            NmiBillingDetails {
+                firstname: address.and_then(|a| a.first_name.clone()),
+                lastname: address.and_then(|a| a.last_name.clone()),
+                address1: address.and_then(|a| a.line1.clone()),
+                address2: address.and_then(|a| a.line2.clone()),
+                city: address
+                    .and_then(|a| a.city.clone())
+                    .map(|c| c.peek().clone()),
+                state: address.and_then(|a| a.state.clone()),
+                zip: address.and_then(|a| a.zip.clone()),
+                country: address.and_then(|a| a.country),
+                phone: None,
+                email,
+            }
+        };
+        let billing_details = Some(billing_details);
+
         Ok(Self {
             security_key: auth.api_key,
             transaction_type,
@@ -317,6 +401,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .as_ref()
                 .map(|m| NmiMerchantDefinedField::new(m.peek())),
+            billing_details,
         })
     }
 }
@@ -505,7 +590,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // PSync uses attempt_id as order_id (NOT connector_transaction_id)
         // The connector_transaction_id contains the attempt_id for sync operations
@@ -631,7 +716,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original transaction ID from connector_transaction_id
         let transactionid = router_data
@@ -737,7 +822,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original payment transaction ID
         let transactionid = router_data.request.connector_transaction_id.clone();
@@ -835,7 +920,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // RSync uses connector_refund_id as order_id (per tech spec section 3.6)
         let order_id = router_data.request.connector_refund_id.clone();
@@ -932,7 +1017,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original payment transaction ID
         let transactionid = router_data.request.connector_transaction_id.clone();
