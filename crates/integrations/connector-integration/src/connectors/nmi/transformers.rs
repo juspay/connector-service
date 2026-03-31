@@ -10,7 +10,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -132,6 +133,7 @@ pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
     GooglePay(Box<GooglePayData>),
+    GooglePayDecrypt(Box<GooglePayDecryptedData>),
 }
 
 // ===== GOOGLE PAY DATA =====
@@ -141,6 +143,22 @@ pub struct GooglePayData {
     #[serde(rename = "payment_token")]
     payment_token: Secret<String>,
 }
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayDecryptedData {
+    decrypted_googlepay_data: DecryptedDataIndicator,
+    ccnumber: String,
+    ccexp: String,
+    cavv: Option<Secret<String>>,
+    eci: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum DecryptedDataIndicator {
+    #[serde(rename = "1")]
+    Decrypted,
+}
+
 
 #[derive(Debug, Serialize)]
 pub struct CardData<T: PaymentMethodDataTypes> {
@@ -432,22 +450,39 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )
                 }
                 PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
-                    let google_pay_token = google_pay_data
-                        .tokenization_data
-                        .get_encrypted_google_pay_token()
-                        .change_context(errors::ConnectorError::MissingRequiredField {
-                            field_name: "google_pay_token",
-                        })?;
-                    (
-                        NmiPaymentMethod::GooglePay(Box::new(GooglePayData {
-                            payment_token: Secret::new(google_pay_token),
-                        })),
-                        if router_data.request.is_auto_capture()? {
-                            TransactionType::Sale
-                        } else {
-                            TransactionType::Auth
-                        },
-                    )
+                    match &google_pay_data.tokenization_data {
+                        GpayTokenizationData::Decrypted(decrypted_data) => {
+                            let year = decrypted_data.card_exp_year.peek();
+                            let year_short = if year.len() == 4 { &year[2..] } else { year };
+                            let ccexp =
+                                format!("{}{}", decrypted_data.card_exp_month.peek(), year_short);
+                            (
+                                NmiPaymentMethod::GooglePayDecrypt(Box::new(
+                                    GooglePayDecryptedData {
+                                        decrypted_googlepay_data:
+                                            DecryptedDataIndicator::Decrypted,
+                                        ccnumber: decrypted_data
+                                            .application_primary_account_number
+                                            .get_card_no(),
+                                        ccexp,
+                                        cavv: decrypted_data.cryptogram.clone(),
+                                        eci: decrypted_data.eci_indicator.clone(),
+                                    },
+                                )),
+                                TransactionType::Sale,
+                            )
+                        }
+                        GpayTokenizationData::Encrypted(encrypted_data) => (
+                            NmiPaymentMethod::GooglePay(Box::new(GooglePayData {
+                                payment_token: Secret::new(encrypted_data.token.clone()),
+                            })),
+                            if router_data.request.is_auto_capture()? {
+                                TransactionType::Sale
+                            } else {
+                                TransactionType::Auth
+                            },
+                        ),
+                    }
                 }
                 _ => {
                     let txn_type = if router_data.request.is_auto_capture()? {
