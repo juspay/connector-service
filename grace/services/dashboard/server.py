@@ -39,6 +39,7 @@ async def api_state_handler(request: web.Request) -> web.Response:
             "pr_number": entry.get("pr_number"),
             "path": entry.get("path", ""),
             "instruction": entry.get("instruction_preview", ""),
+            "resolution_summary": entry.get("resolution_summary", ""),
             "processed_at": entry.get("processed_at", ""),
             "status": entry.get("status", ""),
             "commit_sha": entry.get("commit_sha", ""),
@@ -46,46 +47,92 @@ async def api_state_handler(request: web.Request) -> web.Response:
         }
         if entry.get("status") == "fixed":
             completed.append(item)
-        elif entry.get("status") == "failed":
+        elif entry.get("status") in ("failed", "build_blocked"):
             failed.append(item)
 
-    # From recent events (live) — build backlog, in_progress, AND steps
-    steps_by_pr = {}
-    active_pr = None
+    # From recent events (live)
+    steps_by_pr = {}  # {pr_number: {connector: [steps]}}
+    queued = []
     seen_prs = set()
-    for event in bus.get_recent(200):
-        if event.type == "comment_found":
-            backlog.append(event.data)
-        elif event.type == "pr_start":
-            active_pr = event.data.get("pr_number")
+    active_pr = None  # Track which PR is currently being processed
+
+    for event in bus.get_recent(500):
+        t = event.type
+        d = event.data
+
+        if t == "comment_found":
+            # Deduplicate by thread_id
+            tid = d.get("thread_id", f"{d.get('pr')}_{d.get('path')}_{d.get('line')}")
+            if not any(b.get("thread_id", f"{b.get('pr')}_{b.get('path')}_{b.get('line')}") == tid for b in backlog):
+                backlog.append({**d, "thread_id": tid})
+        elif t == "pr_start":
+            active_pr = d.get("pr_number")
             if active_pr and active_pr not in seen_prs:
-                in_progress.append(event.data)
+                in_progress.append(d)
                 seen_prs.add(active_pr)
-            steps_by_pr[active_pr] = []
-        elif event.type == "gate" and active_pr:
-            icon = "pass" if event.data.get("passed") else "fail"
-            steps_by_pr.setdefault(active_pr, []).append({
-                "icon": icon, "text": event.data.get("name", ""), "detail": event.data.get("detail", "")
-            })
-        elif event.type == "agent_tool" and active_pr:
-            steps_by_pr.setdefault(active_pr, []).append({
-                "icon": "tool", "text": event.data.get("tool", ""), "detail": event.data.get("input_summary", "")
-            })
-        elif event.type == "agent_text" and active_pr:
-            steps_by_pr.setdefault(active_pr, []).append({
-                "icon": "text", "text": event.data.get("text", "")[:100], "detail": ""
-            })
+            steps_by_pr.setdefault(active_pr, {})
+        elif t == "pr_queued":
+            queued.append(d)
+        elif t == "gate":
+            pr = d.get("pr") or active_pr
+            if pr:
+                steps_by_pr.setdefault(pr, {}).setdefault("_pr", []).append({
+                    "icon": "pass" if d.get("passed") else "fail",
+                    "text": d.get("name", ""),
+                    "detail": d.get("detail", ""),
+                    "output": d.get("output", ""),
+                })
+        elif t.startswith("subtask_"):
+            pr = d.get("pr") or active_pr
+            connector = d.get("connector", "_pr")
+            steps_by_pr.setdefault(pr, {}).setdefault(connector, [])
+
+            if t == "subtask_start":
+                steps_by_pr[pr][connector].append({"icon": "start", "text": f"Started ({d.get('comment_count', 0)} comments)", "detail": ""})
+            elif t == "subtask_gate":
+                steps_by_pr[pr][connector].append({
+                    "icon": "pass" if d.get("passed") else "fail",
+                    "text": d.get("gate", ""),
+                    "detail": d.get("detail", ""),
+                })
+            elif t == "subtask_agent_tool":
+                steps_by_pr[pr][connector].append({"icon": "tool", "text": d.get("tool", ""), "detail": d.get("input_summary", "")})
+            elif t == "subtask_agent_text":
+                steps_by_pr[pr][connector].append({"icon": "text", "text": d.get("text", "")[:100], "detail": ""})
+            elif t == "subtask_committed":
+                steps_by_pr[pr][connector].append({"icon": "pass", "text": f"Committed {d.get('sha', '')[:8]}", "detail": ""})
+            elif t == "subtask_fixed":
+                steps_by_pr[pr][connector].append({"icon": "pass", "text": "Fixed", "detail": ""})
+            elif t == "subtask_failed":
+                steps_by_pr[pr][connector].append({"icon": "fail", "text": "Failed", "detail": d.get("error", "")[:100]})
 
     # Sort completed by timestamp descending
     completed.sort(key=lambda x: x.get("processed_at", ""), reverse=True)
     failed.sort(key=lambda x: x.get("processed_at", ""), reverse=True)
+
+    # Remove items from backlog that are in in_progress, completed, or failed
+    done_tids = {e.get("thread_id") for e in completed + failed if e.get("thread_id")}
+    done_prs = {e.get("pr_number") for e in completed + failed if e.get("pr_number")}
+    active_prs = {p.get("pr_number") for p in in_progress}
+    backlog = [b for b in backlog
+               if b.get("thread_id") not in done_tids
+               and b.get("pr") not in active_prs
+               and b.get("pr") not in done_prs]
+    # Remove in_progress PRs that are fully done
+    in_progress = [p for p in in_progress if p.get("pr_number") not in done_prs]
+
+    # Get pool status if available
+    service = request.app.get("resolver_service")
+    pool_status = service.pool.status if service else []
 
     return web.json_response({
         "backlog": backlog,
         "in_progress": in_progress,
         "completed": completed[:50],
         "failed": failed[:20],
+        "queued": queued,
         "steps_by_pr": steps_by_pr,
+        "pool": pool_status,
         "last_poll": state_mgr._state.get("last_poll"),
         "subscribers": bus.subscriber_count,
     })
@@ -131,6 +178,32 @@ async def sse_handler(request: web.Request) -> web.StreamResponse:
     return response
 
 
+async def api_retry_handler(request: web.Request) -> web.Response:
+    """Retry a specific failed thread — removes it from processed state."""
+    thread_id = request.match_info["thread_id"]
+    state_mgr: StateManager = request.app["state_manager"]
+    state_mgr.load()
+    ok = state_mgr.retry(thread_id)
+    return web.json_response({"ok": ok, "thread_id": thread_id})
+
+
+async def api_retry_all_handler(request: web.Request) -> web.Response:
+    """Retry all failed threads — removes them from processed state."""
+    state_mgr: StateManager = request.app["state_manager"]
+    state_mgr.load()
+    count = state_mgr.retry_all_failed()
+    return web.json_response({"ok": True, "retried": count})
+
+
+async def api_poll_now_handler(request: web.Request) -> web.Response:
+    """Trigger an immediate poll cycle without waiting for the interval."""
+    service = request.app.get("resolver_service")
+    if not service:
+        return web.json_response({"ok": False, "error": "Service not running"})
+    asyncio.create_task(service.run_once())
+    return web.json_response({"ok": True, "message": "Poll triggered"})
+
+
 async def start_resolver_background(app: web.Application) -> None:
     """Start the PR resolver service as a background task."""
     config: PRResolverConfig = app["resolver_config"]
@@ -166,6 +239,9 @@ def create_app(config: PRResolverConfig) -> web.Application:
     app.router.add_get("/api/state", api_state_handler)
     app.router.add_get("/api/history", api_history_handler)
     app.router.add_get("/api/events", sse_handler)
+    app.router.add_post("/api/retry/{thread_id}", api_retry_handler)
+    app.router.add_post("/api/retry-all-failed", api_retry_all_handler)
+    app.router.add_post("/api/poll-now", api_poll_now_handler)
 
     # Background tasks
     app.on_startup.append(start_resolver_background)

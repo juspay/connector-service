@@ -17,6 +17,10 @@ class PRResolverConfig:
     state_file: Path = field(default_factory=lambda: Path.home() / ".grace" / "pr_resolver_state.json")
     index_dir: Path = field(default_factory=lambda: Path.home() / ".grace" / "index")
     lock_file: Path = field(default_factory=lambda: Path.home() / ".grace" / "pr_resolver.lock")
+    clone_dir: Path = field(default_factory=lambda: Path.home() / ".grace" / "clones")
+    max_concurrent_prs: int = 3
+    repo_clone_url: str = ""  # Auto-derived from github_repo if empty
+    max_build_fix_loops: int = 3
     verbose: bool = False
 
     @property
@@ -26,6 +30,11 @@ class PRResolverConfig:
     @property
     def repo(self) -> str:
         return self.github_repo.split("/")[1]
+
+    def __post_init__(self):
+        """Auto-derive repo_clone_url from github_repo if not set."""
+        if not self.repo_clone_url:
+            self.repo_clone_url = f"https://github.com/{self.github_repo}.git"
 
     @classmethod
     def from_env(cls, **overrides) -> "PRResolverConfig":
@@ -67,6 +76,22 @@ class PRResolverConfig:
             "lock_file",
             Path(os.environ.get(f"{prefix}LOCK_FILE", str(Path.home() / ".grace" / "pr_resolver.lock"))),
         )
+        clone_dir = overrides.get(
+            "clone_dir",
+            Path(os.environ.get(f"{prefix}CLONE_DIR", str(Path.home() / ".grace" / "clones"))),
+        )
+        max_concurrent_prs = overrides.get(
+            "max_concurrent_prs",
+            int(os.environ.get(f"{prefix}MAX_CONCURRENT", "3")),
+        )
+        repo_clone_url = overrides.get(
+            "repo_clone_url",
+            os.environ.get(f"{prefix}REPO_CLONE_URL", ""),  # Empty = auto-derive from github_repo
+        )
+        max_build_fix_loops = overrides.get(
+            "max_build_fix_loops",
+            int(os.environ.get(f"{prefix}MAX_BUILD_LOOPS", "3")),
+        )
         verbose = overrides.get(
             "verbose",
             os.environ.get(f"{prefix}VERBOSE", "").lower() in ("1", "true", "yes"),
@@ -81,5 +106,9 @@ class PRResolverConfig:
             state_file=Path(state_file) if isinstance(state_file, str) else state_file,
             index_dir=Path(index_dir) if isinstance(index_dir, str) else index_dir,
             lock_file=Path(lock_file) if isinstance(lock_file, str) else lock_file,
+            clone_dir=Path(clone_dir) if isinstance(clone_dir, str) else clone_dir,
+            max_concurrent_prs=max_concurrent_prs,
+            repo_clone_url=repo_clone_url,
+            max_build_fix_loops=max_build_fix_loops,
             verbose=verbose,
         )

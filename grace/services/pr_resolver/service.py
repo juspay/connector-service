@@ -1,17 +1,23 @@
-"""Main PR Resolver service — poll loop with freshness gates.
+"""Main PR Resolver service — concurrent PRs, connector sub-tasks, build-fix loops.
 
-ARCHITECTURE: PR branch checkouts happen in git worktrees so the main repo
-directory (where the service code lives) is never disturbed.
+ARCHITECTURE:
+- Clone pool: 3 independent repo clones for concurrent PR processing
+- Sub-tasks: comments grouped by connector, one Claude session + one commit per connector
+- Build-fix loop: cargo build + clippy after each fix, loop back to Claude on failure (max 3)
+- 6 freshness gates before pushing
 """
 
 import asyncio
 import fcntl
 import logging
 import os
+import re
 import traceback
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from .clone_pool import ClonePool, CloneSlot
 from .config import PRResolverConfig
 from .display import (
     display_comment_list,
@@ -27,17 +33,54 @@ from .display import (
     display_resolving,
     display_skip,
 )
-from .git import GitOperations
 from .github import GitHubClient, TriggeredThread, filter_triggered_threads
-from .resolver import CommentResolver, ResolveResult
+from .resolver import CommentResolver
 from .state import StateManager
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# File lock
+# Helpers
 # ---------------------------------------------------------------------------
+
+
+def _extract_connector(path: str) -> str:
+    """Extract connector name from a file path.
+
+    'crates/integrations/connector-integration/src/connectors/adyen/transformers.rs' -> 'adyen'
+    'crates/integrations/connector-integration/src/connectors/adyen.rs' -> 'adyen'
+    """
+    if "connectors/" in path:
+        after = path.split("connectors/")[-1]
+        return after.split("/")[0].replace(".rs", "")
+    return "other"
+
+
+def _is_question(instruction: str) -> bool:
+    """Detect if a comment is a question rather than an actionable code change request."""
+    text = instruction.strip().lower()
+    # Ends with question mark
+    if text.endswith("?"):
+        return True
+    # Starts with question words without actionable verbs
+    question_starts = ("why ", "what ", "how ", "is this", "should ", "could ", "would ", "can ", "have you", "did you", "are you")
+    if any(text.startswith(q) for q in question_starts):
+        # But check for actionable intent: "can you fix this" is actionable
+        actionable_overrides = ("can you ", "could you ", "please ", "fix", "change", "remove", "rename", "update", "add", "use ")
+        if any(a in text for a in actionable_overrides):
+            return False
+        return True
+    return False
+
+
+def _group_by_connector(threads: List[TriggeredThread]) -> Dict[str, List[TriggeredThread]]:
+    """Group triggered threads by connector name."""
+    groups: Dict[str, List[TriggeredThread]] = defaultdict(list)
+    for t in threads:
+        connector = _extract_connector(t.path)
+        groups[connector].append(t)
+    return dict(groups)
 
 
 class FileLock:
@@ -74,7 +117,7 @@ class FileLock:
 
 
 class PRResolverService:
-    """Polls GitHub for @10xGrace-triggered review comments and resolves them."""
+    """Polls GitHub for @10xGrace comments and resolves them concurrently."""
 
     def __init__(
         self,
@@ -85,15 +128,21 @@ class PRResolverService:
         self.event_callback = event_callback
 
         self.state = StateManager(config.state_file)
-        self.git = GitOperations(config.repo_path)
         self.github = GitHubClient(config.owner, config.repo)
+        self.pool = ClonePool(
+            base_dir=config.clone_dir,
+            repo_url=config.repo_clone_url,
+            max_slots=config.max_concurrent_prs,
+        )
 
-        # Claude SDK config — from env with Grace config fallback
+        # Claude SDK config
         self.claude_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         self.claude_base_url = os.environ.get("ANTHROPIC_BASE_URL", "")
         self.claude_model = os.environ.get("CLAUDE_MODEL", "")
 
         self._cycle = 0
+        self._pool_initialized = False
+        self._resolve_summaries: Dict[str, str] = {}  # thread_id -> Claude's summary of what changed
 
     # ------------------------------------------------------------------
     # Events
@@ -107,11 +156,14 @@ class PRResolverService:
             if asyncio.iscoroutine(result):
                 await result
         except Exception:
-            logger.error("Event callback error for %s:\n%s", event_type, traceback.format_exc())
+            logger.error("Event emit error (%s): %s", event_type, traceback.format_exc())
 
-    async def _gate(self, name: str, passed: bool, detail: str = "") -> bool:
-        display_gate(name, passed, detail)
-        await self._emit("gate", name=name, passed=passed, detail=detail)
+    async def _gate(self, name: str, passed: bool, detail: str = "", pr: int = 0, connector: str = "", output: str = "") -> bool:
+        display_gate(name, passed, detail[:200])
+        if connector:
+            await self._emit("subtask_gate", pr=pr, connector=connector, gate=name, passed=passed, detail=detail, output=output)
+        else:
+            await self._emit("gate", name=name, passed=passed, detail=detail, output=output, pr=pr)
         return passed
 
     # ------------------------------------------------------------------
@@ -119,41 +171,45 @@ class PRResolverService:
     # ------------------------------------------------------------------
 
     async def run_forever(self) -> None:
-        """Poll loop — runs until interrupted."""
-        logger.info("PR Resolver starting (interval=%ds)", self.config.poll_interval)
+        logger.info("10xGrace starting (interval=%ds, max_concurrent=%d)", self.config.poll_interval, self.config.max_concurrent_prs)
         while True:
             try:
                 await self.run_once()
             except KeyboardInterrupt:
-                logger.info("Shutting down")
                 break
             except Exception:
-                logger.exception("Unexpected error in poll cycle")
+                logger.exception("Cycle error")
                 display_error(traceback.format_exc())
             await asyncio.sleep(self.config.poll_interval)
 
     async def run_once(self) -> Dict[str, Any]:
-        """Run a single poll cycle. Returns a summary dict."""
+        """Single poll cycle: poll → filter → concurrent PR processing."""
         self._cycle += 1
         display_cycle_start(self._cycle)
         await self._emit("cycle_start", cycle=self._cycle)
 
+        # Initialize clone pool on first run
+        if not self._pool_initialized:
+            logger.info("Initializing clone pool...")
+            await self.pool.initialize()
+            self._pool_initialized = True
+
         lock = FileLock(self.config.lock_file)
         if not lock.acquire():
-            display_error("Another instance is running (lock held)")
+            display_error("Lock held by another instance")
             return {"error": "lock_held"}
 
-        summary: Dict[str, Any] = {"cycle": self._cycle, "fixed": 0, "failed": 0, "skipped": 0, "total": 0}
+        summary: Dict[str, Any] = {"cycle": self._cycle, "fixed": 0, "failed": 0, "skipped": 0, "total": 0, "queued": 0}
 
         try:
             self.state.load()
             self.state.cleanup_old_entries()
 
-            # Fetch open PRs
+            # Poll GitHub
             prs = await self.github.fetch_open_prs_with_threads()
             processed_ids = self.state.get_processed_ids()
 
-            # Filter for triggered threads
+            # Filter for @10xGrace
             all_triggered: List[TriggeredThread] = []
             for pr in prs:
                 triggered = filter_triggered_threads(pr, self.config.trigger_tag, processed_ids)
@@ -167,229 +223,351 @@ class PRResolverService:
                 return summary
 
             # Cap per cycle
-            if len(all_triggered) > self.config.max_comments_per_cycle:
-                all_triggered = all_triggered[: self.config.max_comments_per_cycle]
-
+            all_triggered = all_triggered[: self.config.max_comments_per_cycle]
             summary["total"] = len(all_triggered)
 
-            # Display comment list
-            display_comment_list(
-                [
-                    {
-                        "path": t.path,
-                        "line": t.line,
-                        "author": t.author,
-                        "instruction": t.instruction,
-                    }
-                    for t in all_triggered
-                ]
-            )
+            display_comment_list([
+                {"path": t.path, "line": t.line, "author": t.author, "instruction": t.instruction}
+                for t in all_triggered
+            ])
 
-            # Emit comment_found events
             for t in all_triggered:
-                await self._emit("comment_found", pr=t.pr_number, path=t.path, line=t.line, author=t.author, instruction=t.instruction[:100])
+                await self._emit("comment_found", pr=t.pr_number, path=t.path, line=t.line, author=t.author, instruction=t.instruction[:100], thread_id=t.thread_id)
 
             # Group by PR
-            by_pr: Dict[int, List[TriggeredThread]] = {}
+            by_pr: Dict[int, List[TriggeredThread]] = defaultdict(list)
             for t in all_triggered:
-                by_pr.setdefault(t.pr_number, []).append(t)
+                by_pr[t.pr_number].append(t)
 
-            for pr_number, threads in by_pr.items():
-                branch = threads[0].pr_branch
+            pr_list = list(by_pr.items())
+
+            # Take up to max_concurrent_prs, queue the rest
+            active_prs = pr_list[: self.config.max_concurrent_prs]
+            queued_prs = pr_list[self.config.max_concurrent_prs:]
+
+            for i, (pr_num, _) in enumerate(queued_prs):
+                await self._emit("pr_queued", pr=pr_num, position=i + 1)
+                summary["queued"] += 1
+
+            # Process active PRs concurrently
+            tasks = []
+            for pr_number, threads in active_prs:
                 await self._emit("pr_start", pr_number=pr_number, title=f"PR #{pr_number}", thread_count=len(threads))
-                result = await self._process_pr(branch, threads, pr_number)
-                summary["fixed"] += result.get("fixed", 0)
-                summary["failed"] += result.get("failed", 0)
-                summary["skipped"] += result.get("skipped", 0)
+                task = asyncio.create_task(self._process_pr(pr_number, threads))
+                tasks.append((pr_number, task))
+
+            # Wait for all concurrent PR tasks
+            for pr_number, task in tasks:
+                try:
+                    result = await task
+                    summary["fixed"] += result.get("fixed", 0)
+                    summary["failed"] += result.get("failed", 0)
+                    summary["skipped"] += result.get("skipped", 0)
+                except Exception:
+                    logger.exception("PR #%d processing failed", pr_number)
+                    summary["failed"] += len(by_pr[pr_number])
 
         except Exception:
-            logger.exception("Error in poll cycle %d", self._cycle)
+            logger.exception("Cycle %d error", self._cycle)
             display_error(traceback.format_exc())
         finally:
             lock.release()
 
-        display_cycle_summary(
-            self._cycle,
-            summary["total"],
-            summary["fixed"],
-            summary["failed"],
-            summary["skipped"],
-        )
-        await self._emit("cycle_end", fixed=summary["fixed"], failed=summary["failed"], skipped=summary["skipped"])
+        display_cycle_summary(self._cycle, summary["total"], summary["fixed"], summary["failed"], summary["skipped"])
+        await self._emit("cycle_end", **summary)
         return summary
 
     # ------------------------------------------------------------------
-    # Per-PR processing with 6 freshness gates
+    # Per-PR processing
     # ------------------------------------------------------------------
 
-    async def _process_pr(
-        self,
-        branch: str,
-        threads: List[TriggeredThread],
-        pr_number: int,
-    ) -> Dict[str, int]:
+    async def _process_pr(self, pr_number: int, threads: List[TriggeredThread]) -> Dict[str, int]:
+        """Process all @10xGrace comments for one PR using a clone slot."""
         counts = {"fixed": 0, "failed": 0, "skipped": 0}
+        branch = threads[0].pr_branch
+
         display_pr_processing(pr_number, branch, len(threads))
 
-        # --- Gate 1: PR still OPEN ---
+        # GATE 1: PR still open
         pr_info = await self.github.fetch_pr_threads(pr_number)
         if not await self._gate("PR still open", pr_info is not None and pr_info.state == "OPEN",
-                          f"state={pr_info.state if pr_info else 'NOT_FOUND'}"):
+                                f"state={pr_info.state if pr_info else 'NOT_FOUND'}", pr=pr_number):
             counts["skipped"] = len(threads)
             return counts
 
-        # --- Gate 2: Fetch and reset (WORKTREE) ---
-        ok, err, work_dir = await self.git.fetch_and_reset(branch, pr_number=pr_number)
-        if not await self._gate("Checkout branch", ok, err):
+        # GATE 2: Acquire clone slot + checkout
+        slot = await self.pool.acquire(pr_number)
+        if slot is None:
+            await self._gate("Clone slot", False, "no slots available", pr=pr_number)
             counts["skipped"] = len(threads)
             return counts
+        await self._emit("clone_acquired", pr=pr_number, slot_id=slot.slot_id)
 
         try:
-            return await self._process_pr_in_worktree(branch, threads, pr_number, pr_info, work_dir)
-        finally:
-            # Always clean up the worktree
-            if work_dir != self.config.repo_path:
-                await self.git.cleanup_worktree(pr_number=pr_number)
+            ok, err = await self.pool.checkout_pr(slot, pr_number)
+            if not await self._gate("Checkout branch", ok, err, pr=pr_number):
+                counts["skipped"] = len(threads)
+                return counts
 
-    async def _process_pr_in_worktree(
+            # GATE 3: Re-verify threads still unresolved
+            still_open = threads
+            if pr_info:
+                resolved_ids = {rt.id for rt in pr_info.threads if rt.is_resolved}
+                still_open = [t for t in threads if t.thread_id not in resolved_ids]
+
+            if not await self._gate("Threads unresolved", len(still_open) > 0,
+                                    f"{len(still_open)}/{len(threads)} open", pr=pr_number):
+                counts["skipped"] = len(threads)
+                return counts
+            threads = still_open
+
+            # Check if this PR's build already failed (same SHA = no new commits)
+            from .clone_pool import _run as _pool_run
+            _, head_sha, _ = await _pool_run(["git", "rev-parse", "HEAD"], slot.path)
+            head_sha = head_sha.strip()
+
+            if self.state.should_skip_build(pr_number, head_sha):
+                # Load the stored error output from the previous failure
+                stored = self.state._state.get("build_failures", {}).get(str(pr_number), {})
+                stored_error = stored.get("error", "No error details available")
+                await self._gate("Baseline build", False, "Build failed previously — waiting for new commits on this branch", pr=pr_number, output=stored_error)
+                counts["skipped"] = len(threads)
+                return counts
+
+            # GATE 4: Baseline cargo build
+            build_ok, build_out = await self.pool.cargo_build(slot)
+            if not await self._gate("Baseline build", build_ok, "Branch has build errors" if not build_ok else "OK", pr=pr_number, output=build_out if not build_ok else ""):
+                # Mark with SHA so we don't retry until a new commit is pushed
+                self.state.mark_build_failed(pr_number, branch, head_sha, build_out, thread_ids=[t.thread_id for t in threads])
+                counts["skipped"] = len(threads)
+                return counts
+
+            # Add 👀 reaction to each comment to signal pickup
+            for t in threads:
+                if t.comment_node_id:
+                    await self.github.add_reaction(t.comment_node_id, "EYES")
+
+            # Triage: classify comments as actionable vs questions
+            actionable_threads = []
+            for t in threads:
+                if _is_question(t.instruction):
+                    # Reply asking for clarification instead of trying to fix
+                    reply = (
+                        f"This looks like a question rather than a code change request. "
+                        f"Could you clarify what specific change you'd like made?\n\n"
+                        f"— 10xGrace"
+                    )
+                    await self.github.post_thread_reply(t.thread_id, reply)
+                    await self._emit("subtask_gate", pr=pr_number, connector=_extract_connector(t.path),
+                                     gate="Triage", passed=False, detail="Question — asked for clarification")
+                    counts["skipped"] += 1
+                else:
+                    actionable_threads.append(t)
+
+            threads = actionable_threads
+            if not threads:
+                await self._gate("Actionable comments", False, "all were questions", pr=pr_number)
+                return counts
+
+            # Group comments by connector
+            by_connector = _group_by_connector(threads)
+            logger.info("PR #%d: %d connector(s) to process: %s", pr_number, len(by_connector), list(by_connector.keys()))
+
+            # Process each connector sub-task sequentially
+            for connector, connector_threads in by_connector.items():
+                result = await self._process_connector(slot, connector, connector_threads, pr_number, branch)
+                counts["fixed"] += result.get("fixed", 0)
+                counts["failed"] += result.get("failed", 0)
+                counts["skipped"] += result.get("skipped", 0)
+
+            # GATE 5+6 + Push (only if we have commits)
+            if counts["fixed"] > 0:
+                await self._push_and_reply(slot, branch, pr_number, threads, counts)
+
+        finally:
+            await self.pool.release(slot)
+            await self._emit("clone_released", pr=pr_number, slot_id=slot.slot_id)
+
+        return counts
+
+    # ------------------------------------------------------------------
+    # Per-connector sub-task with build-fix loop
+    # ------------------------------------------------------------------
+
+    async def _process_connector(
         self,
-        branch: str,
+        slot: CloneSlot,
+        connector: str,
         threads: List[TriggeredThread],
         pr_number: int,
-        pr_info: Any,
-        work_dir: Path,
+        branch: str,
     ) -> Dict[str, int]:
+        """Process all comments for one connector. Includes build-fix loop."""
         counts = {"fixed": 0, "failed": 0, "skipped": 0}
 
-        # --- Gate 3: Re-verify threads still unresolved ---
-        still_open = []
-        for t in threads:
-            thread_still_open = False
-            for rt in (pr_info.threads if pr_info else []):
-                if rt.id == t.thread_id and not rt.is_resolved:
-                    thread_still_open = True
-                    break
-            if thread_still_open:
-                still_open.append(t)
-            else:
-                display_skip(t.thread_id, "already resolved")
-                counts["skipped"] += 1
-
-        if not await self._gate("Threads still unresolved", len(still_open) > 0,
-                          f"{len(still_open)}/{len(threads)} still open"):
-            return counts
-
-        threads = still_open
-
-        # --- Gate 4: Baseline cargo check ---
-        from .git import _run
-        rc, out, err = await _run(["cargo", "check"], work_dir, timeout=300)
-        baseline_ok = rc == 0
-        if not await self._gate("Baseline cargo check", baseline_ok,
-                          err[:200] if not baseline_ok else "OK"):
-            counts["skipped"] = len(threads)
-            return counts
-
-        # --- Resolve with Claude ---
         display_resolving(len(threads))
+        await self._emit("subtask_start", pr=pr_number, connector=connector, comment_count=len(threads))
+
         resolver = CommentResolver(
-            repo_path=work_dir,
+            repo_path=slot.path,
             index_dir=self.config.index_dir,
             claude_api_key=self.claude_api_key,
             claude_base_url=self.claude_base_url,
             claude_model=self.claude_model,
+            max_turns=20,
             event_callback=self.event_callback,
         )
-        result: ResolveResult = await resolver.resolve_comments(threads)
-        display_resolve_done(len(result.fixed_threads), len(result.failed_threads), result.turn_count)
 
-        if result.error:
-            display_error(result.error)
+        # Initial Claude session
+        resolve_result = await resolver.resolve_connector(connector, threads, pr_number=pr_number)
+
+        if resolve_result.error:
+            display_error(resolve_result.error)
+            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=resolve_result.error)
             for t in threads:
-                self.state.mark_failed(t.thread_id, pr_number, result.error)
+                self.state.mark_failed(t.thread_id, pr_number, resolve_result.error)
             counts["failed"] = len(threads)
             return counts
 
-        # --- Post-fix build check ---
-        if result.modified_files:
-            rc, out, err = await _run(["cargo", "check"], work_dir, timeout=300)
-            if rc != 0:
-                display_error(f"Post-fix cargo check failed: {err[:200]}")
-                await self.git.revert_all(cwd=work_dir)
+        # Build-fix loop: cargo build + clippy → retry on failure
+        loop_count = 0
+        last_error = ""
+
+        while loop_count < self.config.max_build_fix_loops:
+            loop_count += 1
+
+            # Check if Claude actually changed anything
+            changed = await self.pool.git_changed_files(slot)
+            if not changed:
+                display_skip("all", f"no changes produced for {connector}")
+                # Mark as processed so we don't retry endlessly
                 for t in threads:
-                    self.state.mark_failed(t.thread_id, pr_number, f"cargo check failed: {err[:200]}")
-                counts["failed"] = len(threads)
+                    self.state.mark_failed(t.thread_id, pr_number, "No code changes produced — may already be fixed")
+                counts["skipped"] = len(threads)
                 return counts
 
-        # --- Gate 5: Pre-push remote HEAD check ---
-        ok, remote_sha = await self.git.get_remote_head(branch, cwd=work_dir)
-        local_sha_before = await self.git.get_current_head(cwd=work_dir)
-        # We just need to verify the branch hasn't diverged unexpectedly
-        if not await self._gate("Remote HEAD check", ok, remote_sha[:12] if ok else remote_sha):
-            await self.git.revert_all(cwd=work_dir)
-            counts["skipped"] = len(threads)
-            return counts
+            # Run cargo build + clippy
+            both_ok, error_output = await self.pool.cargo_build_and_clippy(slot)
 
-        # --- Gate 6: Pre-push thread re-verify ---
-        pr_info_fresh = await self.github.fetch_pr_threads(pr_number)
-        threads_still_open = 0
-        if pr_info_fresh:
-            for t in threads:
-                for rt in pr_info_fresh.threads:
-                    if rt.id == t.thread_id and not rt.is_resolved:
-                        threads_still_open += 1
+            if both_ok:
+                await self._gate(f"Build+Clippy (loop {loop_count})", True, "PASS", pr=pr_number, connector=connector)
+                break
+            else:
+                await self._gate(f"Build+Clippy (loop {loop_count})", False, error_output, pr=pr_number, connector=connector)
+                last_error = error_output
+
+                if loop_count < self.config.max_build_fix_loops:
+                    # Send errors back to Claude
+                    fix_result = await resolver.run_fix_loop(
+                        connector, threads, error_output, loop_count, pr_number=pr_number,
+                    )
+                    if fix_result.error:
+                        display_error(f"Fix loop {loop_count} failed: {fix_result.error}")
                         break
-        if not await self._gate("Pre-push thread re-verify", threads_still_open > 0,
-                          f"{threads_still_open}/{len(threads)} still open"):
-            await self.git.revert_all(cwd=work_dir)
-            counts["skipped"] = len(threads)
+        else:
+            # Exhausted all loops — revert and fail
+            display_error(f"Build-fix loop exhausted for {connector} after {loop_count} attempts")
+            await self.pool.git_revert_all(slot)
+            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=f"Build failed after {loop_count} loops: {last_error[:200]}")
+            for t in threads:
+                self.state.mark_failed(t.thread_id, pr_number, f"Build failed: {last_error[:200]}")
+            counts["failed"] = len(threads)
             return counts
 
-        # --- Stage, commit, push ---
-        if not await self.git.has_changes(cwd=work_dir):
-            display_skip("all", "no changes produced")
-            counts["skipped"] = len(threads)
-            return counts
+        # Scope check: only connector files should have changed
+        changed = await self.pool.git_changed_files(slot)
+        unexpected = [f for f in changed if connector not in f]
+        if unexpected:
+            logger.warning("Unexpected files changed for %s: %s — reverting them", connector, unexpected)
+            from .clone_pool import _run
+            for f in unexpected:
+                await _run(["git", "checkout", "--", f], slot.path)
 
-        changed = await self.git.get_changed_files(cwd=work_dir)
-        ok, stage_err = await self.git.stage_files(changed, cwd=work_dir)
+        # Commit scoped to connector
+        ok, stage_err = await self.pool.git_stage_connector(slot, connector)
         if not ok:
             display_error(f"git add failed: {stage_err}")
             counts["failed"] = len(threads)
             return counts
 
-        instructions_preview = "; ".join(t.instruction[:60] for t in threads[:3])
-        commit_msg = f"fix(review): resolve {len(threads)} comment(s) on PR #{pr_number}\n\n{instructions_preview}"
-        ok, sha = await self.git.commit(commit_msg, cwd=work_dir)
-        if not ok:
-            display_error(f"git commit failed: {sha}")
+        instructions = "; ".join(t.instruction[:60] for t in threads[:3])
+        commit_msg = f"fix({connector}): resolve {len(threads)} review comment(s)\n\n{instructions}"
+        ok, sha = await self.pool.git_commit_connector(slot, connector, commit_msg)
+
+        if ok:
+            display_commit(sha, commit_msg.split("\n")[0])
+            display_resolve_done(len(threads), 0, resolve_result.turn_count)
+            await self._emit("subtask_committed", pr=pr_number, connector=connector, sha=sha)
+            await self._emit("subtask_fixed", pr=pr_number, connector=connector)
+            # Store per-comment summaries for individual replies
+            per_thread = getattr(resolve_result, 'summaries_by_thread', {})
+            for t in threads:
+                self._resolve_summaries[t.thread_id] = per_thread.get(t.thread_id, resolve_result.summary)
+            counts["fixed"] = len(threads)
+        else:
+            display_error(f"commit failed: {sha}")
+            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=f"commit failed: {sha}")
             counts["failed"] = len(threads)
-            return counts
 
-        display_commit(sha, commit_msg.split("\n")[0])
+        return counts
 
-        ok, push_err = await self.git.push(branch, cwd=work_dir)
+    # ------------------------------------------------------------------
+    # Push + reply
+    # ------------------------------------------------------------------
+
+    async def _push_and_reply(
+        self,
+        slot: CloneSlot,
+        branch: str,
+        pr_number: int,
+        threads: List[TriggeredThread],
+        counts: Dict[str, int],
+    ) -> None:
+        """Push all commits and reply on fixed threads."""
+
+        # GATE 5: Remote HEAD check
+        from .clone_pool import _run
+        await _run(["git", "fetch", "origin"], slot.path, timeout=60)
+
+        # GATE 6: Threads still unresolved
+        fresh = await self.github.fetch_pr_threads(pr_number)
+        if fresh:
+            resolved_ids = {rt.id for rt in fresh.threads if rt.is_resolved}
+            still_open = [t for t in threads if t.thread_id not in resolved_ids]
+            if not still_open:
+                await self._gate("Threads still open (pre-push)", False, "all resolved externally", pr=pr_number)
+                return
+            await self._gate("Threads still open (pre-push)", True, f"{len(still_open)} open", pr=pr_number)
+
+        # Push
+        ok, push_err = await self.pool.git_push(slot, branch, pr_number=pr_number)
         if not ok:
-            # Try pull --rebase and retry
-            ok2, _ = await self.git.pull_rebase(branch, cwd=work_dir)
-            if ok2:
-                ok, push_err = await self.git.push(branch, cwd=work_dir)
-            if not ok:
-                display_error(f"git push failed: {push_err}")
-                counts["failed"] = len(threads)
-                return counts
+            # Try rebase + retry
+            await _run(["git", "pull", "--rebase", "origin", branch], slot.path, timeout=60)
+            ok, push_err = await self.pool.git_push(slot, branch, pr_number=pr_number)
 
-        # --- Reply on threads ---
-        for t in threads:
-            body = (
-                f"Resolved by commit `{sha[:8]}`. "
-                f"Applied fix: {t.instruction[:200]}\n\n"
-                f"-- 10xGrace PR Resolver"
-            )
+        if not ok:
+            display_error(f"Push failed: {push_err}")
+            await self._emit("pr_push_failed", pr=pr_number, error=push_err)
+            return
+
+        # Get final commit SHA
+        _, sha, _ = await _run(["git", "rev-parse", "HEAD"], slot.path)
+        sha = sha.strip()
+        await self._emit("pr_pushed", pr=pr_number, sha=sha)
+
+        # Reply on each fixed thread with what Claude actually did
+        fixed_threads = [t for t in threads if not self.state.is_processed(t.thread_id)]
+        for t in fixed_threads:
+            summary = self._resolve_summaries.get(t.thread_id, "")
+            if summary:
+                # Use Claude's summary of what was changed (truncate to 500 chars)
+                what_changed = summary[:500]
+            else:
+                what_changed = f"Applied fix for: {t.instruction[:200]}"
+            body = f"**Resolved** in commit `{sha[:8]}`\n\n{what_changed}\n\n— *10xGrace*"
             posted = await self.github.post_thread_reply(t.thread_id, body)
             if posted:
                 display_reply_posted(t.thread_id)
-            self.state.mark_fixed(t.thread_id, pr_number, sha, t.path, t.instruction)
-            counts["fixed"] += 1
-
-        return counts
+            summary = self._resolve_summaries.get(t.thread_id, "")
+            self.state.mark_fixed(t.thread_id, pr_number, sha, t.path, t.instruction, resolution_summary=summary)

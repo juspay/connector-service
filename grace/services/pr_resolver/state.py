@@ -69,6 +69,25 @@ class StateManager:
     def get_processed_ids(self) -> Set[str]:
         return set(self._state.get("processed_threads", {}).keys())
 
+    def retry(self, thread_id: str) -> bool:
+        """Remove a thread from processed state so it gets picked up again."""
+        threads = self._state.get("processed_threads", {})
+        if thread_id in threads:
+            del threads[thread_id]
+            self.save()
+            return True
+        return False
+
+    def retry_all_failed(self) -> int:
+        """Remove all failed threads from processed state. Returns count."""
+        threads = self._state.get("processed_threads", {})
+        to_remove = [tid for tid, e in threads.items() if e.get("status") == "failed"]
+        for tid in to_remove:
+            del threads[tid]
+        if to_remove:
+            self.save()
+        return len(to_remove)
+
     # ------------------------------------------------------------------
     # Update helpers
     # ------------------------------------------------------------------
@@ -80,6 +99,7 @@ class StateManager:
         commit_sha: str,
         path: str,
         instruction: str,
+        resolution_summary: str = "",
     ) -> None:
         threads = self._state.setdefault("processed_threads", {})
         threads[thread_id] = {
@@ -89,6 +109,7 @@ class StateManager:
             "commit_sha": commit_sha,
             "path": path,
             "instruction_preview": instruction[:200],
+            "resolution_summary": resolution_summary[:500],
         }
         self.save()
 
@@ -98,13 +119,62 @@ class StateManager:
             "pr_number": pr_number,
             "processed_at": datetime.now(timezone.utc).isoformat(),
             "status": "failed",
-            "error": error[:500],
+            "error": error[:3000],
         }
         self.save()
 
     def update_last_poll(self) -> None:
         self._state["last_poll"] = datetime.now(timezone.utc).isoformat()
         self.save()
+
+    def mark_build_failed(self, pr_number: int, branch: str, head_sha: str, error: str, thread_ids: list = None) -> None:
+        """Mark a PR branch as having a broken build. Retries when SHA changes.
+
+        Also marks affected threads as 'build_blocked' so they show in the dashboard
+        but auto-clear when new commits are pushed.
+        """
+        builds = self._state.setdefault("build_failures", {})
+        builds[str(pr_number)] = {
+            "branch": branch,
+            "head_sha": head_sha,
+            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "error": error[:3000],
+        }
+        # Mark threads as blocked (not failed — they'll auto-retry on new commits)
+        if thread_ids:
+            threads = self._state.setdefault("processed_threads", {})
+            for tid in thread_ids:
+                threads[tid] = {
+                    "pr_number": pr_number,
+                    "processed_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "build_blocked",
+                    "error": f"Branch build broken — will auto-retry when new commits are pushed",
+                }
+        self.save()
+
+    def should_skip_build(self, pr_number: int, current_sha: str) -> bool:
+        """Check if we should skip this PR because its build already failed.
+
+        Returns True if the SHA hasn't changed since the last failure (no new commits).
+        Returns False if SHA changed (user pushed a fix) or no failure recorded.
+        """
+        builds = self._state.get("build_failures", {})
+        entry = builds.get(str(pr_number))
+        if not entry:
+            return False
+        # SHA changed → new commit → retry
+        if entry.get("head_sha") != current_sha:
+            # Clear the old failure and unblock threads
+            del builds[str(pr_number)]
+            # Remove build_blocked threads for this PR so they get picked up again
+            threads = self._state.get("processed_threads", {})
+            to_unblock = [tid for tid, t in threads.items()
+                          if t.get("pr_number") == pr_number and t.get("status") == "build_blocked"]
+            for tid in to_unblock:
+                del threads[tid]
+            self.save()
+            return False
+        return True
 
     def cleanup_old_entries(self, max_age_days: int = 30) -> int:
         """Remove entries older than *max_age_days*. Returns count removed."""

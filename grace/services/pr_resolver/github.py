@@ -55,6 +55,7 @@ class TriggeredThread:
     instruction: str
     diff_hunk: str
     author: str
+    comment_node_id: str = ""  # For adding reactions (👀)
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +266,22 @@ class GitHubClient:
             logger.exception("Failed to post reply to thread %s", thread_id)
             return False
 
+    async def add_reaction(self, comment_node_id: str, reaction: str = "EYES") -> bool:
+        """Add a reaction (e.g., EYES 👀) to a comment to signal it's been picked up."""
+        mutation = """
+        mutation($subjectId: ID!, $content: ReactionContent!) {
+          addReaction(input: {subjectId: $subjectId, content: $content}) {
+            reaction { content }
+          }
+        }
+        """
+        try:
+            await _run_graphql(mutation, {"subjectId": comment_node_id, "content": reaction})
+            return True
+        except Exception:
+            logger.debug("Failed to add reaction to %s", comment_node_id)
+            return False
+
 
 # ---------------------------------------------------------------------------
 # Trigger filtering
@@ -295,6 +312,7 @@ def filter_triggered_threads(
         instruction: Optional[str] = None
         author: str = "unknown"
         diff_hunk: str = ""
+        comment_node_id: str = ""
 
         for comment in thread.comments:
             if trigger_lower in comment.body.lower():
@@ -302,6 +320,7 @@ def filter_triggered_threads(
                 raw = re.sub(re.escape(trigger), "", comment.body, flags=re.IGNORECASE).strip()
                 instruction = raw
                 author = comment.author
+                comment_node_id = comment.id
                 diff_hunk = comment.diff_hunk or (thread.comments[0].diff_hunk if thread.comments else "")
                 break
 
@@ -316,6 +335,7 @@ def filter_triggered_threads(
                     instruction=instruction,
                     diff_hunk=diff_hunk,
                     author=author,
+                    comment_node_id=comment_node_id,
                 )
             )
 

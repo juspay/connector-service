@@ -146,13 +146,24 @@ def run_indexer(
     parser = RustASTParser()
     file_asts = []
 
+    # Normalize: store relative paths (relative to repo root)
+    def _make_relative(file_ast):
+        """Convert absolute file_path to relative."""
+        fp = file_ast.file_path
+        if fp.startswith(repo_path):
+            fp = fp[len(repo_path):].lstrip("/")
+        elif fp.startswith(str(repo_path)):
+            fp = fp[len(str(repo_path)):].lstrip("/")
+        file_ast.file_path = fp
+        return file_ast
+
     if Progress is not None:
         with Progress() as progress:
             task = progress.add_task("Parsing Rust files...", total=len(files_to_parse))
             for fpath in files_to_parse:
                 ast = parser.parse_file(fpath)
                 if ast:
-                    file_asts.append(ast)
+                    file_asts.append(_make_relative(ast))
                 else:
                     result.errors.append(f"Failed to parse: {fpath}")
                 progress.update(task, advance=1)
@@ -160,7 +171,7 @@ def run_indexer(
         for fpath in files_to_parse:
             ast = parser.parse_file(fpath)
             if ast:
-                file_asts.append(ast)
+                file_asts.append(_make_relative(ast))
             else:
                 result.errors.append(f"Failed to parse: {fpath}")
 
