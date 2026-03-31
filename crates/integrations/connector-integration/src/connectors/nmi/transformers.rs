@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::pii;
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PreAuthenticate, RSync, Refund, Void},
@@ -147,8 +148,8 @@ pub struct GooglePayData {
 #[derive(Debug, Serialize)]
 pub struct GooglePayDecryptedData {
     decrypted_googlepay_data: DecryptedDataIndicator,
-    ccnumber: String,
-    ccexp: String,
+    ccnumber: Secret<String>,
+    ccexp: Secret<String>,
     cavv: Option<Secret<String>>,
     eci: Option<String>,
 }
@@ -452,18 +453,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
                     match &google_pay_data.tokenization_data {
                         GpayTokenizationData::Decrypted(decrypted_data) => {
-                            let year = decrypted_data.card_exp_year.peek();
-                            let year_short = if year.len() == 4 { &year[2..] } else { year };
-                            let ccexp =
-                                format!("{}{}", decrypted_data.card_exp_month.peek(), year_short);
+                            let ccexp = decrypted_data
+                                .get_expiry_date_as_mmyy()
+                                .change_context(
+                                    errors::ConnectorError::RequestEncodingFailed,
+                                )?;
                             (
                                 NmiPaymentMethod::GooglePayDecrypt(Box::new(
                                     GooglePayDecryptedData {
                                         decrypted_googlepay_data:
                                             DecryptedDataIndicator::Decrypted,
-                                        ccnumber: decrypted_data
-                                            .application_primary_account_number
-                                            .get_card_no(),
+                                        ccnumber: Secret::new(
+                                            decrypted_data
+                                                .application_primary_account_number
+                                                .get_card_no(),
+                                        ),
                                         ccexp,
                                         cavv: decrypted_data.cryptogram.clone(),
                                         eci: decrypted_data.eci_indicator.clone(),
