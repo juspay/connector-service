@@ -113,7 +113,9 @@ macro_rules! impl_flow_method {
                 ca_cert: None,
             };
 
-            let http_response = http_client.execute(http_req, Some(timeout_overrides)).await?;
+            let http_response = http_client
+                .execute(http_req, Some(timeout_overrides))
+                .await?;
 
             let mut header_map = http::HeaderMap::new();
             for (key, value) in &http_response.headers {
