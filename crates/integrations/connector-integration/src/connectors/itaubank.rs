@@ -266,7 +266,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     res.status_code,
                     res.response
                 );
-                Err(errors::ConnectorResponseTransformationError::ResponseDeserializationFailed { context: Default::default() }.into())
+                Err(
+                    errors::ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                        context: Default::default(),
+                    }
+                    .into(),
+                )
             }
         }
     }
@@ -327,10 +332,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PayoutTransferResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-        let access_token = req
-            .resource_common_data
-            .get_access_token()
-            .map_err(|_| errors::IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
+        let access_token = req.resource_common_data.get_access_token().map_err(|_| {
+            errors::IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+        })?;
 
         Ok(vec![
             (
@@ -398,7 +404,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     res.status_code,
                     res.response
                 );
-                Err(errors::ConnectorResponseTransformationError::ResponseDeserializationFailed { context: Default::default() }.into())
+                Err(
+                    errors::ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                        context: Default::default(),
+                    }
+                    .into(),
+                )
             }
         }
     }

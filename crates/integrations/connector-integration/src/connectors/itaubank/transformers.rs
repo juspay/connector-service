@@ -1,7 +1,7 @@
 use domain_types::{
     connector_flow::*,
     connector_types::*,
-    errors::{IntegrationError, ConnectorResponseTransformationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payouts::payout_method_data::{Bank, PayoutMethodData, PixBankTransfer},
     payouts::payouts_types::*,
     router_data::ConnectorSpecificConfig,
@@ -36,7 +36,10 @@ impl TryFrom<&ConnectorSpecificConfig> for ItaubankAuthType {
                 client_id: client_id.clone(),
                 client_secret: client_secret.clone(),
             }),
-            _ => Err(IntegrationError::FailedToObtainAuthType { context: Default::default() }.into()),
+            _ => Err(IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -160,10 +163,14 @@ impl
         let converter = StringMajorUnitForConnector;
         let valor_pagamento = converter
             .convert(req.request.amount, req.request.source_currency)
-            .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let data_pagamento = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
-            .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let recebedor = match req.request.payout_method_data.clone() {
             Some(PayoutMethodData::Bank(Bank::Pix(PixBankTransfer {
@@ -276,6 +283,11 @@ impl TryFrom<ResponseRouterData<ItaubankErrorResponse, Self>>
     fn try_from(
         _item: ResponseRouterData<ItaubankErrorResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        Err(ConnectorResponseTransformationError::ResponseHandlingFailed { context: Default::default() }.into())
+        Err(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            }
+            .into(),
+        )
     }
 }
