@@ -152,43 +152,42 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
     }
 
     match method {
-        // PaymentService - support both old (payment/*, direct_payment/*) and new method paths
-        "payment/authorize" | "direct_payment/authorize" => call!(
+        "payment/authorize" => call!(
             PaymentServiceClient,
             authorize,
             PaymentServiceAuthorizeRequest
         ),
-        "payment/capture" | "direct_payment/capture" => {
+        "payment/capture" => {
             call!(PaymentServiceClient, capture, PaymentServiceCaptureRequest)
         }
-        "payment/void" | "direct_payment/void" => {
+        "payment/void" => {
             call!(PaymentServiceClient, void, PaymentServiceVoidRequest)
         }
-        "payment/get" | "direct_payment/get" => {
+        "payment/get" => {
             call!(PaymentServiceClient, get, PaymentServiceGetRequest)
         }
-        "payment/refund" | "direct_payment/refund" => {
+        "payment/refund" => {
             call!(PaymentServiceClient, refund, PaymentServiceRefundRequest)
         }
-        "payment/reverse" | "direct_payment/reverse" => {
+        "payment/reverse" => {
             call!(PaymentServiceClient, reverse, PaymentServiceReverseRequest)
         }
-        "payment/setup_recurring" | "direct_payment/setup_recurring" => call!(
+        "payment/setup_recurring" => call!(
             PaymentServiceClient,
             setup_recurring,
             PaymentServiceSetupRecurringRequest
         ),
-        "direct_payment/create_order" => call!(
+        "payment/create_order" => call!(
             PaymentServiceClient,
             create_order,
             PaymentServiceCreateOrderRequest
         ),
-        "direct_payment/incremental_authorization" => call!(
+        "payment/incremental_authorization" => call!(
             PaymentServiceClient,
             incremental_authorization,
             PaymentServiceIncrementalAuthorizationRequest
         ),
-        "direct_payment/verify_redirect_response" => call!(
+        "payment/verify_redirect_response" => call!(
             PaymentServiceClient,
             verify_redirect_response,
             PaymentServiceVerifyRedirectResponseRequest

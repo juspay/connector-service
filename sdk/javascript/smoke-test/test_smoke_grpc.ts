@@ -88,15 +88,15 @@ interface FlowMeta {
 
 // Canonical ordering matches Rust build.rs.
 const FLOW_META: [string, FlowMeta][] = [
-  ["authorize",                { field: "directPayment",    method: "authorize",             builder: "_buildAuthorizeRequest",            arg: "AUTOMATIC" }],
-  ["capture",                  { field: "directPayment",    method: "capture",               builder: "_buildCaptureRequest",              arg: "txnId"     }],
-  ["void",                     { field: "directPayment",    method: "void",                  builder: "_buildVoidRequest",                 arg: "txnId"     }],
-  ["get",                      { field: "directPayment",    method: "get",                   builder: "_buildGetRequest",                  arg: "txnId"     }],
-  ["refund",                   { field: "directPayment",    method: "refund",                builder: "_buildRefundRequest",               arg: "txnId"     }],
-  ["reverse",                  { field: "directPayment",    method: "reverse",               builder: "_buildReverseRequest",              arg: "txnId"     }],
+  ["authorize",                { field: "payment",          method: "authorize",             builder: "_buildAuthorizeRequest",            arg: "AUTOMATIC" }],
+  ["capture",                  { field: "payment",          method: "capture",               builder: "_buildCaptureRequest",              arg: "txnId"     }],
+  ["void",                     { field: "payment",          method: "void",                  builder: "_buildVoidRequest",                 arg: "txnId"     }],
+  ["get",                      { field: "payment",          method: "get",                   builder: "_buildGetRequest",                  arg: "txnId"     }],
+  ["refund",                   { field: "payment",          method: "refund",                builder: "_buildRefundRequest",               arg: "txnId"     }],
+  ["reverse",                  { field: "payment",          method: "reverse",               builder: "_buildReverseRequest",              arg: "txnId"     }],
   ["create_customer",          { field: "customer",         method: "create",                builder: "_buildCreateCustomerRequest",       arg: "none"      }],
   ["tokenize",                 { field: "paymentMethod",    method: "tokenize",              builder: "_buildTokenizeRequest",             arg: "none"      }],
-  ["setup_recurring",          { field: "directPayment",    method: "setupRecurring",        builder: "_buildSetupRecurringRequest",       arg: "none"      }],
+  ["setup_recurring",          { field: "payment",          method: "setupRecurring",        builder: "_buildSetupRecurringRequest",       arg: "none"      }],
   ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "mandateId" }],
   ["pre_authenticate",         { field: "paymentMethodAuthentication", method: "preAuthenticate",  builder: "_buildPreAuthenticateRequest",      arg: "none"      }],
   ["authenticate",             { field: "paymentMethodAuthentication", method: "authenticate",   builder: "_buildAuthenticateRequest",         arg: "none"      }],
@@ -265,7 +265,7 @@ async function runConnector(
     try {
       const req = buildRequest(mod, "authorize", "AUTOMATIC", probeRequests);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await (client as any).directPayment.authorize(req) as { connectorTransactionId?: string; statusCode: number };
+      const res = await (client as any).payment.authorize(req) as { connectorTransactionId?: string; statusCode: number };
       authorizeTxnId = extractTxnId(res.connectorTransactionId);
       const result = `txn_id: ${res.connectorTransactionId ?? "-"}, status_code: ${res.statusCode}`;
       if (res.statusCode >= 400) {
@@ -293,7 +293,7 @@ async function runConnector(
     try {
       const req = buildRequest(mod, "setup_recurring", undefined, probeRequests);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await (client as any).directPayment.setupRecurring(req) as { 
+      const res = await (client as any).payment.setupRecurring(req) as { 
         mandateReference?: { connectorMandateId?: { connectorMandateId?: string } }; 
         statusCode: number 
       };
@@ -334,7 +334,7 @@ async function runConnector(
         // capture / void: do a MANUAL authorize inline (AUTOMATIC txn_id can't be captured).
         const authReq = buildRequest(mod, "authorize", "MANUAL", probeRequests);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const auth = await (client as any).directPayment.authorize(authReq) as { connectorTransactionId?: string; statusCode: number; error?: unknown };
+        const auth = await (client as any).payment.authorize(authReq) as { connectorTransactionId?: string; statusCode: number; error?: unknown };
         if (auth.statusCode >= 400) {
           throw new Error(`inline authorize failed (status ${auth.statusCode})`);
         }

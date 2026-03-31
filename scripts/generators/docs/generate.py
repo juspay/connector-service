@@ -490,7 +490,7 @@ def generate_scenario_files(
 
     for sdk, ext, render_fn in [
         ("python",     "py", snippets.render_consolidated_python),
-        ("javascript", "js", snippets.render_consolidated_javascript),
+        ("javascript", "ts", snippets.render_consolidated_javascript),
     ]:
         out_dir  = examples_dir / connector_name / sdk
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -830,14 +830,24 @@ def list_connectors() -> list[str]:
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
 
-def check_example_syntax(examples_dir: Path) -> None:
-    """Run syntax checks on all generated example files."""
+def check_example_syntax(examples_dir: Path, connectors: Optional[list[str]] = None) -> None:
+    """Run syntax checks on generated example files.
+
+    If *connectors* is given, only files under examples_dir/{connector}/ are checked.
+    """
     import subprocess
 
-    py_files = sorted(examples_dir.rglob("*.py"))
-    js_files = sorted(examples_dir.rglob("*.js"))
-    kt_files = sorted(examples_dir.rglob("*.kt"))
-    rs_files = sorted(examples_dir.rglob("*.rs"))
+    if connectors:
+        subdirs = [examples_dir / c for c in connectors if (examples_dir / c).is_dir()]
+        py_files = sorted(f for d in subdirs for f in d.rglob("*.py"))
+        ts_files = sorted(f for d in subdirs for f in d.rglob("*.ts"))
+        kt_files = sorted(f for d in subdirs for f in d.rglob("*.kt"))
+        rs_files = sorted(f for d in subdirs for f in d.rglob("*.rs"))
+    else:
+        py_files = sorted(examples_dir.rglob("*.py"))
+        ts_files = sorted(examples_dir.rglob("*.ts"))
+        kt_files = sorted(examples_dir.rglob("*.kt"))
+        rs_files = sorted(examples_dir.rglob("*.rs"))
 
     errors: list[str] = []
 
@@ -850,18 +860,22 @@ def check_example_syntax(examples_dir: Path) -> None:
         if result.returncode != 0:
             errors.append(f"Python: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
-    # JavaScript — syntax check
-    node_ok = False
+    # TypeScript — syntax check via tsc (TypeScript compiler)
+    tsc_ok = False
     try:
-        subprocess.run(["node", "--version"], capture_output=True, check=True)
-        node_ok = True
+        subprocess.run(["tsc", "--version"], capture_output=True, check=True)
+        tsc_ok = True
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
-    if node_ok:
-        for f in js_files:
-            result = subprocess.run(["node", "--check", str(f)], capture_output=True, text=True)
+    if tsc_ok:
+        for f in ts_files:
+            # Check syntax only (no emit)
+            result = subprocess.run(
+                ["tsc", "--noEmit", "--skipLibCheck", str(f)],
+                capture_output=True, text=True
+            )
             if result.returncode != 0:
-                errors.append(f"JS: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+                errors.append(f"TypeScript: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
     # Kotlin — full compile via Gradle (preferred) or kotlinc syntax check (fallback).
     # Standalone kotlinc cannot resolve payments.* SDK imports, so only Gradle gives
@@ -926,11 +940,11 @@ def check_example_syntax(examples_dir: Path) -> None:
         for e in errors:
             print(f"    {e}")
     else:
-        checks = f"{len(py_files)} Python, {len(js_files)} JavaScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
-        js_note = "" if node_ok else " (node unavailable — JS skipped)"
+        checks = f"{len(py_files)} Python, {len(ts_files)} TypeScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
+        ts_note = "" if tsc_ok else " (tsc unavailable — TypeScript skipped)"
         kt_note = "" if kt_ok else " (Gradle/kotlinc unavailable — Kotlin skipped)"
         rs_note = "" if rustfmt_ok else " (rustfmt unavailable — Rust skipped)"
-        print(f"  ✓ Syntax check passed ({checks}){js_note}{kt_note}{rs_note}")
+        print(f"  ✓ Syntax check passed ({checks}){ts_note}{kt_note}{rs_note}")
 
 
 def cmd_list():
@@ -940,7 +954,7 @@ def cmd_list():
         print(f"  {name}")
 
 
-def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[Path] = None):
+def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[Path] = None, update_llms: bool = True):
     probe_data = load_probe_data(probe_path)
     if not probe_data:
         print("Error: No probe data available. Run field-probe first.", file=sys.stderr)
@@ -960,6 +974,19 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
         # Generate example files first so we can compute line numbers for doc links.
         scenario_files, scenario_lines, flow_lines_py_js     = generate_scenario_files(name, probe_connector, EXAMPLES_DIR)
         flow_files, flow_lines_kt_rs, scenario_lines_kt_rs   = generate_flow_files(name, probe_connector, EXAMPLES_DIR)
+
+        # Supplement py/js line numbers from existing files when generate_scenario_files
+        # returned early (e.g. scenario_groups missing from manifest).
+        flow_items = _collect_flow_items(probe_connector, exclude_keys=set())
+        for sdk, ext in [("python", "py"), ("javascript", "js")]:
+            existing = EXAMPLES_DIR / name / sdk / f"{name}.{ext}"
+            if existing.exists():
+                content = existing.read_text(encoding="utf-8")
+                for flow_key, _, _ in flow_items:
+                    if sdk not in flow_lines_py_js.get(flow_key, {}):
+                        lineno = _find_func_line(content, _flow_search(sdk, flow_key))
+                        if lineno:
+                            flow_lines_py_js.setdefault(flow_key, {})[sdk] = lineno
 
         # Merge py/js and kt/rs flow line numbers into one dict.
         merged_flow_lines: dict[str, dict[str, int]] = {}
@@ -989,9 +1016,10 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
             print("skipped")
             skip += 1
 
-    generate_llms_txt(probe_data, output_dir)
+    if update_llms:
+        generate_llms_txt(probe_data, output_dir)
     print(f"\nDone: {ok} generated, {skip} skipped.")
-    check_example_syntax(EXAMPLES_DIR)
+    check_example_syntax(EXAMPLES_DIR, connectors=connectors)
 
 
 # ─── All Connectors Coverage Document ─────────────────────────────────────────
@@ -1390,7 +1418,7 @@ def main():
             sys.exit(1)
         cmd_generate(connectors, args.output_dir, args.probe_path)
     elif args.connectors:
-        cmd_generate(args.connectors, args.output_dir, args.probe_path)
+        cmd_generate(args.connectors, args.output_dir, args.probe_path, update_llms=False)
     else:
         parser.print_help()
         sys.exit(1)

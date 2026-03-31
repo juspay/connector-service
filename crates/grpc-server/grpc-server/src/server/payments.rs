@@ -2398,7 +2398,7 @@ impl PaymentService for Payments {
         name = "token_authorize",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "PaymentService",
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = "token_authorize",
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -2458,7 +2458,7 @@ impl PaymentService for Payments {
         name = "token_setup_recurring",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "PaymentService",
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = "token_setup_recurring",
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -2518,7 +2518,7 @@ impl PaymentService for Payments {
         name = "proxy_authorize",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "PaymentService",
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = "proxy_authorize",
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -2561,7 +2561,7 @@ impl PaymentService for Payments {
                 let metadata = metadata.clone();
                 Box::pin(async move {
                     let authorize_request = proxied_authorize_to_base(request_data.payload)
-                        .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e:?}")))?;
 
                     let mut inner_request = tonic::Request::new(authorize_request);
                     *inner_request.extensions_mut() = extensions;
@@ -2579,7 +2579,7 @@ impl PaymentService for Payments {
         name = "proxy_setup_recurring",
         fields(
             name = common_utils::consts::NAME,
-            service_name = "PaymentService",
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = "proxy_setup_recurring",
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -2623,7 +2623,7 @@ impl PaymentService for Payments {
                 Box::pin(async move {
                     let setup_recurring_request =
                         proxied_setup_recurring_to_base(request_data.payload)
-                            .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
+                            .map_err(|e| tonic::Status::invalid_argument(format!("{e:?}")))?;
 
                     let mut inner_request = tonic::Request::new(setup_recurring_request);
                     *inner_request.extensions_mut() = extensions;

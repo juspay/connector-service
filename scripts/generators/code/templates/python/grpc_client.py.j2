@@ -114,7 +114,7 @@ class Grpc{{ service[:-7] if service.endswith('Service') else service }}Client:
         """{{ f.service }}.{{ f.rpc }} — {{ f.description }}"""
         return _call_grpc(
             self._ffi, self._config,
-            "{{ f.name }}",
+            "{{ grpc_method_path(f.service, f.name) }}",
             req, payment_pb2.{{ f.response }},
         )
 {% endfor %}

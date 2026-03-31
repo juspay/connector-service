@@ -9,8 +9,8 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
-from payments import RecurringPaymentClient
 from payments import CustomerClient
+from payments import RecurringPaymentClient
 from payments import PaymentMethodClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
@@ -93,11 +93,9 @@ def _build_get_request(connector_transaction_id: str):
 def _build_recurring_charge_request():
     return ParseDict(
         {
-            "connector_recurring_payment_id": {
-                "mandate_id_type": {
-                    "connector_mandate_id": {
-                        "connector_mandate_id": "probe-mandate-123"
-                    }
+            "connector_recurring_payment_id": {  # Reference to existing mandate
+                "connector_mandate_id": {  # mandate_id sent by the connector
+                    "connector_mandate_id": "probe-mandate-123"
                 }
             },
             "amount": {  # Amount Information
@@ -154,13 +152,13 @@ def _build_setup_recurring_request():
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,
+            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
             "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",
-            "request_incremental_authorization": False,
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",
-                "accepted_at": 0
+            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
+            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
+            "customer_acceptance": {  # Details of customer acceptance
+                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
+                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
             }
         },
         payment_pb2.PaymentServiceSetupRecurringRequest(),
@@ -198,10 +196,29 @@ def _build_void_request(connector_transaction_id: str):
         },
         payment_pb2.PaymentServiceVoidRequest(),
     )
+async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """One-step Payment (Authorize + Capture)
+
+    Simple payment that authorizes and captures in one call. Use for immediate charges.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}
+
+
 async def process_checkout_card(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Card Payment (Authorize + Capture)
 
-    Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+    Two-step card payment. First authorize, then capture. Use when you need to verify funds before finalizing.
     """
     payment_client = PaymentClient(config)
 
@@ -223,121 +240,10 @@ async def process_checkout_card(merchant_transaction_id: str, config: sdk_config
     return {"status": getattr(capture_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(capture_response, "error", None)}
 
 
-async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Card Payment (Automatic Capture)
-
-    Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
-    """
-    payment_client = PaymentClient(config)
-
-    # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
-
-    if authorize_response.status == "FAILED":
-        raise RuntimeError(f"Payment failed: {authorize_response.error}")
-    if authorize_response.status == "PENDING":
-        # Awaiting async confirmation — handle via webhook
-        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
-
-    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}
-
-
-async def process_checkout_wallet(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Wallet Payment (Google Pay / Apple Pay)
-
-    Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
-    """
-    payment_client = PaymentClient(config)
-
-    # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(ParseDict(
-        {
-            "merchant_transaction_id": "probe_txn_001",  # Identification
-            "amount": {  # The amount for the payment
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {  # Payment method to be used
-                "google_pay": {  # Google Pay
-                    "type": "CARD",  # Type of payment method
-                    "description": "Visa 1111",  # User-facing description of the payment method
-                    "info": {
-                        "card_network": "VISA",  # Card network name
-                        "card_details": "1111"  # Card details (usually last 4 digits)
-                    },
-                    "tokenization_data": {
-                        "encrypted_data": {  # Encrypted Google Pay payment data
-                            "token_type": "PAYMENT_GATEWAY",  # The type of the token
-                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet
-                        }
-                    }
-                }
-            },
-            "capture_method": "AUTOMATIC",  # Method for capturing the payment
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Authentication Details
-            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
-        },
-        payment_pb2.PaymentServiceAuthorizeRequest(),
-    ))
-
-    if authorize_response.status == "FAILED":
-        raise RuntimeError(f"Payment failed: {authorize_response.error}")
-    if authorize_response.status == "PENDING":
-        # Awaiting async confirmation — handle via webhook
-        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
-
-    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}
-
-
-async def process_checkout_bank(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Bank Transfer (SEPA / ACH / BACS)
-
-    Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC`.
-    """
-    payment_client = PaymentClient(config)
-
-    # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(ParseDict(
-        {
-            "merchant_transaction_id": "probe_txn_001",  # Identification
-            "amount": {  # The amount for the payment
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "EUR"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {  # Payment method to be used
-                "sepa": {  # Sepa - Single Euro Payments Area direct debit
-                    "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
-                    "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
-                }
-            },
-            "capture_method": "AUTOMATIC",  # Method for capturing the payment
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Authentication Details
-            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
-        },
-        payment_pb2.PaymentServiceAuthorizeRequest(),
-    ))
-
-    if authorize_response.status == "FAILED":
-        raise RuntimeError(f"Payment failed: {authorize_response.error}")
-    if authorize_response.status == "PENDING":
-        # Awaiting async confirmation — handle via webhook
-        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
-
-    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}
-
-
 async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Refund a Payment
+    """Refund
 
-    Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+    Return funds to the customer for a completed payment.
     """
     payment_client = PaymentClient(config)
 
@@ -359,79 +265,10 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
     return {"status": getattr(refund_response, "status", ""), "error": getattr(refund_response, "error", None)}
 
 
-async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Recurring / Mandate Payments
-
-    Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
-    """
-    payment_client = PaymentClient(config)
-    recurringpayment_client = RecurringPaymentClient(config)
-
-    # Step 1: Setup Recurring — store the payment mandate
-    setup_response = await payment_client.setup_recurring(ParseDict(
-        {
-            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
-            "amount": {  # Mandate Details
-                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-                }
-            },
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,
-            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",
-            "request_incremental_authorization": False,
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",
-                "accepted_at": 0
-            }
-        },
-        payment_pb2.PaymentServiceSetupRecurringRequest(),
-    ))
-
-    if setup_response.status == "FAILED":
-        raise RuntimeError(f"Recurring setup failed: {setup_response.error}")
-    if setup_response.status == "PENDING":
-        # Mandate stored asynchronously — save connector_recurring_payment_id
-        return {"status": "pending", "mandate_id": setup_response.connector_recurring_payment_id}
-
-    # Step 2: Recurring Charge — charge against the stored mandate
-    recurring_response = await recurringpayment_client.charge(ParseDict(
-        {
-            "connector_recurring_payment_id": {"connector_mandate_id": {"connector_mandate_id": setup_response.mandate_reference.connector_mandate_id.connector_mandate_id}},  # from SetupRecurring response
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "return_url": "https://example.com/recurring-return",
-            "connector_customer_id": "cust_probe_123",
-            "off_session": True  # Behavioral Flags and Preferences
-        },
-        payment_pb2.RecurringPaymentServiceChargeRequest(),
-    ))
-
-    if recurring_response.status == "FAILED":
-        raise RuntimeError(f"Recurring_Charge failed: {recurring_response.error}")
-
-    return {"status": getattr(recurring_response, "status", ""), "transaction_id": getattr(recurring_response, "connector_transaction_id", ""), "error": getattr(recurring_response, "error", None)}
-
-
 async def process_void_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Void a Payment
+    """Void Payment
 
-    Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+    Cancel an authorized but not-yet-captured payment.
     """
     payment_client = PaymentClient(config)
 
@@ -453,7 +290,7 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
 async def process_get_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Get Payment Status
 
-    Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+    Retrieve current payment status from the connector.
     """
     payment_client = PaymentClient(config)
 
@@ -470,61 +307,6 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
     get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
 
     return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}
-
-
-async def process_create_customer(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Create Customer
-
-    Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
-    """
-    customer_client = CustomerClient(config)
-
-    # Step 1: Create Customer — register customer record in the connector
-    create_response = await customer_client.create(ParseDict(
-        {
-            "merchant_customer_id": "cust_probe_123",  # Identification
-            "customer_name": "John Doe",  # Name of the customer
-            "email": {"value": "test@example.com"},  # Email address of the customer
-            "phone_number": "4155552671"  # Phone number of the customer
-        },
-        payment_pb2.CustomerServiceCreateRequest(),
-    ))
-
-    return {"customer_id": getattr(create_response, "connector_customer_id", ""), "error": getattr(create_response, "error", None)}
-
-
-async def process_tokenize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Tokenize Payment Method
-
-    Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
-    """
-    paymentmethod_client = PaymentMethodClient(config)
-
-    # Step 1: Tokenize — store card details and return a reusable token
-    tokenize_response = await paymentmethod_client.tokenize(ParseDict(
-        {
-            "amount": {  # Payment Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-                }
-            },
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            }
-        },
-        payment_pb2.PaymentMethodServiceTokenizeRequest(),
-    ))
-
-    return {"token": getattr(tokenize_response, "payment_method_token", ""), "error": getattr(tokenize_response, "error", None)}
 
 
 async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -583,8 +365,6 @@ async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.C
                 "card_holder_name": "John Doe"
             },
             "address": {
-                "billing_address": {
-                }
             },
             "capture_method": "AUTOMATIC",
             "auth_type": "NO_THREE_DS",
@@ -640,7 +420,7 @@ async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorCon
     return {"status": void_response.status}
 
 if __name__ == "__main__":
-    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_card"
+    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_autocapture"
     fn = globals().get(f"process_{scenario}")
     if not fn:
         available = [k[8:] for k in globals() if k.startswith("process_")]

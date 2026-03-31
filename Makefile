@@ -125,10 +125,19 @@ validate-pre-push-fix:
 	@echo "▶ Running pre-push validation with auto-fix..."
 	@./scripts/validation/pre-push.sh --fix
 
-## Generate connector docs from source code (all connectors)
-docs: field-probe
+## Generate connector docs (default: stripe only; use CONNECTORS=all for all connectors)
+## Skips field-probe if data/field_probe already exists; use CONNECTORS=all to re-probe all connectors.
+docs:
 	@echo "▶ Generating connector docs…"
-	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+	@if [ "$(CONNECTORS)" = "all" ]; then \
+		$(MAKE) field-probe; \
+		python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe; \
+	else \
+		if [ ! -d data/field_probe ] || [ -z "$$(ls -A data/field_probe 2>/dev/null)" ]; then \
+			$(MAKE) field-probe; \
+		fi; \
+		python3 scripts/generators/docs/generate.py stripe --probe-path data/field_probe; \
+	fi
 
 ## Generate the all-connectors coverage document
 all-connectors-doc: field-probe
@@ -245,7 +254,7 @@ help:
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
 	@echo "Docs Targets:"
-	@echo "  docs         Regenerate all connector docs from source"
+	@echo "  docs         Regenerate connector docs (default: stripe; CONNECTORS=all for all)"
 	@echo "  docs-check   Report which connectors are missing annotation files"
 	@echo "Certification Targets:"
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"

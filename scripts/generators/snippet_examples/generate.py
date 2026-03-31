@@ -5,6 +5,13 @@ All functions are pure (no I/O, no global state). Called by docs/generate.py.
 
 Proto field comments come from manifest["message_schemas"] (populated by field-probe).
 
+DESIGN PRINCIPLES (CRITICAL):
+- This is a GENERIC generator script - it must handle ALL connectors and flows generically
+- NO hardcoding of flow names, field names, or connector-specific logic
+- All type information must be derived from proto metadata (_PROTO_FIELD_TYPES, message_schemas)
+- Flow keys, field names, and types must be resolved dynamically from probe data
+- When adding type annotations, derive the TypeScript type from proto_type via _PROTO_FIELD_TYPES
+
 Public API
 ----------
   detect_scenarios(probe_connector) -> list[ScenarioSpec]
@@ -131,6 +138,65 @@ def load_proto_type_map(proto_dir: Path) -> None:
 
 
 # ── Scenario groups (populated by docs/generate.py via set_scenario_groups()) ──
+
+# Fallback scenario groups used when manifest.json doesn't provide them
+# Use pm_key_variants for authorize to match connectors with PM-specific flows (no default entry)
+_FALLBACK_SCENARIO_GROUPS: list[dict] = [
+    {
+        "key": "checkout_autocapture",
+        "title": "One-step Payment (Authorize + Capture)",
+        "description": "Simple payment that authorizes and captures in one call. Use for immediate charges.",
+        "flows": ["authorize"],
+        "pm_key": None,
+        "required_flows": [
+            {"flow_key": "authorize", "pm_key_variants": ["Card", "Ach", "Sepa", "Bacs", "GooglePay", "ApplePay"]},
+        ]
+    },
+    {
+        "key": "checkout_card",
+        "title": "Card Payment (Authorize + Capture)",
+        "description": "Two-step card payment. First authorize, then capture. Use when you need to verify funds before finalizing.",
+        "flows": ["authorize", "capture"],
+        "pm_key": "Card",
+        "required_flows": [
+            {"flow_key": "authorize", "pm_key": "Card"},
+            {"flow_key": "capture", "pm_key": None}
+        ]
+    },
+    {
+        "key": "refund",
+        "title": "Refund",
+        "description": "Return funds to the customer for a completed payment.",
+        "flows": ["authorize", "refund"],
+        "pm_key": None,
+        "required_flows": [
+            {"flow_key": "authorize", "pm_key_variants": ["Card", "Ach", "Sepa", "Bacs", "GooglePay", "ApplePay"]},
+            {"flow_key": "refund", "pm_key": None}
+        ]
+    },
+    {
+        "key": "void_payment",
+        "title": "Void Payment",
+        "description": "Cancel an authorized but not-yet-captured payment.",
+        "flows": ["authorize", "void"],
+        "pm_key": None,
+        "required_flows": [
+            {"flow_key": "authorize", "pm_key_variants": ["Card", "Ach", "Sepa", "Bacs", "GooglePay", "ApplePay"]},
+            {"flow_key": "void", "pm_key": None}
+        ]
+    },
+    {
+        "key": "get_payment",
+        "title": "Get Payment Status",
+        "description": "Retrieve current payment status from the connector.",
+        "flows": ["authorize", "get"],
+        "pm_key": None,
+        "required_flows": [
+            {"flow_key": "authorize", "pm_key_variants": ["Card", "Ach", "Sepa", "Bacs", "GooglePay", "ApplePay"]},
+            {"flow_key": "get", "pm_key": None}
+        ]
+    },
+]
 
 _SCENARIO_GROUPS: list[dict] = []  # populated by docs/generate.py via set_scenario_groups()
 
@@ -366,7 +432,10 @@ def detect_scenarios(probe_connector: dict) -> list[ScenarioSpec]:
 
     scenarios: list[ScenarioSpec] = []
 
-    for group in _SCENARIO_GROUPS:
+    # Use fallback scenario groups if none provided via set_scenario_groups()
+    groups_to_use = _SCENARIO_GROUPS if _SCENARIO_GROUPS else _FALLBACK_SCENARIO_GROUPS
+
+    for group in groups_to_use:
         key = group.get("key", "")
         title = group.get("title", "")
         description = group.get("description", "")
@@ -467,6 +536,30 @@ class _SchemaDB:
 
 # ── Annotated JSON rendering ───────────────────────────────────────────────────
 
+def _is_proto_enum(type_name: str) -> bool:
+    """Return True if type_name refers to a proto enum (not a message, not a primitive)."""
+    if not type_name:
+        return False
+    _PRIMITIVES = frozenset({"string", "bool", "int32", "uint32", "int64", "uint64",
+                              "float", "double", "bytes", "sint32", "sint64",
+                              "fixed32", "sfixed32", "fixed64", "sfixed64"})
+    return type_name not in _PRIMITIVES and type_name not in _PROTO_FIELD_TYPES and type_name not in _PROTO_WRAPPER_TYPES
+
+
+def _collect_ts_enum_types(obj: dict, msg_name: str, db: "_SchemaDB") -> set[str]:
+    """Recursively collect all proto enum type names used in obj."""
+    result: set[str] = set()
+    if not isinstance(obj, dict):
+        return result
+    for key, val in obj.items():
+        child_msg = db.get_type(msg_name, key)
+        if isinstance(val, dict) and child_msg:
+            result |= _collect_ts_enum_types(val, child_msg, db)
+        elif isinstance(val, str) and child_msg and _is_proto_enum(child_msg):
+            result.add(child_msg)
+    return result
+
+
 def _json_scalar(val: object, js: bool = False) -> str:
     """Convert a scalar value to its language literal representation."""
     if isinstance(val, bool):
@@ -485,6 +578,7 @@ def _annotate_inline_lines(
     indent: int,
     cmt: str,
     camel_keys: bool = False,
+    ts_mode: bool = False,
 ) -> list[str]:
     pad   = "    " * indent
     lines: list[str] = []
@@ -498,15 +592,20 @@ def _annotate_inline_lines(
         out_key   = _to_camel(key) if camel_keys else key
 
         if isinstance(val, dict):
-            lines.append(f'{pad}"{out_key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent + 1, cmt, camel_keys))
-            lines.append(f"{pad}}}{trailing}")
+            if not child_msg:
+                # Unknown field — likely a oneof group name (e.g. mandate_id_type).
+                # Flatten by processing inner fields at the current message level.
+                lines.extend(_annotate_inline_lines(val, msg_name, db, indent, cmt, camel_keys, ts_mode=ts_mode))
+            else:
+                lines.append(f'{pad}"{out_key}": {{{cmt_part}')
+                lines.extend(_annotate_inline_lines(val, child_msg, db, indent + 1, cmt, camel_keys, ts_mode=ts_mode))
+                lines.append(f"{pad}}}{trailing}")
         elif isinstance(val, list) and val and isinstance(val[0], dict):
             lines.append(f'{pad}"{out_key}": [{cmt_part}')
             for j, item in enumerate(val):
                 item_trailing = "," if j < len(val) - 1 else ""
                 lines.append(f"{pad}    {{")
-                lines.extend(_annotate_inline_lines(item, child_msg, db, indent + 2, cmt, camel_keys))
+                lines.extend(_annotate_inline_lines(item, child_msg, db, indent + 2, cmt, camel_keys, ts_mode=ts_mode))
                 lines.append(f"{pad}    }}{item_trailing}")
             lines.append(f"{pad}]{trailing}")
         elif child_msg and db.is_wrapper(child_msg):
@@ -514,12 +613,15 @@ def _annotate_inline_lines(
             lines.append(f'{pad}"{out_key}": {{"value": {_json_scalar(val, js=camel_keys)}}}{trailing}{cmt_part}')
         elif child_msg and not isinstance(val, (dict, list)):
             # Scalar for a non-wrapper message — check if msg has one field that is itself a wrapper
-            _sfwk = db.single_field_wrapper_key(child_msg)
-            inner_key = _to_camel(_sfwk) if (camel_keys and _sfwk) else _sfwk
-            if inner_key:
-                lines.append(f'{pad}"{out_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=camel_keys)}}}}}{trailing}{cmt_part}')
+            if ts_mode and _is_proto_enum(child_msg) and isinstance(val, str):
+                lines.append(f'{pad}"{out_key}": {child_msg}.{val}{trailing}{cmt_part}')
             else:
-                lines.append(f'{pad}"{out_key}": {_json_scalar(val, js=camel_keys)}{trailing}{cmt_part}')
+                _sfwk = db.single_field_wrapper_key(child_msg)
+                inner_key = _to_camel(_sfwk) if (camel_keys and _sfwk) else _sfwk
+                if inner_key:
+                    lines.append(f'{pad}"{out_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=camel_keys)}}}}}{trailing}{cmt_part}')
+                else:
+                    lines.append(f'{pad}"{out_key}": {_json_scalar(val, js=camel_keys)}{trailing}{cmt_part}')
         else:
             lines.append(f'{pad}"{out_key}": {_json_scalar(val, js=camel_keys)}{trailing}{cmt_part}')
 
@@ -890,6 +992,7 @@ def _scenario_step_javascript(
     grpc_req: str,
     db: _SchemaDB,
     client_var: str = "client",
+    ts_mode: bool = False,
 ) -> list[str]:
     """Return lines for one step inside a JavaScript scenario function body."""
     method   = _to_camel(_FLOW_KEY_TO_METHOD.get(flow_key, flow_key))
@@ -916,19 +1019,22 @@ def _scenario_step_javascript(
                 lines.append(f'        "{_to_camel(key)}": {dyn},{extra}')
             elif isinstance(val, dict):
                 lines.append(f'        "{_to_camel(key)}": {{{cmt_part}')
-                lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True))
+                lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True, ts_mode=ts_mode))
                 lines.append(f'        }}{trailing}')
             elif child_msg and db.is_wrapper(child_msg):
                 # Scalar stored in probe data, but proto type is a wrapper message — needs {"value": ...}
                 lines.append(f'        "{_to_camel(key)}": {{"value": {_json_scalar(val, js=True)}}}{trailing}{cmt_part}')
             elif child_msg and not isinstance(val, (dict, list)):
                 # Scalar for a non-wrapper message — check if msg has one field that is itself a wrapper
-                _sfwk = db.single_field_wrapper_key(child_msg)
-                inner_key = _to_camel(_sfwk) if _sfwk else None
-                if inner_key:
-                    lines.append(f'        "{_to_camel(key)}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+                if ts_mode and _is_proto_enum(child_msg) and isinstance(val, str):
+                    lines.append(f'        "{_to_camel(key)}": {child_msg}.{val}{trailing}{cmt_part}')
                 else:
-                    lines.append(f'        "{_to_camel(key)}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
+                    _sfwk = db.single_field_wrapper_key(child_msg)
+                    inner_key = _to_camel(_sfwk) if _sfwk else None
+                    if inner_key:
+                        lines.append(f'        "{_to_camel(key)}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+                    else:
+                        lines.append(f'        "{_to_camel(key)}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
             else:
                 lines.append(f'        "{_to_camel(key)}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
     else:
@@ -1291,13 +1397,36 @@ def _py_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB
     return "\n".join(lines)
 
 
-def _js_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB") -> str:
-    """Return a JavaScript private builder function for the given flow."""
+def _js_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB", ts_mode: bool = False) -> str:
+    """Return a JavaScript/TypeScript private builder function for the given flow."""
     param_name = _FLOW_BUILDER_EXTRA_PARAM[flow_key][0]  # snake_case
     js_param   = _to_camel(param_name)
     fn_name    = "_build" + "".join(w.title() for w in flow_key.split("_")) + "Request"
     items      = list(proto_req.items())
-    lines: list[str] = [f"function {fn_name}({js_param}) {{"]
+    # Type annotation for the parameter - derive GENERICALLY from proto type metadata
+    # NEVER hardcode field names here - use _PROTO_FIELD_TYPES to look up types
+    type_ann = ""
+    if ts_mode:
+        proto_type = _PROTO_FIELD_TYPES.get(grpc_req, {}).get(param_name, "")
+        if proto_type:
+            if _is_proto_enum(proto_type):
+                type_ann = f": {proto_type}"
+            elif proto_type in ("string", "bytes"):
+                type_ann = ": string"
+            elif proto_type in ("int32", "int64", "uint32", "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64"):
+                type_ann = ": number"
+            elif proto_type == "bool":
+                type_ann = ": boolean"
+            elif proto_type in _PROTO_FIELD_TYPES:
+                # It's a message type
+                type_ann = f": {proto_type}"
+            else:
+                type_ann = ": any"
+    
+    # Add return type annotation for TypeScript
+    return_type = f": {grpc_req}" if ts_mode else ""
+    
+    lines: list[str] = [f"function {fn_name}({js_param}{type_ann}){return_type} {{"]
     lines.append("    return {")
     for idx, (key, val) in enumerate(items):
         trailing  = "," if idx < len(items) - 1 else ""
@@ -1309,17 +1438,20 @@ def _js_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB
             lines.append(f'        "{js_key}": {js_param}{trailing}{cmt_part}')
         elif isinstance(val, dict):
             lines.append(f'        "{js_key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True))
+            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True, ts_mode=ts_mode))
             lines.append(f'        }}{trailing}')
         elif child_msg and db.is_wrapper(child_msg):
             lines.append(f'        "{js_key}": {{"value": {_json_scalar(val, js=True)}}}{trailing}{cmt_part}')
         elif child_msg and not isinstance(val, (dict, list)):
-            sfwk      = db.single_field_wrapper_key(child_msg)
-            inner_key = _to_camel(sfwk) if sfwk else None
-            if inner_key:
-                lines.append(f'        "{js_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+            if ts_mode and _is_proto_enum(child_msg) and isinstance(val, str):
+                lines.append(f'        "{js_key}": {child_msg}.{val}{trailing}{cmt_part}')
             else:
-                lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
+                sfwk      = db.single_field_wrapper_key(child_msg)
+                inner_key = _to_camel(sfwk) if sfwk else None
+                if inner_key:
+                    lines.append(f'        "{js_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+                else:
+                    lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
         else:
             lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
     lines.append("    };")
@@ -1359,11 +1491,13 @@ def _py_builder_fn_no_param(flow_key: str, proto_req: dict, grpc_req: str, db: "
     return "\n".join(lines)
 
 
-def _js_builder_fn_no_param(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB") -> str:
-    """Return a JavaScript private builder function with no dynamic parameter (arg: none flows)."""
+def _js_builder_fn_no_param(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB", ts_mode: bool = False) -> str:
+    """Return a JavaScript/TypeScript private builder function with no dynamic parameter (arg: none flows)."""
     fn_name = "_build" + "".join(w.title() for w in flow_key.split("_")) + "Request"
     items   = list(proto_req.items())
-    lines: list[str] = [f"function {fn_name}() {{"]
+    # Add return type annotation for TypeScript
+    return_type = f": {grpc_req}" if ts_mode else ""
+    lines: list[str] = [f"function {fn_name}(){return_type} {{"]
     lines.append("    return {")
     for idx, (key, val) in enumerate(items):
         trailing  = "," if idx < len(items) - 1 else ""
@@ -1373,17 +1507,20 @@ def _js_builder_fn_no_param(flow_key: str, proto_req: dict, grpc_req: str, db: "
         js_key    = _to_camel(key)
         if isinstance(val, dict):
             lines.append(f'        "{js_key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True))
+            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True, ts_mode=ts_mode))
             lines.append(f'        }}{trailing}')
         elif child_msg and db.is_wrapper(child_msg):
             lines.append(f'        "{js_key}": {{"value": {_json_scalar(val, js=True)}}}{trailing}{cmt_part}')
         elif child_msg and not isinstance(val, (dict, list)):
-            sfwk      = db.single_field_wrapper_key(child_msg)
-            inner_key = _to_camel(sfwk) if sfwk else None
-            if inner_key:
-                lines.append(f'        "{js_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+            if ts_mode and _is_proto_enum(child_msg) and isinstance(val, str):
+                lines.append(f'        "{js_key}": {child_msg}.{val}{trailing}{cmt_part}')
             else:
-                lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
+                sfwk      = db.single_field_wrapper_key(child_msg)
+                inner_key = _to_camel(sfwk) if sfwk else None
+                if inner_key:
+                    lines.append(f'        "{js_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+                else:
+                    lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
         else:
             lines.append(f'        "{js_key}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
     lines.append("    };")
@@ -1691,9 +1828,9 @@ def render_consolidated_javascript(
         if not grpc_req_b:
             continue
         if flow_key in _FLOW_BUILDER_EXTRA_PARAM:
-            js_builder_fns.append(_js_builder_fn(flow_key, proto_req, grpc_req_b, db))
+            js_builder_fns.append(_js_builder_fn(flow_key, proto_req, grpc_req_b, db, ts_mode=True))
         else:
-            js_builder_fns.append(_js_builder_fn_no_param(flow_key, proto_req, grpc_req_b, db))
+            js_builder_fns.append(_js_builder_fn_no_param(flow_key, proto_req, grpc_req_b, db, ts_mode=True))
         js_has_builder.add(flow_key)
 
     # Pass 2: flows from scenarios that don't have a standalone flow item.
@@ -1710,9 +1847,9 @@ def render_consolidated_javascript(
             if not proto_req:
                 continue
             if fk in _FLOW_BUILDER_EXTRA_PARAM:
-                js_builder_fns.append(_js_builder_fn(fk, proto_req, grpc_req_b, db))
+                js_builder_fns.append(_js_builder_fn(fk, proto_req, grpc_req_b, db, ts_mode=True))
             else:
-                js_builder_fns.append(_js_builder_fn_no_param(fk, proto_req, grpc_req_b, db))
+                js_builder_fns.append(_js_builder_fn_no_param(fk, proto_req, grpc_req_b, db, ts_mode=True))
             js_has_builder.add(fk)
 
     _js_var_defaults = {k: _to_camel(v.replace("_response", "Response")) for k, v in _FLOW_VAR_NAME.items()}
@@ -1724,13 +1861,27 @@ def render_consolidated_javascript(
         var_name = _js_var_defaults.get(flow_key, f"{flow_key.split('_')[0]}Response")
         desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
         fn_name  = "_build" + "".join(w.title() for w in flow_key.split("_")) + "Request"
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
 
-        if flow_key == "authorize" and scenario_key in _CARD_AUTHORIZE_SCENARIOS:
-            cm = {"checkout_card": "MANUAL", "void_payment": "MANUAL",
-                  "get_payment": "MANUAL", "refund": "AUTOMATIC"}.get(scenario_key, "AUTOMATIC")
-            call_arg = f"'{cm}'"
+        # Get the dynamic parameter for this flow (if any) from _FLOW_BUILDER_EXTRA_PARAM
+        if flow_key in _FLOW_BUILDER_EXTRA_PARAM:
+            param_name = _FLOW_BUILDER_EXTRA_PARAM[flow_key][0]
+            # Look up the proto type for this parameter GENERICALLY
+            proto_type = _PROTO_FIELD_TYPES.get(grpc_req, {}).get(param_name, "")
+            
+            if flow_key == "authorize" and scenario_key in _CARD_AUTHORIZE_SCENARIOS:
+                # Scenario-specific capture method values - this is business logic, not type info
+                cm = {"checkout_card": "MANUAL", "void_payment": "MANUAL",
+                      "get_payment": "MANUAL", "refund": "AUTOMATIC"}.get(scenario_key, "AUTOMATIC")
+                # Use the actual proto enum type name, not hardcoded "CaptureMethod"
+                if proto_type and _is_proto_enum(proto_type):
+                    call_arg = f"{proto_type}.{cm}"
+                else:
+                    call_arg = f"'{cm}'"
+            else:
+                call_arg = "authorizeResponse.connectorTransactionId"
         else:
-            call_arg = "authorizeResponse.connectorTransactionId"
+            call_arg = ""
 
         slines: list[str] = [
             f"    // Step {step_num}: {desc}",
@@ -1804,11 +1955,21 @@ def render_consolidated_javascript(
 
         body_lines.append(_scenario_return_javascript(scenario))
         body = "\n".join(body_lines)
+        
+        # Determine return type GENERICALLY from the last flow's response type
+        # The return type should be based on the primary flow response (last step or main flow)
+        last_flow_key = scenario.flows[-1] if scenario.flows else ""
+        last_flow_meta = flow_metadata.get(last_flow_key, {})
+        grpc_response = last_flow_meta.get("grpc_response", "")
+        if grpc_response:
+            scenario_return_type = f"Promise<{grpc_response}>"
+        else:
+            scenario_return_type = "Promise<any>"
 
         func_blocks.append(
             f"// {scenario.title}\n"
             f"// {scenario.description}\n"
-            f"async function {func_name}(merchantTransactionId, config = _defaultConfig) {{\n"
+            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {scenario_return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
@@ -1832,7 +1993,10 @@ def render_consolidated_javascript(
             if flow_key in _FLOW_BUILDER_EXTRA_PARAM:
                 param_name  = _FLOW_BUILDER_EXTRA_PARAM[flow_key][0]
                 default_val = proto_req.get(param_name, "AUTOMATIC" if param_name == "capture_method" else "probe_connector_txn_001")
-                call_expr   = f"{fn_name}('{default_val}')"
+                if param_name == "capture_method":
+                    call_expr = f"{fn_name}(CaptureMethod.{default_val})"
+                else:
+                    call_expr = f"{fn_name}('{default_val}')"
             else:
                 call_expr   = f"{fn_name}()"
             body_lines  = [
@@ -1842,7 +2006,7 @@ def render_consolidated_javascript(
                 "",
             ]
         else:
-            body_lines = list(_scenario_step_javascript("_standalone_", flow_key, 1, proto_req, grpc_req, db, client_var))
+            body_lines = list(_scenario_step_javascript("_standalone_", flow_key, 1, proto_req, grpc_req, db, client_var, ts_mode=True))
         if flow_key == "authorize":
             body_lines.append(f"    return {{ status: {var_name}.status, transactionId: {var_name}.connectorTransactionId }};")
         elif flow_key == "setup_recurring":
@@ -1852,9 +2016,16 @@ def render_consolidated_javascript(
 
         body = "\n".join(body_lines)
         func_names_js.append(func_name)
+        # Determine return type GENERICALLY from grpc response metadata
+        # NEVER hardcode flow-specific return types
+        grpc_response = meta.get("grpc_response", "")
+        if grpc_response:
+            return_type = f"Promise<{grpc_response}>"
+        else:
+            return_type = "Promise<any>"
         func_blocks.append(
             f"// Flow: {svc}.{rpc_name}{pm_part}\n"
-            f"async function {func_name}(merchantTransactionId, config = _defaultConfig) {{\n"
+            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
@@ -1876,33 +2047,35 @@ def render_consolidated_javascript(
 // Regenerate: python3 scripts/generate-connector-docs.py {connector_name}
 //
 // {connector_name.title()} — all integration scenarios and flows in one file.
-// Run a scenario:  node {connector_name}.js {first_scenario}
-'use strict';
+// Run a scenario:  npx tsx {connector_name}.ts {first_scenario}
 
-const {{ {client_imports} }} = require('hyperswitch-prism');
-const {{ ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment }} = require('hyperswitch-prism').types;
+import {{ {client_imports} }} from 'hyperswitch-prism';
+import {{ ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment }} from 'hyperswitch-prism/types';
 
-const _defaultConfig = ConnectorConfig.create({{
-    options: SdkOptions.create({{ environment: Environment.SANDBOX }}),
-}});
+const _defaultConfig: ConnectorConfig = {{
+    options: {{
+        environment: Environment.SANDBOX,
+    }},
+}};
 // Standalone credentials (field names depend on connector auth type):
-// _defaultConfig.connectorConfig = ConnectorSpecificConfig.create({{
+// _defaultConfig.connectorConfig = {{
 //     {connector_name}: {{ apiKey: {{ value: 'YOUR_API_KEY' }} }}
-// }});
+// }};
 {js_builders_section}
 
 // ANCHOR: scenario_functions
 {funcs_text}
 
 
-module.exports = {{ {exports} }};
+export {{ {exports} }};
 
+// CLI runner
 if (require.main === module) {{
     const scenario = process.argv[2] || '{first_scenario}';
     const key = 'process' + scenario.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
-    const fn = module.exports[key];
+    const fn = (globalThis as any)[key] || (exports as any)[key];
     if (!fn) {{
-        const available = Object.keys(module.exports).map(k =>
+        const available = Object.keys(exports).map(k =>
             k.replace(/^process/, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
         );
         console.error(`Unknown scenario: ${{scenario}}. Available: ${{available.join(', ')}}`);
@@ -2074,7 +2247,7 @@ if __name__ == "__main__":
 """
 
 
-def render_flow_javascript(
+def render_flow_typescript(
     flow_key: str,
     connector_name: str,
     proto_req: dict,
@@ -2082,7 +2255,7 @@ def render_flow_javascript(
     message_schemas: dict,
     pm_label: str = "",
 ) -> str:
-    """Return the full content of a runnable JavaScript file for a single flow."""
+    """Return the full content of a runnable TypeScript file for a single flow."""
     db           = _SchemaDB(message_schemas)
     meta         = flow_metadata.get(flow_key, {})
     svc          = meta.get("service_name", "PaymentService")
@@ -2093,13 +2266,17 @@ def render_flow_javascript(
     func_name    = (_to_camel(flow_key) if flow_key not in _JS_RESERVED else f"{flow_key}Payment")
     var_name     = f"{flow_key.split('_')[0]}Response"
 
-    body_lines: list[str] = list(_scenario_step_javascript("_standalone_", flow_key, 1, proto_req, grpc_req, db))
+    body_lines: list[str] = list(_scenario_step_javascript("_standalone_", flow_key, 1, proto_req, grpc_req, db, ts_mode=True))
 
+    # Determine return type
     if flow_key == "authorize":
-        body_lines.append(f"    return {{ status: {var_name}.status, transactionId: {var_name}.connector_transaction_id }};")
+        return_type = "{ status: string; transactionId: string }"
+        body_lines.append(f"    return {{ status: {var_name}.status, transactionId: {var_name}.connectorTransactionId }};")
     elif flow_key == "setup_recurring":
-        body_lines.append(f"    return {{ status: {var_name}.status, mandateId: {var_name}.connector_transaction_id }};")
+        return_type = "{ status: string; mandateId: string }"
+        body_lines.append(f"    return {{ status: {var_name}.status, mandateId: {var_name}.connectorTransactionId }};")
     else:
+        return_type = "{ status: string }"
         body_lines.append(f"    return {{ status: {var_name}.status }};")
 
     body      = "\n".join(body_lines)
@@ -2113,17 +2290,18 @@ def render_flow_javascript(
 //
 // Flow: {svc_label}{pm_part}
 
-const {{ ConnectorClient }} = require('connector-service-node-ffi');
+import {{ PaymentClient }} from 'hyperswitch-prism';
+import {{ ConnectorConfig, SdkOptions, Environment }} from 'hyperswitch-prism/types';
 
-const client = new ConnectorClient({{
-    connector: '{conn_display}',
-    environment: 'sandbox',
-    connector_auth_type: {{
-        header_key: {{ api_key: 'YOUR_API_KEY' }},
+const config: ConnectorConfig = {{
+    options: {{
+        environment: Environment.SANDBOX,
     }},
-}});
+}};
 
-async function {func_name}(merchantTransactionId) {{
+const client = new PaymentClient(config);
+
+async function {func_name}(merchantTransactionId: string): Promise<{return_type}> {{
 {body}
 }}
 
@@ -2834,6 +3012,11 @@ def render_consolidated_kotlin(
         svc        = meta.get("service_name", "PaymentService")
         grpc_req   = meta.get("grpc_request", "")
         rpc_name   = meta.get("rpc_name", flow_key)
+        
+        # Skip flows without proper metadata (not in manifest.json)
+        if not grpc_req:
+            continue
+            
         client_cls = _client_class(svc)
         # SDK method (e.g. "defend" for dispute_defend); function name uses camelCase flow key
         method     = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)

@@ -338,6 +338,26 @@ fn main() {
                 present.push((*key, *fn_name));
             }
         }
+        // Also discover direct flow functions (authorize, capture, void, etc.)
+        let direct_flows = [
+            ("authorize", "authorize"),
+            ("capture", "capture"),
+            ("void", "void"),
+            ("get", "get"),
+            ("refund", "refund"),
+            ("reverse", "reverse"),
+            ("create_customer", "create_customer"),
+            ("tokenize", "tokenize"),
+            ("setup_recurring", "setup_recurring"),
+            ("recurring_charge", "recurring_charge"),
+        ];
+        for (key, fn_name) in direct_flows {
+            if content.contains(&format!("pub async fn {fn_name}("))
+                && !present.iter().any(|(k, _)| *k == key)
+            {
+                present.push((key, fn_name));
+            }
+        }
         if !present.is_empty() {
             modules.push((connector_name.clone(), present));
         }

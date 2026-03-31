@@ -166,7 +166,7 @@ test-grpc-no-server: install
 	fi
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runGrpc --args="--connectors $(CONNECTORS)" 2>&1
 
-test-grpc: install ## Build grpc-ffi lib + grpc-server → start server → run Kotlin gRPC smoke test → stop server
+test-grpc: install generate-all ## Build grpc-ffi lib + grpc-server → start server → run Kotlin gRPC smoke test → stop server
 	@echo "Building gRPC FFI library ($(GRPC_PROFILE))..."
 	@cd $(REPO_ROOT) && cargo build -p hyperswitch-grpc-ffi --profile $(GRPC_PROFILE) 2>&1
 	@echo "Building gRPC server ($(GRPC_PROFILE))..."

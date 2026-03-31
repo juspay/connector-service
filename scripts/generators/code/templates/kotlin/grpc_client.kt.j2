@@ -133,7 +133,7 @@ class Grpc{{ service[:-7] if service.endswith('Service') else service }}Client i
      * {{ f.service }}.{{ f.rpc }} — {{ f.description }}
      */
     suspend fun {{ f.name }}(req: {{ f.request }}): {{ f.response }} =
-        callGrpc(config, "{{ f.name }}", req, {{ f.response }}.parser())
+        callGrpc(config, "{{ grpc_method_path(f.service, f.name) }}", req, {{ f.response }}.parser())
 {% endfor %}
 }
 
