@@ -4,7 +4,7 @@ SDK Code Generator — Generates type-safe client methods for all SDKs.
 
 This generator cross-references:
   1. services.proto (via protoc descriptor) → RPC definitions with types and docs
-  2. services/payments.rs → which flows have req_transformer implementations
+  2. services/*.rs → which flows have req_transformer implementations
 
 Generates flow methods (authorize, capture, refund, etc.) for each SDK,
 and the Rust FFI flow registration files.
@@ -24,6 +24,7 @@ Usage:
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -32,11 +33,16 @@ SDK_ROOT = REPO_ROOT / "sdk"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 SERVICES_PROTO = REPO_ROOT / "crates/types-traits/grpc-api-types/proto/services.proto"
-FFI_SERVICES = REPO_ROOT / "crates/ffi/ffi/src/services/payments.rs"
+FFI_SERVICES_DIR = REPO_ROOT / "crates/ffi/ffi/src/services"
 PROTO_DESCRIPTOR = Path(__file__).parent / "services.desc"
 
 RUST_HANDLERS_OUT = REPO_ROOT / "crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs"
 RUST_FFI_FLOWS_OUT = REPO_ROOT / "crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs"
+RUST_GRPC_CLIENT_OUT       = SDK_ROOT  / "rust/src/_generated_grpc_client.rs"
+JS_GRPC_CLIENT_OUT         = SDK_ROOT  / "javascript/src/payments/_generated_grpc_client.ts"
+JS_GRPC_EXAMPLE_FLOWS_OUT  = REPO_ROOT / "examples/_generated_grpc_example_flows.js"
+PY_GRPC_CLIENT_OUT         = SDK_ROOT  / "python/src/payments/_generated_grpc_client.py"
+KOTLIN_GRPC_CLIENT_OUT     = SDK_ROOT  / "java/src/main/kotlin/payments/GrpcClient.kt"
 
 # ── Jinja2 environment ──────────────────────────────────────────────────────
 
@@ -102,59 +108,72 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                     source_info[path] = location.leading_comments.strip()
 
         for svc_idx, service in enumerate(file_desc.service):
+            svc_name = service.name
+            if svc_name.endswith("Service"):
+                svc_prefix = to_snake_case(svc_name[:-7])
+            else:
+                svc_prefix = to_snake_case(svc_name)
+
             for method_idx, method in enumerate(service.method):
                 rpc_name = method.name
                 snake = to_snake_case(rpc_name)
+                full_snake = f"{svc_prefix}_{snake}"
+
+                # Extract type names (remove package prefix)
+                req_type = method.input_type.split('.')[-1]
+                res_type = method.output_type.split('.')[-1]
+
+                # Get doc comment if available
+                # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
+                path = (6, svc_idx, 2, method_idx)
+                comment = source_info.get(path, f"{service.name}.{rpc_name}")
+                # Normalize whitespace to single-line
+                comment = ' '.join(comment.split())
+
+                info = {
+                    "request": req_type,
+                    "response": res_type,
+                    "service": service.name,
+                    "rpc": rpc_name,
+                    "description": comment,
+                }
 
                 if snake not in rpcs:
-                    # Extract type names (remove package prefix)
-                    req_type = method.input_type.split('.')[-1]
-                    res_type = method.output_type.split('.')[-1]
-
-                    # Get doc comment if available
-                    # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
-                    path = (6, svc_idx, 2, method_idx)
-                    comment = source_info.get(path, f"{service.name}.{rpc_name}")
-                    # Normalize whitespace to single-line
-                    comment = ' '.join(comment.split())
-
-                    rpcs[snake] = {
-                        "request": req_type,
-                        "response": res_type,
-                        "service": service.name,
-                        "rpc": rpc_name,
-                        "description": comment,
-                    }
+                    rpcs[snake] = info
+                if full_snake not in rpcs:
+                    rpcs[full_snake] = info
 
     return rpcs
 
 
-def parse_service_flows(service_file: Path) -> set[str]:
+def parse_service_flows(services_dir: Path) -> dict[str, str]:
     """
-    Scan services/payments.rs for every req_transformer! invocation.
+    Scan all .rs files in services directory for every req_transformer! invocation.
     Captures the flow name from `fn_name: {flow}_req_transformer`.
     """
-    text = service_file.read_text()
-    return {
-        m.group(1)
-        for m in re.finditer(
-            r"fn_name:\s*(\w+)_req_transformer\b", text
-        )
-    }
+    flows = {}
+    for f in services_dir.glob("*.rs"):
+        module_name = f.stem
+        text = f.read_text()
+        for m in re.finditer(r"fn_name:\s*(\w+)_req_transformer\b", text):
+            flows[m.group(1)] = module_name
+    return flows
 
 
-def parse_single_flows(service_file: Path) -> set[str]:
+def parse_single_flows(services_dir: Path) -> dict[str, str]:
     """
-    Scan services/payments.rs for hand-written single-step transformers.
+    Scan all .rs files in services directory for hand-written single-step transformers.
     These are `pub fn {flow}_transformer` functions that are NOT req/res macros —
     they take the request directly and return the response without an HTTP round-trip
     (e.g. webhook processing via `handle_transformer`).
     """
-    text = service_file.read_text()
-    return {
-        m.group(1)
-        for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
-    }
+    flows = {}
+    for f in services_dir.glob("*.rs"):
+        module_name = f.stem
+        text = f.read_text()
+        for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE):
+            flows[m.group(1)] = module_name
+    return flows
 
 
 def discover_flows() -> tuple[list[dict], list[dict]]:
@@ -164,30 +183,30 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
     Standard flows use req+HTTP+res; single flows call the transformer directly.
     """
     proto_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
-    service_flows = parse_service_flows(FFI_SERVICES)
-    single_flow_names = parse_single_flows(FFI_SERVICES)
+    service_flows = parse_service_flows(FFI_SERVICES_DIR)
+    single_flow_names = parse_single_flows(FFI_SERVICES_DIR)
 
     flows = []
     for flow in sorted(service_flows):
         if flow not in proto_rpcs:
             print(
-                f"  WARNING: '{flow}_req_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
+                f"  WARNING: '{flow}_req_transformer' exists in services/*.rs but has no matching RPC in services.proto",
                 file=sys.stderr,
             )
             continue
-        flows.append({"name": flow, **proto_rpcs[flow]})
+        flows.append({"name": flow, "module": service_flows[flow], **proto_rpcs[flow]})
 
     single_flows = []
     for flow in sorted(single_flow_names):
         if flow not in proto_rpcs:
             print(
-                f"  WARNING: '{flow}_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
+                f"  WARNING: '{flow}_transformer' exists in services/*.rs but has no matching RPC in services.proto",
                 file=sys.stderr,
             )
             continue
-        single_flows.append({"name": flow, **proto_rpcs[flow]})
+        single_flows.append({"name": flow, "module": single_flow_names[flow], **proto_rpcs[flow]})
 
-    implemented = service_flows | single_flow_names
+    implemented = set(service_flows.keys()) | set(single_flow_names.keys())
     unimplemented = sorted(set(proto_rpcs) - implemented)
     if unimplemented:
         print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
@@ -220,9 +239,56 @@ def to_camel(snake: str) -> str:
     return re.sub(r"_([a-z])", lambda m: m.group(1).upper(), snake)
 
 
+def service_to_tonic_mod(service: str) -> str:
+    """'PaymentService' -> 'payment_service_client'"""
+    return to_snake_case(service) + "_client"
+
+
+def service_to_grpc_struct(service: str) -> str:
+    """'PaymentService' -> 'GrpcPaymentClient'"""
+    base = service[:-7] if service.endswith("Service") else service
+    return f"Grpc{base}Client"
+
+
+def service_to_grpc_field(service: str) -> str:
+    """'PaymentService' -> 'payment'  |  'RecurringPaymentService' -> 'recurring_payment'"""
+    base = service[:-7] if service.endswith("Service") else service
+    return to_snake_case(base)
+
+
+def service_to_grpc_js_field(service: str) -> str:
+    """'RecurringPaymentService' -> 'recurringPayment' (camelCase JS field on GrpcClient)"""
+    return to_camel(service_to_grpc_field(service))
+
+
+def grpc_method_path(service: str, rpc_name: str) -> str:
+    """{service_field}/{rpc_name} — matches the Rust FFI dispatch table."""
+    return f"{service_to_grpc_field(service)}/{rpc_name}"
+
+
+# Special-case grpc_* function names for flows where the bare RPC name is
+# ambiguous or non-descriptive (e.g. CustomerService.Create → "create_customer").
+_GRPC_EXAMPLE_FN_OVERRIDES: dict[tuple[str, str], str] = {
+    ("CustomerService",        "create"): "create_customer",
+    ("RecurringPaymentService", "charge"): "recurring_charge",
+}
+
+
+def grpc_example_fn_name(service: str, rpc_name: str) -> str:
+    """Canonical grpc_* smoke-test function suffix for a (service, rpc) pair."""
+    return _GRPC_EXAMPLE_FN_OVERRIDES.get((service, rpc_name), rpc_name)
+
+
 # Register helpers as Jinja2 globals so templates can call them directly.
-env.globals["service_to_client_name"] = service_to_client_name
-env.globals["to_camel"] = to_camel
+env.globals["service_to_client_name"]    = service_to_client_name
+env.globals["service_to_tonic_mod"]      = service_to_tonic_mod
+env.globals["service_to_grpc_struct"]    = service_to_grpc_struct
+env.globals["service_to_grpc_field"]     = service_to_grpc_field
+env.globals["service_to_grpc_js_field"]  = service_to_grpc_js_field
+env.globals["grpc_method_path"]          = grpc_method_path
+env.globals["grpc_example_fn_name"]      = grpc_example_fn_name
+env.globals["to_camel"]                  = to_camel
+env.globals["to_snake_case"]             = to_snake_case
 
 
 # ── Generators ───────────────────────────────────────────────────────────────
@@ -284,6 +350,7 @@ def gen_javascript(flows: list[dict], single_flows: list[dict]) -> None:
     gen_flows_js(flows, single_flows)
     gen_connector_client_ts(flows, single_flows)
     gen_uniffi_client_ts(flows, single_flows)
+    gen_javascript_grpc_client()
 
 
 def gen_flows_js(flows: list[dict], single_flows: list[dict]) -> None:
@@ -326,7 +393,55 @@ def gen_uniffi_client_ts(flows: list[dict], single_flows: list[dict]) -> None:
     )
 
 
+KOTLIN_UNIFFI_BINDINGS = SDK_ROOT / "java/src/main/kotlin/generated/uniffi/connector_service_ffi/connector_service_ffi.kt"
+
+
+def _available_uniffi_transformers() -> Optional[set[str]]:
+    """
+    Parse the generated uniffi Kotlin bindings to find which transformer
+    functions are actually available. Returns None if the file doesn't exist
+    (treated as "all available" — don't filter).
+    """
+    if not KOTLIN_UNIFFI_BINDINGS.exists():
+        return None
+    text = KOTLIN_UNIFFI_BINDINGS.read_text()
+    found: set[str] = set()
+    # Matches both standard flows (foo_req_transformer) and single-step flows (foo_transformer)
+    for m in re.finditer(r"fn_func_(\w+_transformer)\b", text):
+        found.add(m.group(1))
+    return found
+
+
 def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
+    available = _available_uniffi_transformers()
+
+    if available is not None:
+        filtered_flows = []
+        for f in flows:
+            symbol = f"{f['name']}_req_transformer"
+            if symbol in available:
+                filtered_flows.append(f)
+            else:
+                print(
+                    f"  WARNING: '{symbol}' not in uniffi bindings — skipping '{f['name']}' "
+                    "from Kotlin SDK. Run 'make -C sdk/java generate-bindings' to include it.",
+                    file=sys.stderr,
+                )
+        flows = filtered_flows
+
+        filtered_single = []
+        for f in single_flows:
+            symbol = f"{f['name']}_transformer"
+            if symbol in available:
+                filtered_single.append(f)
+            else:
+                print(
+                    f"  WARNING: '{symbol}' not in uniffi bindings — skipping '{f['name']}' "
+                    "from Kotlin SDK. Run 'make -C sdk/java generate-bindings' to include it.",
+                    file=sys.stderr,
+                )
+        single_flows = filtered_single
+
     groups = group_by_service(flows)
     single_groups = group_by_service(single_flows)
     all_services = sorted(set(groups) | set(single_groups))
@@ -344,26 +459,197 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
 
 def gen_rust_handlers(flows: list[dict]) -> None:
     """Generate _generated_flow_registrations.rs — included by handlers/payments.rs."""
-    all_types = sorted({t for f in flows for t in (f["request"], f["response"])})
+    modules = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in modules:
+            modules[mod] = set()
+        modules[mod].add(f["request"])
+        modules[mod].add(f["response"])
+
+    modules_sorted = {}
+    for mod in modules:
+        modules_sorted[mod] = sorted(modules[mod])
+
+    flows_by_module = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in flows_by_module:
+            flows_by_module[mod] = []
+        flows_by_module[mod].append(f)
 
     render(
         "rust/handlers.rs.j2",
         RUST_HANDLERS_OUT,
         flows=flows,
-        all_types=all_types,
+        modules=modules_sorted,
+        flows_by_module=flows_by_module,
     )
 
 
 def gen_rust_ffi_flows(flows: list[dict]) -> None:
     """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs."""
-    req_types = sorted({f["request"] for f in flows})
+    modules_req = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in modules_req:
+            modules_req[mod] = set()
+        modules_req[mod].add(f["request"])
+
+    modules_req_sorted = {}
+    for mod in modules_req:
+        modules_req_sorted[mod] = sorted(modules_req[mod])
 
     render(
         "rust/ffi_flows.rs.j2",
         RUST_FFI_FLOWS_OUT,
         flows=flows,
-        req_types=req_types,
+        modules_req=modules_req_sorted,
     )
+
+
+def _grpc_groups() -> tuple[list[str], dict[str, list[dict]]]:
+    """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators).
+    
+    Returns only unique RPCs (simple names, not prefixed duplicates like 'payment_authorize').
+    """
+    all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
+    groups: dict[str, list[dict]] = {}
+    for flow_name, meta in sorted(all_rpcs.items(), key=lambda kv: kv[1]["service"]):
+        # Filter out prefixed duplicates - keep only simple RPC names
+        # e.g., keep 'authorize' but skip 'payment_authorize'
+        rpc_simple_name = to_snake_case(meta["rpc"])
+        if flow_name != rpc_simple_name:
+            continue
+        groups.setdefault(meta["service"], []).append({"name": flow_name, **meta})
+    return list(groups.keys()), groups
+
+
+def gen_python_grpc_client() -> None:
+    """Generate _generated_grpc_client.py — Python gRPC sub-clients and GrpcClient from proto RPCs."""
+    services, groups = _grpc_groups()
+    render(
+        "python/grpc_client.py.j2",
+        PY_GRPC_CLIENT_OUT,
+        services=services,
+        groups=groups,
+    )
+
+
+def gen_kotlin_grpc_client() -> None:
+    """Generate GrpcClient.kt — Kotlin gRPC sub-clients and GrpcClient from proto RPCs."""
+    services, groups = _grpc_groups()
+    render(
+        "kotlin/grpc_client.kt.j2",
+        KOTLIN_GRPC_CLIENT_OUT,
+        services=services,
+        groups=groups,
+    )
+
+
+# All proto message types that serialize as plain strings in Rust serde but need
+# {value: "..."} wrapping for protobufjs fromObject.
+_VALUE_WRAPPER_TYPES = frozenset([
+    ".types.SecretString",
+    ".types.CardNumberType",
+    ".types.NetworkTokenType",
+])
+
+
+def _collect_proto_field_maps(
+    desc_file: Path,
+) -> tuple[dict[str, list[str]], dict[str, dict[str, str]]]:
+    """
+    Parse proto descriptor in one pass and return:
+      secret_fields:  {MessageName: [camelCaseFieldName]}  — fields typed SecretString
+      msg_field_types:{MessageName: {camelCaseFieldName: NestedTypeName}} — other message fields
+    Both maps are keyed by short message name (e.g. "Ach", not ".types.Ach").
+    """
+    from google.protobuf.descriptor_pb2 import FileDescriptorSet, FieldDescriptorProto
+
+    with open(desc_file, "rb") as f:
+        desc_set = FileDescriptorSet.FromString(f.read())
+
+    secret_fields: dict[str, list[str]] = {}
+    msg_field_types: dict[str, dict[str, str]] = {}
+
+    def collect(message_type) -> None:
+        secrets: list[str] = []
+        nested_msgs: dict[str, str] = {}
+        for field in message_type.field:
+            if field.type != FieldDescriptorProto.TYPE_MESSAGE:
+                continue
+            camel = to_camel(field.name)
+            if field.type_name in _VALUE_WRAPPER_TYPES:
+                # SecretString, CardNumberType, NetworkTokenType — all {value: string} wrappers
+                secrets.append(camel)
+            else:
+                # Short name: ".types.Ach" → "Ach"
+                nested_msgs[camel] = field.type_name.split(".")[-1]
+        if secrets:
+            secret_fields[message_type.name] = secrets
+        if nested_msgs:
+            msg_field_types[message_type.name] = nested_msgs
+        for nested in message_type.nested_type:
+            collect(nested)
+
+    for file_desc in desc_set.file:
+        for message_type in file_desc.message_type:
+            collect(message_type)
+
+    return secret_fields, msg_field_types
+
+
+def gen_javascript_grpc_client() -> None:
+    """Generate _generated_grpc_client.ts — JS gRPC sub-clients and GrpcClient from proto RPCs."""
+    services, groups = _grpc_groups()
+    all_types = sorted({t for flows in groups.values() for f in flows for t in (f["request"], f["response"])})
+    secret_string_fields, msg_field_types = _collect_proto_field_maps(PROTO_DESCRIPTOR)
+    render(
+        "javascript/grpc_client.ts.j2",
+        JS_GRPC_CLIENT_OUT,
+        services=services,
+        groups=groups,
+        all_types=all_types,
+        secret_string_fields=secret_string_fields,
+        msg_field_types=msg_field_types,
+    )
+
+
+def gen_javascript_grpc_example_flows() -> None:
+    """Generate examples/_generated_grpc_example_flows.js — generic grpc_* smoke-test functions."""
+    services, groups = _grpc_groups()
+    render(
+        "javascript/grpc_example_flows.js.j2",
+        JS_GRPC_EXAMPLE_FLOWS_OUT,
+        services=services,
+        groups=groups,
+    )
+
+
+def gen_rust_grpc_client() -> None:
+    """Generate _generated_grpc_client.rs from all proto RPCs (not filtered by FFI impl)."""
+    import subprocess
+
+    services, groups = _grpc_groups()
+    all_types = sorted({t for flows in groups.values() for f in flows for t in (f["request"], f["response"])})
+
+    render(
+        "rust/grpc_client.rs.j2",
+        RUST_GRPC_CLIENT_OUT,
+        services=services,
+        groups=groups,
+        all_types=all_types,
+    )
+
+    # Format with rustfmt so the file matches `cargo fmt` output exactly.
+    result = subprocess.run(
+        ["rustfmt", "--edition", "2021", str(RUST_GRPC_CLIENT_OUT)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"  warning: rustfmt failed: {result.stderr.strip()}")
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
@@ -371,12 +657,12 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
 def main() -> None:
     import argparse
     parser = argparse.ArgumentParser(
-        description="SDK codegen — regenerate SDK clients from services.proto ∩ services/payments.rs"
+        description="SDK codegen — regenerate SDK clients from services.proto ∩ services/*.rs"
     )
 
     parser.add_argument(
         "--lang",
-        choices=["python", "javascript", "kotlin", "rust", "all"],
+        choices=["python", "javascript", "kotlin", "rust", "grpc", "all"],
         default="all",
         help="Which language/SDK to generate (default: all)"
     )
@@ -385,7 +671,7 @@ def main() -> None:
     ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
-    print(f"Parsing: {FFI_SERVICES.relative_to(REPO_ROOT)}")
+    print(f"Parsing: {FFI_SERVICES_DIR.relative_to(REPO_ROOT)}/*.rs")
     print()
 
     flows, single_flows = discover_flows()
@@ -400,11 +686,22 @@ def main() -> None:
         gen_rust_handlers(flows)
         gen_rust_ffi_flows(flows)
 
+    if args.lang in ("grpc", "all"):
+        print("Generating Rust gRPC client...")
+        gen_rust_grpc_client()
+        print("Generating JavaScript gRPC client...")
+        gen_javascript_grpc_client()
+        print("Generating Python gRPC client...")
+        gen_python_grpc_client()
+        print("Generating Kotlin gRPC client...")
+        gen_kotlin_grpc_client()
+
     if args.lang in ("python", "all"):
         print("Generating Python SDK...")
         gen_python(flows, single_flows)
         gen_python_stub(flows, single_flows)
         gen_python_clients(flows, single_flows)
+        gen_python_grpc_client()
 
     if args.lang in ("javascript", "all"):
         print("Generating JavaScript SDK...")
