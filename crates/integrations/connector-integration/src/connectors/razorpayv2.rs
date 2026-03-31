@@ -45,6 +45,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers as razorpayv2;
 
+use super::macros;
 use crate::connectors::razorpay::transformers::ForeignTryFrom;
 use domain_types::errors::ConnectorResponseTransformationError;
 use domain_types::errors::IntegrationError;
@@ -584,6 +585,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     > for RazorpayV2<T>
 {
 }
+macros::macro_connector_payout_implementation!(
+    connector: RazorpayV2,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for RazorpayV2<T>
 {

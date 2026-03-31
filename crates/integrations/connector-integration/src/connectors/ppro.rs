@@ -613,6 +613,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::macro_connector_payout_implementation!(
+    connector: Ppro,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
+
 static PPRO_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Ppro",
     description: "Ppro is a global provider of local payment infrastructure.",

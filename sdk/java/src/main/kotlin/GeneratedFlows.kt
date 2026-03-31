@@ -49,6 +49,10 @@ import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
 import uniffi.connector_service_ffi.preAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxyAuthorizeReqTransformer
+import uniffi.connector_service_ffi.proxyAuthorizeResTransformer
+import uniffi.connector_service_ffi.proxySetupRecurringReqTransformer
+import uniffi.connector_service_ffi.proxySetupRecurringResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
 import uniffi.connector_service_ffi.reverseReqTransformer
@@ -57,6 +61,10 @@ import uniffi.connector_service_ffi.setupRecurringReqTransformer
 import uniffi.connector_service_ffi.setupRecurringResTransformer
 import uniffi.connector_service_ffi.submitEvidenceReqTransformer
 import uniffi.connector_service_ffi.submitEvidenceResTransformer
+import uniffi.connector_service_ffi.tokenAuthorizeReqTransformer
+import uniffi.connector_service_ffi.tokenAuthorizeResTransformer
+import uniffi.connector_service_ffi.tokenSetupRecurringReqTransformer
+import uniffi.connector_service_ffi.tokenSetupRecurringResTransformer
 import uniffi.connector_service_ffi.tokenizeReqTransformer
 import uniffi.connector_service_ffi.tokenizeResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
@@ -86,10 +94,14 @@ object FlowRegistry {
         "payout_void" to ::payoutVoidReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
+        "proxy_authorize" to ::proxyAuthorizeReqTransformer,
+        "proxy_setup_recurring" to ::proxySetupRecurringReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
         "setup_recurring" to ::setupRecurringReqTransformer,
         "submit_evidence" to ::submitEvidenceReqTransformer,
+        "token_authorize" to ::tokenAuthorizeReqTransformer,
+        "token_setup_recurring" to ::tokenSetupRecurringReqTransformer,
         "tokenize" to ::tokenizeReqTransformer,
         "void" to ::voidReqTransformer,
     )
@@ -116,10 +128,14 @@ object FlowRegistry {
         "payout_void" to ::payoutVoidResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
+        "proxy_authorize" to ::proxyAuthorizeResTransformer,
+        "proxy_setup_recurring" to ::proxySetupRecurringResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
         "setup_recurring" to ::setupRecurringResTransformer,
         "submit_evidence" to ::submitEvidenceResTransformer,
+        "token_authorize" to ::tokenAuthorizeResTransformer,
+        "token_setup_recurring" to ::tokenSetupRecurringResTransformer,
         "tokenize" to ::tokenizeResTransformer,
         "void" to ::voidResTransformer,
     )
@@ -130,8 +146,6 @@ object FlowRegistry {
     )
 
 }
-
-// Per-service client classes — typed with concrete proto request/response types.
 
 class CustomerClient(
     config: ConnectorConfig,
@@ -228,11 +242,11 @@ class PaymentClient(
     fun authorize(request: PaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
         executeFlow("authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
 
-    // capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+    // capture: PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
     fun capture(request: PaymentServiceCaptureRequest, options: RequestConfig? = null): PaymentServiceCaptureResponse =
         executeFlow("capture", request.toByteArray(), PaymentServiceCaptureResponse.parser(), options)
 
-    // create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+    // create_order: PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
     fun create_order(request: PaymentServiceCreateOrderRequest, options: RequestConfig? = null): PaymentServiceCreateOrderResponse =
         executeFlow("create_order", request.toByteArray(), PaymentServiceCreateOrderResponse.parser(), options)
 
@@ -240,19 +254,35 @@ class PaymentClient(
     fun get(request: PaymentServiceGetRequest, options: RequestConfig? = null): PaymentServiceGetResponse =
         executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), options)
 
-    // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
+    // proxy_authorize: PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+    fun proxy_authorize(request: PaymentServiceProxyAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("proxy_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+
+    // proxy_setup_recurring: PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data.
+    fun proxy_setup_recurring(request: PaymentServiceProxySetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("proxy_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
+
+    // refund: PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
     fun refund(request: PaymentServiceRefundRequest, options: RequestConfig? = null): RefundResponse =
         executeFlow("refund", request.toByteArray(), RefundResponse.parser(), options)
 
-    // reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
+    // reverse: PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
     fun reverse(request: PaymentServiceReverseRequest, options: RequestConfig? = null): PaymentServiceReverseResponse =
         executeFlow("reverse", request.toByteArray(), PaymentServiceReverseResponse.parser(), options)
 
-    // setup_recurring: PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
+    // setup_recurring: PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
     fun setup_recurring(request: PaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
         executeFlow("setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
 
-    // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
+    // token_authorize: PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token.
+    fun token_authorize(request: PaymentServiceTokenAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("token_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+
+    // token_setup_recurring: PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token.
+    fun token_setup_recurring(request: PaymentServiceTokenSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("token_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
+
+    // void: PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
     fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
 
