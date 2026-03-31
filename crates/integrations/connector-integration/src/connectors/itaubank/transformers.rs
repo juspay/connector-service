@@ -8,6 +8,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 
+const CLIENT_CREDENTIALS_GRANT_TYPE: &str = "client_credentials";
+
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -80,7 +82,7 @@ impl
     ) -> Result<Self, Self::Error> {
         let auth = ItaubankAuthType::try_from(&req.connector_config)?;
         Ok(Self {
-            grant_type: "client_credentials".to_string(),
+            grant_type: CLIENT_CREDENTIALS_GRANT_TYPE.to_string(),
             client_id: auth.client_id,
             client_secret: auth.client_secret,
         })
@@ -274,20 +276,5 @@ impl TryFrom<ResponseRouterData<ItaubankErrorResponse, Self>>
         _item: ResponseRouterData<ItaubankErrorResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Err(ConnectorError::NotImplemented("PSync for Itaubank".to_string()).into())
-    }
-}
-
-// ===== PAYOUT TRANSFER RESPONSE =====
-
-impl TryFrom<ItaubankTransferResponse> for PayoutTransferResponse {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: ItaubankTransferResponse) -> Result<Self, Self::Error> {
-        Ok(Self {
-            merchant_payout_id: None,
-            payout_status: response.status(),
-            connector_payout_id: Some(response.id),
-            status_code: 200,
-        })
     }
 }

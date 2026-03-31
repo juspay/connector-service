@@ -382,10 +382,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         match response {
             Ok(transfer_res) => {
                 event_builder.map(|i| i.set_connector_response(&transfer_res));
-                let payout_response = PayoutTransferResponse::try_from(transfer_res)?;
-
                 Ok(RouterDataV2 {
-                    response: Ok(payout_response),
+                    response: Ok(PayoutTransferResponse {
+                        merchant_payout_id: None,
+                        payout_status: transfer_res.status(),
+                        connector_payout_id: Some(transfer_res.id),
+                        status_code: res.status_code,
+                    }),
                     ..data.clone()
                 })
             }
