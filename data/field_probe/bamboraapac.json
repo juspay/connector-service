@@ -195,55 +195,13 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://demo.ippayments.com.au/interface/api/dts.asmx",
-          "method": "Post",
-          "headers": {
-            "content-type": "text/xml",
-            "via": "HyperSwitch"
-          },
-          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Body>\n<dts:SubmitSinglePayment>\n<dts:trnXML><![CDATA[<Transaction><CustRef>probe_proxy_txn_001</CustRef><Amount>1000</Amount><TrnType>1</TrnType><AccountNumber>probe_acct_num</AccountNumber><CreditCard Registered=\"False\"><CardNumber>4111111111111111</CardNumber><ExpM>03</ExpM><ExpY>2030</ExpY><CVN>123</CVN><CardHolderName>John Doe</CardHolderName></CreditCard><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></Transaction>]]></dts:trnXML>\n</dts:SubmitSinglePayment>\n</soapenv:Body>\n</soapenv:Envelope>"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "supported",
         "proto_request": {
           "connector_recurring_payment_id": {
             "mandate_id_type": {
-              "connector_mandate_id": {
-                "connector_mandate_id": "probe-mandate-123"
-              }
+              "connector_mandate_id": "probe-mandate-123"
             }
           },
           "amount": {
@@ -251,9 +209,7 @@
             "currency": "USD"
           },
           "payment_method": {
-            "token": {
-              "token": "probe_pm_token"
-            }
+            "token": "probe_pm_token"
           },
           "return_url": "https://example.com/recurring-return",
           "connector_customer_id": "cust_probe_123",
@@ -340,18 +296,6 @@
           },
           "body": "\n            <soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"\n            xmlns:sipp=\"http://www.ippayments.com.au/interface/api/sipp\">\n                <soapenv:Header/>\n                <soapenv:Body>\n                    <sipp:RegisterSingleCustomer>\n                        <sipp:registerSingleCustomerXML>\n                            <![CDATA[\n                <Register>\n                    <Customer>\n                        <CustNumber>probe_mandate_001</CustNumber>\n                        <CreditCard>\n                            <CardNumber>4111111111111111</CardNumber>\n                            <ExpM>03</ExpM>\n                            <ExpY>2030</ExpY>\n                            <CardHolderName>John Doe</CardHolderName>\n                        </CreditCard>\n                    </Customer>\n                    <Security>\n                        <UserName>probe_user</UserName>\n                        <Password>probe_pass</Password>\n                    </Security>\n                </Register>\n            ]]>\n                        </sipp:registerSingleCustomerXML>\n                    </sipp:RegisterSingleCustomer>\n                </soapenv:Body>\n            </soapenv:Envelope>\n        "
         }
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

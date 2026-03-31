@@ -223,46 +223,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://sandbox.nmi.com/api/transact.php",
-          "method": "Post",
-          "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
-          },
-          "body": "security_key=probe_key&type=sale&amount=10.0&currency=USD&orderid=probe_proxy_txn_001&ccnumber=4111111111111111&ccexp=0330&cvv=123"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -300,18 +260,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

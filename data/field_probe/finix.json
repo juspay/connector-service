@@ -721,18 +721,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first, or ensure connector_customer_id is set"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -771,18 +759,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first, or ensure connector_customer_id is set"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

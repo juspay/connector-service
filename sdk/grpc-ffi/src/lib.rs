@@ -34,11 +34,11 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
     PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, PaymentServiceTokenAuthorizeRequest,
-    PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
+    RecurringPaymentServiceChargeRequest,
 };
 use prost::Message;
 use serde::Deserialize;

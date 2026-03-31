@@ -199,47 +199,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://stage-secure-gateway.hipay-tpp.com/rest/v1/order",
-          "method": "Post",
-          "headers": {
-            "accept": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "via": "HyperSwitch"
-          },
-          "body": ""
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -278,40 +237,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_tokenized_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "connector_token": "pm_1AbcXyzStripeTestToken",
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://stage-secure-gateway.hipay-tpp.com/rest/v1/order",
-          "method": "Post",
-          "headers": {
-            "accept": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "via": "HyperSwitch"
-          },
-          "body": ""
-        }
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

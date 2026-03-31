@@ -268,47 +268,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://apitest.payengine.de/v1/orders/debit",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"creditcard\",\"payment\":{\"cardNumber\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"verification\":\"123\",\"cofContract\":null},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":\"probe_proxy_txn_001\"}"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -347,18 +306,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through nexinets"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

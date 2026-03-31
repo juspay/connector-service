@@ -111,18 +111,18 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L76) · [Rust](../../examples/volt/rust/volt.rs#L78)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L76) · [Rust](../../examples/volt/rust/volt.rs#L74)
 
 #### PaymentService.Refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L84) · [Rust](../../examples/volt/rust/volt.rs#L85)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L84) · [Rust](../../examples/volt/rust/volt.rs#L81)
 
 ### Authentication
 
@@ -135,4 +135,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L66) · [Rust](../../examples/volt/rust/volt.rs#L71)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L66) · [Rust](../../examples/volt/rust/volt.rs#L65)

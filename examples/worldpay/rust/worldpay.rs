@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -46,11 +46,10 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
     serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
     "merchant_capture_id": "probe_capture_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -61,7 +60,7 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     })).unwrap_or_default()
 }
 
-pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -72,34 +71,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
-pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
-    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {
-        "mandate_id_type": {
-            "connector_mandate_id": {
-                "connector_mandate_id": "probe-mandate-123",
-            },
-        },
-    },
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows)
-        "payment_method": {
-            "token": {  // Payment tokens
-                "token": "probe_pm_token",  // The token string representing a payment method.
-            },
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences
-    })).unwrap_or_default()
-}
-
-pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -112,7 +84,7 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     })).unwrap_or_default()
 }
 
-pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -195,7 +167,6 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, _merchant_transac
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
         "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "order_details": []  // Order Details
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {
@@ -294,37 +265,29 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.proxy_authorize
-#[allow(dead_code)]
-pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.proxy_authorize(serde_json::from_value::<>(serde_json::json!({
-    "merchant_transaction_id": "probe_proxy_txn_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
-    },
-    "card_proxy": {
-        "card_number": "4111111111111111",
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "capture_method": "AUTOMATIC",
-    "auth_type": "NO_THREE_DS",
-    "return_url": "https://example.com/return",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
 // Flow: RecurringPaymentService.Charge
 #[allow(dead_code)]
 pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.recurring_charge(build_recurring_charge_request(), &HashMap::new(), None).await?;
+    let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
+    "connector_recurring_payment_id": {  // Reference to existing mandate
+        "mandate_id_type": {
+            "connector_mandate_id": "probe-mandate-123",
+        },
+    },
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {  // Optional payment Method Information (for network transaction flows)
+        "payment_method": {
+            "token": "probe_pm_token",  // Payment tokens
+        }
+    },
+    "return_url": "https://example.com/recurring-return",
+    "connector_customer_id": "cust_probe_123",
+    "payment_method_type": "PAY_PAL",
+    "off_session": true,  // Behavioral Flags and Preferences
+    })).unwrap_or_default(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
@@ -342,6 +305,7 @@ pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> R
     Ok(format!("status: {:?}", response.status()))
 }
 
+
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
@@ -357,11 +321,10 @@ async fn main() {
         "authorize" => authorize(&client, "order_001").await,
         "capture" => capture(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
-        "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "recurring_charge" => recurring_charge(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_checkout_wallet, process_refund, process_void_payment, process_get_payment, authorize, capture, get, proxy_authorize, recurring_charge, refund, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_checkout_wallet, process_refund, process_void_payment, process_get_payment, authorize, capture, get, recurring_charge, refund, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

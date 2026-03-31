@@ -134,7 +134,7 @@
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":{\"total\":10.0,\"currency\":\"USD\"},\"transactionDetails\":{\"captureFlag\":true,\"merchantTransactionId\":\"probe_capture_001\",\"operationType\":\"CAPTURE\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":null},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_connector_txn_001\"},\"order\":{\"orderId\":null}}"
+          "body": "{\"amount\":{\"total\":10.0,\"currency\":\"USD\"},\"transactionDetails\":{\"captureFlag\":true,\"merchantTransactionId\":\"probe_capture_001\",\"operationType\":\"CAPTURE\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":\"probe_terminal\"},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_connector_txn_001\"},\"order\":{\"orderId\":null}}"
         }
       }
     },
@@ -210,51 +210,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://cert.api.fiservapps.com/ch/payments/v1/charges",
-          "method": "Post",
-          "headers": {
-            "api-key": "probe_key",
-            "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
-            "content-type": "application/json",
-            "timestamp": "0000000000",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"amount\":{\"total\":10.0,\"currency\":\"USD\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":null},\"source\":{\"sourceType\":\"PaymentCard\",\"card\":{\"cardData\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"123\"}},\"transactionInteraction\":{\"origin\":\"ECOM\",\"eciIndicator\":\"CHANNEL_ENCRYPTED\",\"posConditionCode\":\"CARD_NOT_PRESENT_ECOM\"},\"transactionDetails\":{\"captureFlag\":true,\"merchantTransactionId\":\"probe_proxy_txn_001\"}}"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -299,18 +254,6 @@
         "status": "not_implemented"
       }
     },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
-      }
-    },
     "tokenize": {
       "default": {
         "status": "not_implemented"
@@ -335,7 +278,7 @@
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"transactionDetails\":{\"merchantTransactionId\":\"probe_void_001\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":null},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_connector_txn_001\"}}"
+          "body": "{\"transactionDetails\":{\"merchantTransactionId\":\"probe_void_001\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":\"probe_terminal\"},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_connector_txn_001\"}}"
         }
       }
     }

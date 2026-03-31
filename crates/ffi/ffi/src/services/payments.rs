@@ -19,12 +19,13 @@ use grpc_api_types::payments::{
     PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
-    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
+    PaymentServiceGetResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
+    PaymentServiceReverseRequest, PaymentServiceReverseResponse,
+    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 
 use domain_types::{

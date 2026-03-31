@@ -131,18 +131,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "not_supported",
-        "error": "The given currency method is not configured with the given connector"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -161,18 +149,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_supported",
-        "error": "The given currency method is not configured with the given connector"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

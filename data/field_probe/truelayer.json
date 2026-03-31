@@ -8,72 +8,72 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Becs": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Blik": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Truelayer"
       }
     },
     "capture": {
@@ -166,18 +166,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Failed to obtain authentication type"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -186,7 +174,7 @@
     "refund": {
       "default": {
         "status": "error",
-        "error": "Stuck on field: merchant_account_id — Missing required field: merchant_account_id"
+        "error": "Failed to decode message: None"
       }
     },
     "reverse": {
@@ -197,18 +185,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Failed to obtain authentication type"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

@@ -387,47 +387,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://sandbox.bluesnap.com/services/2/transactions",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"cardTransactionType\":\"AUTH_CAPTURE\",\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"securityCode\":\"123\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\"},\"transactionFraudInfo\":{\"fraudSessionId\":\"probe_proxy_txn_001\"},\"merchantTransactionId\":\"probe_proxy_txn_001\"}"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -466,18 +425,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method is not supported"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

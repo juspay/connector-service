@@ -250,27 +250,6 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
-// Flow: PaymentService.proxy_authorize
-fun proxyAuthorize(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = .newBuilder().apply {
-        merchantTransactionId = "probe_proxy_txn_001"
-        minorAmount = 1000L
-        currency = "USD"
-        cardNumber = "4111111111111111"
-        cardExpMonth = "03"
-        cardExpYear = "2030"
-        cardCvc = "123"
-        cardHolderName = "John Doe"
-        captureMethod = "AUTOMATIC"
-        authType = "NO_THREE_DS"
-        returnUrl = "https://example.com/return"
-        merchantOrderId = "probe_order_001"
-    }.build()
-    val response = client.proxy_authorize(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -279,22 +258,6 @@ fun refund(txnId: String) {
     if (response.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
     println("Done: ${response.status.name}")
-}
-
-// Flow: PaymentService.token_authorize
-fun tokenAuthorize(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = .newBuilder().apply {
-        merchantTransactionId = "probe_tokenized_txn_001"
-        minorAmount = 1000L
-        currency = "USD"
-        connectorToken = "pm_1AbcXyzStripeTestToken"
-        captureMethod = "AUTOMATIC"
-        returnUrl = "https://example.com/return"
-        merchantOrderId = "probe_order_001"
-    }.build()
-    val response = client.token_authorize(request)
-    println("Status: ${response.status.name}")
 }
 
 
@@ -310,9 +273,7 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "createOrder" -> createOrder(txnId)
         "get" -> get(txnId)
-        "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
-        "tokenAuthorize" -> tokenAuthorize(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processGetPayment, authorize, createOrder, get, proxyAuthorize, refund, tokenAuthorize")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processGetPayment, authorize, createOrder, get, refund")
     }
 }

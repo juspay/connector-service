@@ -78,82 +78,6 @@ def _build_get_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceGetRequest(),
     )
 
-def _build_recurring_charge_request():
-    return ParseDict(
-        {
-            "connector_recurring_payment_id": {
-                "mandate_id_type": {
-                    "connector_mandate_id": {
-                        "connector_mandate_id": "probe-mandate-123"
-                    }
-                }
-            },
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {  # Optional payment Method Information (for network transaction flows)
-                "token": {  # Payment tokens
-                    "token": {"value": "probe_pm_token"}  # The token string representing a payment method.
-                }
-            },
-            "return_url": "https://example.com/recurring-return",
-            "connector_customer_id": "cust_probe_123",
-            "payment_method_type": "PAY_PAL",
-            "off_session": True  # Behavioral Flags and Preferences
-        },
-        payment_pb2.RecurringPaymentServiceChargeRequest(),
-    )
-
-def _build_refund_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": connector_transaction_id,
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request"  # Reason for the refund
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    )
-
-def _build_setup_recurring_request():
-    return ParseDict(
-        {
-            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
-            "amount": {  # Mandate Details
-                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-                }
-            },
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,
-            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",
-            "request_incremental_authorization": False,
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",
-                "accepted_at": 0
-            }
-        },
-        payment_pb2.PaymentServiceSetupRecurringRequest(),
-    )
-
 def _build_void_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -223,7 +147,19 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
+    refund_response = await payment_client.refund(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    ))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -261,13 +197,13 @@ async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,
+            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
             "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",
-            "request_incremental_authorization": False,
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",
-                "accepted_at": 0
+            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
+            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
+            "customer_acceptance": {  # Details of customer acceptance
+                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
+                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
             }
         },
         payment_pb2.PaymentServiceSetupRecurringRequest(),
@@ -371,62 +307,82 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.proxy_authorize"""
-    payment_client = PaymentClient(config)
-
-    # Step 1: proxy_authorize
-    proxy_response = await payment_client.proxy_authorize(ParseDict(
-        {
-            "merchant_transaction_id": "probe_proxy_txn_001",
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-            },
-            "card_proxy": {
-                "card_number": "4111111111111111",
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "123",
-                "card_holder_name": "John Doe"
-            },
-            "address": {
-                "billing_address": {
-                    "first_name": "John"
-                }
-            },
-            "capture_method": "AUTOMATIC",
-            "auth_type": "NO_THREE_DS",
-            "return_url": "https://example.com/return"
-        },
-    ))
-
-    return {"status": proxy_response.status}
-
-
 async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RecurringPaymentService.Charge"""
     recurringpayment_client = RecurringPaymentClient(config)
 
-    recurring_response = await recurringpayment_client.charge(_build_recurring_charge_request())
+    # Step 1: Recurring Charge — charge against the stored mandate
+    recurring_response = await recurringpayment_client.charge(ParseDict(
+        {
+            "connector_recurring_payment_id": {  # Reference to existing mandate
+                "mandate_id_type": {
+                    "connector_mandate_id": "probe-mandate-123"
+                }
+            },
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "payment_method": {  # Optional payment Method Information (for network transaction flows)
+                "token": {"token": {"value": "probe_pm_token"}}  # Payment tokens
+            },
+            "return_url": "https://example.com/recurring-return",
+            "connector_customer_id": "cust_probe_123",
+            "payment_method_type": "PAY_PAL",
+            "off_session": True  # Behavioral Flags and Preferences
+        },
+        payment_pb2.RecurringPaymentServiceChargeRequest(),
+    ))
+
+    if recurring_response.status == "FAILED":
+        raise RuntimeError(f"Recurring_Charge failed: {recurring_response.error}")
 
     return {"status": recurring_response.status}
-
-
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Refund"""
-    payment_client = PaymentClient(config)
-
-    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
-
-    return {"status": refund_response.status}
 
 
 async def setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.SetupRecurring"""
     payment_client = PaymentClient(config)
 
-    setup_response = await payment_client.setup_recurring(_build_setup_recurring_request())
+    # Step 1: Setup Recurring — store the payment mandate
+    setup_response = await payment_client.setup_recurring(ParseDict(
+        {
+            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
+            "amount": {  # Mandate Details
+                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "payment_method": {
+                "card": {  # Generic card payment
+                    "card_number": {"value": "4111111111111111"},  # Card Identification
+                    "card_exp_month": {"value": "03"},
+                    "card_exp_year": {"value": "2030"},
+                    "card_cvc": {"value": "737"},
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+                }
+            },
+            "address": {  # Address Information
+                "billing_address": {
+                }
+            },
+            "auth_type": "NO_THREE_DS",  # Type of authentication to be used
+            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
+            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
+            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
+            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
+            "customer_acceptance": {  # Details of customer acceptance
+                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
+                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            }
+        },
+        payment_pb2.PaymentServiceSetupRecurringRequest(),
+    ))
+
+    if setup_response.status == "FAILED":
+        raise RuntimeError(f"Recurring setup failed: {setup_response.error}")
+    if setup_response.status == "PENDING":
+        # Mandate stored asynchronously — save connector_recurring_payment_id
+        return {"status": "pending", "mandate_id": setup_response.connector_recurring_payment_id}
 
     return {"status": setup_response.status, "mandate_id": setup_response.connector_transaction_id}
 

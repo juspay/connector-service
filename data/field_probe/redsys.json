@@ -196,18 +196,6 @@
         }
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "not_supported",
-        "error": "Cards No3DS is not supported by Redsys"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -245,18 +233,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_supported",
-        "error": "Cards No3DS is not supported by Redsys"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

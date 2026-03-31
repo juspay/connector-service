@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L133) · [JavaScript](../../examples/noon/javascript/noon.js#L121) · [Kotlin](../../examples/noon/kotlin/noon.kt#L105) · [Rust](../../examples/noon/rust/noon.rs#L129)
+**Examples:** [Python](../../examples/noon/python/noon.py#L90) · [JavaScript](../../examples/noon/javascript/noon.js#L80) · [Kotlin](../../examples/noon/kotlin/noon.kt#L105) · [Rust](../../examples/noon/rust/noon.rs#L100)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L158) · [JavaScript](../../examples/noon/javascript/noon.js#L147) · [Kotlin](../../examples/noon/kotlin/noon.kt#L127) · [Rust](../../examples/noon/rust/noon.rs#L152)
+**Examples:** [Python](../../examples/noon/python/noon.py#L115) · [JavaScript](../../examples/noon/javascript/noon.js#L106) · [Kotlin](../../examples/noon/kotlin/noon.kt#L127) · [Rust](../../examples/noon/rust/noon.rs#L123)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -136,25 +136,25 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L177) · [JavaScript](../../examples/noon/javascript/noon.js#L166) · [Kotlin](../../examples/noon/kotlin/noon.kt#L143) · [Rust](../../examples/noon/rust/noon.rs#L168)
+**Examples:** [Python](../../examples/noon/python/noon.py#L134) · [JavaScript](../../examples/noon/javascript/noon.js#L125) · [Kotlin](../../examples/noon/kotlin/noon.kt#L143) · [Rust](../../examples/noon/rust/noon.rs#L139)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L230) · [JavaScript](../../examples/noon/javascript/noon.js#L216) · [Kotlin](../../examples/noon/kotlin/noon.kt#L190) · [Rust](../../examples/noon/rust/noon.rs#L218)
+**Examples:** [Python](../../examples/noon/python/noon.py#L187) · [JavaScript](../../examples/noon/javascript/noon.js#L175) · [Kotlin](../../examples/noon/kotlin/noon.kt#L190) · [Rust](../../examples/noon/rust/noon.rs#L188)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L255) · [JavaScript](../../examples/noon/javascript/noon.js#L242) · [Kotlin](../../examples/noon/kotlin/noon.kt#L212) · [Rust](../../examples/noon/rust/noon.rs#L241)
+**Examples:** [Python](../../examples/noon/python/noon.py#L224) · [JavaScript](../../examples/noon/javascript/noon.js#L210) · [Kotlin](../../examples/noon/kotlin/noon.kt#L212) · [Rust](../../examples/noon/rust/noon.rs#L211)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L277) · [JavaScript](../../examples/noon/javascript/noon.js#L264) · [Kotlin](../../examples/noon/kotlin/noon.kt#L231) · [Rust](../../examples/noon/rust/noon.rs#L260)
+**Examples:** [Python](../../examples/noon/python/noon.py#L246) · [JavaScript](../../examples/noon/javascript/noon.js#L232) · [Kotlin](../../examples/noon/kotlin/noon.kt#L231) · [Rust](../../examples/noon/rust/noon.rs#L230)
 
 ## API Reference
 
@@ -245,18 +245,18 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L299) · [JavaScript](../../examples/noon/javascript/noon.js#L285) · [Kotlin](../../examples/noon/kotlin/noon.kt#L249) · [Rust](../../examples/noon/rust/noon.rs#L278)
+**Examples:** [Python](../../examples/noon/python/noon.py#L268) · [JavaScript](../../examples/noon/javascript/noon.js#L253) · [Kotlin](../../examples/noon/kotlin/noon.kt#L249) · [Rust](../../examples/noon/rust/noon.rs#L248)
 
 #### PaymentService.Capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L308) · [JavaScript](../../examples/noon/javascript/noon.js#L294) · [Kotlin](../../examples/noon/kotlin/noon.kt#L261) · [Rust](../../examples/noon/rust/noon.rs#L290)
+**Examples:** [Python](../../examples/noon/python/noon.py#L277) · [JavaScript](../../examples/noon/javascript/noon.js#L262) · [Kotlin](../../examples/noon/kotlin/noon.kt#L261) · [Rust](../../examples/noon/rust/noon.rs#L260)
 
 #### PaymentService.Get
 
@@ -267,29 +267,29 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L317) · [JavaScript](../../examples/noon/javascript/noon.js#L303) · [Kotlin](../../examples/noon/kotlin/noon.kt#L271) · [Rust](../../examples/noon/rust/noon.rs#L297)
+**Examples:** [Python](../../examples/noon/python/noon.py#L286) · [JavaScript](../../examples/noon/javascript/noon.js#L271) · [Kotlin](../../examples/noon/kotlin/noon.kt#L271) · [Rust](../../examples/noon/rust/noon.rs#L267)
 
 #### PaymentService.Refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L335) · [JavaScript](../../examples/noon/javascript/noon.js#L321) · [Kotlin](../../examples/noon/kotlin/noon.kt#L305) · [Rust](../../examples/noon/rust/noon.rs#L311)
+**Examples:** [Python](../../examples/noon/python/noon.py#L187) · [JavaScript](../../examples/noon/javascript/noon.js#L175) · [Kotlin](../../examples/noon/kotlin/noon.kt#L309) · [Rust](../../examples/noon/rust/noon.rs#L301)
 
 #### PaymentService.Void
 
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L344) · [JavaScript](../../examples/noon/javascript/noon.js#L330) · [Kotlin](../../examples/noon/kotlin/noon.kt#L315) · [Rust](../../examples/noon/rust/noon.rs#L318)
+**Examples:** [Python](../../examples/noon/python/noon.py#L329) · [JavaScript](../../examples/noon/javascript/noon.js#L310) · [Kotlin](../../examples/noon/kotlin/noon.kt#L319) · [Rust](../../examples/noon/rust/noon.rs#L308)
 
 ### Mandates
 
@@ -302,4 +302,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/noon/python/noon.py#L326) · [JavaScript](../../examples/noon/javascript/noon.js#L312) · [Kotlin](../../examples/noon/kotlin/noon.kt#L279) · [Rust](../../examples/noon/rust/noon.rs#L304)
+**Examples:** [Python](../../examples/noon/python/noon.py#L295) · [JavaScript](../../examples/noon/javascript/noon.js#L280) · [Kotlin](../../examples/noon/kotlin/noon.kt#L279) · [Rust](../../examples/noon/rust/noon.rs#L274)

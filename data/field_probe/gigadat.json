@@ -8,72 +8,72 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Becs": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Blik": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       }
     },
     "capture": {
@@ -149,18 +149,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -199,18 +187,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: metadata — Invalid Configuration: missing 'site' in connector config or metadata"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

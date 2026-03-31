@@ -30,11 +30,11 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
-    PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
-    PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,
-    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, PaymentServiceTokenAuthorizeRequest,
-    PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceGetRequest, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
+    PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVoidRequest, RecurringPaymentServiceChargeRequest,
 };
 use hyperswitch_masking::Secret;
 use std::str::FromStr;
@@ -335,8 +335,7 @@ pub(crate) fn base_tokenized_authorize_request() -> PaymentServiceTokenAuthorize
     }
 }
 
-pub(crate) fn base_tokenized_setup_recurring_request(
-) -> PaymentServiceTokenSetupRecurringRequest {
+pub(crate) fn base_tokenized_setup_recurring_request() -> PaymentServiceTokenSetupRecurringRequest {
     PaymentServiceTokenSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_tokenized_mandate_001".to_string(),
         amount: Some(usd_money(0)),

@@ -69,16 +69,16 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
     PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRefundRequest,
+    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
-    PayoutMethodEligibilityResponse, PaymentServiceProxyAuthorizeRequest,
-    PaymentServiceProxySetupRecurringRequest, RecurringPaymentServiceChargeRequest,
+    PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
-    RecurringPaymentServiceRevokeResponse, RefundResponse, PaymentServiceTokenAuthorizeRequest,
-    PaymentServiceTokenSetupRecurringRequest,
+    RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;

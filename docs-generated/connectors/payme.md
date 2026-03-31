@@ -106,25 +106,25 @@ let config = ConnectorConfig {
 
 #### PaymentService.Capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L75) · [Rust](../../examples/payme/rust/payme.rs#L83)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L75) · [Rust](../../examples/payme/rust/payme.rs#L73)
 
 #### PaymentService.CreateOrder
 
-Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
+Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L85) · [Rust](../../examples/payme/rust/payme.rs#L90)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L85) · [Rust](../../examples/payme/rust/payme.rs#L80)
 
 #### PaymentService.Get
 
@@ -135,26 +135,26 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L99) · [Rust](../../examples/payme/rust/payme.rs#L97)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L99) · [Rust](../../examples/payme/rust/payme.rs#L93)
 
 #### PaymentService.Refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L107) · [Rust](../../examples/payme/rust/payme.rs#L104)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L107) · [Rust](../../examples/payme/rust/payme.rs#L100)
 
 #### PaymentService.Void
 
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L117) · [Rust](../../examples/payme/rust/payme.rs#L111)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L117) · [Rust](../../examples/payme/rust/payme.rs#L107)

@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -63,11 +63,10 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         "accept_language": "en-US,en;q=0.9",
         "ip_address": "1.2.3.4",  // Device Information
     },
-    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
     serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
     "merchant_capture_id": "probe_capture_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -78,16 +77,7 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     })).unwrap_or_default()
 }
 
-pub fn build_create_session_token_request() -> MerchantAuthenticationServiceCreateSessionTokenRequest {
-    serde_json::from_value::<MerchantAuthenticationServiceCreateSessionTokenRequest>(serde_json::json!({
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    })).unwrap_or_default()
-}
-
-pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -98,7 +88,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
-pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -111,7 +101,7 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     })).unwrap_or_default()
 }
 
-pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -245,7 +235,12 @@ pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -
 // Flow: MerchantAuthenticationService.CreateSessionToken
 #[allow(dead_code)]
 pub async fn create_session_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_session_token(build_create_session_token_request(), &HashMap::new(), None).await?;
+    let response = client.create_session_token(serde_json::from_value::<MerchantAuthenticationServiceCreateSessionTokenRequest>(serde_json::json!({
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    })).unwrap_or_default(), &HashMap::new(), None).await?;
     Ok(format!("Session token obtained (statusCode={})", response.status_code))
 }
 
@@ -269,6 +264,7 @@ pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> R
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
+
 
 #[allow(dead_code)]
 #[tokio::main]

@@ -14,9 +14,11 @@ import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentServiceSetupRecurringRequest
+import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
+import payments.FutureUsage
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
@@ -230,27 +232,6 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
-// Flow: PaymentService.proxy_authorize
-fun proxyAuthorize(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = .newBuilder().apply {
-        merchantTransactionId = "probe_proxy_txn_001"
-        minorAmount = 1000L
-        currency = "USD"
-        cardNumber = "4111111111111111"
-        cardExpMonth = "03"
-        cardExpYear = "2030"
-        cardCvc = "123"
-        cardHolderName = "John Doe"
-        email = "test@example.com"
-        captureMethod = "AUTOMATIC"
-        authType = "NO_THREE_DS"
-        returnUrl = "https://example.com/return"
-    }.build()
-    val response = client.proxy_authorize(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -284,12 +265,14 @@ fun setupRecurring(txnId: String) {
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false
+        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = "OFF_SESSION"
-        requestIncrementalAuthorization = false
-        acceptanceType = "OFFLINE"
-        acceptedAt = 0L
+        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
+        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
+        customerAcceptanceBuilder.apply {  // Details of customer acceptance
+            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
+            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        }
     }.build()
     val response = client.setup_recurring(request)
     when (response.status.name) {
@@ -321,10 +304,9 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "get" -> get(txnId)
-        "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, proxyAuthorize, refund, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, refund, setupRecurring, void")
     }
 }

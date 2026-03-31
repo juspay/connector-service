@@ -197,48 +197,6 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {
-              "first_name": "John"
-            }
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://sandbox-secure.zift.io/gates/xurl",
-          "method": "Post",
-          "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
-          },
-          "body": "requestType=sale&userName=probe_user&password=probe_pass&accountId=probe_id&accountType=R&accountNumber=4111111111111111&accountAccessory=0330&transactionCode=probe_proxy_txn_001&csc=123&transactionIndustryType=EC&transactionCategoryCode=EC&holderName=John&holderType=P&amount=1000"
-        }
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented",
@@ -316,18 +274,6 @@
           },
           "body": "requestType=account-verification&userName=probe_user&password=probe_pass&accountId=probe_id&transactionIndustryType=EC&transactionCategoryCode=EC&holderName=John&holderType=P&transactionCode=probe_mandate_001&accountType=R&accountNumber=4111111111111111&accountAccessory=0330&csc=737"
         }
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

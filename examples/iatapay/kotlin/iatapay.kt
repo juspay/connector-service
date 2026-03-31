@@ -80,7 +80,7 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
         }
         reason = "customer_request"  // Reason for the refund
         webhookUrl = "https://example.com/webhook"  // URL for webhook notifications
-        stateBuilder.apply {  // State data for access token storage and
+        stateBuilder.apply {  // State data for access token storage and other connector-specific state
             accessTokenBuilder.apply {  // Access token obtained from connector
                 tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)

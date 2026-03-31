@@ -202,22 +202,10 @@
         "status": "not_implemented"
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
-        "status": "error",
-        "error": "Invalid Configuration: merchant_account_id"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
       }
     },
     "refund": {
@@ -234,18 +222,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {

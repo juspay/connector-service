@@ -28,13 +28,13 @@ use grpc_api_types::payments::{
     PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
-    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    PaymentServiceProxyAuthorizeRequest, PaymentServiceProxySetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
-    RequestConfig, PaymentServiceTokenAuthorizeRequest,
-    PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceGetResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
+    PaymentServiceReverseRequest, PaymentServiceReverseResponse,
+    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse, RefundResponse, RequestConfig,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.

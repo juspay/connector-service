@@ -153,7 +153,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L100) · [Rust](../../examples/iatapay/rust/iatapay.rs#L105)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L100) · [Rust](../../examples/iatapay/rust/iatapay.rs#L98)
 
 #### PaymentService.Get
 
@@ -164,18 +164,18 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L122) · [Rust](../../examples/iatapay/rust/iatapay.rs#L124)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L122) · [Rust](../../examples/iatapay/rust/iatapay.rs#L119)
 
 #### PaymentService.Refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L130) · [Rust](../../examples/iatapay/rust/iatapay.rs#L131)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L130) · [Rust](../../examples/iatapay/rust/iatapay.rs#L126)
 
 ### Authentication
 
@@ -188,4 +188,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L112) · [Rust](../../examples/iatapay/rust/iatapay.rs#L117)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L112) · [Rust](../../examples/iatapay/rust/iatapay.rs#L110)

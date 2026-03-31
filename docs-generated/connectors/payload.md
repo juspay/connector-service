@@ -106,14 +106,14 @@ let config = ConnectorConfig {
 
 #### PaymentService.Capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L101) · [Rust](../../examples/payload/rust/payload.rs#L131)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L101) · [Rust](../../examples/payload/rust/payload.rs#L97)
 
 #### PaymentService.Get
 
@@ -124,29 +124,29 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L111) · [Rust](../../examples/payload/rust/payload.rs#L138)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L111) · [Rust](../../examples/payload/rust/payload.rs#L104)
 
 #### PaymentService.Refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L151) · [Rust](../../examples/payload/rust/payload.rs#L152)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L155) · [Rust](../../examples/payload/rust/payload.rs#L144)
 
 #### PaymentService.Void
 
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L161) · [Rust](../../examples/payload/rust/payload.rs#L159)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L165) · [Rust](../../examples/payload/rust/payload.rs#L151)
 
 ### Mandates
 
@@ -159,4 +159,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L119) · [Rust](../../examples/payload/rust/payload.rs#L145)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L119) · [Rust](../../examples/payload/rust/payload.rs#L111)

@@ -201,18 +201,6 @@
         }
       }
     },
-    "proxy_authorize": {
-      "default": {
-        "status": "error",
-        "error": "Stuck on field: authentication_data — Missing required field: authentication_data (must be present for 3DS flow)"
-      }
-    },
-    "proxy_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Customer acceptance is missing"
-      }
-    },
     "recurring_charge": {
       "default": {
         "status": "not_implemented"
@@ -253,18 +241,6 @@
     "setup_recurring": {
       "default": {
         "status": "not_implemented"
-      }
-    },
-    "token_authorize": {
-      "default": {
-        "status": "not_supported",
-        "error": "Payment method CardToken(CardToken { card_holder_name: None, card_cvc: None }) is not supported by Nexixpay"
-      }
-    },
-    "token_setup_recurring": {
-      "default": {
-        "status": "error",
-        "error": "Future usage must be specified"
       }
     },
     "tokenize": {
