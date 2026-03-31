@@ -4,6 +4,27 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.04.0-hotfix5
+
+### Features
+
+- **connector:** [Trustly] Implement Trustly flows ([#819](https://github.com/juspay/connector-service/pull/819)) ([`0a44d95`](https://github.com/juspay/connector-service/commit/0a44d95b9c2f992e62a5e630103736dd311ab1f1))
+- **connectors:** [revolv3] add external 3ds support ([#816](https://github.com/juspay/connector-service/pull/816)) ([`186d045`](https://github.com/juspay/connector-service/commit/186d04504b4fb20622e48e2900a3287f1d681479))
+
+**Full Changelog:** [`2026.03.04.0-hotfix4...2026.03.04.0-hotfix5`](https://github.com/juspay/connector-service/compare/2026.03.04.0-hotfix4...2026.03.04.0-hotfix5)
+
+- - -
+
+## 2026.03.04.0-hotfix4
+
+### Refactors
+
+- **connector:** [Fiservcommercehub] send expiry year as 1 week in second for access_token ([#827](https://github.com/juspay/connector-service/pull/827)) ([`26e44b1`](https://github.com/juspay/connector-service/commit/26e44b1d794cf572e5c8cde87ca1fa37ac8a13a3))
+
+**Full Changelog:** [`2026.03.04.0-hotfix3...2026.03.04.0-hotfix4`](https://github.com/juspay/connector-service/compare/2026.03.04.0-hotfix3...2026.03.04.0-hotfix4)
+
+- - -
+
 ## 2026.03.04.0-hotfix3
 
 ### Features
