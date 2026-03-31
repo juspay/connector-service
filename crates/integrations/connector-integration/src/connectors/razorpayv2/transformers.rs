@@ -185,7 +185,7 @@ pub struct RazorpayV2CardPaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub order_id: String,
     pub email: Email,
     pub contact: Secret<String>,
@@ -511,9 +511,10 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card payments are supported for this endpoint".to_string(),
-            )),
+            _ => Err(errors::ConnectorError::NotSupported {
+                message: "Payment method".to_string(),
+                connector: "razorpayv2",
+            }),
         }?;
 
         let order_id =
@@ -531,7 +532,9 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .get_optional_billing_full_name()
             })
-            .unwrap_or_else(|| Secret::new("Card Holder".to_string()));
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "card_holder_name",
+            })?;
 
         let card_details = RazorpayV2CardDetails {
             number: card_data.card_number.clone(),
@@ -548,31 +551,24 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let callback_url = item.router_data.request.get_router_return_url().ok();
 
+        let contact = item
+            .router_data
+            .resource_common_data
+            .get_billing_phone_number()
+            .map(|phone| phone.expose())?;
+
         Ok(Self {
             amount: item.amount,
-            currency: item.router_data.request.currency.to_string(),
+            currency: item.router_data.request.currency,
             order_id: order_id.to_string(),
             email: item
                 .router_data
                 .resource_common_data
-                .get_billing_email()
-                .or_else(|_| {
-                    Email::from_str("customer@example.com").map_err(|_| {
-                        error_stack::Report::new(errors::ConnectorError::InvalidDataFormat {
-                            field_name: "billing.email",
-                        })
-                    })
-                })?,
-            contact: Secret::new(
-                item.router_data
-                    .resource_common_data
-                    .get_billing_phone_number()
-                    .map(|phone| phone.expose())
-                    .unwrap_or_else(|_| "+911234567890".to_string()),
-            ),
+                .get_billing_email()?,
+            contact: Secret::new(contact),
             method: "card".to_string(),
             card: card_details,
-            description: Some("Payment via RazorpayV2".to_string()),
+            description: None,
             notes: item.router_data.request.metadata.clone().expose_option(),
             callback_url,
             ip: None,
