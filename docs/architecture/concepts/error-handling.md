@@ -112,20 +112,19 @@ When using Prism SDK, errors are exposed as structured error objects that you ca
 The SDK exposes three main error types:
 
 1. **IntegrationError** - Occurs before calling the connector (request validation, configuration issues)
-   - `error_message`: Human-readable error description
-   - `error_code`: Machine-readable code (e.g., "MISSING_REQUIRED_FIELD")
-   - `suggested_action`: Guidance on how to fix the error (optional)
-   - `doc_url`: Documentation link for reference (optional)
+   - **JS/Kotlin:** Access fields via `error.proto` — `error.proto.errorCode`, `error.proto.errorMessage`, `error.proto.suggestedAction`, `error.proto.docUrl`
+   - **Python:** Fields are delegated via `__getattr__` — `error.error_code`, `error.error_message`, `error.suggested_action`, `error.doc_url`
+   - **Rust:** Direct struct fields — `error.error_code`, `error.error_message`, `error.suggested_action`, `error.doc_url`
 
 2. **NetworkError** - Occurs during HTTP communication (transport layer failures)
-   - `code`: Network error code enum (e.g., "CONNECT_TIMEOUT_EXCEEDED")
-   - `message`: Human-readable error description (optional)
-   - `status_code`: HTTP status code if available (optional)
+   - **JS/Kotlin:** `code` (numeric enum), `errorCode` (string getter, e.g., `"CONNECT_TIMEOUT_EXCEEDED"`), `message` (inherited from Error), `statusCode`
+   - **Python:** `code` (numeric enum), `error_code` (string property), `str(error)` for message, `status_code`
+   - **Rust:** `code` (`NetworkErrorCode` enum), `error_code()` (method, returns `&'static str`), `message` (`String`), `status_code` (`Option<u32>`)
 
 3. **ConnectorResponseTransformationError** - Occurs after calling the connector (response parsing issues)
-   - `error_message`: Human-readable description
-   - `error_code`: Machine-readable code (e.g., "RESPONSE_DESERIALIZATION_FAILED")
-   - `http_status_code`: HTTP status from connector (optional)
+   - **JS/Kotlin:** Access fields via `error.proto` — `error.proto.errorCode`, `error.proto.errorMessage`, `error.proto.httpStatusCode`
+   - **Python:** Fields are delegated via `__getattr__` — `error.error_code`, `error.error_message`, `error.http_status_code`
+   - **Rust:** Direct struct fields — `error.error_code`, `error.error_message`, `error.http_status_code`
 
 ### Handling Integration Errors
 
