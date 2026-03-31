@@ -270,6 +270,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   RedirectionResponse: { "payload": "PayloadEntry" },
   RedirectForm: { "form": "FormData", "html": "HtmlData", "uri": "UriData", "braintree": "BraintreeData", "mifinity": "MifinityData", "nmi": "NmiData" },
   FormData: { "formFields": "FormFieldsEntry" },
+  NmiData: { "amount": "Money" },
   RequestDetails: { "headers": "HeadersEntry" },
   EventServiceHandleResponse: { "eventContent": "EventContent", "eventAckResponse": "EventAckResponse" },
   EventAckResponse: { "headers": "HeadersEntry" },

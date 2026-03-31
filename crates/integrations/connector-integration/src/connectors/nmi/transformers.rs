@@ -15,9 +15,7 @@ use domain_types::{
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{
-        get_unimplemented_payment_method_error_message, ForeignTryFrom,
-    },
+    utils::{get_unimplemented_payment_method_error_message, ForeignTryFrom},
 };
 use grpc_api_types::payments::{Currency, Money};
 
