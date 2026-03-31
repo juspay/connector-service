@@ -12,12 +12,10 @@ use domain_types::{
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
@@ -104,20 +102,6 @@ pub struct NuveiUrlDetails {
     pub pending_url: String,
 }
 
-// 3DS authentication data for Nuvei
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NuveiThreeDsData {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cavv: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub eci: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-}
-
 // Payment Request
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -166,8 +150,6 @@ pub struct NuveiCard<
     pub expiration_year: Secret<String>,
     #[serde(rename = "CVV")]
     pub cvv: Secret<String>,
-    #[serde(rename = "threeD", skip_serializing_if = "Option::is_none")]
-    pub three_ds_data: Option<NuveiThreeDsData>,
 }
 
 // ACH Bank Transfer specific structures
@@ -235,12 +217,6 @@ pub struct NuveiPaymentResponse {
     pub client_unique_id: Option<String>,
     pub client_request_id: Option<String>,
     pub internal_request_id: Option<i64>,
-    // 3DS redirect fields
-    #[serde(rename = "redirectURL")]
-    pub redirect_url: Option<String>,
-    #[serde(rename = "acsURL")]
-    pub acs_url: Option<String>,
-    pub pa_request: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -331,12 +307,6 @@ pub struct NuveiTransactionDetails {
     pub credited: Option<String>,
     pub acquiring_bank_name: Option<String>,
     pub transaction_type: Option<String>,
-    // 3DS redirect fields
-    #[serde(rename = "redirectURL")]
-    pub redirect_url: Option<String>,
-    #[serde(rename = "acsURL")]
-    pub acs_url: Option<String>,
-    pub pa_request: Option<String>,
 }
 
 // Capture Request
@@ -678,18 +648,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "billing_address.first_name and billing_address.last_name or customer_name",
                     })?;
 
-                // Build 3DS data if authentication information is available
-                let three_ds_data = router_data
-                    .request
-                    .authentication_data
-                    .as_ref()
-                    .map(|auth_data| NuveiThreeDsData {
-                        cavv: auth_data.cavv.clone(),
-                        eci: auth_data.eci.clone(),
-                        xid: auth_data.threeds_server_transaction_id.clone(),
-                        version: auth_data.message_version.as_ref().map(|v| v.to_string()),
-                    });
-
                 NuveiPaymentOption {
                     card: Some(NuveiCard {
                         card_number: card_data.card_number.clone(),
@@ -697,7 +655,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         expiration_month: card_data.card_exp_month.clone(),
                         expiration_year: card_data.card_exp_year.clone(),
                         cvv: card_data.card_cvc.clone(),
-                        three_ds_data,
                     }),
                     alternative_payment_method: None,
                 }
@@ -991,27 +948,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(response.order_id.clone())
             .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
 
-        // Extract redirect URL when transaction status is Redirect
-        let redirection_data = if matches!(
-            response.transaction_status,
-            Some(NuveiTransactionStatus::Redirect)
-        ) {
-            response
-                .redirect_url
-                .clone()
-                .or(response.acs_url.clone())
-                .and_then(|url_string| {
-                    Url::parse(&url_string)
-                        .ok()
-                        .map(|url| Box::new(RedirectForm::from((url, common_utils::request::Method::Get))))
-                })
-        } else {
-            None
-        };
-
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-            redirection_data,
+            redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
@@ -1191,27 +1130,9 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
             .clone()
             .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
 
-        // Extract redirect URL when transaction status is Redirect
-        let redirection_data = if matches!(
-            transaction_details.transaction_status,
-            Some(NuveiTransactionStatus::Redirect)
-        ) {
-            transaction_details
-                .redirect_url
-                .clone()
-                .or(transaction_details.acs_url.clone())
-                .and_then(|url_string| {
-                    Url::parse(&url_string)
-                        .ok()
-                        .map(|url| Box::new(RedirectForm::from((url, common_utils::request::Method::Get))))
-                })
-        } else {
-            None
-        };
-
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-            redirection_data,
+            redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
