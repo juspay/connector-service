@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::pii;
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -144,8 +145,8 @@ pub struct GooglePayData {
 #[derive(Debug, Serialize)]
 pub struct GooglePayDecryptedData {
     decrypted_googlepay_data: DecryptedDataIndicator,
-    ccnumber: String,
-    ccexp: String,
+    ccnumber: Secret<String>,
+    ccexp: Secret<String>,
     cavv: Option<Secret<String>>,
     eci: Option<String>,
 }
@@ -167,7 +168,7 @@ pub struct NmiBillingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     address2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    city: Option<String>,
+    city: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     state: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -177,7 +178,7 @@ pub struct NmiBillingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     phone: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    email: Option<String>,
+    email: Option<pii::Email>,
 }
 
 #[derive(Debug, Serialize)]
@@ -307,16 +308,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
                 match &google_pay_data.tokenization_data {
                     GpayTokenizationData::Decrypted(decrypted_data) => {
-                        let year = decrypted_data.card_exp_year.peek();
-                        let year_short = if year.len() == 4 { &year[2..] } else { year };
-                        let ccexp =
-                            format!("{}{}", decrypted_data.card_exp_month.peek(), year_short);
+                        let ccexp = decrypted_data
+                            .get_expiry_date_as_mmyy()
+                            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
                         (
                             NmiPaymentMethod::GooglePayDecrypt(Box::new(GooglePayDecryptedData {
                                 decrypted_googlepay_data: DecryptedDataIndicator::Decrypted,
-                                ccnumber: decrypted_data
-                                    .application_primary_account_number
-                                    .get_card_no(),
+                                ccnumber: Secret::new(
+                                    decrypted_data
+                                        .application_primary_account_number
+                                        .get_card_no(),
+                                ),
                                 ccexp,
                                 cavv: decrypted_data.cryptogram.clone(),
                                 eci: decrypted_data.eci_indicator.clone(),
@@ -359,32 +361,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let billing_details = {
-            let billing = router_data
+        let billing_details = Some(NmiBillingDetails {
+            firstname: router_data
                 .resource_common_data
-                .address
-                .get_payment_billing();
-            let address = billing.and_then(|b| b.address.as_ref());
-            let email = billing
-                .and_then(|b| b.email.clone())
-                .or_else(|| router_data.request.email.clone())
-                .map(|e| e.peek().clone());
-            NmiBillingDetails {
-                firstname: address.and_then(|a| a.first_name.clone()),
-                lastname: address.and_then(|a| a.last_name.clone()),
-                address1: address.and_then(|a| a.line1.clone()),
-                address2: address.and_then(|a| a.line2.clone()),
-                city: address
-                    .and_then(|a| a.city.clone())
-                    .map(|c| c.peek().clone()),
-                state: address.and_then(|a| a.state.clone()),
-                zip: address.and_then(|a| a.zip.clone()),
-                country: address.and_then(|a| a.country),
-                phone: None,
-                email,
-            }
-        };
-        let billing_details = Some(billing_details);
+                .get_optional_billing_first_name(),
+            lastname: router_data
+                .resource_common_data
+                .get_optional_billing_last_name(),
+            address1: router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            address2: router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            city: router_data.resource_common_data.get_optional_billing_city(),
+            state: router_data
+                .resource_common_data
+                .get_optional_billing_state(),
+            zip: router_data.resource_common_data.get_optional_billing_zip(),
+            country: router_data
+                .resource_common_data
+                .get_optional_billing_country(),
+            phone: router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            email: router_data
+                .resource_common_data
+                .get_optional_billing_email()
+                .or_else(|| router_data.request.email.clone()),
+        });
 
         Ok(Self {
             security_key: auth.api_key,
