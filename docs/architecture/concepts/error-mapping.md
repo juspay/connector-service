@@ -60,7 +60,7 @@ A sample mapping of error codes across Stripe and Adyen as below.
 | `INCORRECT_CVV` | Wrong security code | `incorrect_cvc` | `CVC Declined` (refusalReasonCode: 24) |
 | `INVALID_CARD_NUMBER` | Bad card number | `incorrect_number` | `Invalid Card Number` (refusalReasonCode: 8) |
 | `PROCESSING_ERROR` | Generic processor error | `processing_error` | `Acquirer Error` (refusalReasonCode: 4) |
-| `NETWORK_TIMEOUT` | Request timed out | HTTP 504 | `Issuer Unavailable` (refusalReasonCode: 9) |
+| `NETWORK_TIMEOUT` | Request timed out | HTTP 504 | HTTP 504 / Network timeout |
 | `RATE_LIMITED` | Too many requests | HTTP 429 | Refusal code 46 (excessive retry prevention) |
 | `INVALID_API_KEY` | Auth failed | `api_key_expired` / HTTP 401 | HTTP 401 |
 | `VALIDATION_ERROR` | Bad request format | HTTP 400 | HTTP 422 |

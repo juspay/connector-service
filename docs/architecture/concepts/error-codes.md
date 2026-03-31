@@ -10,7 +10,6 @@ These errors occur **before** the HTTP request is sent to the connector. They in
 |------------|-------------|
 | `FailedToObtainIntegrationUrl` | Cannot determine connector endpoint URL |
 | `RequestEncodingFailed` | Failed to encode connector request |
-| `HeaderMapConstructionFailed` | Cannot construct HTTP headers |
 | `BodySerializationFailed` | Cannot serialize request body |
 | `UrlParsingFailed` | Cannot parse URL |
 | `UrlEncodingFailed` | URL encoding of request payload failed |
@@ -38,7 +37,6 @@ These errors occur **before** the HTTP request is sent to the connector. They in
 | `MissingConnectorMandateMetadata` | Connector mandate metadata not found |
 | `MissingConnectorRelatedTransactionID` | Required related transaction ID not found |
 | `MaxFieldLengthViolated` | Field exceeds maximum length for connector |
-| `SourceVerificationFailed` | Webhook or response source verification failed |
 | `ConfigurationError` | General configuration validation error |
 
 ## Network Errors

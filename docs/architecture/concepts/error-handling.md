@@ -136,7 +136,7 @@ Integration errors indicate problems with your request or configuration. These s
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, IntegrationError } from 'hyperswitch-prism';
+import { PaymentClient, IntegrationError } from 'hs-playlib';
 
 try {
   const payment = await client.createPayment({
@@ -148,15 +148,15 @@ try {
 } catch (error) {
   if (error instanceof IntegrationError) {
     // Request phase error - fix input data or configuration
-    console.error(`Error: ${error.errorCode}`);
-    console.error(`Message: ${error.errorMessage}`);
+    console.error(`Error: ${error.proto.errorCode}`);
+    console.error(`Message: ${error.proto.errorMessage}`);
 
-    if (error.suggestedAction) {
-      console.error(`Suggested action: ${error.suggestedAction}`);
+    if (error.proto.suggestedAction) {
+      console.error(`Suggested action: ${error.proto.suggestedAction}`);
     }
 
     // Handle specific error codes
-    switch (error.errorCode) {
+    switch (error.proto.errorCode) {
       case 'MISSING_REQUIRED_FIELD':
         // Fix: Provide the missing field in your request
         break;
@@ -176,6 +176,9 @@ try {
       default:
         console.error('Fix the request data or configuration before retrying');
     }
+  } else {
+    // Re-throw other error types
+    throw error;
   }
 }
 ```
@@ -183,7 +186,7 @@ try {
 #### **Python**
 
 ```python
-from hyperswitch_prism import PaymentClient, IntegrationError
+from payments import PaymentClient, IntegrationError
 
 try:
     payment = client.create_payment(
@@ -220,10 +223,12 @@ except IntegrationError as error:
 
 Response transformation errors occur **after** calling the connector when Prism cannot parse the response (e.g., connector API changes, unexpected response formats, invalid JSON/XML). Handle these carefully because the payment may have succeeded at the connector even if Prism cannot parse the response.
 
+<!-- tabs:start -->
+
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, ConnectorResponseTransformationError } from 'hyperswitch-prism';
+import { PaymentClient, ConnectorResponseTransformationError } from 'hs-playlib';
 
 try {
   const payment = await client.createPayment({
@@ -237,15 +242,18 @@ try {
     // Response parsing error - payment MAY have succeeded at connector
     // CRITICAL: Do NOT retry without investigation
 
-    console.error(`Error: ${error.errorCode}`);
-    console.error(`Message: ${error.errorMessage}`);
-    if (error.httpStatusCode) {
-      console.error(`HTTP Status: ${error.httpStatusCode}`);
+    console.error(`Error: ${error.proto.errorCode}`);
+    console.error(`Message: ${error.proto.errorMessage}`);
+    if (error.proto.httpStatusCode) {
+      console.error(`HTTP Status: ${error.proto.httpStatusCode}`);
     }
 
     // Log error details for investigation
     // Payment status at connector may differ from what we know
     throw error; // Do not retry
+  } else {
+    // Re-throw other error types
+    throw error;
   }
 }
 ```
@@ -253,7 +261,7 @@ try {
 #### **Python**
 
 ```python
-from hyperswitch_prism import PaymentClient, ConnectorResponseTransformationError
+from payments import PaymentClient, ConnectorResponseTransformationError
 
 try:
     payment = client.create_payment(
@@ -287,7 +295,7 @@ Here's a complete example showing proper error handling for payment creation:
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, IntegrationError, ConnectorResponseTransformationError, NetworkError } from 'hyperswitch-prism';
+import { PaymentClient, IntegrationError, ConnectorResponseTransformationError, NetworkError } from 'hs-playlib';
 
 async function createPayment(client: PaymentClient, orderData: any) {
   try {
@@ -309,11 +317,11 @@ async function createPayment(client: PaymentClient, orderData: any) {
     if (error instanceof IntegrationError) {
       // Request phase errors - fix configuration/input before retrying
       console.error('❌ Request validation failed');
-      console.error(`Error: ${error.errorCode}`);
-      console.error(`Message: ${error.errorMessage}`);
+      console.error(`Error: ${error.proto.errorCode}`);
+      console.error(`Message: ${error.proto.errorMessage}`);
 
-      if (error.suggestedAction) {
-        console.error(`Suggested action: ${error.suggestedAction}`);
+      if (error.proto.suggestedAction) {
+        console.error(`Suggested action: ${error.proto.suggestedAction}`);
       }
 
       throw error; // Don't retry - fix the issue first
@@ -321,7 +329,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
     } else if (error instanceof NetworkError) {
       // Network/transport layer errors
       console.error('🔌 Network error occurred');
-      console.error(`Error: ${error.errorCode}`);
+      console.error(`Error: ${error.code}`);
       console.error(`Message: ${error.message}`);
       if (error.statusCode) {
         console.error(`Status: ${error.statusCode}`);
@@ -333,10 +341,10 @@ async function createPayment(client: PaymentClient, orderData: any) {
     } else if (error instanceof ConnectorResponseTransformationError) {
       // Response phase errors - payment may have succeeded at connector
       console.error('⚠️  Response processing failed');
-      console.error(`Error: ${error.errorCode}`);
-      console.error(`Message: ${error.errorMessage}`);
-      if (error.httpStatusCode) {
-        console.error(`HTTP Status: ${error.httpStatusCode}`);
+      console.error(`Error: ${error.proto.errorCode}`);
+      console.error(`Message: ${error.proto.errorMessage}`);
+      if (error.proto.httpStatusCode) {
+        console.error(`HTTP Status: ${error.proto.httpStatusCode}`);
       }
 
       // CRITICAL: Payment status at connector may differ from what we know
@@ -355,7 +363,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
 #### **Python**
 
 ```python
-from hyperswitch_prism import (
+from payments import (
     PaymentClient,
     IntegrationError,
     ConnectorResponseTransformationError,
