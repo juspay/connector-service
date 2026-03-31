@@ -4,10 +4,10 @@ use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        BillingDescriptor, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        BillingDescriptor, EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, EventType,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::{
@@ -1363,7 +1363,6 @@ pub fn validate_psync(
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Revolv3WebhookBody {
@@ -1526,11 +1525,13 @@ impl WebhookInvoiceStatus {
             | Self::BatchPending
             | Self::CapturePending => Ok(AttemptStatus::Pending),
             Self::Noncollectable | Self::Failed => Ok(AttemptStatus::Failure),
-            Self::Refund | Self::PartialRefund | Self::RefundDeclined | Self::RefundFailed | Self::RefundPending => {
-                Err(errors::ConnectorError::UnexpectedResponseError(
-                    bytes::Bytes::from("received refund status in payments webhook".to_string()),
-                ))
-            }
+            Self::Refund
+            | Self::PartialRefund
+            | Self::RefundDeclined
+            | Self::RefundFailed
+            | Self::RefundPending => Err(errors::ConnectorError::UnexpectedResponseError(
+                bytes::Bytes::from("received refund status in payments webhook".to_string()),
+            )),
         }
     }
 
@@ -1547,4 +1548,3 @@ impl WebhookInvoiceStatus {
         }
     }
 }
-

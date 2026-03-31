@@ -1981,7 +1981,7 @@ impl EventType {
         matches!(
             self,
             Self::EndpointVerification
-            |Self::ExternalAuthenticationAres
+                | Self::ExternalAuthenticationAres
                 | Self::FrmApproved
                 | Self::FrmRejected
                 | Self::IncomingWebhookEventUnspecified
@@ -1989,10 +1989,7 @@ impl EventType {
     }
 
     pub fn is_test_event(&self) -> bool {
-        matches!(
-            self,
-            Self::EndpointVerification
-        )
+        matches!(self, Self::EndpointVerification)
     }
 }
 
@@ -2190,7 +2187,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
         value: grpc_api_types::payments::RequestDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let method = HttpMethod::foreign_try_from(value.method())?;
-         let url = value
+        let url = value
             .url
             .map(|url_str| {
                 url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(

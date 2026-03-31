@@ -3,8 +3,8 @@ use super::macros;
 use std::fmt::Debug;
 
 use crate::{types::ResponseRouterData, with_error_response_body};
-use common_enums::CurrencyUnit;
 use base64::Engine;
+use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow,
@@ -26,10 +26,11 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as revolv3, validate_psync, Revolv3AuthReversalRequest, Revolv3AuthReversalResponse,
-    Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3PaymentSyncResponse,
-    Revolv3PaymentsRequest, Revolv3PaymentsResponse, Revolv3RefundRequest, Revolv3RefundResponse,
-    Revolv3RefundSyncResponse, Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse,
-    Revolv3SaleResponse, Revolv3SetupMandateRequest, Revolv3InvoiceWebhookBody,  Revolv3WebhookBody, Revolv3WebhookBodyData,
+    Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3InvoiceWebhookBody,
+    Revolv3PaymentSyncResponse, Revolv3PaymentsRequest, Revolv3PaymentsResponse,
+    Revolv3RefundRequest, Revolv3RefundResponse, Revolv3RefundSyncResponse,
+    Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse, Revolv3SaleResponse,
+    Revolv3SetupMandateRequest, Revolv3WebhookBody, Revolv3WebhookBodyData,
 };
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
