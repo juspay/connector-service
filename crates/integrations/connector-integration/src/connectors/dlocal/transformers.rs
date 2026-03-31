@@ -55,7 +55,6 @@ pub enum PaymentMethodId {
 pub enum PaymentMethodFlow {
     #[default]
     Direct,
-    #[serde(rename = "REDIRECT")]
     Redirect,
 }
 
