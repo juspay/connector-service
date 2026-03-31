@@ -1712,7 +1712,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        // Get order_category from metadata if available
         let category = item
             .request
             .metadata
