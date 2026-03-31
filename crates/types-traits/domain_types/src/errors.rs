@@ -974,6 +974,8 @@ pub enum ConnectorError {
         max_length: usize,
         received_length: usize,
     },
+    #[error("Failed to resolve configuration: {0}")]
+    ConfigResolutionFailed(String),
 }
 
 impl ConnectorError {
