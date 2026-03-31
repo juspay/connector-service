@@ -1,5 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
-use common_utils::{pii::IpAddress, Email};
+use common_utils::{pii::IpAddress, types, Email};
 use domain_types::{
     connector_flow::{Authorize, CreateOrder, PSync},
     connector_types::{
@@ -103,7 +103,7 @@ pub struct PayuPaymentRequest {
     // Core payment fields
     pub key: String,                                  // Merchant key
     pub txnid: String,                                // Transaction ID
-    pub amount: common_utils::types::StringMajorUnit, // Amount in string major units
+    pub amount: types::StringMajorUnit, // Amount in string major units
     pub currency: Currency,                           // Currency code
     pub productinfo: String,                          // Product description
 
@@ -997,7 +997,7 @@ fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -
 pub struct PayuCreateOrderRequest {
     pub key: String,
     pub txnid: String,
-    pub amount: common_utils::types::StringMajorUnit,
+    pub amount: types::StringMajorUnit,
     pub currency: Currency,
     pub productinfo: String,
     pub firstname: Secret<String>,
@@ -1044,7 +1044,7 @@ pub struct PayuCreateOrderRequest {
 pub struct PayuCreateOrderResponse {
     #[serde(deserialize_with = "deserialize_payu_status")]
     pub status: Option<PayuStatusValue>,
-    pub token: Option<String>,
+    pub token: Option<Secret<String>>,
     #[serde(alias = "referenceId")]
     pub reference_id: Option<String>,
     #[serde(alias = "txnId")]
@@ -1105,22 +1105,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // This is acceptable as the order is created pending completion
         let client_ip = Secret::new("127.0.0.1".to_string());
 
-        // Build request with fallback values for required fields
+        // Build request with required fields
         let firstname = router_data
             .resource_common_data
             .get_optional_billing_first_name()
-            .unwrap_or_else(|| Secret::new("Test".to_string()));
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "billing.first_name",
+            })?;
         let email = router_data
             .resource_common_data
             .get_optional_billing_email()
-            .unwrap_or_else(|| {
-                Email::try_from("test@example.com".to_string())
-                    .expect("Hardcoded email should be valid")
-            });
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "billing.email",
+            })?;
         let phone = router_data
             .resource_common_data
             .get_optional_billing_phone_number()
-            .unwrap_or_else(|| Secret::new("+919876543210".to_string()));
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "billing.phone",
+            })?;
 
         let mut request = Self {
             key: auth.api_key.peek().to_string(),
@@ -1258,7 +1261,7 @@ impl TryFrom<ResponseRouterData<PayuCreateOrderResponse, Self>>
                 .reference_id
                 .clone()
                 .or_else(|| response.txn_id.clone())
-                .or_else(|| response.token.clone());
+                .or_else(|| response.token.as_ref().map(|s| s.peek().clone()));
 
             let error_response = ErrorResponse {
                 status_code: item.http_code,
@@ -1286,7 +1289,7 @@ impl TryFrom<ResponseRouterData<PayuCreateOrderResponse, Self>>
         let order_id = response
             .reference_id
             .or_else(|| response.txn_id.clone())
-            .or_else(|| response.token.clone())
+            .or_else(|| response.token.as_ref().map(|s| s.peek().clone()))
             .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
 
         // Determine status
