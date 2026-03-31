@@ -1391,7 +1391,7 @@ impl Payments {
 
         // Create connector request data
         let setup_mandate_request_data =
-            SetupMandateRequestData::foreign_try_from((payload.clone(), payment_method_data))
+            SetupMandateRequestData::foreign_try_from((payload.clone(), payment_method_data.clone()))
                 .map_err(|err| {
                     tracing::error!("Failed to process payment setup recurring data: {:?}", err);
                     PaymentAuthorizationError::new(
@@ -1410,7 +1410,7 @@ impl Payments {
             PaymentsResponseData,
         > = RouterDataV2 {
             flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
+            resource_common_data: payment_flow_data.clone(),
             connector_config: connector_config.clone(),
             request: setup_mandate_request_data.clone(),
             response: Err(ErrorResponse::default()),
@@ -1458,27 +1458,59 @@ impl Payments {
                 api_tag,
             ),
         )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Setup recurring failed: {e}")),
-                Some("SETUP_RECURRING_FAILED".to_string()),
-                Some(500),
-            )
-        })?;
+        .await;
 
-        // Generate response - pass both success and error cases
-        let setup_mandate_response = generate_setup_mandate_response(response).map_err(|e| {
-            tracing::error!("Failed to generate setup mandate response: {:?}", e);
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to generate setup mandate response".to_string()),
-                Some("SETUP_MANDATE_RESPONSE_ERROR".to_string()),
-                None,
-            )
-        })?;
+        // Generate response - handle both success and error cases like process_authorization_internal
+        let setup_mandate_response = match response {
+            Ok(success_response) => generate_setup_mandate_response(success_response)
+                .map_err(|err| {
+                    tracing::error!("Failed to generate setup mandate response: {:?}", err);
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some("Failed to generate setup mandate response".to_string()),
+                        Some("SETUP_MANDATE_RESPONSE_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            Err(error_report) => {
+                tracing::error!("{:?}", error_report);
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
+                // Convert error to RouterDataV2 with error response
+                let error_router_data = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_config,
+                    request: setup_mandate_request_data,
+                    response: Err(ErrorResponse {
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
+                        reason: None,
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                };
+                generate_setup_mandate_response::<T>(error_router_data)
+                    .map_err(|err| {
+                        tracing::error!(
+                            "Failed to generate setup mandate response for connector error: {:?}",
+                            err
+                        );
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(format!("Connector error: {error_report}")),
+                            Some("CONNECTOR_ERROR".to_string()),
+                            None,
+                        )
+                    })?
+            }
+        };
 
         Ok(setup_mandate_response)
     }
@@ -2659,7 +2691,7 @@ impl PaymentService for Payments {
                 
                 match setup_mandate_response {
                     Ok(resp) => Ok(tonic::Response::new(resp)),
-                    Err(e) => return Ok(tonic::Response::new(payment_authorization_error_to_setup_recurring_response(e))),
+                    Err(e) => Ok(tonic::Response::new(e.into())),
                 }
                     
                 })
@@ -2833,11 +2865,11 @@ impl PaymentMethodService for PaymentMethod {
                         ).await
                     }
                 };
-                let payment_method_tokenize_response = match payment_method_tokenize_response {
-                    Ok(resp) => resp,
-                    Err(e) => return Ok(tonic::Response::new(payment_authorization_error_to_payment_method_tokenize_response(e))),
-                };
-                    Ok(tonic::Response::new(payment_method_tokenize_response))
+                match payment_method_tokenize_response {
+                    Ok(resp) => Ok(tonic::Response::new(resp)),
+                    Err(e) => Ok(tonic::Response::new(e.into())),
+                }
+                    
                 })
             },
         )
@@ -2986,30 +3018,59 @@ impl PaymentMethod {
                 api_tag,
             ),
         )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("payment method tokenize failed: {e}")),
-                Some("PAYMENT_METHOD_TOKENIZE_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
+        .await;
 
-        // Generate response using the existing function
-        let payment_method_token_response =
-            domain_types::types::generate_create_payment_method_token_response(response).map_err(
-                |e| {
-                    tracing::error!("Failed to generate payment method token response: {:?}", e);
+        // Generate response - handle both success and error cases like process_authorization_internal
+        let payment_method_token_response = match response {
+            Ok(success_response) => domain_types::types::generate_create_payment_method_token_response(success_response)
+                .map_err(|err| {
+                    tracing::error!("Failed to generate payment method token response: {:?}", err);
                     PaymentAuthorizationError::new(
                         grpc_api_types::payments::PaymentStatus::Pending,
                         Some("Failed to generate payment method token response".to_string()),
                         Some("PAYMENT_METHOD_TOKENIZE_RESPONSE_ERROR".to_string()),
                         None,
                     )
-                },
-            )?;
+                })?,
+            Err(error_report) => {
+                tracing::error!("{:?}", error_report);
+                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
+                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
+                let api_error = app_err.get_api_error();
+
+                // Convert error to RouterDataV2 with error response
+                let error_router_data = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_config,
+                    request: payment_method_token_request_data,
+                    response: Err(ErrorResponse {
+                        status_code: api_error.error_identifier,
+                        code: api_error.sub_code.clone(),
+                        message: api_error.error_message.clone(),
+                        reason: None,
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                };
+                domain_types::types::generate_create_payment_method_token_response(error_router_data)
+                    .map_err(|err| {
+                        tracing::error!(
+                            "Failed to generate payment method token response for connector error: {:?}",
+                            err
+                        );
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(format!("Connector error: {error_report}")),
+                            Some("CONNECTOR_ERROR".to_string()),
+                            None,
+                        )
+                    })?
+            }
+        };
 
         Ok(payment_method_token_response)
     }
@@ -4247,36 +4308,36 @@ pub fn generate_mandate_revoke_response(
     }
 }
 
-/// Convert a PaymentAuthorizationError into a PaymentServiceSetupRecurringResponse (for error cases)
-pub fn payment_authorization_error_to_setup_recurring_response(
-    error: PaymentAuthorizationError,
-) -> PaymentServiceSetupRecurringResponse {
-    PaymentServiceSetupRecurringResponse {
-        status: error.status as i32,
-        error: Some(grpc_api_types::payments::ErrorInfo {
-            unified_details: None,
-            connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
-                code: error.error_code.clone(),
-                message: error.error_message.clone(),
-                reason: None,
-            }),
-            issuer_details: None,
-        }),
-        status_code: error.status_code.unwrap_or(500),
-        response_headers: std::collections::HashMap::new(), //check this
-        mandate_reference: None,
-        connector_recurring_payment_id: None,
-        redirection_data: None,
-        network_transaction_id: None,
-        merchant_recurring_payment_id: String::new(),
-        connector_response: None,
-        incremental_authorization_allowed: None,
-        captured_amount: None,
-        state: None,
-        raw_connector_request: None,
-        connector_feature_data: None,
-    }
-}
+// /// Convert a PaymentAuthorizationError into a PaymentServiceSetupRecurringResponse (for error cases)
+// pub fn payment_authorization_error_to_setup_recurring_response(
+//     error: PaymentAuthorizationError,
+// ) -> PaymentServiceSetupRecurringResponse {
+//     PaymentServiceSetupRecurringResponse {
+//         status: error.status as i32,
+//         error: Some(grpc_api_types::payments::ErrorInfo {
+//             unified_details: None,
+//             connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+//                 code: error.error_code.clone(),
+//                 message: error.error_message.clone(),
+//                 reason: None,
+//             }),
+//             issuer_details: None,
+//         }),
+//         status_code: error.status_code.unwrap_or(500),
+//         response_headers: std::collections::HashMap::new(), //check this
+//         mandate_reference: None,
+//         connector_recurring_payment_id: None,
+//         redirection_data: None,
+//         network_transaction_id: None,
+//         merchant_recurring_payment_id: String::new(),
+//         connector_response: None,
+//         incremental_authorization_allowed: None,
+//         captured_amount: None,
+//         state: None,
+//         raw_connector_request: None,
+//         connector_feature_data: None,
+//     }
+// }
 
 /// Convert a PaymentAuthorizationError into a PaymentServiceSetupRecurringResponse (for error cases)
 pub fn payment_authorization_error_to_payment_method_tokenize_response(

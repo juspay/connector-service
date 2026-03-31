@@ -336,6 +336,57 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
     }
 }
 
+impl From<PaymentAuthorizationError> for grpc_api_types::payments::PaymentServiceSetupRecurringResponse {
+    fn from(error: PaymentAuthorizationError) -> Self {
+        Self {
+            status: error.status as i32,
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    code: error.error_code,
+                    message: error.error_message,
+                    reason: None,
+                }),
+                issuer_details: None,
+            }),
+            status_code: error.status_code.unwrap_or(500),
+            response_headers: std::collections::HashMap::new(),
+            mandate_reference: None,
+            connector_recurring_payment_id: None,
+            redirection_data: None,
+            network_transaction_id: None,
+            merchant_recurring_payment_id: String::new(),
+            connector_response: None,
+            incremental_authorization_allowed: None,
+            captured_amount: None,
+            state: None,
+            raw_connector_request: None,
+            connector_feature_data: None,
+        }
+    }
+}
+
+impl From<PaymentAuthorizationError> for grpc_api_types::payments::PaymentMethodServiceTokenizeResponse {
+    fn from(error: PaymentAuthorizationError) -> Self {
+        Self {
+            payment_method_token: String::new(),
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    message: error.error_message,
+                    code: error.error_code,
+                    reason: None,
+                }),
+                issuer_details: None,
+            }),
+            status_code: error.status_code.unwrap_or(500),
+            response_headers: std::collections::HashMap::new(),
+            merchant_payment_method_id: None,
+            state: None,
+        }
+    }
+}
+
 /// Convert ApplicationErrorResponse to proto IntegrationError
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApplicationErrorResponse {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
