@@ -19,6 +19,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.31.0
+
+### Refactors
+
+- **connector:** Use RedirectForm::Uri instead of Form for redire… ([#811](https://github.com/juspay/connector-service/pull/811)) ([`02842f7`](https://github.com/juspay/connector-service/commit/02842f75294cc2d8a13eafe8afe9dd347a8c223f))
+
+**Full Changelog:** [`2026.03.30.0...2026.03.31.0`](https://github.com/juspay/connector-service/compare/2026.03.30.0...2026.03.31.0)
+
+- - -
+
+## 2026.03.30.0
+
+### Bug Fixes
+
+- Restore merchant_secret fallback and webhook_uri in webhook ([#822](https://github.com/juspay/connector-service/pull/822)) ([`e849b7f`](https://github.com/juspay/connector-service/commit/e849b7f366f8b2c9f35034289e97dd758cc87011))
+
+### Refactors
+
+- **connector:** [Fiservcommercehub] fix card_expiry_year and access_token expiry ([#828](https://github.com/juspay/connector-service/pull/828)) ([`06e7de9`](https://github.com/juspay/connector-service/commit/06e7de9faea16f2396340e9fee0238c7608c2e1c))
+
+**Full Changelog:** [`2026.03.27.0...2026.03.30.0`](https://github.com/juspay/connector-service/compare/2026.03.27.0...2026.03.30.0)
+
+- - -
+
 ## 2026.03.27.0
 
 ### Features
