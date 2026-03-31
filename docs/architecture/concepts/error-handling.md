@@ -370,9 +370,9 @@ from payments import (
     NetworkError
 )
 
-def create_payment(client: PaymentClient, order_data: dict):
+async def create_payment(client: PaymentClient, order_data: dict):
     try:
-        payment = client.create_payment(
+        payment = await client.create_payment(
             merchant_order_id=order_data['order_id'],
             amount={
                 'minor_amount': order_data['amount_cents'],
@@ -401,7 +401,7 @@ def create_payment(client: PaymentClient, order_data: dict):
         # Network/transport layer errors
         print('🔌 Network error occurred')
         print(f'Error: {error.error_code}')
-        print(f'Message: {error.message}')
+        print(f'Message: {str(error)}')
         if error.status_code:
             print(f'Status: {error.status_code}')
 
