@@ -84,24 +84,126 @@ def get_flow_name_to_key() -> dict[str, str]:
         get_flow_name_to_key._cache = _build_flow_name_to_key_mapping()
     return get_flow_name_to_key._cache
 
-# Mapping from probe PM key to display name (order matters for table columns)
-_PROBE_PM_DISPLAY: dict[str, str] = {
-    "Card":           "Card",
-    "GooglePay":      "Google Pay",
-    "ApplePay":       "Apple Pay",
-    "Sepa":           "SEPA",
-    "Bacs":           "BACS",
-    "Ach":            "ACH",
-    "Becs":           "BECS",
-    "Ideal":          "iDEAL",
-    "PaypalRedirect": "PayPal",
-    "Blik":           "BLIK",
-    "Klarna":         "Klarna",
-    "Afterpay":       "Afterpay",
-    "UpiCollect":     "UPI",
-    "Affirm":         "Affirm",
-    "SamsungPay":     "Samsung Pay",
-}
+# Payment methods grouped by category for better readability in documentation
+# Format: (category_name, [(pm_key, display_name), ...])
+_PROBE_PM_BY_CATEGORY: list[tuple[str, list[tuple[str, str]]]] = [
+    ("Card", [
+        ("Card", "Card"),
+        ("BancontactCard", "Bancontact"),
+    ]),
+    ("Wallet", [
+        ("ApplePay", "Apple Pay"),
+        ("ApplePayDecrypted", "Apple Pay Dec"),
+        ("ApplePayThirdPartySdk", "Apple Pay SDK"),
+        ("GooglePay", "Google Pay"),
+        ("GooglePayDecrypted", "Google Pay Dec"),
+        ("GooglePayThirdPartySdk", "Google Pay SDK"),
+        ("PaypalSdk", "PayPal SDK"),
+        ("AmazonPayRedirect", "Amazon Pay"),
+        ("CashappQr", "Cash App"),
+        ("PaypalRedirect", "PayPal"),
+        ("WeChatPayQr", "WeChat Pay"),
+        ("AliPayRedirect", "Alipay"),
+        ("RevolutPay", "Revolut Pay"),
+        ("Mifinity", "MiFinity"),
+        ("Bluecode", "Bluecode"),
+        ("Paze", "Paze"),
+        ("SamsungPay", "Samsung Pay"),
+        ("MbWay", "MB Way"),
+        ("Satispay", "Satispay"),
+        ("Wero", "Wero"),
+    ]),
+    ("BNPL", [
+        ("Affirm", "Affirm"),
+        ("Afterpay", "Afterpay"),
+        ("Klarna", "Klarna"),
+    ]),
+    ("UPI", [
+        ("UpiCollect", "UPI Collect"),
+        ("UpiIntent", "UPI Intent"),
+        ("UpiQr", "UPI QR"),
+    ]),
+    ("Online Banking", [
+        ("OnlineBankingThailand", "Thailand"),
+        ("OnlineBankingCzechRepublic", "Czech"),
+        ("OnlineBankingFinland", "Finland"),
+        ("OnlineBankingFpx", "FPX"),
+        ("OnlineBankingPoland", "Poland"),
+        ("OnlineBankingSlovakia", "Slovakia"),
+    ]),
+    ("Open Banking", [
+        ("OpenBankingUk", "UK"),
+        ("OpenBankingPis", "PIS"),
+        ("OpenBanking", "Generic"),
+    ]),
+    ("Bank Redirect", [
+        ("LocalBankRedirect", "Local"),
+        ("Ideal", "iDEAL"),
+        ("Sofort", "Sofort"),
+        ("Trustly", "Trustly"),
+        ("Giropay", "Giropay"),
+        ("Eps", "EPS"),
+        ("Przelewy24", "Przelewy24"),
+        ("Pse", "PSE"),
+        ("Blik", "BLIK"),
+        ("Interac", "Interac"),
+        ("Bizum", "Bizum"),
+        ("Eft", "EFT"),
+        ("DuitNow", "DuitNow"),
+    ]),
+    ("Bank Transfer", [
+        ("AchBankTransfer", "ACH"),
+        ("SepaBankTransfer", "SEPA"),
+        ("BacsBankTransfer", "BACS"),
+        ("MultibancoBankTransfer", "Multibanco"),
+        ("InstantBankTransfer", "Instant"),
+        ("InstantBankTransferFinland", "Instant FI"),
+        ("InstantBankTransferPoland", "Instant PL"),
+        ("Pix", "Pix"),
+        ("PermataBankTransfer", "Permata"),
+        ("BcaBankTransfer", "BCA"),
+        ("BniVaBankTransfer", "BNI VA"),
+        ("BriVaBankTransfer", "BRI VA"),
+        ("CimbVaBankTransfer", "CIMB VA"),
+        ("DanamonVaBankTransfer", "Danamon VA"),
+        ("MandiriVaBankTransfer", "Mandiri VA"),
+        ("LocalBankTransfer", "Local"),
+        ("IndonesianBankTransfer", "Indonesian"),
+    ]),
+    ("Bank Debit", [
+        ("Ach", "ACH"),
+        ("Sepa", "SEPA"),
+        ("Bacs", "BACS"),
+        ("Becs", "BECS"),
+        ("SepaGuaranteedDebit", "SEPA Guaranteed"),
+    ]),
+    ("Alternative", [
+        ("Crypto", "Crypto"),
+        ("ClassicReward", "Reward"),
+        ("Givex", "Givex"),
+        ("PaySafeCard", "PaySafeCard"),
+        ("EVoucher", "E-Voucher"),
+        ("Boleto", "Boleto"),
+        ("Efecty", "Efecty"),
+        ("PagoEfectivo", "Pago Efectivo"),
+        ("RedCompra", "Red Compra"),
+        ("RedPagos", "Red Pagos"),
+        ("Alfamart", "Alfamart"),
+        ("Indomaret", "Indomaret"),
+        ("Oxxo", "Oxxo"),
+        ("SevenEleven", "7-Eleven"),
+        ("Lawson", "Lawson"),
+        ("MiniStop", "Mini Stop"),
+        ("FamilyMart", "Family Mart"),
+        ("Seicomart", "Seicomart"),
+        ("PayEasy", "Pay Easy"),
+    ]),
+]
+
+# Flatten for backward compatibility
+_PROBE_PM_DISPLAY: dict[str, str] = {}
+for _category, pms in _PROBE_PM_BY_CATEGORY:
+    _PROBE_PM_DISPLAY.update(dict(pms))
 
 
 def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
@@ -984,43 +1086,8 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
         out_path.write_text("\n".join(out), encoding="utf-8")
         return
     
-    # ── Summary Table ──────────────────────────────────────────────────────────
-    # Use proto-based flow names for summary
-    summary_flows = [
-        ("authorize", "PaymentService.Authorize"),
-        ("capture", "PaymentService.Capture"),
-        ("get", "PaymentService.Get"),
-        ("refund", "PaymentService.Refund"),
-        ("void", "PaymentService.Void"),
-    ]
-    
-    a("## Summary")
-    a("")
-    # Header with service-prefixed flow names
-    header_parts = ["Connector"]
-    for _, flow_display in summary_flows:
-        # Extract just the RPC name for brevity in header
-        rpc_name = flow_display.split(".")[-1]
-        header_parts.append(rpc_name)
-    a("| " + " | ".join(header_parts) + " |")
-    a("|" + "|".join(["-----------"] + [":---:" for _ in summary_flows]) + "|")
-    
-    for conn_name in connectors_with_probe:
-        conn_data = probe_data[conn_name]
-        flows = conn_data.get("flows", {})
-        
-        display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-        row = [f"[{display}](connectors/{conn_name}.md)"]
-        
-        for flow_key, _ in summary_flows:
-            status_mark, _ = _get_flow_status(flows, flow_key)
-            row.append(status_mark)
-        
-        a("| " + " | ".join(row) + " |")
-    a("")
-    
     # ── Per-Service Flow Coverage Tables ───────────────────────────────────────
-    a("## Flow Details")
+    a("## Flow Coverage")
     a("")
     a("Flow names follow the gRPC service definitions. Each flow is prefixed with")
     a("its service name (e.g., `PaymentService.Authorize`, `RefundService.Get`).")
@@ -1046,25 +1113,15 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     for flow_key, (service_name, rpc_name, description) in proto_flow_defs.items():
         service_flows.setdefault(service_name, []).append((flow_key, rpc_name, description))
     
+    # Separate PM-aware flows from simple status flows
+    pm_aware_flows_data = []
+    simple_flows_data = []
+    
     for service_name in services_order:
         if service_name not in service_flows:
             continue
         
         flows_in_service = service_flows[service_name]
-        
-        # Check if any flow in this service has probe data
-        service_has_data = any(
-            any(
-                probe_data[c].get("flows", {}).get(flow_key)
-                for c in connectors_with_probe
-            )
-            for flow_key, _, _ in flows_in_service
-        )
-        if not service_has_data:
-            continue
-        
-        a(f"### {service_name}")
-        a("")
         
         for flow_key, rpc_name, description in flows_in_service:
             # Check if any connector has data for this flow
@@ -1075,72 +1132,95 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
             if not has_data:
                 continue
             
-            # Flow heading with full service.rpc name
-            a(f"#### {service_name}.{rpc_name}")
-            a("")
-            a(description)
-            a("")
-            
             if flow_key in _PM_AWARE_FLOWS:
-                # For PM-aware flows, show full PM breakdown
-                a("| Connector | " + " | ".join(_PROBE_PM_DISPLAY.values()) + " |")
-                a("|-----------|" + "|".join([":---:" for _ in _PROBE_PM_DISPLAY]) + "|")
-                
-                for conn_name in connectors_with_probe:
-                    conn_data = probe_data[conn_name]
-                    flow_data = conn_data.get("flows", {}).get(flow_key, {})
-                    
-                    display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-                    row = [f"[{display}](connectors/{conn_name}.md)"]
-                    
-                    for pm_key in _PROBE_PM_DISPLAY:
-                        pm_data = flow_data.get(pm_key, {})
-                        status = pm_data.get("status", "unknown")
-                        row.append(_status_to_mark(status))
-                    
-                    a("| " + " | ".join(row) + " |")
-                a("")
-                
-                # Legend
-                a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
-                a("")
+                pm_aware_flows_data.append((service_name, flow_key, rpc_name, description))
             else:
-                # For other flows, show simple supported/not supported
-                a("| Connector | Supported | Notes |")
-                a("|-----------|:---------:|-------|")
-                
-                for conn_name in connectors_with_probe:
-                    conn_data = probe_data[conn_name]
-                    flows = conn_data.get("flows", {})
-                    status_mark, notes = _get_flow_status(flows, flow_key)
-                    
-                    display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-                    a(f"| [{display}](connectors/{conn_name}.md) | {status_mark} | {notes} |")
-                a("")
+                simple_flows_data.append((service_name, flow_key, rpc_name, description))
     
-    # ── Payment Method Legend ─────────────────────────────────────────────────
-    a("## Payment Methods")
-    a("")
-    a("Payment methods probed for authorize flow (configured in `crates/internal/field-probe/probe-config.toml`):")
-    a("")
-    a("| Key | Display Name | Description |")
-    a("|-----|--------------|-------------|")
-    a("| Card | Card | Credit/Debit card payments |")
-    a("| GooglePay | Google Pay | Google Pay digital wallet |")
-    a("| ApplePay | Apple Pay | Apple Pay digital wallet |")
-    a("| Sepa | SEPA | SEPA Direct Debit (EU bank transfers) |")
-    a("| Bacs | BACS | BACS Direct Debit (UK bank transfers) |")
-    a("| Ach | ACH | ACH Direct Debit (US bank transfers) |")
-    a("| Becs | BECS | BECS Direct Debit (AU bank transfers) |")
-    a("| Ideal | iDEAL | iDEAL (Netherlands bank redirect) |")
-    a("| PaypalRedirect | PayPal | PayPal redirect payments |")
-    a("| Blik | BLIK | BLIK (Polish mobile payment) |")
-    a("| Klarna | Klarna | Klarna Buy Now Pay Later |")
-    a("| Afterpay | Afterpay | Afterpay/Clearpay BNPL |")
-    a("| UpiCollect | UPI | UPI Collect (India) |")
-    a("| Affirm | Affirm | Affirm BNPL |")
-    a("| SamsungPay | Samsung Pay | Samsung Pay digital wallet |")
-    a("")
+    # Render PM-aware flows (like Authorize) with full payment method breakdown
+    for service_name, flow_key, rpc_name, description in pm_aware_flows_data:
+        a(f"### {service_name}.{rpc_name}")
+        a("")
+        a(description)
+        a("")
+        
+        # Build display names with category prefix for clarity
+        pm_display_with_category = []
+        pm_keys_ordered = []
+        for category, pm_list in _PROBE_PM_BY_CATEGORY:
+            for pm_key, pm_name in pm_list:
+                pm_keys_ordered.append(pm_key)
+                # Shorten category names for compact display
+                short_cat = {
+                    "Card": "CARD",
+                    "Wallet": "WALLET", 
+                    "BNPL": "BNPL",
+                    "UPI": "UPI",
+                    "Online Banking": "Online Banking",
+                    "Open Banking": "Open Banking",
+                    "Bank Redirect": "Bank Redirect",
+                    "Bank Transfer": "Bank Transfer",
+                    "Bank Debit": "Bank Debit",
+                    "Alternative": "Alternate PMs "
+                }.get(category, category[:4].upper())
+                pm_display_with_category.append(f"{short_cat} / {pm_name}")
+        
+        # Legend at top for clarity
+        a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
+        a("")
+        
+        a("| Connector | " + " | ".join(pm_display_with_category) + " |")
+        a("|-----------|" + "|".join([":---:" for _ in pm_display_with_category]) + "|")
+        
+        for conn_name in connectors_with_probe:
+            conn_data = probe_data[conn_name]
+            flow_data = conn_data.get("flows", {}).get(flow_key, {})
+            
+            display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
+            row = [f"[{display}](connectors/{conn_name}.md)"]
+            
+            for pm_key in pm_keys_ordered:
+                pm_data = flow_data.get(pm_key, {})
+                status = pm_data.get("status", "unknown")
+                row.append(_status_to_mark(status))
+            
+            a("| " + " | ".join(row) + " |")
+        a("")
+    
+    # Render consolidated table for all simple flows (Get, Void, Refund, etc.)
+    if simple_flows_data:
+        a("### Other Flows")
+        a("")
+        a("Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other non-payment flows.")
+        a("")
+        
+        # Build header with flow names
+        flow_headers = []
+        for service_name, flow_key, rpc_name, description in simple_flows_data:
+            # Shorten service name for compact display
+            short_service = service_name.replace("Service", "").replace("Payment", "Pay").replace("Recurring", "Rec")
+            flow_headers.append(f"{short_service}.{rpc_name}")
+        
+        # Legend at top for clarity
+        a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
+        a("")
+        
+        a("| Connector | " + " | ".join(flow_headers) + " |")
+        a("|-----------|" + "|".join([":---:" for _ in simple_flows_data]) + "|")
+        
+        for conn_name in connectors_with_probe:
+            conn_data = probe_data[conn_name]
+            flows = conn_data.get("flows", {})
+            
+            display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
+            row = [f"[{display}](connectors/{conn_name}.md)"]
+            
+            for service_name, flow_key, rpc_name, description in simple_flows_data:
+                status_mark, _ = _get_flow_status(flows, flow_key)
+                row.append(status_mark)
+            
+            a("| " + " | ".join(row) + " |")
+        a("")
     
     # ── Services Reference ─────────────────────────────────────────────────────
     a("## Services Reference")

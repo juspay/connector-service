@@ -352,6 +352,20 @@ pub(crate) fn base_tokenized_setup_recurring_request() -> PaymentServiceTokenSet
                 user_agent: "Mozilla/5.0".to_string(),
             }),
         }),
+        setup_mandate_details: Some(proto::SetupMandateDetails {
+            mandate_type: Some(proto::MandateType {
+                mandate_type: Some(proto::mandate_type::MandateType::MultiUse(
+                    proto::MandateAmountData {
+                        amount: 0,
+                        currency: proto::Currency::Usd as i32,
+                        ..Default::default()
+                    },
+                )),
+            }),
+            ..Default::default()
+        }),
+        setup_future_usage: Some(proto::FutureUsage::OffSession as i32),
+        connector_feature_data: Some(Secret::new("{}".to_string())),
         ..Default::default()
     }
 }
@@ -382,6 +396,12 @@ pub(crate) fn base_proxied_setup_recurring_request() -> PaymentServiceProxySetup
             billing_address: Some(Address::default()),
             ..Default::default()
         }),
+        customer_acceptance: Some(CustomerAcceptance {
+            acceptance_type: AcceptanceType::Offline as i32,
+            accepted_at: 0,
+            online_mandate_details: None,
+        }),
+        setup_future_usage: Some(proto::FutureUsage::OffSession as i32),
         ..Default::default()
     }
 }

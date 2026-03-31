@@ -4110,6 +4110,7 @@ message PaymentServiceTokenSetupRecurringRequest {
   optional SetupMandateDetails setup_mandate_details = 12;
   optional BillingDescriptor billing_descriptor = 13;
   optional string locale = 14;
+  optional FutureUsage setup_future_usage = 15;
 }
 
 // ── ProxiedPaymentService messages ──────────────────────────────────────────────
@@ -4157,5 +4158,7 @@ message PaymentServiceProxySetupRecurringRequest {
   optional CustomerAcceptance customer_acceptance = 11;
   AuthenticationType auth_type = 12;
   optional AuthenticationData authentication_data = 13;
+  optional FutureUsage setup_future_usage = 14;
+  optional BrowserInformation browser_info = 15;
 }
 

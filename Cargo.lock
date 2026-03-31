@@ -1996,6 +1996,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "strum 0.26.3",
  "toml 0.8.23",
  "tonic 0.14.5",
  "ucs_cards",

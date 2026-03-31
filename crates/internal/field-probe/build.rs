@@ -137,6 +137,10 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "create_order"
             | "setup_recurring"
             | "recurring_charge"
+            | "proxy_authorize"
+            | "token_authorize"
+            | "proxy_setup_recurring"
+            | "token_setup_recurring"
     );
 
     // Some flows don't have a connector_feature_data field in their request type
@@ -280,7 +284,11 @@ fn generate_probe_function(f: &mut fs::File, flow: &FlowInfo) {
 
     if flow.needs_oauth {
         writeln!(f, "        if is_oauth_connector(connector) {{").unwrap();
-        writeln!(f, "            req.state = Some(mock_connector_state());").unwrap();
+        writeln!(
+            f,
+            "            req.state = Some(mock_connector_state(Some(connector)));"
+        )
+        .unwrap();
         writeln!(f, "        }}").unwrap();
     }
 
@@ -345,7 +353,7 @@ fn generate_authorize_probe(f: &mut fs::File) {
     )
     .unwrap();
     writeln!(f, "        let req = if is_oauth_connector(connector) {{").unwrap();
-    writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state())").unwrap();
+    writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state(Some(connector)))").unwrap();
     writeln!(f, "        }} else {{").unwrap();
     writeln!(
         f,

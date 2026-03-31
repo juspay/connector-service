@@ -11614,6 +11614,7 @@ pub fn tokenized_setup_recurring_to_base(
         state: v.state,
         customer_acceptance: v.customer_acceptance,
         setup_mandate_details: v.setup_mandate_details,
+        setup_future_usage: v.setup_future_usage,
         ..Default::default()
     }
 }
@@ -11771,6 +11772,8 @@ pub fn proxied_setup_recurring_to_base(
         state: v.state,
         customer_acceptance: v.customer_acceptance,
         setup_mandate_details: v.setup_mandate_details,
+        setup_future_usage: v.setup_future_usage,
+        browser_info: v.browser_info,
         ..Default::default()
     })
 }
