@@ -440,4 +440,3 @@ opencode.json
 
 # Generated proto descriptor files
 scripts/generators/code/services.desc
-creds.json
