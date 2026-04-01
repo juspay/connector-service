@@ -103,9 +103,9 @@ use common_utils::events::{Event, EventConfig, FlowName};
 // TokenData is now imported from hyperswitch_injector
 use common_utils::{consts, emit_event_with_config};
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
 use hyperswitch_masking::ErasedMaskSerialize;
+use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;

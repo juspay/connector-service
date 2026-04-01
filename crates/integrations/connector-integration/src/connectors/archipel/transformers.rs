@@ -903,7 +903,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                 });
 
-        let connector_metadata = ArchipelConfigData::try_from(&item.router_data.request.connector_feature_data)?;
+        let connector_metadata =
+            ArchipelConfigData::try_from(&item.router_data.request.connector_feature_data)?;
 
         Ok(Self {
             order: payment_information.order,
