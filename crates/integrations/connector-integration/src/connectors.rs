@@ -221,6 +221,9 @@ pub use self::revolv3::Revolv3;
 pub mod ppro;
 pub use self::ppro::Ppro;
 
+pub mod fiservcommercehub;
+pub use self::fiservcommercehub::Fiservcommercehub;
+
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
 
@@ -229,3 +232,6 @@ pub use self::peachpayments::Peachpayments;
 
 pub mod finix;
 pub use self::finix::Finix;
+
+pub mod itaubank;
+pub use self::itaubank::Itaubank;

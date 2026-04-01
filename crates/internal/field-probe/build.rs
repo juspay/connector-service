@@ -137,9 +137,13 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "create_order"
             | "setup_recurring"
             | "recurring_charge"
+            | "proxy_authorize"
+            | "token_authorize"
+            | "proxy_setup_recurring"
+            | "token_setup_recurring"
     );
 
-    // Dispute flows don't have connector_feature_data field
+    // Some flows don't have a connector_feature_data field in their request type
     let needs_feature_data = !matches!(
         final_key.as_str(),
         "create_access_token"
@@ -147,6 +151,7 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "dispute_accept"
             | "dispute_submit_evidence"
             | "dispute_defend"
+            | "proxy_setup_recurring"
     );
 
     // Flows whose base request has a connector_transaction_id that some connectors
@@ -237,6 +242,12 @@ fn generate_probe_function(f: &mut fs::File, flow: &FlowInfo) {
         "dispute_submit_evidence" => "base_submit_evidence_request".to_string(),
         "dispute_defend" => "base_defend_dispute_request".to_string(),
         "recurring_charge" => "base_recurring_charge_request".to_string(),
+        // Tokenized payment service flows
+        "token_authorize" => "base_tokenized_authorize_request".to_string(),
+        "token_setup_recurring" => "base_tokenized_setup_recurring_request".to_string(),
+        // Proxied payment service flows
+        "proxy_authorize" => "base_proxied_authorize_request".to_string(),
+        "proxy_setup_recurring" => "base_proxied_setup_recurring_request".to_string(),
         _ => format!("base_{}_request", flow.key),
     };
 
@@ -273,7 +284,11 @@ fn generate_probe_function(f: &mut fs::File, flow: &FlowInfo) {
 
     if flow.needs_oauth {
         writeln!(f, "        if is_oauth_connector(connector) {{").unwrap();
-        writeln!(f, "            req.state = Some(mock_connector_state());").unwrap();
+        writeln!(
+            f,
+            "            req.state = Some(mock_connector_state(Some(connector)));"
+        )
+        .unwrap();
         writeln!(f, "        }}").unwrap();
     }
 
@@ -338,7 +353,7 @@ fn generate_authorize_probe(f: &mut fs::File) {
     )
     .unwrap();
     writeln!(f, "        let req = if is_oauth_connector(connector) {{").unwrap();
-    writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state())").unwrap();
+    writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state(Some(connector)))").unwrap();
     writeln!(f, "        }} else {{").unwrap();
     writeln!(
         f,

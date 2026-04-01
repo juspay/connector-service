@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method review-pr test-grpc
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -98,15 +98,46 @@ proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
 
+CONNECTORS   ?= stripe
+GRPC_PROFILE ?= release-fast
+
+## Run gRPC smoke tests for all SDKs (Rust + JS + Python) with a combined pass/fail summary
+test-grpc:
+	@$(MAKE) -C sdk test-grpc CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE)
+
 ## Run field-probe to generate connector flow data
 field-probe:
 	@echo "▶ Running field-probe to generate connector flow data…"
 	-cargo run -p field-probe
 
-## Generate connector docs from source code (all connectors)
-docs: field-probe
+## Run comprehensive pre-push validation (format, check, clippy, generate, docs)
+validate-pre-push:
+	@echo "▶ Running pre-push validation..."
+	@./scripts/validation/pre-push.sh
+
+## Run pre-push validation with tests (slower but more thorough)
+validate-pre-push-full:
+	@echo "▶ Running pre-push validation with tests..."
+	@./scripts/validation/pre-push.sh --with-tests
+
+## Fix formatting and run pre-push validation
+validate-pre-push-fix:
+	@echo "▶ Running pre-push validation with auto-fix..."
+	@./scripts/validation/pre-push.sh --fix
+
+## Generate connector docs (default: stripe only; use CONNECTORS=all for all connectors)
+## Skips field-probe if data/field_probe already exists; use CONNECTORS=all to re-probe all connectors.
+docs:
 	@echo "▶ Generating connector docs…"
-	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+	@if [ "$(CONNECTORS)" = "all" ]; then \
+		$(MAKE) field-probe; \
+		python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe; \
+	else \
+		if [ ! -d data/field_probe ] || [ -z "$$(ls -A data/field_probe 2>/dev/null)" ]; then \
+			$(MAKE) field-probe; \
+		fi; \
+		python3 scripts/generators/docs/generate.py stripe --probe-path data/field_probe; \
+	fi
 
 ## Generate the all-connectors coverage document
 all-connectors-doc: field-probe
@@ -117,6 +148,87 @@ all-connectors-doc: field-probe
 docs-check:
 	@echo "▶ Checking connector annotation coverage…"
 	python3 scripts/generators/docs/generate.py --check
+
+# Shared shell function: detect AI editors, prompt if multiple, set up symlink
+define AI_AGENT
+	editors=""; \
+	command -v claude >/dev/null 2>&1 && editors="$$editors claude"; \
+	command -v opencode >/dev/null 2>&1 && editors="$$editors opencode"; \
+	command -v cursor >/dev/null 2>&1 && editors="$$editors cursor"; \
+	command -v windsurf >/dev/null 2>&1 && editors="$$editors windsurf"; \
+	command -v codex >/dev/null 2>&1 && editors="$$editors codex"; \
+	editors=$$(echo $$editors | xargs); \
+	if [ -z "$$editors" ]; then \
+		echo "Error: No AI editors found. Install one of: claude, opencode, cursor, windsurf, codex"; \
+		exit 1; \
+	fi; \
+	count=$$(echo $$editors | wc -w | xargs); \
+	if [ "$$count" -eq 1 ]; then \
+		choice=$$editors; \
+	else \
+		echo "Multiple AI editors detected:"; \
+		i=1; for e in $$editors; do echo "  $$i) $$e"; i=$$((i+1)); done; \
+		printf "Choose editor [1-$$count]: "; read sel; \
+		choice=$$(echo $$editors | cut -d' ' -f$$sel); \
+	fi; \
+	case $$choice in \
+		claude)   mkdir -p .claude && ln -sfn ../.skills .claude/skills ;; \
+		opencode) mkdir -p .opencode && ln -sfn ../.skills .opencode/skills ;; \
+		cursor)   mkdir -p .cursor && ln -sfn ../.skills .cursor/rules ;; \
+		windsurf) mkdir -p .windsurf && ln -sfn ../.skills .windsurf/rules ;; \
+		codex)    mkdir -p .agents && ln -sfn ../.skills .agents/skills ;; \
+	esac; \
+	echo "Skills linked for $$choice"
+endef
+
+# Launch editor with a specific skill
+# Usage: $(call LAUNCH_SKILL,skill-name)
+# - claude: /skill-name slash command as positional arg
+# - opencode: --prompt flag (skills auto-invoke, prompt hints the agent)
+# - codex: plain prompt that loads the skill and asks for required inputs
+# - cursor/windsurf: open project (skills auto-load as rules)
+define LAUNCH_SKILL
+	case $$choice in \
+		claude)   exec claude "/$(1)" ;; \
+		opencode) exec opencode --prompt "Use the $(1) skill" ;; \
+		codex)    exec codex "Use the $(1) skill. Ask the user for any required inputs before starting." ;; \
+		cursor)   echo "Skill '$(1)' available as a rule in Cursor"; exec cursor . ;; \
+		windsurf) echo "Skill '$(1)' available as a rule in Windsurf"; exec windsurf . ;; \
+	esac
+endef
+
+## Launch AI editor with skills
+ai:
+	@$(AI_AGENT); \
+	case $$choice in \
+		claude|opencode|codex) exec $$choice ;; \
+		cursor|windsurf) exec $$choice . ;; \
+	esac
+
+## Generate a technical specification for a connector
+gen-tech-spec:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,generate-tech-spec)
+
+## Implement a new connector from scratch
+new-connector:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,new-connector)
+
+## Add payment flow(s) to an existing connector
+add-flow:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,add-connector-flow)
+
+## Add payment method support to an existing connector
+add-payment-method:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,add-payment-method)
+
+## Review a PR using the pr-reviewer skill
+review-pr:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,pr-reviewer)
 
 ## Show this help
 help:
@@ -131,6 +243,11 @@ help:
 	@echo "  nextest  Run tests with nextest (faster test runner)"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
 	@echo
+	@echo "Validation Targets:"
+	@echo "  validate-pre-push      Run comprehensive pre-push validation (format, check, clippy, generate, docs)"
+	@echo "  validate-pre-push-full Run pre-push validation with tests (slower)"
+	@echo "  validate-pre-push-fix  Run pre-push validation with auto-fix"
+	@echo
 	@echo "Proto Targets:"
 	@echo "  proto-format     Format proto files"
 	@echo "  proto-generate   Generate code from proto files"
@@ -142,11 +259,22 @@ help:
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
 	@echo "Docs Targets:"
-	@echo "  docs         Regenerate all connector docs from source"
+	@echo "  docs         Regenerate connector docs (default: stripe; CONNECTORS=all for all)"
 	@echo "  docs-check   Report which connectors are missing annotation files"
 	@echo "Certification Targets:"
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"
 	@echo
+	@echo "AI Targets:"
+	@echo "  ai                 Detect AI editor, set up skills symlink, and launch"
+	@echo "  gen-tech-spec      Generate a technical specification for a connector"
+	@echo "  new-connector      Implement a new connector from scratch"
+	@echo "  add-flow           Add payment flow(s) to an existing connector"
+	@echo "  add-payment-method Add payment method support to an existing connector"
+	@echo "  review-pr          Review a PR using the pr-reviewer skill"
+	@echo
 	@echo "Other Targets:"
-	@echo "  test-ucs Run interactive UCS connector tests"
-	@echo "  help     Show this help message"
+	@echo "  test-grpc              Run gRPC smoke tests for all SDKs (Rust + JS + Python)"
+	@echo "    CONNECTORS=stripe    Connector(s) to test (comma-separated)"
+	@echo "    GRPC_PROFILE=...     Cargo profile (default: release-fast)"
+	@echo "  test-ucs               Run interactive UCS connector tests"
+	@echo "  help                   Show this help message"
