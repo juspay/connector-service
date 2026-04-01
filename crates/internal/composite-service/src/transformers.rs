@@ -5,7 +5,8 @@ use grpc_api_types::payments::{
     CustomerServiceCreateRequest, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+    PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
+    PaymentServiceCreateOrderResponse, PaymentServiceGetRequest, PaymentServiceRefundRequest,
     PaymentServiceVoidRequest, RefundServiceGetRequest,
 };
 
@@ -63,14 +64,58 @@ impl
     ForeignFrom<(
         &CompositeAuthorizeRequest,
         Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+    )> for PaymentServiceCreateOrderRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeAuthorizeRequest,
+            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let connector_customer_id = item
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.clone());
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id,
+        });
+
+        Self {
+            merchant_order_id: item.merchant_order_id.clone(),
+            amount: item.amount,
+            webhook_url: item.webhook_url.clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            state: resolved_state,
+            test_mode: item.test_mode,
+            payment_method_type: item.payment_method_type,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeAuthorizeRequest,
+        Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
         Option<&CustomerServiceCreateResponse>,
+        Option<&PaymentServiceCreateOrderResponse>,
     )> for PaymentServiceAuthorizeRequest
 {
     fn foreign_from(
-        (item, access_token_response, create_customer_response): (
+        (item, access_token_response, create_customer_response, create_order_response): (
             &CompositeAuthorizeRequest,
             Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
             Option<&CustomerServiceCreateResponse>,
+            Option<&PaymentServiceCreateOrderResponse>,
         ),
     ) -> Self {
         let connector_customer_id_from_req = item
@@ -112,7 +157,9 @@ impl
             complete_authorize_url: item.complete_authorize_url.clone(),
             session_token: item.session_token.clone(),
             order_category: item.order_category.clone(),
-            merchant_order_id: item.merchant_order_id.clone(),
+            merchant_order_id: create_order_response
+                .and_then(|r| r.connector_order_id.clone())
+                .or_else(|| item.merchant_order_id.clone()),
             setup_future_usage: item.setup_future_usage,
             off_session: item.off_session,
             request_incremental_authorization: item.request_incremental_authorization,

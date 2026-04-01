@@ -16,7 +16,8 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
+    PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest,
+    PaymentServiceCreateOrderResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 
@@ -261,11 +262,47 @@ where
         Ok(create_customer_response)
     }
 
+    async fn create_order(
+        &self,
+        connector: &ConnectorEnum,
+        payload: &CompositeAuthorizeRequest,
+        access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<Option<PaymentServiceCreateOrderResponse>, tonic::Status> {
+        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+        let should_create_order = connector_data.connector.should_do_order_create();
+
+        let create_order_response = match should_create_order {
+            true => {
+                let create_order_payload = PaymentServiceCreateOrderRequest::foreign_from((
+                    payload,
+                    access_token_response,
+                ));
+                let mut create_order_request = tonic::Request::new(create_order_payload);
+                *create_order_request.metadata_mut() = metadata.clone();
+                *create_order_request.extensions_mut() = extensions.clone();
+
+                let create_order_response = self
+                    .payment_service
+                    .create_order(create_order_request)
+                    .await?
+                    .into_inner();
+
+                Some(create_order_response)
+            }
+            false => None,
+        };
+
+        Ok(create_order_response)
+    }
+
     async fn authorize(
         &self,
         payload: &CompositeAuthorizeRequest,
         access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
         create_customer_response: Option<&CustomerServiceCreateResponse>,
+        create_order_response: Option<&PaymentServiceCreateOrderResponse>,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentServiceAuthorizeResponse, tonic::Status> {
@@ -273,6 +310,7 @@ where
             payload,
             access_token_response,
             create_customer_response,
+            create_order_response,
         ));
 
         let mut authorize_request = tonic::Request::new(authorize_payload);
@@ -302,11 +340,21 @@ where
         let create_customer_response = self
             .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
+        let create_order_response = self
+            .create_order(
+                &connector,
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
         let authorize_response = self
             .authorize(
                 &payload,
                 access_token_response.as_ref(),
                 create_customer_response.as_ref(),
+                create_order_response.as_ref(),
                 &metadata,
                 &extensions,
             )
@@ -315,6 +363,7 @@ where
         Ok(tonic::Response::new(CompositeAuthorizeResponse {
             access_token_response,
             create_customer_response,
+            create_order_response,
             authorize_response: Some(authorize_response),
         }))
     }
