@@ -10,7 +10,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -131,6 +132,31 @@ impl From<NmiStatus> for RefundStatus {
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
+    GooglePay(Box<GooglePayData>),
+    GooglePayDecrypt(Box<GooglePayDecryptedData>),
+}
+
+// ===== GOOGLE PAY DATA =====
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayData {
+    #[serde(rename = "payment_token")]
+    payment_token: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayDecryptedData {
+    decrypted_googlepay_data: DecryptedDataIndicator,
+    ccnumber: Secret<String>,
+    ccexp: Secret<String>,
+    cavv: Option<Secret<String>>,
+    eci: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum DecryptedDataIndicator {
+    #[serde(rename = "1")]
+    Decrypted,
 }
 
 #[derive(Debug, Serialize)]
@@ -421,6 +447,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         NmiPaymentMethod::Ach(Box::new(ach_data)),
                         TransactionType::Sale,
                     )
+                }
+                PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
+                    match &google_pay_data.tokenization_data {
+                        GpayTokenizationData::Decrypted(decrypted_data) => {
+                            let ccexp = decrypted_data
+                                .get_expiry_date_as_mmyy()
+                                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                            (
+                                NmiPaymentMethod::GooglePayDecrypt(Box::new(
+                                    GooglePayDecryptedData {
+                                        decrypted_googlepay_data: DecryptedDataIndicator::Decrypted,
+                                        ccnumber: Secret::new(
+                                            decrypted_data
+                                                .application_primary_account_number
+                                                .get_card_no(),
+                                        ),
+                                        ccexp,
+                                        cavv: decrypted_data.cryptogram.clone(),
+                                        eci: decrypted_data.eci_indicator.clone(),
+                                    },
+                                )),
+                                TransactionType::Sale,
+                            )
+                        }
+                        GpayTokenizationData::Encrypted(encrypted_data) => (
+                            NmiPaymentMethod::GooglePay(Box::new(GooglePayData {
+                                payment_token: Secret::new(encrypted_data.token.clone()),
+                            })),
+                            if router_data.request.is_auto_capture()? {
+                                TransactionType::Sale
+                            } else {
+                                TransactionType::Auth
+                            },
+                        ),
+                    }
                 }
                 _ => {
                     let txn_type = if router_data.request.is_auto_capture()? {
