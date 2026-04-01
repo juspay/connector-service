@@ -457,11 +457,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
                     match &google_pay_data.tokenization_data {
                         GpayTokenizationData::Decrypted(decrypted_data) => {
-                            let ccexp = decrypted_data
-                                .get_expiry_date_as_mmyy()
-                                .change_context(IntegrationError::RequestEncodingFailed {
+                            let ccexp = decrypted_data.get_expiry_date_as_mmyy().change_context(
+                                IntegrationError::RequestEncodingFailed {
                                     context: Default::default(),
-                                })?;
+                                },
+                            )?;
                             (
                                 NmiPaymentMethod::GooglePayDecrypt(Box::new(
                                     GooglePayDecryptedData {
