@@ -8,7 +8,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -382,7 +382,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     context: Default::default(),
                 })?;
 
-            let transaction_type = if router_data.request.is_auto_capture()? {
+            let transaction_type = if router_data.request.is_auto_capture() {
                 TransactionType::Sale
             } else {
                 TransactionType::Auth
@@ -429,7 +429,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )
                 }
                 _ => {
-                    let txn_type = if router_data.request.is_auto_capture()? {
+                    let txn_type = if router_data.request.is_auto_capture() {
                         TransactionType::Sale
                     } else {
                         TransactionType::Auth
@@ -651,7 +651,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                 // For auth type, status is Authorized
                 // For sale type, status is Charged
                 // We need to check the original request's auto_capture flag
-                if item.router_data.request.is_auto_capture()? {
+                if item.router_data.request.is_auto_capture() {
                     AttemptStatus::Charged
                 } else {
                     AttemptStatus::Authorized
@@ -1395,15 +1395,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     )?;
                 let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
-                    ConnectorResponseTransformationError::MissingRequiredField {
-                        field_name: "currency",
+                    ConnectorResponseTransformationError::ResponseDeserializationFailed {
                         context: Default::default(),
                     },
                 )?;
                 let customer_vault_id = response.customer_vault_id.clone().ok_or_else(|| {
                     error_stack::report!(
-                        ConnectorResponseTransformationError::MissingRequiredField {
-                            field_name: "customer_vault_id",
+                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
                             context: Default::default(),
                         }
                     )
@@ -1419,8 +1417,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 currency: Currency::foreign_try_from(currency_data)
                                     .map_err(|_| {
                                         error_stack::report!(
-                                            ConnectorResponseTransformationError::MissingRequiredField {
-                                                field_name: "currency",
+                                            ConnectorResponseTransformationError::ResponseDeserializationFailed {
                                                 context: Default::default(),
                                             }
                                         )
@@ -1428,8 +1425,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                     .into(),
                             },
                             public_key: auth_type.public_key.ok_or(
-                                ConnectorResponseTransformationError::MissingRequiredField {
-                                    field_name: "public_key",
+                                ConnectorResponseTransformationError::ResponseDeserializationFailed {
                                     context: Default::default(),
                                 },
                             )?,
@@ -1447,8 +1443,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .map(|url| url.to_string())
                                 .ok_or_else(|| {
                                     error_stack::report!(
-                                        ConnectorResponseTransformationError::MissingRequiredField {
-                                            field_name: "continue_redirection_url",
+                                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
                                             context: Default::default(),
                                         }
                                     )
