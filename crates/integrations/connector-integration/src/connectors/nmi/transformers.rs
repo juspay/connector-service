@@ -1389,19 +1389,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
             Response::Approved => {
                 let auth_type = NmiAuthType::try_from(&item.router_data.connector_config)
                     .change_context(
-                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                        ConnectorResponseTransformationError::ResponseHandlingFailed {
                             context: Default::default(),
                         },
                     )?;
                 let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
-                    ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    ConnectorResponseTransformationError::ResponseHandlingFailed {
                         context: Default::default(),
                     },
                 )?;
                 let customer_vault_id = response.customer_vault_id.clone().ok_or_else(|| {
                     error_stack::report!(
-                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                        ConnectorResponseTransformationError::UnexpectedResponseError {
                             context: Default::default(),
                         }
                     )
@@ -1417,7 +1417,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 currency: Currency::foreign_try_from(currency_data)
                                     .map_err(|_| {
                                         error_stack::report!(
-                                            ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                                            ConnectorResponseTransformationError::ResponseHandlingFailed {
                                                 context: Default::default(),
                                             }
                                         )
@@ -1425,7 +1425,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                     .into(),
                             },
                             public_key: auth_type.public_key.ok_or(
-                                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                                ConnectorResponseTransformationError::ResponseHandlingFailed {
                                     context: Default::default(),
                                 },
                             )?,
@@ -1443,7 +1443,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .map(|url| url.to_string())
                                 .ok_or_else(|| {
                                     error_stack::report!(
-                                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                                        ConnectorResponseTransformationError::ResponseHandlingFailed {
                                             context: Default::default(),
                                         }
                                     )
