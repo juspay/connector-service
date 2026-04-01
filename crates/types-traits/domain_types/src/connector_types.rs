@@ -3713,6 +3713,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Payu(_) => Ok(Self::Payu),
             AuthType::Powertranz(_) => Ok(Self::Powertranz),
             AuthType::Rapyd(_) => Ok(Self::Rapyd),
+            AuthType::Razorpay(_) => Ok(Self::Razorpay),
             AuthType::Redsys(_) => Ok(Self::Redsys),
             AuthType::Shift4(_) => Ok(Self::Shift4),
             AuthType::Stax(_) => Ok(Self::Stax),

@@ -1625,6 +1625,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 secret_key: rapyd.secret_key.ok_or_else(err)?,
                 base_url: rapyd.base_url,
             }),
+            AuthType::Razorpay(razorpay) => Ok(Self::Razorpay {
+                api_key: razorpay.api_key.ok_or_else(err)?,
+                api_secret: razorpay.api_secret,
+                base_url: razorpay.base_url,
+            }),
             AuthType::Redsys(redsys) => Ok(Self::Redsys {
                 merchant_id: redsys.merchant_id.ok_or_else(err)?,
                 terminal_id: redsys.terminal_id.ok_or_else(err)?,

@@ -3498,6 +3498,12 @@ message RapydConfig {
   optional string base_url = 50;
 }
 
+message RazorpayConfig {
+  SecretString api_key = 1;
+  optional SecretString api_secret = 2;
+  optional string base_url = 50;
+}
+
 message WorldpayConfig {
   SecretString username = 1;
   SecretString password = 2;
@@ -3937,6 +3943,9 @@ message ConnectorSpecificConfig {
 
     // RAPYD = 68
     RapydConfig rapyd = 36;
+
+    // RAZORPAY = 69
+    RazorpayConfig razorpay = 113;
 
     // REDSYS = 71
     RedsysConfig redsys = 37;
