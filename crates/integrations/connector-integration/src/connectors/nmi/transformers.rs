@@ -159,7 +159,6 @@ pub enum DecryptedDataIndicator {
     Decrypted,
 }
 
-
 #[derive(Debug, Serialize)]
 pub struct CardData<T: PaymentMethodDataTypes> {
     ccnumber: RawCardNumber<T>,
@@ -454,14 +453,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         GpayTokenizationData::Decrypted(decrypted_data) => {
                             let ccexp = decrypted_data
                                 .get_expiry_date_as_mmyy()
-                                .change_context(
-                                    errors::ConnectorError::RequestEncodingFailed,
-                                )?;
+                                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
                             (
                                 NmiPaymentMethod::GooglePayDecrypt(Box::new(
                                     GooglePayDecryptedData {
-                                        decrypted_googlepay_data:
-                                            DecryptedDataIndicator::Decrypted,
+                                        decrypted_googlepay_data: DecryptedDataIndicator::Decrypted,
                                         ccnumber: Secret::new(
                                             decrypted_data
                                                 .application_primary_account_number
