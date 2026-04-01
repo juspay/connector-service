@@ -581,10 +581,14 @@ pub struct DlocalErrorResponse {
 /// Maps BankDebitData and country to the dLocal-specific payment_method_id.
 /// dLocal uses country-specific payment method codes for bank transfer / direct debit payments.
 /// For REDIRECT flow bank transfers, the payment_method_id depends on the country:
-///   - BR: "CA" (Caixa), "BB" (Banco do Brasil), etc.
-///   - AR: "IO" (Banco Industrial), "RP" (RapiPago), etc.
-///   - MX: "SE" (SPEI), etc.
-/// We use well-known fallback codes per country.
+///   - BR: "IO" (Bank Transfer)
+///   - AR: "IO" (Bank Transfer)
+///   - MX: "SE" (SPEI)
+///   - CL: "WP" (Webpay)
+///   - CO: "PC" (PSE)
+///   - PE: "BC" (BCP)
+///
+/// We use well-known codes per country from dLocal's payment methods API.
 fn get_bank_debit_payment_method_id(
     bank_debit_data: &payment_method_data::BankDebitData,
     country: common_enums::CountryAlpha2,
@@ -610,20 +614,29 @@ fn get_bank_transfer_method_id_for_country(
     country: common_enums::CountryAlpha2,
 ) -> Result<String, error_stack::Report<ConnectorError>> {
     match country {
-        common_enums::CountryAlpha2::BR => Ok("CA".to_string()), // Caixa bank transfer
-        common_enums::CountryAlpha2::AR => Ok("SI".to_string()), // PagoFacil / bank transfer
+        common_enums::CountryAlpha2::BR => Ok("IO".to_string()), // Bank Transfer
+        common_enums::CountryAlpha2::AR => Ok("IO".to_string()), // Bank Transfer
         common_enums::CountryAlpha2::MX => Ok("SE".to_string()), // SPEI
-        common_enums::CountryAlpha2::CL => Ok("SE".to_string()), // Servipag
+        common_enums::CountryAlpha2::CL => Ok("WP".to_string()), // Webpay
         common_enums::CountryAlpha2::CO => Ok("PC".to_string()), // PSE
-        common_enums::CountryAlpha2::PE => Ok("EF".to_string()), // PagoEfectivo
-        common_enums::CountryAlpha2::UY => Ok("RE".to_string()), // RedPagos
-        _ => Ok("BT".to_string()),                               // Generic bank transfer fallback
+        common_enums::CountryAlpha2::PE => Ok("BC".to_string()), // BCP
+        _ => Err(ConnectorError::NotSupported {
+            message: format!("Bank debit is not supported for country: {country}"),
+            connector: "Dlocal",
+        }
+        .into()),
     }
 }
 
 fn get_doc_from_currency(country: String) -> Secret<String> {
     let doc = match country.as_str() {
-        "BR" => "91483309223",
+        "BR" => "91483309223",        // CPF (11 digits)
+        "MX" => "BADD110313HCMLNS09", // CURP (18 chars)
+        "AR" => "30682389",           // DNI (7-9 digits)
+        "CL" => "12345678",           // CI/RUT (8-9 chars)
+        "CO" => "1234567890",         // CC (6-11 digits)
+        "PE" => "12345678",           // DNI (8 digits)
+        "UY" => "12345678",           // CI (6-8 digits)
         "ZA" => "2001014800086",
         "BD" | "GT" | "HN" | "PK" | "SN" | "TH" => "1234567890001",
         "CR" | "SV" | "VN" => "123456789",
