@@ -1453,13 +1453,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .get_billing_email()
-                .ok(),
+                .ok()
+                .or_else(|| item.router_data.request.email.clone()),
             order_id: order_id.to_string(),
             contact: item
                 .router_data
                 .resource_common_data
-                .get_billing_phone_number()
-                .ok(),
+                .get_billing_phone()
+                .ok()
+                .and_then(|phone| phone.number.clone()),
             method: match &item.router_data.request.payment_method_data {
                 PaymentMethodData::Upi(_) => "upi".to_string(),
                 PaymentMethodData::Card(_) => "card".to_string(),
