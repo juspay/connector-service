@@ -6,9 +6,10 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync},
+    connector_flow::{Authorize, CreateSubscription, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        CreateSubscriptionData, CreateSubscriptionResponseData, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
@@ -1120,4 +1121,252 @@ fn extract_bin_from_masked_account_number(masked_account_number: Option<&str>) -
             .filter(|bin| bin.chars().all(|c| c.is_ascii_digit()))
             .map(str::to_string)
     })
+}
+
+// ===== CREATE SUBSCRIPTION STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+pub struct PhonepeCreateSubscriptionRequest {
+    request: Secret<String>,
+    #[serde(skip)]
+    pub checksum: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PhonepeCreateSubscriptionPayload {
+    #[serde(rename = "merchantId")]
+    merchant_id: Secret<String>,
+    #[serde(rename = "merchantSubscriptionId")]
+    merchant_subscription_id: String,
+    #[serde(rename = "merchantUserId", skip_serializing_if = "Option::is_none")]
+    merchant_user_id: Option<Secret<String>>,
+    #[serde(rename = "subscriptionName", skip_serializing_if = "Option::is_none")]
+    subscription_name: Option<String>,
+    #[serde(rename = "authWorkflowType", skip_serializing_if = "Option::is_none")]
+    auth_workflow_type: Option<String>,
+    #[serde(rename = "amountType", skip_serializing_if = "Option::is_none")]
+    amount_type: Option<String>,
+    amount: MinorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    frequency: Option<String>,
+    #[serde(rename = "recurringCount", skip_serializing_if = "Option::is_none")]
+    recurring_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(rename = "mobileNumber", skip_serializing_if = "Option::is_none")]
+    mobile_number: Option<Secret<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeCreateSubscriptionResponse {
+    pub success: bool,
+    pub code: String,
+    pub message: String,
+    pub data: Option<PhonepeCreateSubscriptionResponseData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeCreateSubscriptionResponseData {
+    #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
+    pub subscription_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+}
+
+// ===== CREATE SUBSCRIPTION REQUEST BUILDING =====
+
+// TryFrom implementation for owned PhonepeRouterData wrapper (CreateSubscription)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PhonepeRouterData<
+            RouterDataV2<
+                CreateSubscription,
+                PaymentFlowData,
+                CreateSubscriptionData,
+                CreateSubscriptionResponseData,
+            >,
+            T,
+        >,
+    > for PhonepeCreateSubscriptionRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        wrapper: PhonepeRouterData<
+            RouterDataV2<
+                CreateSubscription,
+                PaymentFlowData,
+                CreateSubscriptionData,
+                CreateSubscriptionResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &wrapper.router_data;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
+
+        let amount_in_minor_units = wrapper
+            .connector
+            .amount_converter
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let payload = PhonepeCreateSubscriptionPayload {
+            merchant_id: auth.merchant_id.clone(),
+            merchant_subscription_id: router_data.request.subscription_id.clone(),
+            merchant_user_id: router_data.request.customer_id.clone(),
+            subscription_name: router_data.request.subscription_name.clone(),
+            auth_workflow_type: router_data.request.auth_workflow_type.clone(),
+            amount_type: router_data.request.amount_type.clone(),
+            amount: amount_in_minor_units,
+            frequency: router_data.request.frequency.clone(),
+            recurring_count: router_data.request.recurring_count,
+            description: router_data.request.description.clone(),
+            mobile_number: router_data.request.mobile_number.clone(),
+        };
+
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        let api_path = format!("/{}", constants::API_SUBSCRIPTION_CREATE_ENDPOINT);
+        let checksum =
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            request: Secret::new(base64_payload),
+            checksum,
+        })
+    }
+}
+
+// TryFrom implementation for borrowed PhonepeRouterData wrapper (CreateSubscription - header generation)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &PhonepeRouterData<
+            &RouterDataV2<
+                CreateSubscription,
+                PaymentFlowData,
+                CreateSubscriptionData,
+                CreateSubscriptionResponseData,
+            >,
+            T,
+        >,
+    > for PhonepeCreateSubscriptionRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: &PhonepeRouterData<
+            &RouterDataV2<
+                CreateSubscription,
+                PaymentFlowData,
+                CreateSubscriptionData,
+                CreateSubscriptionResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
+
+        let amount_in_minor_units = item
+            .connector
+            .amount_converter
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let payload = PhonepeCreateSubscriptionPayload {
+            merchant_id: auth.merchant_id.clone(),
+            merchant_subscription_id: router_data.request.subscription_id.clone(),
+            merchant_user_id: router_data.request.customer_id.clone(),
+            subscription_name: router_data.request.subscription_name.clone(),
+            auth_workflow_type: router_data.request.auth_workflow_type.clone(),
+            amount_type: router_data.request.amount_type.clone(),
+            amount: amount_in_minor_units,
+            frequency: router_data.request.frequency.clone(),
+            recurring_count: router_data.request.recurring_count,
+            description: router_data.request.description.clone(),
+            mobile_number: router_data.request.mobile_number.clone(),
+        };
+
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        let api_path = format!("/{}", constants::API_SUBSCRIPTION_CREATE_ENDPOINT);
+        let checksum =
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            request: Secret::new(base64_payload),
+            checksum,
+        })
+    }
+}
+
+// ===== CREATE SUBSCRIPTION RESPONSE HANDLING =====
+
+impl TryFrom<ResponseRouterData<PhonepeCreateSubscriptionResponse, Self>>
+    for RouterDataV2<
+        CreateSubscription,
+        PaymentFlowData,
+        CreateSubscriptionData,
+        CreateSubscriptionResponseData,
+    >
+{
+    type Error = Error;
+
+    fn try_from(
+        item: ResponseRouterData<PhonepeCreateSubscriptionResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        if response.success {
+            let (subscription_id, state) = response
+                .data
+                .as_ref()
+                .map(|data| (data.subscription_id.clone(), data.state.clone()))
+                .unwrap_or((None, None));
+
+            Ok(Self {
+                response: Ok(CreateSubscriptionResponseData {
+                    subscription_id,
+                    state,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: common_enums::AttemptStatus::Pending,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
+        } else {
+            let error_message = response.message.clone();
+            let error_code = response.code.clone();
+
+            tracing::warn!(
+                "PhonePe create subscription failed - Code: {}, Message: {}",
+                error_code,
+                error_message,
+            );
+
+            Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: error_code,
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            })
+        }
+    }
 }

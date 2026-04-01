@@ -242,13 +242,13 @@ use crate::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
         ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
-        CustomerInfo, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods, GpayBillingAddressFormat,
-        GpaySessionTokenResponse, L2L3Data, MandateReferenceId, MandateRevokeRequestData,
-        MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall, OrderInfo,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        CreateSubscriptionData, CustomerInfo, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods,
+        GpayBillingAddressFormat, GpaySessionTokenResponse, L2L3Data, MandateReferenceId,
+        MandateRevokeRequestData, MultipleCaptureRequestData, NetworkTokenWithNTIRef,
+        NextActionCall, OrderInfo, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
@@ -10986,6 +10986,102 @@ impl
             customer_id: None,
             connector_customer: None,
             description: Some("Mandate revoke operation".to_string()),
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            amount: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
+}
+
+// Conversion implementations for CreateSubscription flow
+impl ForeignTryFrom<grpc_api_types::payments::RecurringPaymentServiceCreateSubscriptionRequest>
+    for CreateSubscriptionData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::RecurringPaymentServiceCreateSubscriptionRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount_info = value.amount.ok_or_else(|| {
+            error_stack::report!(ApplicationErrorResponse::missing_required_field("amount"))
+        })?;
+
+        let currency = grpc_api_types::payments::Currency::try_from(amount_info.currency)
+            .ok()
+            .and_then(|c| common_enums::Currency::foreign_try_from(c).ok())
+            .unwrap_or(common_enums::Currency::INR);
+
+        Ok(Self {
+            merchant_id: Secret::new(String::new()), // Will be populated from auth
+            subscription_id: value.merchant_subscription_id.unwrap_or_default(),
+            customer_id: value.customer_id.map(Secret::new),
+            subscription_name: value.subscription_name,
+            auth_workflow_type: value.auth_workflow_type,
+            amount_type: value.amount_type,
+            amount: common_utils::types::MinorUnit::new(amount_info.minor_amount),
+            currency,
+            frequency: value.frequency,
+            recurring_count: value.recurring_count,
+            description: value.description,
+            mobile_number: value.mobile_number.map(Secret::new),
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::RecurringPaymentServiceCreateSubscriptionRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::RecurringPaymentServiceCreateSubscriptionRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "CREATE_SUBSCRIPTION_ID".to_string(),
+            attempt_id: "CREATE_SUBSCRIPTION_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Upi,
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.merchant_subscription_id,
+            ),
+            customer_id: None,
+            connector_customer: None,
+            description: value.description.clone(),
             return_url: None,
             connector_feature_data: None,
             amount_captured: None,

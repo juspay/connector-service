@@ -35,5 +35,8 @@ pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0";
 // ===== CHECKSUM =====
 pub const CHECKSUM_SEPARATOR: &str = "###";
 
+// ===== SUBSCRIPTION ENDPOINTS =====
+pub const API_SUBSCRIPTION_CREATE_ENDPOINT: &str = "v3/recurring/subscription/create";
+
 // ===== CONTENT TYPES =====
 pub const APPLICATION_JSON: &str = "application/json";

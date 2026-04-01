@@ -9,13 +9,17 @@
 
 use crate::connectors::*;
 use domain_types::{
-    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    connector_flow::{CreateSubscription, VerifyWebhookSource},
+    connector_types::{
+        CreateSubscriptionData, CreateSubscriptionResponseData, PaymentFlowData,
+        VerifyWebhookSourceFlowData,
+    },
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::connector_types::{CreateSubscriptionV2, VerifyWebhookSourceV2};
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -44,6 +48,114 @@ macro_rules! default_impl_verify_webhook_source_v2 {
         )*
     };
 }
+
+/// Macro to generate empty implementations of CreateSubscriptionV2 for connectors
+/// that don't support subscription creation.
+#[macro_export]
+macro_rules! default_impl_create_subscription_v2 {
+    ($($connector:ident),*) => {
+        $(
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                CreateSubscriptionV2 for $connector<T>
+            {
+            }
+
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                ConnectorIntegrationV2<
+                    CreateSubscription,
+                    PaymentFlowData,
+                    CreateSubscriptionData,
+                    CreateSubscriptionResponseData,
+                > for $connector<T>
+            {
+            }
+
+        )*
+    };
+}
+
+// Generate default CreateSubscription implementations for all connectors except PhonePe
+default_impl_create_subscription_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservcommercehub,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Hyperpg,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Mollie,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paytm,
+    Payu,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Redsys,
+    Revolut,
+    Revolv3,
+    Finix,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit,
+    Zift,
+    Ppro,
+    Paypal,
+    Peachpayments,
+    Truelayer
+);
+// PhonePe has its own CreateSubscription implementation in phonepe.rs
 
 // Generate default implementations for all connectors that don't have custom implementations
 // Connectors with real implementations (like PayPal) will override these
