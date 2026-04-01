@@ -1,8 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii::Email, types::MinorUnit};
-use domain_types::errors::ConnectorResponseTransformationError;
-use domain_types::errors::IntegrationError;
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
@@ -13,10 +11,12 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorAuthType, ConnectorSpecificConfig},
     router_data_v2::RouterDataV2,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -42,8 +42,8 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
             } => Ok(Self {
                 finix_user_name: api_key.to_owned(),
                 finix_password: api_secret.to_owned(),
-                merchant_id: key2.to_owned(),
-                merchant_identity_id: key1.to_owned(),
+                merchant_id: key1.to_owned(),
+                merchant_identity_id: key2.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 IntegrationError::FailedToObtainAuthType {
@@ -378,7 +378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // This requires connector_customer_id to be present
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first, or ensure connector_customer_id is set",
-                context: Default::default()
+                    context: Default::default(),
                 }.into());
             }
         };
@@ -979,14 +979,56 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             account_type,
                         })
                     }
-                    _ => Err(IntegrationError::not_implemented(
+                    _ => Err(IntegrationError::NotImplemented(
                         "Only ACH Bank Debit is supported".to_string(),
+                        Default::default(),
                     )
                     .into()),
                 }
             }
-            _ => Err(IntegrationError::not_implemented(
-                "Only card and bank debit tokenization are supported",
+            PaymentMethodData::Wallet(wallet_data) => {
+                match wallet_data {
+                    domain_types::payment_method_data::WalletData::GooglePay(google_pay_data) => {
+                        // Get merchant_identity_id from auth
+                        let auth = FinixAuthType::try_from(&item.router_data.connector_config)?;
+                        let merchant_identity = auth.merchant_identity_id.peek().to_string();
+
+                        // Extract the encrypted token from Google Pay
+                        let third_party_token = google_pay_data
+                            .tokenization_data
+                            .get_encrypted_google_pay_payment_data_mandatory()
+                            .change_context(IntegrationError::InvalidWalletToken {
+                                wallet_name: "Google Pay".to_string(),
+                                context: Default::default(),
+                            })?;
+
+                        Ok(Self {
+                            instrument_type: FinixPaymentInstrumentType::GooglePay,
+                            name: None, // Name is optional for Google Pay tokenization
+                            number: None,
+                            security_code: None,
+                            expiration_month: None,
+                            expiration_year: None,
+                            identity: customer_id,
+                            tags: None,
+                            address: None,
+                            merchant_identity: Some(Secret::new(merchant_identity)),
+                            third_party_token: Some(Secret::new(third_party_token.token.clone())),
+                            account_number: None,
+                            bank_code: None,
+                            account_type: None,
+                        })
+                    }
+                    _ => Err(IntegrationError::NotImplemented(
+                        "Only Google Pay wallet tokenization is supported".into(),
+                        Default::default(),
+                    )
+                    .into()),
+                }
+            }
+            _ => Err(IntegrationError::NotImplemented(
+                "Only card, bank debit, and Google Pay tokenization are supported".into(),
+                Default::default(),
             )
             .into()),
         }
