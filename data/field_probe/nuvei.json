@@ -1,13 +1,127 @@
 {
   "connector": "nuvei",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
       "Card": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "last_name": "Doe",
+              "country_alpha2_code": "US",
+              "email": "test@example.com"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "session_token": "probe_session_token",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://ppp-test.nuvei.com/ppp/api/v1/payment.do",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"sessionToken\":\"probe_session_token\",\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_txn_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"clientUniqueId\":\"probe_txn_001\",\"paymentOption\":{\"card\":{\"cardNumber\":\"4111111111111111\",\"cardHolderName\":\"Doe\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"CVV\":\"737\"}},\"transactionType\":\"Sale\",\"deviceDetails\":{\"ipAddress\":\"1.2.3.4\"},\"billingAddress\":{\"email\":\"test@example.com\",\"country\":\"US\",\"lastName\":\"Doe\"},\"urlDetails\":{\"successUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\",\"pendingUrl\":\"https://example.com/return\"},\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
+        }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
       }
     },
     "capture": {
@@ -25,11 +139,26 @@
           "url": "https://ppp-test.nuvei.com/ppp/api/v1/settleTransaction.do",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
-          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_capture_001\",\"clientUniqueId\":\"probe_capture_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"20260313001034\",\"checksum\":\"baa8185be2b30325bcbafe8b0bd65ca9249360bb171c7bc622b2603b4caa060d\"}"
+          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_capture_001\",\"clientUniqueId\":\"probe_capture_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "create_session_token": {
@@ -45,17 +174,33 @@
           "url": "https://ppp-test.nuvei.com/ppp/api/v1/getSessionToken.do",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
-          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"\",\"timeStamp\":\"20260313001034\",\"checksum\":\"794e6e144ccdea50e42dc1b7a637f16719a953b52b0b3cc78f818d490450d4c5\"}"
+          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"\",\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -69,8 +214,23 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientUniqueId\":\"probe_connector_txn_001\",\"transactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"20260313001034\",\"checksum\":\"87c888b6699a63e9f61e1363b8ca8fabc7305e0380c8d7fc9445af7ecd457344\"}"
+          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientUniqueId\":\"probe_merchant_txn_001\",\"transactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -93,16 +253,28 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_refund_001\",\"clientUniqueId\":\"probe_refund_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"20260313001034\",\"checksum\":\"2d87ae05a8426cc93319ffc48c5bb06d230734aaecc99afc1e9144ef876a1aaf\"}"
+          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_refund_001\",\"clientUniqueId\":\"probe_refund_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {
       "default": {
         "status": "supported",
-        "required_fields": [
-          "amount"
-        ],
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_connector_txn_001",
@@ -118,7 +290,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_void_001\",\"clientUniqueId\":\"probe_void_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"20260313001034\",\"checksum\":\"441293d772c118cf715cb7456c9259c41c2284a7f0d27ff28feec96b72226dd3\"}"
+          "body": "{\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_void_001\",\"clientUniqueId\":\"probe_void_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"relatedTransactionId\":\"probe_connector_txn_001\",\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
       }
     }

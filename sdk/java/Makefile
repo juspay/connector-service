@@ -1,5 +1,5 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package dist clean
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
+        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -35,9 +35,17 @@ install-deps:
 	@echo "All required tools present."
 
 # ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
+
+# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
-# uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
+# uniffi-bindgen lives in its own crate (crates/internal/uniffi-bindgen) so the ffi
 # library never pulls in the uniffi/cli codegen deps. The output binary lands
 # in the same target/<PLATFORM>/release/ directory as before.
 # ---------------------------------------------------------------------------
@@ -77,7 +85,7 @@ generate-proto:
 	@protoc \
 		-I $(PROTO_DIR) \
 		--java_out=$(GENERATED_JAVA) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto $(PROTO_DIR)/sdk_config.proto
 	@echo "Proto stubs generated in $(GENERATED_JAVA)/"
 
 # ---------------------------------------------------------------------------
@@ -92,10 +100,11 @@ generate-all: generate-proto generate-bindings generate-flows
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating Kotlin flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang kotlin
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang kotlin
 	@echo "Kotlin flow methods generated."
 
 # ---------------------------------------------------------------------------
@@ -137,6 +146,40 @@ test-package: generate-all install
 	fi
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-grpc
+# Builds the grpc-ffi library and runs the Kotlin gRPC smoke test.
+# Requires the grpc-server to be running (started by the top-level test-grpc).
+# ---------------------------------------------------------------------------
+GRPC_PROFILE    ?= release-fast
+GRPC_FFI_LIB    := $(REPO_ROOT)/target/$(GRPC_PROFILE)/libhyperswitch_grpc_ffi.$(LIB_EXT)
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+
+# Run gRPC test assuming server is already running (used by top-level test-grpc)
+test-grpc-no-server: install
+	@echo "Running Kotlin gRPC smoke test..."
+	@mkdir -p $(SDK_ROOT)/smoke-test/src/main/resources/native
+	@cp -f $(GRPC_FFI_LIB) $(SDK_ROOT)/smoke-test/src/main/resources/native/
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runGrpc --args="--connectors $(CONNECTORS)" 2>&1
+
+test-grpc: install generate-all ## Build grpc-ffi lib + grpc-server → start server → run Kotlin gRPC smoke test → stop server
+	@echo "Building gRPC FFI library ($(GRPC_PROFILE))..."
+	@cd $(REPO_ROOT) && cargo build -p hyperswitch-grpc-ffi --profile $(GRPC_PROFILE) 2>&1
+	@echo "Building gRPC server ($(GRPC_PROFILE))..."
+	@cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) 2>&1
+	@echo "Starting gRPC server..."
+	@pkill -KILL -f grpc-server 2>/dev/null || true
+	@sleep 1
+	@cd $(REPO_ROOT) && $(GRPC_SERVER_BIN) > /tmp/grpc-server-kt.log 2>&1 &
+	@sleep 2
+	@$(MAKE) test-grpc-no-server; \
+	EXIT=$$?; \
+	pkill -f grpc-server 2>/dev/null || true; \
+	exit $$EXIT
 
 # ---------------------------------------------------------------------------
 # dist

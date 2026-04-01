@@ -14,11 +14,33 @@
 
 import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
-import { execute, createDispatcher, HttpRequest, ConnectorError } from "../http_client";
+import { execute, createDispatcher, HttpRequest, NetworkError } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
 import { types } from "./generated/proto";
 
 const v2 = types;
+
+/**
+ * Exception raised when req_transformer fails (integration error).
+ * Wraps IntegrationError and provides access to proto fields.
+ */
+export class IntegrationError extends Error {
+  constructor(public proto: any) {
+    super(proto.errorMessage || proto.error_message);
+    this.name = 'IntegrationError';
+  }
+}
+
+/**
+ * Exception raised when res_transformer fails (response transformation error).
+ * Wraps ConnectorResponseTransformationError and provides access to proto fields.
+ */
+export class ConnectorResponseTransformationError extends Error {
+  constructor(public proto: any) {
+    super(proto.errorMessage || proto.error_message);
+    this.name = 'ConnectorResponseTransformationError';
+  }
+}
 
 export class ConnectorClient {
   private uniffi: UniffiClient;
@@ -46,10 +68,10 @@ export class ConnectorClient {
       && Object.values(config.connectorConfig).some((value) => value != null);
 
     if (!hasConnectorVariant) {
-      throw new ConnectorError(
+      throw new NetworkError(
         "connectorConfig with a connector variant is required in ConnectorConfig",
-        400,
-        "CLIENT_INITIALIZATION"
+        types.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE,
+        400
       );
     }
 
@@ -141,7 +163,9 @@ export class ConnectorClient {
 
     // 6. Parse connector response via FFI and decode
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
-    return resType.decode(resultBytesRes);
+    // callRes returns FfiConnectorHttpResponse, extract domain response from body
+    const httpResponse = v2.FfiConnectorHttpResponse.decode(resultBytesRes);
+    return resType.decode(httpResponse.body);
   }
 
   /**
