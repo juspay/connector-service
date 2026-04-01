@@ -583,7 +583,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/x-www-form-urlencoded".to_string().into(),
@@ -592,7 +592,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::TRANSACT))
         }
     }
