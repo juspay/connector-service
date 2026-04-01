@@ -44,12 +44,13 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    Shift4AuthType, Shift4CaptureRequest, Shift4ErrorResponse, Shift4PSyncRequest,
-    Shift4PaymentsRequest, Shift4PaymentsResponse as Shift4AuthorizeResponse,
+    Shift4AuthType, Shift4CaptureRequest, Shift4CreateCustomerRequest,
+    Shift4CreateCustomerResponse, Shift4ErrorResponse, Shift4PSyncRequest, Shift4PaymentsRequest,
+    Shift4PaymentsResponse as Shift4AuthorizeResponse,
     Shift4PaymentsResponse as Shift4CaptureResponse, Shift4PaymentsResponse as Shift4PSyncResponse,
     Shift4RSyncRequest, Shift4RefundRequest, Shift4RefundResponse,
     Shift4RefundResponse as Shift4RSyncResponse, Shift4RepeatPaymentRequest,
-    Shift4RepeatPaymentResponse, Shift4CreateCustomerRequest, Shift4CreateCustomerResponse,
+    Shift4RepeatPaymentResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 
