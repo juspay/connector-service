@@ -133,7 +133,12 @@ The unified representation cures the complexity of errors and enables you to mak
 
 ## SDK Error Handling
 
-When using Prism SDK, errors are exposed as structured error objects that you can catch and handle appropriately.
+When using Prism SDK, errors are exposed in two fundamentally different ways:
+
+- **SDK errors** (`IntegrationError`, `NetworkError`, `ConnectorResponseTransformationError`) — thrown as **exceptions**. The call never returns a response.
+- **Business errors** — returned inside the **response object** as `response.error`. The call succeeds (no exception), but the payment was declined or failed at the connector.
+
+You must handle both.
 
 ### Error Types in SDK
 
@@ -500,6 +505,85 @@ async def create_payment(client: PaymentClient, order_data: dict):
 
 <!-- tabs:end -->
 
+### Handling Business Errors
+
+Business errors are returned in the **response object** — the call does not throw. Check `response.status` and `response.error` after every successful call.
+
+<!-- tabs:start -->
+
+#### **JavaScript/TypeScript**
+
+```typescript
+import { PaymentClient } from 'hyperswitch-prism';
+
+// No exception thrown — response is always returned
+const response = await client.authorize(request);
+
+if (response.error) {
+  const unified = response.error.unifiedDetails;
+  const connector = response.error.connectorDetails;
+  const issuer = response.error.issuerDetails;
+
+  console.error(`Status: ${response.status}`);
+
+  if (unified) {
+    console.error(`Code: ${unified.code}`);           // e.g. "INSUFFICIENT_FUNDS"
+    console.error(`Message: ${unified.message}`);
+    if (unified.userGuidanceMessage) {
+      // Show this to the end user
+      console.error(`User guidance: ${unified.userGuidanceMessage}`);
+    }
+  }
+
+  if (connector) {
+    console.error(`Connector code: ${connector.code}`);
+    console.error(`Connector reason: ${connector.reason}`);
+  }
+
+  if (issuer?.networkDetails) {
+    console.error(`Decline code: ${issuer.networkDetails.declineCode}`);
+    console.error(`Advice code: ${issuer.networkDetails.adviceCode}`);
+  }
+} else {
+  console.log('Payment authorized:', response.connectorTransactionId);
+}
+```
+
+#### **Python**
+
+```python
+from hyperswitch_prism import PaymentClient
+
+# No exception thrown — response is always returned
+response = await client.authorize(request)
+
+if response.error:
+    unified = response.error.unified_details
+    connector = response.error.connector_details
+    issuer = response.error.issuer_details
+
+    print(f'Status: {response.status}')
+
+    if unified:
+        print(f'Code: {unified.code}')           # e.g. "INSUFFICIENT_FUNDS"
+        print(f'Message: {unified.message}')
+        if unified.user_guidance_message:
+            # Show this to the end user
+            print(f'User guidance: {unified.user_guidance_message}')
+
+    if connector:
+        print(f'Connector code: {connector.code}')
+        print(f'Connector reason: {connector.reason}')
+
+    if issuer and issuer.network_details:
+        print(f'Decline code: {issuer.network_details.decline_code}')
+        print(f'Advice code: {issuer.network_details.advice_code}')
+else:
+    print(f'Payment authorized: {response.connector_transaction_id}')
+```
+
+<!-- tabs:end -->
+
 ## Best Practices
 
 1. **Always distinguish between error types before retrying**
@@ -522,10 +606,18 @@ async def create_payment(client: PaymentClient, order_data: dict):
    - Validate data formats (amounts, dates, etc.)
    - Provide clear error messages to end users
 
-5. **Monitor error rates**
-   - Track IntegrationError rates to catch configuration issues
-   - Track ConnectorResponseTransformationError rates to detect connector API changes
-   - Set up alerts for unusual error spikes
+5. **Always check `response.error` after every call**
+   - A successful call (no exception) can still contain a business error
+   - Check both `response.status` and `response.error` before treating the payment as successful
+
+6. **Show `unified_details.user_guidance_message` to end users**
+   - This field is specifically crafted for end-user display
+   - Use `unified_details.code` for your own logic/routing decisions
+
+7. **Monitor error rates**
+   - Track `IntegrationError` rates to catch configuration issues
+   - Track `ConnectorResponseTransformationError` rates to detect connector API changes
+   - Track `unified_details.code` frequencies to identify top decline reasons
 
 ## See Also
 
