@@ -9,7 +9,9 @@ use domain_types::{
         RepeatPaymentData, ResponseId,
     },
     errors,
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{
+        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes, WalletData,
+    },
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
@@ -274,26 +276,87 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )
                 }
                 PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
-                    let encrypted_data = google_pay_data
-                        .tokenization_data
-                        .get_encrypted_google_pay_payment_data_mandatory()
+                    let decrypted_data = match &google_pay_data.tokenization_data {
+                        GpayTokenizationData::Decrypted(d) => d,
+                        GpayTokenizationData::Encrypted(_) => {
+                            return Err(errors::ConnectorError::MissingRequiredField {
+                                field_name: "google_pay.tokenization_data (decrypted)",
+                            }
+                            .into())
+                        }
+                    };
+
+                    let expiration_month = decrypted_data
+                        .get_expiry_month()
                         .change_context(errors::ConnectorError::MissingRequiredField {
-                            field_name: "google_pay.tokenization_data (encrypted)",
+                            field_name: "google_pay_decrypted_data.card_exp_month",
+                        })?
+                        .peek()
+                        .parse::<u8>()
+                        .map_err(|_| {
+                            errors::ConnectorError::InvalidDataFormat {
+                                field_name: "google_pay_decrypted_data.card_exp_month",
+                            }
                         })?;
+
+                    let expiration_year = decrypted_data
+                        .get_four_digit_expiry_year()
+                        .change_context(errors::ConnectorError::MissingRequiredField {
+                            field_name: "google_pay_decrypted_data.card_exp_year",
+                        })?
+                        .peek()
+                        .parse::<u16>()
+                        .map_err(|_| {
+                            errors::ConnectorError::InvalidDataFormat {
+                                field_name: "google_pay_decrypted_data.card_exp_year",
+                            }
+                        })?;
+
+                    let pan = Secret::new(
+                        decrypted_data
+                            .application_primary_account_number
+                            .get_card_no(),
+                    );
+
+                    let auth_method = if decrypted_data.cryptogram.is_some() {
+                        PaysafeGooglePayAuthMethod::Cryptogram3Ds
+                    } else {
+                        PaysafeGooglePayAuthMethod::PanOnly
+                    };
+
+                    let payment_method_details = PaysafeGooglePayPaymentMethodDetails {
+                        auth_method,
+                        pan,
+                        expiration_month,
+                        expiration_year,
+                        cryptogram: decrypted_data.cryptogram.clone(),
+                    };
+
+                    // TODO(https://github.com/juspay/hyperswitch/issues/11684): HS parses
+                    // message_id and message_expiration from the decrypted GPay payload
+                    // internally but drops them before forwarding to UCS via GPayPredecryptData.
+                    // Until HS propagates these fields, we fall back to a random UUID for
+                    // message_id (losing Paysafe's replay-detection guarantee) and a far-future
+                    // placeholder for message_expiration.
+                    let decrypted_token = PaysafeGooglePayDecryptedToken {
+                        message_id: uuid::Uuid::new_v4().to_string(),
+                        message_expiration: "9999999999999".to_string(),
+                        payment_method_details,
+                    };
 
                     let google_pay_payment_token = PaysafeGooglePayPaymentToken {
                         api_version: 2,
                         api_version_minor: 0,
                         payment_method_data: PaysafeGooglePayPaymentMethodData {
-                            pm_type: google_pay_data.pm_type.clone(),
+                            pm_type: "CARD".to_string(),
                             description: google_pay_data.description.clone(),
                             info: PaysafeGooglePayCardInfo {
                                 card_network: google_pay_data.info.card_network.clone(),
                                 card_details: google_pay_data.info.card_details.clone(),
                             },
                             tokenization_data: PaysafeGooglePayTokenizationData {
-                                token_type: encrypted_data.token_type.clone(),
-                                token: Secret::new(encrypted_data.token.clone()),
+                                token_type: "PAYMENT_GATEWAY".to_string(),
+                                decrypted_token,
                             },
                         },
                     };
@@ -321,10 +384,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             };
 
         // For ACH payments, Paysafe requires settleWithAuth to be true
-        // For GooglePay, same behavior as Card based on capture_method
+        // For Card (including GooglePay which maps to Card), settle based on capture_method
         let settle_with_auth = match payment_type {
             PaysafePaymentType::Ach => true,
-            PaysafePaymentType::Card | PaysafePaymentType::GooglePay => matches!(
+            PaysafePaymentType::Card => matches!(
                 router_data.request.capture_method,
                 Some(enums::CaptureMethod::Automatic) | None
             ),
