@@ -15,7 +15,7 @@ use common_utils::{
     crypto::{self, SignMessage},
     errors::CustomResult,
     events,
-    ext_traits::{ByteSliceExt, OptionExt},
+    ext_traits::ByteSliceExt,
     pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
@@ -483,7 +483,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
             // For wallet redirects, encoded_data may be None
             // In such cases, gracefully skip the psync request
-            if let Some(_) = req.request.encoded_data.clone() {
+            if req.request.encoded_data.clone().is_some() {
                 // Build the request normally if encoded_data is present
                 let url = self.get_url(req)?;
                 let headers = self.get_headers(req)?;
