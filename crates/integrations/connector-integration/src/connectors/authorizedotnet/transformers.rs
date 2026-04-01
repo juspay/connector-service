@@ -12,8 +12,8 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{
-        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder,
+        ApplePayPaymentData, BankDebitData, DefaultPCIHolder, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder, WalletData,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -333,11 +333,26 @@ pub struct BankAccountDetails {
     name_on_account: Secret<String>,
 }
 
+/// OpaqueData structure for wallet payments (Google Pay, Apple Pay)
+/// Authorize.net accepts wallet tokens through the opaqueData field
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OpaqueData {
+    /// Data descriptor identifies the type of wallet payment
+    /// For Google Pay: "COMMON.GOOGLE.INAPP.PAYMENT"
+    /// For Apple Pay: "COMMON.APPLE.INAPP.PAYMENT"
+    data_descriptor: String,
+    /// The wallet token from the payment provider
+    data_value: Secret<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
     BankAccount(BankAccountDetails),
+    OpaqueData(OpaqueData),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -657,6 +672,70 @@ fn create_regular_transaction_request<
                             .to_string(),
                     )))
                 }
+            }
+        }
+        PaymentMethodData::Wallet(wallet_data) => {
+            match wallet_data {
+                WalletData::GooglePay(_google_pay_data) => {
+                    // Get the encoded wallet token from Google Pay
+                    // The token is a base64-encoded JSON containing the payment data
+                    let encoded_token = wallet_data.get_encoded_wallet_token().map_err(|e| {
+                        error_stack::report!(ConnectorError::InvalidWalletToken {
+                            wallet_name: "Google Pay".to_string(),
+                        })
+                        .attach_printable(format!("Failed to get encoded wallet token: {:?}", e))
+                    })?;
+
+                    // Create OpaqueData for Google Pay
+                    // Authorize.net expects dataDescriptor "COMMON.GOOGLE.INAPP.PAYMENT"
+                    let opaque_data = OpaqueData {
+                        data_descriptor: "COMMON.GOOGLE.INAPP.PAYMENT".to_string(),
+                        data_value: Secret::new(encoded_token),
+                    };
+
+                    Ok(PaymentDetails::OpaqueData(opaque_data))
+                }
+                WalletData::GooglePayThirdPartySdk(gpay_sdk_data) => {
+                    // Handle Google Pay Third Party SDK
+                    let token = gpay_sdk_data.token.clone().ok_or_else(|| {
+                        error_stack::report!(ConnectorError::MissingRequiredField {
+                            field_name: "google_pay_token",
+                        })
+                    })?;
+
+                    let opaque_data = OpaqueData {
+                        data_descriptor: "COMMON.GOOGLE.INAPP.PAYMENT".to_string(),
+                        data_value: token,
+                    };
+
+                    Ok(PaymentDetails::OpaqueData(opaque_data))
+                }
+                WalletData::ApplePay(apple_pay_data) => {
+                    // Get the encrypted Apple Pay payment data
+                    // Authorize.net requires the encrypted token (base64-encoded payment data)
+                    let encrypted_token = match &apple_pay_data.payment_data {
+                        ApplePayPaymentData::Encrypted(encrypted_data) => encrypted_data.clone(),
+                        ApplePayPaymentData::Decrypted(_) => {
+                            // Authorize.net requires encrypted payment data for Apple Pay
+                            // Decrypted data is not supported for this connector
+                            return Err(error_stack::report!(ConnectorError::NotImplemented(
+                                "Decrypted Apple Pay payment data is not supported for authorizedotnet. Please provide encrypted payment data.".to_string(),
+                            )));
+                        }
+                    };
+
+                    // Create OpaqueData for Apple Pay
+                    // Authorize.net expects dataDescriptor "COMMON.APPLE.INAPP.PAYMENT"
+                    let opaque_data = OpaqueData {
+                        data_descriptor: "COMMON.APPLE.INAPP.PAYMENT".to_string(),
+                        data_value: Secret::new(encrypted_token),
+                    };
+
+                    Ok(PaymentDetails::OpaqueData(opaque_data))
+                }
+                _ => Err(error_stack::report!(ConnectorError::NotImplemented(
+                    format!("Wallet type {:?}", wallet_data)
+                ))),
             }
         }
         pm => Err(error_stack::report!(ConnectorError::NotImplemented(
