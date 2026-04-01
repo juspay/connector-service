@@ -2,11 +2,14 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment},
+    connector_flow::{
+        Authorize, Capture, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment,
+    },
     connector_types::{
-        MandateReferenceId, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId,
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReferenceId, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId,
     },
     errors,
     payment_method_data::{
@@ -17,7 +20,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeOptionInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -54,6 +57,79 @@ pub struct ApiErrorResponse {
     pub code: Option<String>,
     pub message: String,
 }
+
+// ===== CREATE CUSTOMER FLOW STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4CreateCustomerRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Shift4CreateCustomerResponse {
+    pub id: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        Shift4RouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    > for Shift4CreateCustomerRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: Shift4RouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: item
+                .router_data
+                .request
+                .email
+                .clone()
+                .map(|e| e.expose().expose().expose()),
+            description: item.router_data.request.description.clone(),
+        })
+    }
+}
+
+impl<F, T> TryFrom<ResponseRouterData<Shift4CreateCustomerResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, ConnectorCustomerResponse>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<Shift4CreateCustomerResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(ConnectorCustomerResponse {
+                connector_customer_id: item.response.id,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// ===== AUTHORIZE FLOW STRUCTURES =====
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -728,10 +804,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // ===== REPEAT PAYMENT (MIT) FLOW STRUCTURES =====
 
-/// Shift4 MIT request - uses Card on File transaction structure
+/// Shift4 MIT request - supports both stored card token and raw card details
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Shift4RepeatPaymentRequest {
+pub struct Shift4RepeatPaymentRequest<T: PaymentMethodDataTypes> {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub captured: bool,
@@ -739,37 +815,32 @@ pub struct Shift4RepeatPaymentRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
-    #[serde(flatten)]
-    pub payment_method: Shift4CardPaymentMethod,
-    /// Card On File information for MIT transactions
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub card_on_file: Option<Shift4CardOnFile>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Shift4CardPaymentMethod {
-    pub card: Shift4CardTokenData,
-}
-
-/// Card data using token (stored card) for MIT
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Shift4CardTokenData {
-    /// Card token from previous transaction or stored credential
-    pub token: String,
-}
-
-/// Card On File structure for MIT transactions
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Shift4CardOnFile {
-    /// Type of card on file transaction: "S01" = initial, "U03" = subsequent/recurring
+    /// Card: either a token string ("card_xxx") or raw card details object
+    pub card: Shift4RepeatPaymentCard<T>,
+    /// Transaction type: "merchant_initiated", "subsequent_recurring", etc.
     #[serde(rename = "type")]
-    pub cof_type: String,
-    /// The card on file transaction ID from the original approved transaction
+    pub transaction_type: Shift4TransactionType,
+    /// Customer ID required when charging a stored card (not needed for raw card)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_id: Option<String>,
+    pub customer_id: Option<String>,
+}
+
+/// Card field for MIT: either a stored card token or raw card details
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum Shift4RepeatPaymentCard<T: PaymentMethodDataTypes> {
+    /// Stored card identifier (e.g., "card_xxx")
+    Token(String),
+    /// Raw card details for approach 3 MIT
+    RawCard(Shift4CardData<T>),
+}
+
+/// Shift4 transaction type for MIT/recurring classification
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Shift4TransactionType {
+    MerchantInitiated,
+    SubsequentRecurring,
 }
 
 /// MIT response reuses the standard payments response
@@ -780,7 +851,7 @@ pub type Shift4RepeatPaymentResponse = Shift4PaymentsResponse;
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-    > for Shift4RepeatPaymentRequest
+    > for Shift4RepeatPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -792,47 +863,67 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract the token from mandate_reference
-        let token = match &item.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
-                .get_connector_mandate_id()
-                .ok_or_else(|| {
-                    error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id (card token)",
-                    })
-                })?,
-            MandateReferenceId::NetworkMandateId(_) => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented(
-                        "NetworkMandateId is not supported for Shift4 MIT".to_string()
-                    )
-                ));
-            }
-            MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented(
-                        "NetworkTokenWithNTI is not supported for Shift4 MIT".to_string()
-                    )
-                ));
-            }
+        // Determine card: use raw card data if available, otherwise use stored card token
+        let (card, customer_id) = if let PaymentMethodData::Card(card_data) =
+            &item.request.payment_method_data
+        {
+            // Approach 3: Raw card details for MIT (no customer needed)
+            let cardholder_name = item
+                .resource_common_data
+                .address
+                .get_payment_method_billing()
+                .and_then(|billing| billing.get_optional_full_name())
+                .unwrap_or_else(|| Secret::new("".to_string()));
+
+            (
+                Shift4RepeatPaymentCard::RawCard(Shift4CardData {
+                    number: card_data.card_number.clone(),
+                    exp_month: card_data.card_exp_month.clone(),
+                    exp_year: card_data.card_exp_year.clone(),
+                    cardholder_name,
+                }),
+                None, // No customer needed for raw card
+            )
+        } else {
+            // Stored card token approach: extract from mandate_reference
+            let token = match &item.request.mandate_reference {
+                MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
+                    connector_mandate_ref
+                        .get_connector_mandate_id()
+                        .ok_or_else(|| {
+                            error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                                field_name: "connector_mandate_id (card token)",
+                            })
+                        })?
+                }
+                MandateReferenceId::NetworkMandateId(_) => {
+                    return Err(error_stack::report!(
+                        errors::ConnectorError::NotImplemented(
+                            "NetworkMandateId is not supported for Shift4 MIT".to_string()
+                        )
+                    ));
+                }
+                MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    return Err(error_stack::report!(
+                        errors::ConnectorError::NotImplemented(
+                            "NetworkTokenWithNTI is not supported for Shift4 MIT".to_string()
+                        )
+                    ));
+                }
+            };
+            (
+                Shift4RepeatPaymentCard::Token(token),
+                item.resource_common_data.connector_customer.clone(),
+            )
         };
 
-        // Determine Card On File type based on MIT category
-        let cof_type = match item.request.mit_category {
-            Some(common_enums::MitCategory::Recurring) => "U03", // Subsequent recurring payment
-            Some(common_enums::MitCategory::Unscheduled) => "U03", // Unscheduled COF
-            Some(common_enums::MitCategory::Installment) => "U03", // Installment payment
-            Some(common_enums::MitCategory::Resubmission) => "U03", // Retry/resubmission
-            None => "U03",                                       // Default to subsequent for MIT
+        // Determine Shift4 transaction type based on MIT category
+        let transaction_type = match item.request.mit_category {
+            Some(common_enums::MitCategory::Recurring) => {
+                Shift4TransactionType::SubsequentRecurring
+            }
+            _ => Shift4TransactionType::MerchantInitiated,
         };
-
-        // Build Card On File structure
-        // transaction_id is optional for Shift4 GTV tokens (Global Token Vault)
-        // but required for non-GTV token scenarios per the spec
-        let card_on_file = Some(Shift4CardOnFile {
-            cof_type: cof_type.to_string(),
-            transaction_id: None, // GTV tokens don't require this
-        });
 
         let captured = item
             .request
@@ -845,10 +936,9 @@ impl<T: PaymentMethodDataTypes>
             captured,
             description: item.resource_common_data.description.clone(),
             metadata: item.request.metadata.clone().expose_option(),
-            payment_method: Shift4CardPaymentMethod {
-                card: Shift4CardTokenData { token },
-            },
-            card_on_file,
+            card,
+            transaction_type,
+            customer_id,
         })
     }
 }
@@ -865,7 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for Shift4RepeatPaymentRequest
+    > for Shift4RepeatPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -894,26 +984,51 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4RepeatPaymentRe
     fn try_from(
         item: ResponseRouterData<Shift4RepeatPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // Reuse the same mapping logic as Authorize flow
-        let (status, transaction_id, redirection_data) = match &item.response {
-            Shift4PaymentsResponse::Standard(standard) => {
-                let (s, id, rd) = map_standard_response(standard);
-                (s, id, rd)
+        // Reuse the same status mapping logic as Authorize flow
+        let status = match item.response.status {
+            Shift4PaymentStatus::Successful => {
+                if item.response.captured {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Authorized
+                }
             }
-            Shift4PaymentsResponse::AchSale(ach) => {
-                let (s, id) = map_ach_sale_response(ach);
-                (s, id, None)
+            Shift4PaymentStatus::Failed => AttemptStatus::Failure,
+            Shift4PaymentStatus::Pending => {
+                match item
+                    .response
+                    .flow
+                    .as_ref()
+                    .and_then(|flow| flow.next_action.as_ref())
+                {
+                    Some(NextAction::Redirect) => AttemptStatus::AuthenticationPending,
+                    Some(NextAction::Wait) | Some(NextAction::None) | None => {
+                        AttemptStatus::Pending
+                    }
+                }
             }
         };
 
+        // Extract redirect URL from flow if present
+        let redirection_data = item
+            .response
+            .flow
+            .as_ref()
+            .and_then(|flow| flow.redirect.as_ref())
+            .and_then(|redirect| {
+                Url::parse(&redirect.redirect_url)
+                    .ok()
+                    .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+            });
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(transaction_id),
+                connector_response_reference_id: Some(item.response.id),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),

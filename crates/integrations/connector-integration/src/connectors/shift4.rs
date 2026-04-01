@@ -49,7 +49,7 @@ use self::transformers::{
     Shift4PaymentsResponse as Shift4CaptureResponse, Shift4PaymentsResponse as Shift4PSyncResponse,
     Shift4RSyncRequest, Shift4RefundRequest, Shift4RefundResponse,
     Shift4RefundResponse as Shift4RSyncResponse, Shift4RepeatPaymentRequest,
-    Shift4RepeatPaymentResponse,
+    Shift4RepeatPaymentResponse, Shift4CreateCustomerRequest, Shift4CreateCustomerResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 
@@ -225,9 +225,15 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RepeatPayment,
-            request_body: Shift4RepeatPaymentRequest,
+            request_body: Shift4RepeatPaymentRequest<T>,
             response_body: Shift4RepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: Shift4CreateCustomerRequest,
+            response_body: Shift4CreateCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [],
@@ -430,7 +436,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Shift4,
-    curl_request: Json(Shift4RepeatPaymentRequest),
+    curl_request: Json(Shift4RepeatPaymentRequest<T>),
     curl_response: Shift4RepeatPaymentResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
@@ -680,15 +686,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Create Connector Customer
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Shift4<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Shift4,
+    curl_request: Json(Shift4CreateCustomerRequest),
+    curl_response: Shift4CreateCustomerResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/customers"))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
