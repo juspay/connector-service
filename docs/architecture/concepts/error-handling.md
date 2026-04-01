@@ -17,17 +17,20 @@ Integration errors occur **before** the HTTP request is sent to the payment conn
 - Authentication configuration errors
 
 **Error structure:**
-- `errorCode`: Machine-readable error code (e.g., `"MISSING_REQUIRED_FIELD"`)
+- `errorCode`: Machine-readable error code in `SCREAMING_SNAKE_CASE` (e.g., `"MISSING_REQUIRED_FIELD"`)
 - `errorMessage`: Human-readable description with context
 - `suggestedAction`: Guidance on how to fix (optional)
-- `docUrl`: Documentation reference (optional)
+- `docUrl`: Link to documentation for this error code (optional)
 
 **Common error codes:**
 - `MISSING_REQUIRED_FIELD` - Required field not provided
+- `MISSING_REQUIRED_FIELDS` - Multiple required fields missing
 - `FAILED_TO_OBTAIN_AUTH_TYPE` - Authentication configuration invalid
 - `NOT_SUPPORTED` - Feature not supported by connector
+- `FLOW_NOT_SUPPORTED` - Payment flow not supported by connector
 - `AMOUNT_CONVERSION_FAILED` - Invalid amount or currency
 - `INVALID_DATA_FORMAT` - Field doesn't match expected format
+- `CURRENCY_NOT_SUPPORTED` - Currency not configured for this connector
 
 See [Error Code Reference](./error-codes.md) for complete list.
 
@@ -43,8 +46,9 @@ Network errors occur during HTTP communication with the payment connector. These
 - Invalid CA certificates
 
 **Error structure:**
-- `code`: Network error code enum (e.g., `CONNECT_TIMEOUT_EXCEEDED`)
-- `message`: Human-readable error description (optional)
+- `errorCode`: String error code (e.g., `"CONNECT_TIMEOUT_EXCEEDED"`) — use this for logging and comparisons
+- `code`: Numeric enum value — use this for programmatic switching
+- `message`: Human-readable error description
 - `statusCode`: HTTP status code if available (optional)
 
 **Error codes:**
@@ -64,7 +68,31 @@ Network errors occur during HTTP communication with the payment connector. These
 - Only retry if you have idempotency keys or can verify the payment was never processed
 - Consider using payment status check APIs if available
 
-### 3. Business Errors
+### 3. Response Transformation Errors (Response Phase)
+
+Response transformation errors occur **after** the HTTP response is received from the connector, when Prism cannot parse or process it.
+
+**Common causes:**
+- Unexpected or malformed response format (invalid JSON/XML)
+- Connector API changed response structure
+- Integrity check failed (e.g. amount or currency mismatch in response)
+
+**Error structure:**
+- `errorCode`: Machine-readable error code (e.g., `"RESPONSE_DESERIALIZATION_FAILED"`)
+- `errorMessage`: Human-readable description of what failed
+- `httpStatusCode`: HTTP status returned by connector before parsing failed (optional)
+
+**⚠️ CRITICAL:** The payment may have **succeeded at the connector** even when this error is thrown. Do not retry without first verifying payment status.
+
+**Error codes:**
+- `RESPONSE_DESERIALIZATION_FAILED` - Cannot parse connector response (invalid JSON/XML)
+- `RESPONSE_HANDLING_FAILED` - Error while processing parsed response
+- `UNEXPECTED_RESPONSE_ERROR` - Response structure doesn't match expected schema
+- `INTEGRITY_CHECK_FAILED` - Amount/currency mismatch between request and response
+
+See [Error Code Reference](./error-codes.md) for complete list.
+
+### 4. Business Errors
 
 Business errors occur when the request reaches the processor, but the operation fails due to a business reason. This is where the error block with `unified_details`, `issuer_details`, and `connector_details` comes in. It tells you:
 
@@ -135,7 +163,7 @@ Integration errors indicate problems with your request or configuration. These s
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, IntegrationError } from 'hs-playlib';
+import { PaymentClient, IntegrationError } from 'hyperswitch-prism';
 
 try {
   const payment = await client.createPayment({
@@ -185,10 +213,10 @@ try {
 #### **Python**
 
 ```python
-from payments import PaymentClient, IntegrationError
+from hyperswitch_prism import PaymentClient, IntegrationError
 
 try:
-    payment = client.create_payment(
+    payment = await client.create_payment(
         merchant_order_id='order-123',
         amount={'minor_amount': 1000, 'currency': 'USD'},
         # ... other fields
@@ -218,6 +246,50 @@ except IntegrationError as error:
 
 <!-- tabs:end -->
 
+### Handling Network Errors
+
+Network errors occur during HTTP transport. Most are **not safe to retry** in payment systems — the request may have already been sent.
+
+<!-- tabs:start -->
+
+#### **JavaScript/TypeScript**
+
+```typescript
+import { PaymentClient, NetworkError } from 'hyperswitch-prism';
+
+try {
+  const payment = await client.createPayment({ /* ... */ });
+} catch (error) {
+  if (error instanceof NetworkError) {
+    console.error(`Error: ${error.errorCode}`);   // e.g. "CONNECT_TIMEOUT_EXCEEDED"
+    console.error(`Message: ${error.message}`);
+    if (error.statusCode) {
+      console.error(`Status: ${error.statusCode}`);
+    }
+    // Do NOT blindly retry — check if request was already sent
+    throw error;
+  }
+}
+```
+
+#### **Python**
+
+```python
+from hyperswitch_prism import PaymentClient, NetworkError
+
+try:
+    payment = await client.create_payment(...)
+except NetworkError as error:
+    print(f'Error: {error.error_code}')   # e.g. "CONNECT_TIMEOUT_EXCEEDED"
+    print(f'Message: {str(error)}')
+    if error.status_code:
+        print(f'Status: {error.status_code}')
+    # Do NOT blindly retry — check if request was already sent
+    raise
+```
+
+<!-- tabs:end -->
+
 ### Handling Response Transformation Errors
 
 Response transformation errors occur **after** calling the connector when Prism cannot parse the response (e.g., connector API changes, unexpected response formats, invalid JSON/XML). Handle these carefully because the payment may have succeeded at the connector even if Prism cannot parse the response.
@@ -227,7 +299,7 @@ Response transformation errors occur **after** calling the connector when Prism 
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, ConnectorResponseTransformationError } from 'hs-playlib';
+import { PaymentClient, ConnectorResponseTransformationError } from 'hyperswitch-prism';
 
 try {
   const payment = await client.createPayment({
@@ -260,10 +332,10 @@ try {
 #### **Python**
 
 ```python
-from payments import PaymentClient, ConnectorResponseTransformationError
+from hyperswitch_prism import PaymentClient, ConnectorResponseTransformationError
 
 try:
-    payment = client.create_payment(
+    payment = await client.create_payment(
         merchant_order_id='order-123',
         amount={'minor_amount': 1000, 'currency': 'USD'},
         # ... other fields
@@ -294,7 +366,7 @@ Here's a complete example showing proper error handling for payment creation:
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, IntegrationError, ConnectorResponseTransformationError, NetworkError } from 'hs-playlib';
+import { PaymentClient, IntegrationError, ConnectorResponseTransformationError, NetworkError } from 'hyperswitch-prism';
 
 async function createPayment(client: PaymentClient, orderData: any) {
   try {
@@ -328,7 +400,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
     } else if (error instanceof NetworkError) {
       // Network/transport layer errors
       console.error('🔌 Network error occurred');
-      console.error(`Error: ${error.code}`);
+      console.error(`Error: ${error.errorCode}`);
       console.error(`Message: ${error.message}`);
       if (error.statusCode) {
         console.error(`Status: ${error.statusCode}`);
@@ -362,7 +434,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
 #### **Python**
 
 ```python
-from payments import (
+from hyperswitch_prism import (
     PaymentClient,
     IntegrationError,
     ConnectorResponseTransformationError,
@@ -430,12 +502,14 @@ async def create_payment(client: PaymentClient, order_data: dict):
 
 ## Best Practices
 
-1. **Always distinguish between IntegrationError and ConnectorResponseTransformationError**
-   - IntegrationError = fix request and retry
-   - ConnectorResponseTransformationError = error during response handling
+1. **Always distinguish between error types before retrying**
+   - `IntegrationError` = request never sent — safe to fix and retry
+   - `NetworkError` = request may have been sent — do not retry without idempotency verification
+   - `ConnectorResponseTransformationError` = payment may have succeeded at connector — do not retry without checking payment status
 
-2. **Never retry response transformation errors**
-   - Payment may have succeeded at the connector without investigation
+2. **Never retry response transformation errors blindly**
+   - The connector may have processed the payment successfully even if Prism failed to parse the response
+   - Always verify payment status via webhook or status-check API before retrying
 
 3. **Log comprehensive error details**
    - Error code and message
