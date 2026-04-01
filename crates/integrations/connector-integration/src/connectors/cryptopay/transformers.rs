@@ -109,6 +109,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
@@ -428,6 +429,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 minor_amount_captured: None,
                 amount_captured: None,
                 network_txn_id: None,
+                payment_method_update: None,
             })
         } else {
             let amount_captured_in_minor_units =
@@ -459,6 +461,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         raw_connector_response: None,
                         response_headers: None,
                         network_txn_id: None,
+                        payment_method_update: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     })
                 }
@@ -476,6 +479,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     amount_captured: None,
                     error_reason: None,
                     network_txn_id: None,
+                    payment_method_update: None,
                     transformation_status: common_enums::WebhookTransformationStatus::Complete,
                 }),
             }
