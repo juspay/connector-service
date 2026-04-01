@@ -1652,7 +1652,10 @@ impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
             Some(common_enums::CaptureMethod::ManualMultiple)
             | Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(ConnectorError::CaptureMethodNotSupported.into())
+                Err(IntegrationError::CaptureMethodNotSupported {
+                    context: Default::default(),
+                }
+                .into())
             }
         }
     }
@@ -1663,8 +1666,9 @@ impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
             .as_ref()
             .and_then(|res| res.payload.to_owned())
             .ok_or(
-                ConnectorError::MissingConnectorRedirectionPayload {
+                IntegrationError::MissingRequiredField {
                     field_name: "request.redirect_response.payload",
+                    context: Default::default(),
                 }
                 .into(),
             )

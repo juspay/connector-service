@@ -47,7 +47,9 @@ impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
                 public_key: public_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                IntegrationError::FailedToObtainAuthType { context: Default::default() }
+                IntegrationError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -344,12 +346,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .redirect_response
                     .as_ref()
                     .ok_or_else(|| {
-                        error_stack::report!(
-                            IntegrationError::MissingRequiredField {
-                                field_name: "redirect_response",
-                                context: Default::default(),
-                            }
-                        )
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "redirect_response",
+                            context: Default::default(),
+                        })
                     })?;
 
             let payload_data = redirect_response.payload.clone().ok_or_else(|| {
@@ -359,13 +359,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })?;
 
-            let three_ds_data: NmiRedirectResponseData =
-                serde_json::from_value(payload_data.expose()).change_context(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "three_ds_data",
-                        context: Default::default(),
-                    },
-                )?;
+            let three_ds_data: NmiRedirectResponseData = serde_json::from_value(
+                payload_data.expose(),
+            )
+            .change_context(IntegrationError::MissingRequiredField {
+                field_name: "three_ds_data",
+                context: Default::default(),
+            })?;
 
             let cvv = match &router_data.request.payment_method_data {
                 PaymentMethodData::Card(card_data) => Some(card_data.card_cvc.clone()),
@@ -378,7 +378,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     router_data.request.minor_amount,
                     router_data.request.currency,
                 )
-                .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+                .change_context(IntegrationError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
             let transaction_type = if router_data.request.is_auto_capture()? {
                 TransactionType::Sale
@@ -445,7 +447,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     router_data.request.minor_amount,
                     router_data.request.currency,
                 )
-                .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+                .change_context(IntegrationError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
             Ok(Self {
                 security_key: auth.api_key.clone(),
@@ -548,15 +552,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
-            ) => Err(error_stack::report!(
-                IntegrationError::NotImplemented(
-                    "Bank Debit type not supported for NMI".to_string(),
-                    Default::default(),
-                )
-            )),
-            _ => Err(error_stack::report!(
-                IntegrationError::NotImplemented("Payment method not supported".to_string(), Default::default())
-            )),
+            ) => Err(error_stack::report!(IntegrationError::NotImplemented(
+                "Bank Debit type not supported for NMI".to_string(),
+                Default::default(),
+            ))),
+            _ => Err(error_stack::report!(IntegrationError::NotImplemented(
+                "Payment method not supported".to_string(),
+                Default::default()
+            ))),
         }
     }
 }
@@ -607,12 +610,10 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             };
             Ok(ach_data)
         }
-        _ => Err(error_stack::report!(
-            IntegrationError::NotImplemented(
-                "Only ACH Bank Debit is supported for NMI".to_string(),
-                Default::default(),
-            )
-        )),
+        _ => Err(error_stack::report!(IntegrationError::NotImplemented(
+            "Only ACH Bank Debit is supported for NMI".to_string(),
+            Default::default(),
+        ))),
     }
 }
 
@@ -757,7 +758,11 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(ConnectorResponseTransformationError::ResponseDeserializationFailed { context: Default::default() })?;
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)
@@ -857,7 +862,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -971,7 +978,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -1379,7 +1388,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
         let (status, payment_response) = match response.response {
             Response::Approved => {
                 let auth_type = NmiAuthType::try_from(&item.router_data.connector_config)
-                    .change_context(ConnectorResponseTransformationError::ResponseDeserializationFailed { context: Default::default() })?;
+                    .change_context(
+                        ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                            context: Default::default(),
+                        },
+                    )?;
                 let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
                     ConnectorResponseTransformationError::MissingRequiredField {
@@ -1388,10 +1401,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     },
                 )?;
                 let customer_vault_id = response.customer_vault_id.clone().ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseTransformationError::MissingRequiredField {
-                        field_name: "customer_vault_id",
-                        context: Default::default(),
-                    })
+                    error_stack::report!(
+                        ConnectorResponseTransformationError::MissingRequiredField {
+                            field_name: "customer_vault_id",
+                            context: Default::default(),
+                        }
+                    )
                 })?;
 
                 (
