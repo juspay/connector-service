@@ -832,6 +832,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ccard,
             ))?,
             PaymentMethodData::CardDetailsForNetworkTransactionId(..)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(..)
             | PaymentMethodData::CardRedirect(..)
             | PaymentMethodData::Wallet(..)
             | PaymentMethodData::PayLater(..)
@@ -1393,6 +1394,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ArchipelCard::try_from((card_holder_name, cardholder, ccard))?
             }
             PaymentMethodData::CardDetailsForNetworkTransactionId(..)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(..)
             | PaymentMethodData::CardRedirect(..)
             | PaymentMethodData::Wallet(..)
             | PaymentMethodData::PayLater(..)

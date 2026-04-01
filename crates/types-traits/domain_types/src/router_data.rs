@@ -704,6 +704,7 @@ pub enum ConnectorSpecificConfig {
     },
     Archipel {
         api_key: Secret<String>,
+        base_url: Option<String>,
     },
 }
 

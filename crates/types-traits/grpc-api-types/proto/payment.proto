@@ -4065,10 +4065,10 @@ message ConnectorSpecificConfig {
     TruelayerConfig truelayer = 111;
 
     // FISERVCOMMERCEHUB = 114
-    FiservcommercehubConfig fiservcommercehub = 112;
+    FiservcommercehubConfig fiservcommercehub = 114;
 
     // ARCHIPEL = 115
-    ArchipelConfig archipel = 112;
+    ArchipelConfig archipel = 115;
   }
 }
 
