@@ -21,19 +21,33 @@ use domain_types::{
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payouts::payouts_types::{
+        PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
+        PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,
+        PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,
+        PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
+        PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
+    },
     router_data::ConnectorSpecificConfig,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
+use serde_json::Value;
 
 use crate::{
-    api::ConnectorCommon,
+    api::{ApplicationResponse, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
     decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub enum IncomingWebhookFlowError {
+    ResourceNotFound,
+    InternalError,
+}
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
@@ -64,6 +78,14 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + MandateRevokeV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
+    + PayoutCreateV2
+    + PayoutTransferV2
+    + PayoutGetV2
+    + PayoutVoidV2
+    + PayoutStageV2
+    + PayoutCreateLinkV2
+    + PayoutCreateRecipientV2
+    + PayoutEnrollDisburseAccountV2
 {
 }
 
@@ -336,6 +358,16 @@ pub trait VerifyWebhookSourceV2:
 {
 }
 
+pub trait PayoutCreateV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreate,
+    PayoutFlowData,
+    PayoutCreateRequest,
+    PayoutCreateResponse,
+>
+{
+}
+
 pub trait IncomingWebhook {
     fn verify_webhook_source(
         &self,
@@ -430,6 +462,19 @@ pub trait IncomingWebhook {
             "get_webhook_resource_object".to_string(),
         )
         .into())
+    }
+
+    /// fn get_webhook_api_response
+    ///
+    /// This is used by callers to decide what HTTP response
+    /// should be sent back to the connector for webhook acknowledgement.
+    fn get_webhook_api_response(
+        &self,
+        _request: RequestDetails,
+        _error_kind: Option<IncomingWebhookFlowError>,
+    ) -> Result<ApplicationResponse<Value>, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
+        Ok(ApplicationResponse::StatusOk)
     }
 }
 
@@ -599,4 +644,76 @@ pub fn is_mandate_supported<T: PaymentMethodDataTypes>(
             .into()),
         }
     }
+}
+
+// --- GENERATED PAYOUT TRAITS ---
+
+pub trait PayoutTransferV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutTransfer,
+    PayoutFlowData,
+    PayoutTransferRequest,
+    PayoutTransferResponse,
+>
+{
+}
+
+pub trait PayoutGetV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutGet,
+    PayoutFlowData,
+    PayoutGetRequest,
+    PayoutGetResponse,
+>
+{
+}
+
+pub trait PayoutVoidV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutVoid,
+    PayoutFlowData,
+    PayoutVoidRequest,
+    PayoutVoidResponse,
+>
+{
+}
+
+pub trait PayoutStageV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutStage,
+    PayoutFlowData,
+    PayoutStageRequest,
+    PayoutStageResponse,
+>
+{
+}
+
+pub trait PayoutCreateLinkV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreateLink,
+    PayoutFlowData,
+    PayoutCreateLinkRequest,
+    PayoutCreateLinkResponse,
+>
+{
+}
+
+pub trait PayoutCreateRecipientV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutCreateRecipient,
+    PayoutFlowData,
+    PayoutCreateRecipientRequest,
+    PayoutCreateRecipientResponse,
+>
+{
+}
+
+pub trait PayoutEnrollDisburseAccountV2:
+    ConnectorIntegrationV2<
+    connector_flow::PayoutEnrollDisburseAccount,
+    PayoutFlowData,
+    PayoutEnrollDisburseAccountRequest,
+    PayoutEnrollDisburseAccountResponse,
+>
+{
 }
