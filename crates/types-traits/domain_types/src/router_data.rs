@@ -697,9 +697,13 @@ pub enum ConnectorSpecificConfig {
         terminal_id: Secret<String>,
         base_url: Option<String>,
     },
+    Itaubank {
+        client_id: Secret<String>,
+        client_secret: Secret<String>,
+        base_url: Option<String>,
+    },
     Archipel {
         api_key: Secret<String>,
-        base_url: Option<String>,
     },
 }
 
@@ -991,6 +995,10 @@ impl ConnectorSpecificConfig {
                 secret,
                 merchant_id,
                 terminal_id
+            },
+            Itaubank {
+                client_id,
+                client_secret
             },
             Archipel { api_key },
         )
@@ -1371,6 +1379,10 @@ impl ConnectorSpecificConfig {
                     secret,
                     merchant_id,
                     terminal_id
+                },
+                Itaubank {
+                    client_id,
+                    client_secret
                 },
                 Archipel { api_key }
             ),
@@ -1844,6 +1856,13 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 kid: truelayer.kid,
                 base_url: truelayer.base_url,
                 secondary_base_url: truelayer.secondary_base_url,
+            }),
+            AuthType::Fiservcommercehub(fiservcommercehub) => Ok(Self::Fiservcommercehub {
+                api_key: fiservcommercehub.api_key.ok_or_else(err)?,
+                secret: fiservcommercehub.secret.ok_or_else(err)?,
+                merchant_id: fiservcommercehub.merchant_id.ok_or_else(err)?,
+                terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
+                base_url: fiservcommercehub.base_url,
             }),
             AuthType::Archipel(archipel) => Ok(Self::Archipel {
                 api_key: archipel.ca_certificate.ok_or_else(err)?,
@@ -2816,6 +2835,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     secret: api_secret.clone(),
                     merchant_id: key1.clone(),
                     terminal_id: key2.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Itaubank => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Itaubank {
+                    client_id: api_key.clone(),
+                    client_secret: key1.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

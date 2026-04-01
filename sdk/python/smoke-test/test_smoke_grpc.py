@@ -84,15 +84,15 @@ def load_field_probe(
 #   arg_type: "AUTOMATIC" | "MANUAL" | "txn_id" | "none"
 
 FLOW_META = [
-    ("authorize",                "payment",          "authorize",           "_build_authorize_request",              "AUTOMATIC"),
-    ("capture",                  "payment",          "capture",             "_build_capture_request",                "txn_id"),
-    ("void",                     "payment",          "void",                "_build_void_request",                   "txn_id"),
-    ("get",                      "payment",          "get",                 "_build_get_request",                    "txn_id"),
-    ("refund",                   "payment",          "refund",              "_build_refund_request",                 "txn_id"),
-    ("reverse",                  "payment",          "reverse",             "_build_reverse_request",                "txn_id"),
+    ("authorize",                "payment",   "authorize",           "_build_authorize_request",              "AUTOMATIC"),
+    ("capture",                  "payment",   "capture",             "_build_capture_request",                "txn_id"),
+    ("void",                     "payment",   "void",                "_build_void_request",                   "txn_id"),
+    ("get",                      "payment",   "get",                 "_build_get_request",                    "txn_id"),
+    ("refund",                   "payment",   "refund",              "_build_refund_request",                 "txn_id"),
+    ("reverse",                  "payment",   "reverse",             "_build_reverse_request",                "txn_id"),
     ("create_customer",          "customer",         "create",              "_build_create_customer_request",        "none"),
     ("tokenize",                 "payment_method",   "tokenize",            "_build_tokenize_request",               "none"),
-    ("setup_recurring",          "payment",          "setup_recurring",     "_build_setup_recurring_request",        "none"),
+    ("setup_recurring",          "payment",   "setup_recurring",     "_build_setup_recurring_request",        "none"),
     ("recurring_charge",         "recurring_payment","charge",              "_build_recurring_charge_request",       "none"),
     ("pre_authenticate",         "payment_method_authentication", "pre_authenticate",  "_build_pre_authenticate_request",  "none"),
     ("authenticate",             "payment_method_authentication", "authenticate",      "_build_authenticate_request",      "none"),

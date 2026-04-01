@@ -20,19 +20,27 @@ SERVICE_FLOWS = {
     "PaymentClient": {
         # authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
         "authorize": "PaymentServiceAuthorizeResponse",
-        # capture: PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+        # capture: PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
         "capture": "PaymentServiceCaptureResponse",
-        # create_order: PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+        # create_order: PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
         "create_order": "PaymentServiceCreateOrderResponse",
         # get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
         "get": "PaymentServiceGetResponse",
-        # refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
+        # proxy_authorize: PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+        "proxy_authorize": "PaymentServiceAuthorizeResponse",
+        # proxy_setup_recurring: PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data.
+        "proxy_setup_recurring": "PaymentServiceSetupRecurringResponse",
+        # refund: PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
         "refund": "RefundResponse",
-        # reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
+        # reverse: PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
         "reverse": "PaymentServiceReverseResponse",
-        # setup_recurring: PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
+        # setup_recurring: PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
         "setup_recurring": "PaymentServiceSetupRecurringResponse",
-        # void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
+        # token_authorize: PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token.
+        "token_authorize": "PaymentServiceAuthorizeResponse",
+        # token_setup_recurring: PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token.
+        "token_setup_recurring": "PaymentServiceSetupRecurringResponse",
+        # void: PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
         "void": "PaymentServiceVoidResponse",
     },
     "RecurringPaymentClient": {
@@ -52,6 +60,20 @@ SERVICE_FLOWS = {
     "PayoutClient": {
         # payout_create: PayoutService.Create — Creates a payout.
         "payout_create": "PayoutServiceCreateResponse",
+        # payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
+        "payout_create_link": "PayoutServiceCreateLinkResponse",
+        # payout_create_recipient: PayoutService.CreateRecipient — Create payout recipient.
+        "payout_create_recipient": "PayoutServiceCreateRecipientResponse",
+        # payout_enroll_disburse_account: PayoutService.EnrollDisburseAccount — Enroll disburse account.
+        "payout_enroll_disburse_account": "PayoutServiceEnrollDisburseAccountResponse",
+        # payout_get: PayoutService.Get — Retrieve payout details.
+        "payout_get": "PayoutServiceGetResponse",
+        # payout_stage: PayoutService.Stage — Stage the payout.
+        "payout_stage": "PayoutServiceStageResponse",
+        # payout_transfer: PayoutService.Transfer — Creates a payout fund transfer.
+        "payout_transfer": "PayoutServiceTransferResponse",
+        # payout_void: PayoutService.Void — Void a payout.
+        "payout_void": "PayoutServiceVoidResponse",
     },
     "PaymentMethodClient": {
         # tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.

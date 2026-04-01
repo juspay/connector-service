@@ -468,6 +468,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
     }
 
@@ -599,6 +600,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Ppro<T>
 {
 }
+
+macros::macro_connector_payout_implementation!(
+    connector: Ppro,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
 
 static PPRO_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Ppro",

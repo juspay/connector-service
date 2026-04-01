@@ -14,7 +14,7 @@ use common_utils::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
+use strum::{Display, EnumIter, EnumString};
 use time::PrimitiveDateTime;
 
 use crate::{
@@ -43,7 +43,17 @@ use url::Url;
 
 // snake case for enum variants
 #[derive(
-    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Display,
+    EnumIter,
+    EnumString,
+    serde::Deserialize,
+    Eq,
+    Hash,
+    PartialEq,
+    Serialize,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
@@ -126,6 +136,7 @@ pub enum ConnectorEnum {
     Truelayer,
     Peachpayments,
     Finix,
+    Itaubank,
     Archipel,
 }
 
@@ -212,6 +223,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Peachpayments => Ok(Self::Peachpayments),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
+            grpc_api_types::payments::Connector::Itaubank => Ok(Self::Itaubank),
             grpc_api_types::payments::Connector::Archipel => Ok(Self::Archipel),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1412,6 +1424,22 @@ pub struct MandateReference {
     pub connector_mandate_request_reference_id: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub enum PaymentMethodUpdate {
+    Card(CardDetailUpdate),
+}
+
+#[derive(Debug, Clone)]
+pub struct CardDetailUpdate {
+    pub card_exp_month: Option<String>,
+    pub card_exp_year: Option<String>,
+    pub last4_digits: Option<String>,
+    pub issuer_country: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<String>,
+    pub card_holder_name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CaptureSyncResponse {
     Success {
@@ -1782,6 +1810,7 @@ pub struct WebhookDetailsResponse {
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
+    pub payment_method_update: Option<PaymentMethodUpdate>,
 }
 
 #[derive(Debug, Clone)]
@@ -2943,6 +2972,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 Self::CardDetailsForNetworkTransactionId
             }
             PaymentMethodData::NetworkToken(_) => Self::NetworkToken,
+            PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
+                Self::NetworkToken
+            }
             PaymentMethodData::MobilePayment(mobile_payment_data) => match mobile_payment_data {
                 payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => {
                     Self::DirectCarrierBilling
@@ -3714,6 +3746,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
+            AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Archipel(_) => Ok(Self::Archipel),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {

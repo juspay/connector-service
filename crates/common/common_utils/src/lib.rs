@@ -15,6 +15,7 @@ pub mod metadata;
 pub mod new_types;
 pub mod pii;
 pub mod request;
+#[cfg(feature = "superposition")]
 pub mod superposition_config;
 pub mod types;
 // Re-export commonly used items
@@ -35,6 +36,7 @@ pub use global_id::{CellId, GlobalPaymentId};
 pub use id_type::{CustomerId, MerchantId};
 pub use pii::{Email, SecretSerdeValue};
 pub use request::{Method, Request, RequestContent};
+#[cfg(feature = "superposition")]
 pub use superposition_config::{
     get_optional_nonempty_string, get_string, SuperpositionConfig, SuperpositionConfigError,
 };
