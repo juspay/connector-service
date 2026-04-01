@@ -128,7 +128,7 @@ pub struct PaysafeGooglePayPaymentMethodData {
     pub description: String,
     /// Card info (network + last 4)
     pub info: PaysafeGooglePayCardInfo,
-    /// Tokenization data containing the encrypted token
+    /// Tokenization data containing the decryptedToken block
     pub tokenization_data: PaysafeGooglePayTokenizationData,
 }
 
@@ -142,11 +142,38 @@ pub struct PaysafeGooglePayCardInfo {
 #[derive(Debug, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafeGooglePayTokenizationData {
-    /// The tokenization type, e.g. "PAYMENT_GATEWAY"
+    /// Always "PAYMENT_GATEWAY"
     #[serde(rename = "type")]
     pub token_type: String,
-    /// The encrypted Google Pay token (JSON string)
-    pub token: Secret<String>,
+    /// The decrypted Google Pay token data
+    pub decrypted_token: PaysafeGooglePayDecryptedToken,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeGooglePayDecryptedToken {
+    pub message_id: String,
+    pub message_expiration: String,
+    pub payment_method_details: PaysafeGooglePayPaymentMethodDetails,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeGooglePayPaymentMethodDetails {
+    pub auth_method: PaysafeGooglePayAuthMethod,
+    pub pan: Secret<String>,
+    pub expiration_month: u8,
+    pub expiration_year: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<Secret<String>>,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub enum PaysafeGooglePayAuthMethod {
+    #[serde(rename = "PAN_ONLY")]
+    PanOnly,
+    #[serde(rename = "CRYPTOGRAM_3DS")]
+    Cryptogram3Ds,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
@@ -180,7 +207,6 @@ pub struct PaysafeCardExpiry {
 pub enum PaysafePaymentType {
     Card,
     Ach,
-    GooglePay,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
