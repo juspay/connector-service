@@ -1,6 +1,5 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::pii;
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PreAuthenticate, RSync, Refund, Void},
