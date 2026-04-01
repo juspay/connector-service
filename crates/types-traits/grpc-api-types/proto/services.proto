@@ -179,6 +179,10 @@ service RecurringPaymentService {
   // Cancel an existing recurring payment mandate. Stops future automatic
   // charges on customer's stored consent for subscription cancellations.
   rpc Revoke(RecurringPaymentServiceRevokeRequest) returns (RecurringPaymentServiceRevokeResponse);
+
+  // Update the token details (e.g., network token) associated with a mandate
+  // at the payment gateway. Used when card tokens are refreshed or rotated.
+  rpc UpdateMandateToken(RecurringPaymentServiceUpdateMandateTokenRequest) returns (RecurringPaymentServiceUpdateMandateTokenResponse);
 }
 
 // ============================================================================

@@ -12,7 +12,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, UpdateMandateToken, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -25,7 +25,8 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, UpdateMandateTokenRequestData,
+        UpdateMandateTokenResponseData, UpdateMandateTokenStatus,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -46,7 +47,7 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 use transformers::{
     is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse, PayuSyncRequest,
-    PayuSyncResponse,
+    PayuSyncResponse, PayuUpdateMandateTokenRequest, PayuUpdateMandateTokenResponse,
 };
 
 use super::macros;
@@ -159,6 +160,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Payu<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::UpdateMandateTokenV2 for Payu<T>
 {
 }
 
@@ -612,4 +618,174 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         MandateRevokeResponseData,
     > for Payu<T>
 {
+}
+
+// UpdateMandateToken flow implementation for PayU
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        UpdateMandateToken,
+        PaymentFlowData,
+        UpdateMandateTokenRequestData,
+        UpdateMandateTokenResponseData,
+    > for Payu<T>
+{
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Post
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        "application/x-www-form-urlencoded"
+    }
+
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        Ok(vec![
+            (
+                "Content-Type".to_string(),
+                "application/x-www-form-urlencoded".into(),
+            ),
+            ("Accept".to_string(), "application/json".into()),
+        ])
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+    ) -> CustomResult<String, ConnectorError> {
+        // Haskell: test.payu.in/merchant/postservice?form=2 (test)
+        //          info.payu.in/merchant/postservice?form=2 (prod)
+        let base_url = self.base_url(&req.resource_common_data.connectors);
+        let base_url = base_url.trim_end_matches('/');
+        Ok(format!("{base_url}/merchant/postservice?form=2"))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, ConnectorError> {
+        let body = PayuUpdateMandateTokenRequest::try_from(req)?;
+        Ok(Some(common_utils::request::RequestContent::FormUrlEncoded(
+            Box::new(body),
+        )))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+        ConnectorError,
+    > {
+        // PayU may return HTML error pages (HTTP 200 with non-JSON body) for
+        // invalid mandate IDs. Attempt JSON parsing first; on failure, treat
+        // the response as a Fail with the raw body as the failure reason.
+        let parse_result: Result<PayuUpdateMandateTokenResponse, _> =
+            res.response.parse_struct("PayuUpdateMandateTokenResponse");
+
+        match parse_result {
+            Ok(response) => {
+                if let Some(event) = event_builder {
+                    event.set_connector_response(&response);
+                }
+
+                let router_data = ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                };
+
+                RouterDataV2::try_from(router_data)
+                    .change_context(ConnectorError::ResponseHandlingFailed)
+            }
+            Err(_) => {
+                let raw_body = String::from_utf8_lossy(&res.response).to_string();
+                let failure_reason = if raw_body.len() > 500 {
+                    format!("Non-JSON response from PayU: {}...", &raw_body[..500])
+                } else {
+                    format!("Non-JSON response from PayU: {raw_body}")
+                };
+
+                Ok(RouterDataV2 {
+                    response: Ok(UpdateMandateTokenResponseData {
+                        updation_status: UpdateMandateTokenStatus::Fail,
+                        failure_reason: Some(failure_reason),
+                    }),
+                    ..data.clone()
+                })
+            }
+        }
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        // PayU may return HTML error pages instead of JSON. Try JSON first,
+        // fall back to a generic error with the raw body.
+        let parse_result: Result<PayuUpdateMandateTokenResponse, _> =
+            res.response.parse_struct("PayuUpdateMandateTokenResponse");
+
+        match parse_result {
+            Ok(response) => Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: "PAYU_UPDATE_MANDATE_TOKEN_ERROR".to_string(),
+                message: response.message,
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_error_message: None,
+                network_advice_code: None,
+                network_decline_code: None,
+            }),
+            Err(_) => {
+                let raw_body = String::from_utf8_lossy(&res.response).to_string();
+                let message = if raw_body.len() > 500 {
+                    format!("Non-JSON response from PayU: {}...", &raw_body[..500])
+                } else {
+                    format!("Non-JSON response from PayU: {raw_body}")
+                };
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: "PAYU_UPDATE_MANDATE_TOKEN_ERROR".to_string(),
+                    message,
+                    reason: None,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                })
+            }
+        }
+    }
 }

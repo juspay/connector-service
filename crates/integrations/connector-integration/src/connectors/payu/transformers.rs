@@ -1,9 +1,10 @@
 use common_enums::{self, AttemptStatus, Currency};
 use common_utils::{pii::IpAddress, Email};
 use domain_types::{
-    connector_flow::{Authorize, PSync},
+    connector_flow::{Authorize, PSync, UpdateMandateToken},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        UpdateMandateTokenRequestData, UpdateMandateTokenResponseData, UpdateMandateTokenStatus,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
@@ -983,5 +984,156 @@ fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -
             // Unknown status - treat as failure for safety
             AttemptStatus::Failure
         }
+    }
+}
+
+// ==================== UpdateMandateToken Flow ====================
+
+// PayU UpdateMandateToken request - form-encoded body sent to PayU
+// Fields: key, command, var1 (JSON-encoded), hash
+#[derive(Debug, Serialize)]
+pub struct PayuUpdateMandateTokenRequest {
+    pub key: String,
+    pub command: String,
+    pub var1: String, // JSON-encoded UpdateToTokenDetailsVar
+    pub hash: String, // SHA-512 of key|command|var1|salt
+}
+
+// Inner struct that gets JSON-encoded into the var1 field
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayuUpdateToTokenDetailsVar {
+    pub auth_payu_id: String,
+    pub request_id: String,
+    pub is_existing_mandate: String,
+    pub token: PayuTokenData,
+}
+
+// Token data nested within var1
+#[derive(Debug, Serialize)]
+pub struct PayuTokenData {
+    pub _type: String,
+    pub number: String,
+    pub expiry_month: String,
+    pub expiry_year: String,
+    pub tsp: String,
+}
+
+// PayU UpdateMandateToken response
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayuUpdateMandateTokenResponse {
+    pub status: i32,
+    pub auth_payu_id: Option<String>,
+    pub message: String,
+}
+
+// Request transformer: domain UpdateMandateTokenRequestData -> PayuUpdateMandateTokenRequest
+impl
+    TryFrom<
+        &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+    > for PayuUpdateMandateTokenRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            UpdateMandateToken,
+            PaymentFlowData,
+            UpdateMandateTokenRequestData,
+            UpdateMandateTokenResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PayuAuthType::try_from(&item.connector_config)?;
+        let key = auth.api_key.peek().to_string();
+        let salt = auth.api_secret.peek().to_string();
+        let command = "update_SI".to_string();
+
+        // Determine TSP based on card network
+        let tsp = match item.request.card_network.as_deref() {
+            Some("Visa") | Some("VISA") | Some("visa") => "001".to_string(),
+            _ => "002".to_string(),
+        };
+
+        // Build the inner var1 struct
+        let var1_struct = PayuUpdateToTokenDetailsVar {
+            auth_payu_id: item.request.connector_mandate_id.peek().to_string(),
+            request_id: uuid::Uuid::new_v4().to_string(),
+            is_existing_mandate: "0".to_string(),
+            token: PayuTokenData {
+                _type: "network".to_string(),
+                number: item.request.card_number.peek().to_string(),
+                expiry_month: item.request.card_exp_month.peek().to_string(),
+                expiry_year: item.request.card_exp_year.peek().to_string(),
+                tsp,
+            },
+        };
+
+        // JSON-encode var1
+        let var1_json = serde_json::to_string(&var1_struct)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+
+        // Compute hash: SHA512(key|command|var1_json|salt)
+        let hash = generate_update_mandate_token_hash(&key, &command, &var1_json, &salt);
+
+        Ok(Self {
+            key,
+            command,
+            var1: var1_json,
+            hash,
+        })
+    }
+}
+
+// Hash generation for UpdateMandateToken request
+// Format: SHA512(key|command|var1_json|salt)
+fn generate_update_mandate_token_hash(key: &str, command: &str, var1: &str, salt: &str) -> String {
+    use sha2::{Digest, Sha512};
+
+    let hash_string = format!("{key}|{command}|{var1}|{salt}");
+    let mut hasher = Sha512::new();
+    hasher.update(hash_string.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+// Response transformer: PayuUpdateMandateTokenResponse -> domain UpdateMandateTokenResponseData
+impl TryFrom<ResponseRouterData<PayuUpdateMandateTokenResponse, Self>>
+    for RouterDataV2<
+        UpdateMandateToken,
+        PaymentFlowData,
+        UpdateMandateTokenRequestData,
+        UpdateMandateTokenResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PayuUpdateMandateTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        // Success if status == 1 OR message == "Already PMU Updated"
+        let (updation_status, failure_reason) =
+            if response.status == 1 || response.message == "Already PMU Updated" {
+                (UpdateMandateTokenStatus::Success, None)
+            } else {
+                (
+                    UpdateMandateTokenStatus::Fail,
+                    Some(response.message.clone()),
+                )
+            };
+
+        Ok(Self {
+            response: Ok(UpdateMandateTokenResponseData {
+                updation_status,
+                failure_reason,
+            }),
+            ..item.router_data
+        })
     }
 }

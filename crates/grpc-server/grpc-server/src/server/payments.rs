@@ -14,7 +14,7 @@ use domain_types::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        Void, VoidPC,
+        UpdateMandateToken, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -26,7 +26,8 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, UpdateMandateTokenRequestData,
+        UpdateMandateTokenResponseData, UpdateMandateTokenStatus, VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -78,7 +79,8 @@ use grpc_api_types::payments::{
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
     PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
-    RecurringPaymentServiceRevokeResponse, RefundResponse,
+    RecurringPaymentServiceRevokeResponse, RecurringPaymentServiceUpdateMandateTokenRequest,
+    RecurringPaymentServiceUpdateMandateTokenResponse, RefundResponse,
 };
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
@@ -222,6 +224,11 @@ trait RecurringPaymentOperational {
         &self,
         request: RequestData<RecurringPaymentServiceRevokeRequest>,
     ) -> Result<tonic::Response<RecurringPaymentServiceRevokeResponse>, tonic::Status>;
+
+    async fn internal_update_mandate_token(
+        &self,
+        request: RequestData<RecurringPaymentServiceUpdateMandateTokenRequest>,
+    ) -> Result<tonic::Response<RecurringPaymentServiceUpdateMandateTokenResponse>, tonic::Status>;
 }
 
 trait MerchantAuthenticationOperational {
@@ -3464,6 +3471,21 @@ impl RecurringPaymentOperational for RecurringPayments {
         generate_response_fn: generate_mandate_revoke_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_update_mandate_token,
+        log_prefix: "UPDATE_MANDATE_TOKEN",
+        request_type: RecurringPaymentServiceUpdateMandateTokenRequest,
+        response_type: RecurringPaymentServiceUpdateMandateTokenResponse,
+        flow_marker: UpdateMandateToken,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: UpdateMandateTokenRequestData,
+        response_data_type: UpdateMandateTokenResponseData,
+        request_data_constructor: UpdateMandateTokenRequestData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_update_mandate_token_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -3649,6 +3671,48 @@ impl RecurringPaymentService for RecurringPayments {
             config.clone(),
             FlowName::Authenticate,
             |request_data| async move { self.internal_mandate_revoke(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "update_mandate_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::UpdateMandateToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::UpdateMandateToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn update_mandate_token(
+        &self,
+        request: tonic::Request<RecurringPaymentServiceUpdateMandateTokenRequest>,
+    ) -> Result<tonic::Response<RecurringPaymentServiceUpdateMandateTokenResponse>, tonic::Status>
+    {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::UpdateMandateToken,
+            |request_data| async move { self.internal_update_mandate_token(request_data).await },
         )
         .await
     }
@@ -3894,6 +3958,75 @@ pub fn generate_mandate_revoke_response(
             response_headers,
             network_transaction_id: None,
             merchant_revoke_id: e.connector_transaction_id,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
+}
+
+fn domain_update_mandate_token_status_to_proto(
+    status: UpdateMandateTokenStatus,
+) -> grpc_api_types::payments::UpdateMandateTokenStatus {
+    match status {
+        UpdateMandateTokenStatus::Success => {
+            grpc_api_types::payments::UpdateMandateTokenStatus::UpdateMandateTokenSuccess
+        }
+        UpdateMandateTokenStatus::Fail => {
+            grpc_api_types::payments::UpdateMandateTokenStatus::UpdateMandateTokenFail
+        }
+        UpdateMandateTokenStatus::Pending => {
+            grpc_api_types::payments::UpdateMandateTokenStatus::UpdateMandateTokenPending
+        }
+    }
+}
+
+pub fn generate_update_mandate_token_response(
+    router_data_v2: RouterDataV2<
+        UpdateMandateToken,
+        PaymentFlowData,
+        UpdateMandateTokenRequestData,
+        UpdateMandateTokenResponseData,
+    >,
+) -> Result<
+    RecurringPaymentServiceUpdateMandateTokenResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let update_mandate_token_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+    match update_mandate_token_response {
+        Ok(response) => Ok(RecurringPaymentServiceUpdateMandateTokenResponse {
+            updation_status: domain_update_mandate_token_status_to_proto(response.updation_status)
+                .into(),
+            error: None,
+            status_code: 200,
+            response_headers,
+            failure_reason: response.failure_reason,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(RecurringPaymentServiceUpdateMandateTokenResponse {
+            updation_status:
+                grpc_api_types::payments::UpdateMandateTokenStatus::UpdateMandateTokenFail.into(),
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    code: Some(e.code),
+                    message: Some(e.message.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: e.status_code.into(),
+            response_headers,
+            failure_reason: e.reason,
             raw_connector_response,
             raw_connector_request,
         }),

@@ -2645,6 +2645,42 @@ message RecurringPaymentServiceRevokeResponse {
   optional SecretString raw_connector_request = 8;
 }
 
+// Request message for updating mandate token details with the payment gateway
+message RecurringPaymentServiceUpdateMandateTokenRequest {
+  // Mandate Details
+  string connector_mandate_id = 1;
+
+  // Token Details
+  string card_number = 2;
+  string card_exp_month = 3;
+  string card_exp_year = 4;
+  optional string card_network = 5;
+}
+
+// Response message for updating mandate token details
+message RecurringPaymentServiceUpdateMandateTokenResponse {
+  // Status Information
+  UpdateMandateTokenStatus updation_status = 1;
+  optional ErrorInfo error = 2;
+  uint32 status_code = 3;
+  map<string, string> response_headers = 4;
+
+  // Error Details
+  optional string failure_reason = 5;
+
+  // Raw Response/Request for debugging
+  optional SecretString raw_connector_response = 6;
+  optional SecretString raw_connector_request = 7;
+}
+
+// Status of a mandate token update operation
+enum UpdateMandateTokenStatus {
+  UPDATE_MANDATE_TOKEN_STATUS_UNSPECIFIED = 0;
+  UPDATE_MANDATE_TOKEN_SUCCESS = 1;
+  UPDATE_MANDATE_TOKEN_FAIL = 2;
+  UPDATE_MANDATE_TOKEN_PENDING = 3;
+}
+
 // ============================================================================
 // 3DS AUTHENTICATION FLOW MESSAGES
 // ============================================================================

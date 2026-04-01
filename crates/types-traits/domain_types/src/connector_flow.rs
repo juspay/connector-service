@@ -68,6 +68,9 @@ pub struct IncrementalAuthorization;
 pub struct MandateRevoke;
 
 #[derive(Debug, Clone)]
+pub struct UpdateMandateToken;
+
+#[derive(Debug, Clone)]
 pub struct VerifyWebhookSource;
 
 #[derive(Debug, Clone)]
@@ -122,6 +125,7 @@ pub enum FlowName {
     SdkSessionToken,
     IncrementalAuthorization,
     MandateRevoke,
+    UpdateMandateToken,
     PayoutCreate,
     PayoutTransfer,
     PayoutGet,
