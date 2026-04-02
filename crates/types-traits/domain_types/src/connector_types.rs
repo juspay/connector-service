@@ -3816,6 +3816,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
             AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
+            AuthType::Itaubank(_) => Ok(Self::Itaubank),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
