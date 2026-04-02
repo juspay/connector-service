@@ -110,12 +110,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Barclaycard<T>
+    connector_types::ServerSessionAuthentication for Barclaycard<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Barclaycard<T>
+    connector_types::ClientAuthentication for Barclaycard<T>
 {
 }
 
@@ -126,7 +126,7 @@ macros::macro_connector_payout_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Barclaycard<T>
+    connector_types::ServerAuthentication for Barclaycard<T>
 {
 }
 
@@ -327,29 +327,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        domain_types::connector_flow::CreateAccessToken,
+        domain_types::connector_flow::ServerAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::AccessTokenRequestData,
-        domain_types::connector_types::AccessTokenResponseData,
+        domain_types::connector_types::ServerAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerAuthenticationTokenResponseData,
     > for Barclaycard<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        domain_types::connector_flow::CreateSessionToken,
+        domain_types::connector_flow::ServerSessionAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
     > for Barclaycard<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        domain_types::connector_flow::SdkSessionToken,
+        domain_types::connector_flow::ClientAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::PaymentsSdkSessionTokenData,
+        domain_types::connector_types::ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     > for Barclaycard<T>
 {

@@ -12,10 +12,10 @@ use cbc::{
 use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, CreateSessionToken, PSync},
+    connector_flow::{Authorize, PSync, ServerSessionAuthenticationToken},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, UpiData},
@@ -145,7 +145,7 @@ pub enum UpiFlowType {
 // Session Token Flow
 // ================================
 
-// PaytmInitiateTxnRequest TryFrom CreateSessionToken RouterData
+// PaytmInitiateTxnRequest TryFrom ServerSessionAuthenticationToken RouterData
 // Using the macro-generated PaytmRouterData type from the paytm module
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
@@ -158,10 +158,10 @@ impl<
     TryFrom<
         MacroPaytmRouterData<
             RouterDataV2<
-                CreateSessionToken,
+                ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                SessionTokenRequestData,
-                SessionTokenResponseData,
+                ServerSessionAuthenticationTokenRequestData,
+                ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -172,10 +172,10 @@ impl<
     fn try_from(
         item: MacroPaytmRouterData<
             RouterDataV2<
-                CreateSessionToken,
+                ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                SessionTokenRequestData,
-                SessionTokenResponseData,
+                ServerSessionAuthenticationTokenRequestData,
+                ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -337,13 +337,13 @@ impl<
     }
 }
 
-// CreateSessionToken response transformation
+// ServerSessionAuthenticationToken response transformation
 impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
     for RouterDataV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     >
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -371,7 +371,7 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
                         network_error_message: None,
                     })
                 } else {
-                    Ok(SessionTokenResponseData {
+                    Ok(ServerSessionAuthenticationTokenResponseData {
                         session_token: success_body.txn_token.clone().expose(),
                     })
                 }

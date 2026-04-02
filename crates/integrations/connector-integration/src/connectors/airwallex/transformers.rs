@@ -61,7 +61,7 @@ pub struct AirwallexAccessTokenResponse {
     pub expires_at: time::PrimitiveDateTime,
 }
 
-// Empty request body for CreateAccessToken - Airwallex requires empty JSON object {}
+// Empty request body for ServerAuthenticationToken - Airwallex requires empty JSON object {}
 #[derive(Debug, Serialize)]
 pub struct AirwallexAccessTokenRequest {
     // Empty struct that serializes to {} - Airwallex API requirement
@@ -1332,7 +1332,7 @@ impl TryFrom<ResponseRouterData<AirwallexIntentResponse, Self>>
 
         router_data.response = Ok(domain_types::connector_types::PaymentCreateOrderResponse {
             order_id: item.response.id.clone(),
-            session_token: None,
+            session_data: None,
         });
 
         // Update the flow data with the new status and store payment intent ID as reference_id (like Razorpay V2)
@@ -1351,10 +1351,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         super::AirwallexRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -1365,15 +1365,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         _item: super::AirwallexRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Airwallex CreateAccessToken requires empty JSON body {}
+        // Airwallex ServerAuthenticationToken requires empty JSON body {}
         // The authentication headers (x-api-key, x-client-id) are set separately
         Ok(Self {
             // Empty struct serializes to {}
@@ -1384,10 +1384,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Access Token Response Transformer
 impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::CreateAccessToken,
+        domain_types::connector_flow::ServerAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::AccessTokenRequestData,
-        domain_types::connector_types::AccessTokenResponseData,
+        domain_types::connector_types::ServerAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerAuthenticationTokenResponseData,
     >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -1399,11 +1399,13 @@ impl TryFrom<ResponseRouterData<AirwallexAccessTokenResponse, Self>>
 
         let expires = (item.response.expires_at - common_utils::date_time::now()).whole_seconds();
 
-        router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
-            access_token: item.response.token,
-            token_type: Some("Bearer".to_string()),
-            expires_in: Some(expires),
-        });
+        router_data.response = Ok(
+            domain_types::connector_types::ServerAuthenticationTokenResponseData {
+                access_token: item.response.token,
+                token_type: Some("Bearer".to_string()),
+                expires_in: Some(expires),
+            },
+        );
 
         Ok(router_data)
     }

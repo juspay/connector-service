@@ -1,11 +1,11 @@
 use common_enums::{self, AttemptStatus};
 use common_utils::{consts, request::Method, types::MinorUnit, CustomerId};
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, PSync},
+    connector_flow::{Authorize, PSync, ServerAuthenticationToken},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
@@ -333,10 +333,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         VoltRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -346,10 +346,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: VoltRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -366,14 +366,14 @@ pub struct VoltAuthUpdateResponse {
 }
 
 impl<F, T> TryFrom<ResponseRouterData<VoltAuthUpdateResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+    for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: ResponseRouterData<VoltAuthUpdateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            response: Ok(AccessTokenResponseData {
+            response: Ok(ServerAuthenticationTokenResponseData {
                 access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: Some(item.response.token_type),

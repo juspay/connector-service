@@ -16,10 +16,11 @@ use domain_types::{
         Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
     },
     connector_types::{
-        AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        ServerAuthenticationTokenResponseData, SetupMandateRequestData,
+        VerifyWebhookSourceFlowData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -1281,10 +1282,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         PaypalRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -1294,10 +1295,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: PaypalRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -1320,14 +1321,14 @@ pub struct PaypalAuthUpdateResponse {
 }
 
 impl<F, T> TryFrom<ResponseRouterData<PaypalAuthUpdateResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+    for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<PaypalAuthUpdateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            response: Ok(AccessTokenResponseData {
+            response: Ok(ServerAuthenticationTokenResponseData {
                 access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: None,

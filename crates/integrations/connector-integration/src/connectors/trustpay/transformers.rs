@@ -14,15 +14,16 @@ use common_utils::{
     Email,
 };
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, CreateOrder, Refund},
+    connector_flow::{Authorize, CreateOrder, Refund, ServerAuthenticationToken},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, AmountInfo, ApplePayPaymentRequest,
-        ApplePaySessionResponse, ApplepaySessionTokenResponse, GooglePaySessionResponse,
-        GpayAllowedPaymentMethods, GpayMerchantInfo, GpaySessionTokenResponse,
-        GpayShippingAddressParameters, NextActionCall, PaymentCreateOrderData,
+        AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
+        ApplepayClientAuthenticationResponse, ClientAuthenticationTokenData,
+        GooglePaySessionResponse, GpayAllowedPaymentMethods, GpayClientAuthenticationResponse,
+        GpayMerchantInfo, GpayShippingAddressParameters, NextActionCall, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SdkNextAction,
-        SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
+        SecretInfoToInitiateSdk, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, ThirdPartySdkSessionResponse,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -969,10 +970,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         TrustpayRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -983,10 +984,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         _item: TrustpayRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -1008,10 +1009,10 @@ pub struct TrustpayAuthUpdateResponse {
 
 impl TryFrom<ResponseRouterData<TrustpayAuthUpdateResponse, Self>>
     for RouterDataV2<
-        CreateAccessToken,
+        ServerAuthenticationToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     >
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1021,7 +1022,7 @@ impl TryFrom<ResponseRouterData<TrustpayAuthUpdateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         match (item.response.access_token, item.response.expires_in) {
             (Some(access_token), Some(expires_in)) => Ok(Self {
-                response: Ok(AccessTokenResponseData {
+                response: Ok(ServerAuthenticationTokenResponseData {
                     access_token,
                     expires_in: Some(expires_in),
                     token_type: Some(item.router_data.request.grant_type.clone()),
@@ -2136,42 +2137,43 @@ pub(crate) fn get_apple_pay_session(
     RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
     Error,
 > {
-    let session_token = SessionToken::ApplePay(Box::new(ApplepaySessionTokenResponse {
-        session_token_data: Some(ApplePaySessionResponse::ThirdPartySdk(
-            ThirdPartySdkSessionResponse {
-                secrets: secrets.to_owned().into(),
+    let session_token =
+        ClientAuthenticationTokenData::ApplePay(Box::new(ApplepayClientAuthenticationResponse {
+            session_response: Some(ApplePaySessionResponse::ThirdPartySdk(
+                ThirdPartySdkSessionResponse {
+                    secrets: secrets.to_owned().into(),
+                },
+            )),
+            payment_request_data: Some(ApplePayPaymentRequest {
+                country_code: apple_pay_init_result.country_code,
+                currency_code: apple_pay_init_result.currency_code,
+                supported_networks: Some(apple_pay_init_result.supported_networks.clone()),
+                merchant_capabilities: Some(apple_pay_init_result.merchant_capabilities.clone()),
+                total: AmountInfo {
+                    label: apple_pay_init_result.total.label.clone(),
+                    amount: TrustpayAmountConvertor::convert_back(
+                        apple_pay_init_result.total.amount.clone(),
+                        apple_pay_init_result.currency_code,
+                    )
+                    .change_context(ConnectorError::ResponseDeserializationFailed)?,
+                    total_type: None,
+                },
+                merchant_identifier: None,
+                required_billing_contact_fields: None,
+                required_shipping_contact_fields: None,
+                recurring_payment_request: None,
+            }),
+            connector: "trustpay".to_string(),
+            delayed_session_token: true,
+            sdk_next_action: {
+                SdkNextAction {
+                    next_action: NextActionCall::Confirm,
+                }
             },
-        )),
-        payment_request_data: Some(ApplePayPaymentRequest {
-            country_code: apple_pay_init_result.country_code,
-            currency_code: apple_pay_init_result.currency_code,
-            supported_networks: Some(apple_pay_init_result.supported_networks.clone()),
-            merchant_capabilities: Some(apple_pay_init_result.merchant_capabilities.clone()),
-            total: AmountInfo {
-                label: apple_pay_init_result.total.label.clone(),
-                amount: TrustpayAmountConvertor::convert_back(
-                    apple_pay_init_result.total.amount.clone(),
-                    apple_pay_init_result.currency_code,
-                )
-                .change_context(ConnectorError::ResponseDeserializationFailed)?,
-                total_type: None,
-            },
-            merchant_identifier: None,
-            required_billing_contact_fields: None,
-            required_shipping_contact_fields: None,
-            recurring_payment_request: None,
-        }),
-        connector: "trustpay".to_string(),
-        delayed_session_token: true,
-        sdk_next_action: {
-            SdkNextAction {
-                next_action: NextActionCall::Confirm,
-            }
-        },
-        connector_reference_id: None,
-        connector_sdk_public_key: None,
-        connector_merchant_id: None,
-    }));
+            connector_reference_id: None,
+            connector_sdk_public_key: None,
+            connector_merchant_id: None,
+        }));
 
     Ok(RouterDataV2 {
         resource_common_data: PaymentFlowData {
@@ -2180,7 +2182,7 @@ pub(crate) fn get_apple_pay_session(
         },
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
-            session_token: Some(session_token),
+            session_data: Some(session_token),
         }),
         ..item.router_data.clone()
     })
@@ -2203,8 +2205,8 @@ pub(crate) fn get_google_pay_session(
     RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
     Error,
 > {
-    let session_token = SessionToken::GooglePay(Box::new(
-        GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
+    let session_token = ClientAuthenticationTokenData::GooglePay(Box::new(
+        GpayClientAuthenticationResponse::GooglePaySession(GooglePaySessionResponse {
             connector: "trustpay".to_string(),
             delayed_session_token: true,
             sdk_next_action: {
@@ -2235,7 +2237,7 @@ pub(crate) fn get_google_pay_session(
         },
         response: Ok(PaymentCreateOrderResponse {
             order_id: instance_id,
-            session_token: Some(session_token),
+            session_data: Some(session_token),
         }),
         ..item.router_data.clone()
     })
