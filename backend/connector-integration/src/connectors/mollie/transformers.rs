@@ -839,7 +839,7 @@ pub type MollieRSyncResponse = MollieRefundResponse;
 pub struct MollieOrderLine {
     #[serde(rename = "type")]
     pub line_type: String,
-    pub name: String,
+    pub name: Secret<String>,
     pub quantity: i32,
     pub vat_rate: String,
     pub unit_price: MollieAmount,
@@ -1060,7 +1060,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let zero_amount = common_utils::types::MinorUnit(0);
         let order_line = MollieOrderLine {
             line_type: "physical".to_string(),
-            name: format!("Order {}", order_number),
+            name: format!("Order {}", order_number).into(),
             quantity: 1,
             vat_rate: "0.00".to_string(),
             unit_price: MollieAmount {
