@@ -84,24 +84,126 @@ def get_flow_name_to_key() -> dict[str, str]:
         get_flow_name_to_key._cache = _build_flow_name_to_key_mapping()
     return get_flow_name_to_key._cache
 
-# Mapping from probe PM key to display name (order matters for table columns)
-_PROBE_PM_DISPLAY: dict[str, str] = {
-    "Card":           "Card",
-    "GooglePay":      "Google Pay",
-    "ApplePay":       "Apple Pay",
-    "Sepa":           "SEPA",
-    "Bacs":           "BACS",
-    "Ach":            "ACH",
-    "Becs":           "BECS",
-    "Ideal":          "iDEAL",
-    "PaypalRedirect": "PayPal",
-    "Blik":           "BLIK",
-    "Klarna":         "Klarna",
-    "Afterpay":       "Afterpay",
-    "UpiCollect":     "UPI",
-    "Affirm":         "Affirm",
-    "SamsungPay":     "Samsung Pay",
-}
+# Payment methods grouped by category for better readability in documentation
+# Format: (category_name, [(pm_key, display_name), ...])
+_PROBE_PM_BY_CATEGORY: list[tuple[str, list[tuple[str, str]]]] = [
+    ("Card", [
+        ("Card", "Card"),
+        ("BancontactCard", "Bancontact"),
+    ]),
+    ("Wallet", [
+        ("ApplePay", "Apple Pay"),
+        ("ApplePayDecrypted", "Apple Pay Dec"),
+        ("ApplePayThirdPartySdk", "Apple Pay SDK"),
+        ("GooglePay", "Google Pay"),
+        ("GooglePayDecrypted", "Google Pay Dec"),
+        ("GooglePayThirdPartySdk", "Google Pay SDK"),
+        ("PaypalSdk", "PayPal SDK"),
+        ("AmazonPayRedirect", "Amazon Pay"),
+        ("CashappQr", "Cash App"),
+        ("PaypalRedirect", "PayPal"),
+        ("WeChatPayQr", "WeChat Pay"),
+        ("AliPayRedirect", "Alipay"),
+        ("RevolutPay", "Revolut Pay"),
+        ("Mifinity", "MiFinity"),
+        ("Bluecode", "Bluecode"),
+        ("Paze", "Paze"),
+        ("SamsungPay", "Samsung Pay"),
+        ("MbWay", "MB Way"),
+        ("Satispay", "Satispay"),
+        ("Wero", "Wero"),
+    ]),
+    ("BNPL", [
+        ("Affirm", "Affirm"),
+        ("Afterpay", "Afterpay"),
+        ("Klarna", "Klarna"),
+    ]),
+    ("UPI", [
+        ("UpiCollect", "UPI Collect"),
+        ("UpiIntent", "UPI Intent"),
+        ("UpiQr", "UPI QR"),
+    ]),
+    ("Online Banking", [
+        ("OnlineBankingThailand", "Thailand"),
+        ("OnlineBankingCzechRepublic", "Czech"),
+        ("OnlineBankingFinland", "Finland"),
+        ("OnlineBankingFpx", "FPX"),
+        ("OnlineBankingPoland", "Poland"),
+        ("OnlineBankingSlovakia", "Slovakia"),
+    ]),
+    ("Open Banking", [
+        ("OpenBankingUk", "UK"),
+        ("OpenBankingPis", "PIS"),
+        ("OpenBanking", "Generic"),
+    ]),
+    ("Bank Redirect", [
+        ("LocalBankRedirect", "Local"),
+        ("Ideal", "iDEAL"),
+        ("Sofort", "Sofort"),
+        ("Trustly", "Trustly"),
+        ("Giropay", "Giropay"),
+        ("Eps", "EPS"),
+        ("Przelewy24", "Przelewy24"),
+        ("Pse", "PSE"),
+        ("Blik", "BLIK"),
+        ("Interac", "Interac"),
+        ("Bizum", "Bizum"),
+        ("Eft", "EFT"),
+        ("DuitNow", "DuitNow"),
+    ]),
+    ("Bank Transfer", [
+        ("AchBankTransfer", "ACH"),
+        ("SepaBankTransfer", "SEPA"),
+        ("BacsBankTransfer", "BACS"),
+        ("MultibancoBankTransfer", "Multibanco"),
+        ("InstantBankTransfer", "Instant"),
+        ("InstantBankTransferFinland", "Instant FI"),
+        ("InstantBankTransferPoland", "Instant PL"),
+        ("Pix", "Pix"),
+        ("PermataBankTransfer", "Permata"),
+        ("BcaBankTransfer", "BCA"),
+        ("BniVaBankTransfer", "BNI VA"),
+        ("BriVaBankTransfer", "BRI VA"),
+        ("CimbVaBankTransfer", "CIMB VA"),
+        ("DanamonVaBankTransfer", "Danamon VA"),
+        ("MandiriVaBankTransfer", "Mandiri VA"),
+        ("LocalBankTransfer", "Local"),
+        ("IndonesianBankTransfer", "Indonesian"),
+    ]),
+    ("Bank Debit", [
+        ("Ach", "ACH"),
+        ("Sepa", "SEPA"),
+        ("Bacs", "BACS"),
+        ("Becs", "BECS"),
+        ("SepaGuaranteedDebit", "SEPA Guaranteed"),
+    ]),
+    ("Alternative", [
+        ("Crypto", "Crypto"),
+        ("ClassicReward", "Reward"),
+        ("Givex", "Givex"),
+        ("PaySafeCard", "PaySafeCard"),
+        ("EVoucher", "E-Voucher"),
+        ("Boleto", "Boleto"),
+        ("Efecty", "Efecty"),
+        ("PagoEfectivo", "Pago Efectivo"),
+        ("RedCompra", "Red Compra"),
+        ("RedPagos", "Red Pagos"),
+        ("Alfamart", "Alfamart"),
+        ("Indomaret", "Indomaret"),
+        ("Oxxo", "Oxxo"),
+        ("SevenEleven", "7-Eleven"),
+        ("Lawson", "Lawson"),
+        ("MiniStop", "Mini Stop"),
+        ("FamilyMart", "Family Mart"),
+        ("Seicomart", "Seicomart"),
+        ("PayEasy", "Pay Easy"),
+    ]),
+]
+
+# Flatten for backward compatibility
+_PROBE_PM_DISPLAY: dict[str, str] = {}
+for _category, pms in _PROBE_PM_BY_CATEGORY:
+    _PROBE_PM_DISPLAY.update(dict(pms))
 
 
 def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
@@ -131,9 +233,10 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         _FLOW_METADATA = manifest.get("flow_metadata", [])
         _MESSAGE_SCHEMAS = manifest.get("message_schemas", {})
         connector_names = manifest.get("connectors", [])
+        snippets.set_scenario_groups(manifest.get("scenario_groups", []))
 
         # Load proto type map for wrapper-type detection (SecretString, CardNumberType, etc.)
-        proto_dir = probe_dir.parent.parent / "backend" / "grpc-api-types" / "proto"
+        proto_dir = probe_dir.parent.parent / "crates" / "types-traits" / "grpc-api-types" / "proto"
         if proto_dir.exists():
             snippets.load_proto_type_map(proto_dir)
 
@@ -168,52 +271,6 @@ def _probe_pm_support(probe_connector: dict, flow_key: str) -> Optional[dict[str
 
 
 # Human-readable label per PM key used as the sample heading
-_PROBE_PM_LABELS: dict[str, str] = {
-    "Card":          "Card (Raw PAN)",
-    "GooglePay":     "Google Pay",
-    "ApplePay":      "Apple Pay",
-    "Sepa":          "SEPA Direct Debit",
-    "Bacs":          "BACS Direct Debit",
-    "Ach":           "ACH Direct Debit",
-    "Becs":          "BECS Direct Debit",
-    "Ideal":         "iDEAL",
-    "PaypalRedirect":"PayPal Redirect",
-    "Blik":          "BLIK",
-    "Klarna":        "Klarna",
-    "Afterpay":      "Afterpay / Clearpay",
-}
-
-
-def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[str, dict]]:
-    """
-    Return [(label, proto_request)] from probe data for a flow.
-
-    - Authorize: one sample per supported PM type (in _PROBE_PM_LABELS order).
-    - Other flows: single sample from the "default" entry if supported.
-    Returns empty list when no probe data is available.
-    """
-    if not flow_key:
-        return []
-    pms = probe_connector.get("flows", {}).get(flow_key, {})
-    if not pms:
-        return []
-
-    if set(pms.keys()) == {"default"}:
-        # Non-authorize flow — single payload, no PM breakdown
-        entry = pms["default"]
-        if entry.get("status") == "supported" and "proto_request" in entry:
-            # Include even if proto_request is empty (no required fields)
-            return [("Example Request", entry["proto_request"])]
-        return []
-
-    # Authorize flow — one sample per supported PM type
-    result = []
-    for pm_key, label in _PROBE_PM_LABELS.items():
-        entry = pms.get(pm_key, {})
-        if entry.get("status") == "supported" and entry.get("proto_request"):
-            result.append((label, entry["proto_request"]))
-    return result
-
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -421,8 +478,10 @@ def generate_scenario_files(
     if not scenarios_with_payloads:
         return [], {}, {}
 
-    scenario_keys = {s.key for s, _ in scenarios_with_payloads}
-    flow_items    = _collect_flow_items(probe_connector, scenario_keys)
+    # Collect ALL flows for standalone function generation (don't exclude scenario keys)
+    # This ensures flows like "refund" that are both scenarios AND standalone flows
+    # get their standalone functions generated in Python/JS
+    flow_items    = _collect_flow_items(probe_connector, exclude_keys=set())
     written: list[Path] = []
     # scenario_lines[scenario_key][sdk] = 1-based line number of process_* function
     scenario_lines: dict[str, dict[str, int]] = {}
@@ -431,7 +490,7 @@ def generate_scenario_files(
 
     for sdk, ext, render_fn in [
         ("python",     "py", snippets.render_consolidated_python),
-        ("javascript", "js", snippets.render_consolidated_javascript),
+        ("javascript", "ts", snippets.render_consolidated_javascript),
     ]:
         out_dir  = examples_dir / connector_name / sdk
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -738,19 +797,25 @@ def generate_connector_doc(
                 )
             )
             if has_payload:
-                fl = flow_line_numbers.get(f, {})
-                sl = scenario_line_numbers.get(f, {})  # fallback: scenario covers this flow
                 base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
                 base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
                 base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
                 base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
-                py_line = fl.get("python")     or sl.get("python")
-                js_line = fl.get("javascript") or sl.get("javascript")
-                py_path = base_py + (f"#L{py_line}" if py_line else "")
-                js_path = base_js + (f"#L{js_line}" if js_line else "")
-                kt_path = base_kt + (f"#L{fl['kotlin']}" if fl.get("kotlin") else "")
-                rs_path = base_rs + (f"#L{fl['rust']}"   if fl.get("rust")   else "")
-                a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path}) · [Kotlin]({kt_path}) · [Rust]({rs_path})")
+                
+                # Get line numbers from flow_line_numbers
+                flow_lines = flow_line_numbers.get(f, {}) if flow_line_numbers else {}
+                ln_py = flow_lines.get("python", 0)
+                ln_js = flow_lines.get("javascript", 0)
+                ln_kt = flow_lines.get("kotlin", 0)
+                ln_rs = flow_lines.get("rust", 0)
+                
+                # Build links with line numbers when available
+                py_link = f"{base_py}#L{ln_py}" if ln_py else base_py
+                js_link = f"{base_js}#L{ln_js}" if ln_js else base_js
+                kt_link = f"{base_kt}#L{ln_kt}" if ln_kt else base_kt
+                rs_link = f"{base_rs}#L{ln_rs}" if ln_rs else base_rs
+                
+                a(f"**Examples:** [Python]({py_link}) · [JavaScript]({js_link}) · [Kotlin]({kt_link}) · [Rust]({rs_link})")
                 a("")
 
     return "\n".join(out)
@@ -765,14 +830,24 @@ def list_connectors() -> list[str]:
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
 
-def check_example_syntax(examples_dir: Path) -> None:
-    """Run syntax checks on all generated example files."""
+def check_example_syntax(examples_dir: Path, connectors: Optional[list[str]] = None) -> None:
+    """Run syntax checks on generated example files.
+
+    If *connectors* is given, only files under examples_dir/{connector}/ are checked.
+    """
     import subprocess
 
-    py_files = sorted(examples_dir.rglob("*.py"))
-    js_files = sorted(examples_dir.rglob("*.js"))
-    kt_files = sorted(examples_dir.rglob("*.kt"))
-    rs_files = sorted(examples_dir.rglob("*.rs"))
+    if connectors:
+        subdirs = [examples_dir / c for c in connectors if (examples_dir / c).is_dir()]
+        py_files = sorted(f for d in subdirs for f in d.rglob("*.py"))
+        ts_files = sorted(f for d in subdirs for f in d.rglob("*.ts"))
+        kt_files = sorted(f for d in subdirs for f in d.rglob("*.kt"))
+        rs_files = sorted(f for d in subdirs for f in d.rglob("*.rs"))
+    else:
+        py_files = sorted(examples_dir.rglob("*.py"))
+        ts_files = sorted(examples_dir.rglob("*.ts"))
+        kt_files = sorted(examples_dir.rglob("*.kt"))
+        rs_files = sorted(examples_dir.rglob("*.rs"))
 
     errors: list[str] = []
 
@@ -785,18 +860,22 @@ def check_example_syntax(examples_dir: Path) -> None:
         if result.returncode != 0:
             errors.append(f"Python: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
-    # JavaScript — syntax check
-    node_ok = False
+    # TypeScript — syntax check via tsc (TypeScript compiler)
+    tsc_ok = False
     try:
-        subprocess.run(["node", "--version"], capture_output=True, check=True)
-        node_ok = True
+        subprocess.run(["tsc", "--version"], capture_output=True, check=True)
+        tsc_ok = True
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
-    if node_ok:
-        for f in js_files:
-            result = subprocess.run(["node", "--check", str(f)], capture_output=True, text=True)
+    if tsc_ok:
+        for f in ts_files:
+            # Check syntax only (no emit)
+            result = subprocess.run(
+                ["tsc", "--noEmit", "--skipLibCheck", str(f)],
+                capture_output=True, text=True
+            )
             if result.returncode != 0:
-                errors.append(f"JS: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+                errors.append(f"TypeScript: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
     # Kotlin — full compile via Gradle (preferred) or kotlinc syntax check (fallback).
     # Standalone kotlinc cannot resolve payments.* SDK imports, so only Gradle gives
@@ -861,11 +940,11 @@ def check_example_syntax(examples_dir: Path) -> None:
         for e in errors:
             print(f"    {e}")
     else:
-        checks = f"{len(py_files)} Python, {len(js_files)} JavaScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
-        js_note = "" if node_ok else " (node unavailable — JS skipped)"
+        checks = f"{len(py_files)} Python, {len(ts_files)} TypeScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
+        ts_note = "" if tsc_ok else " (tsc unavailable — TypeScript skipped)"
         kt_note = "" if kt_ok else " (Gradle/kotlinc unavailable — Kotlin skipped)"
         rs_note = "" if rustfmt_ok else " (rustfmt unavailable — Rust skipped)"
-        print(f"  ✓ Syntax check passed ({checks}){js_note}{kt_note}{rs_note}")
+        print(f"  ✓ Syntax check passed ({checks}){ts_note}{kt_note}{rs_note}")
 
 
 def cmd_list():
@@ -875,7 +954,7 @@ def cmd_list():
         print(f"  {name}")
 
 
-def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[Path] = None):
+def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[Path] = None, update_llms: bool = True):
     probe_data = load_probe_data(probe_path)
     if not probe_data:
         print("Error: No probe data available. Run field-probe first.", file=sys.stderr)
@@ -895,6 +974,19 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
         # Generate example files first so we can compute line numbers for doc links.
         scenario_files, scenario_lines, flow_lines_py_js     = generate_scenario_files(name, probe_connector, EXAMPLES_DIR)
         flow_files, flow_lines_kt_rs, scenario_lines_kt_rs   = generate_flow_files(name, probe_connector, EXAMPLES_DIR)
+
+        # Supplement py/js line numbers from existing files when generate_scenario_files
+        # returned early (e.g. scenario_groups missing from manifest).
+        flow_items = _collect_flow_items(probe_connector, exclude_keys=set())
+        for sdk, ext in [("python", "py"), ("javascript", "js")]:
+            existing = EXAMPLES_DIR / name / sdk / f"{name}.{ext}"
+            if existing.exists():
+                content = existing.read_text(encoding="utf-8")
+                for flow_key, _, _ in flow_items:
+                    if sdk not in flow_lines_py_js.get(flow_key, {}):
+                        lineno = _find_func_line(content, _flow_search(sdk, flow_key))
+                        if lineno:
+                            flow_lines_py_js.setdefault(flow_key, {})[sdk] = lineno
 
         # Merge py/js and kt/rs flow line numbers into one dict.
         merged_flow_lines: dict[str, dict[str, int]] = {}
@@ -924,9 +1016,10 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
             print("skipped")
             skip += 1
 
-    generate_llms_txt(probe_data, output_dir)
+    if update_llms:
+        generate_llms_txt(probe_data, output_dir)
     print(f"\nDone: {ok} generated, {skip} skipped.")
-    check_example_syntax(EXAMPLES_DIR)
+    check_example_syntax(EXAMPLES_DIR, connectors=connectors)
 
 
 # ─── All Connectors Coverage Document ─────────────────────────────────────────
@@ -1021,43 +1114,8 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
         out_path.write_text("\n".join(out), encoding="utf-8")
         return
     
-    # ── Summary Table ──────────────────────────────────────────────────────────
-    # Use proto-based flow names for summary
-    summary_flows = [
-        ("authorize", "PaymentService.Authorize"),
-        ("capture", "PaymentService.Capture"),
-        ("get", "PaymentService.Get"),
-        ("refund", "PaymentService.Refund"),
-        ("void", "PaymentService.Void"),
-    ]
-    
-    a("## Summary")
-    a("")
-    # Header with service-prefixed flow names
-    header_parts = ["Connector"]
-    for _, flow_display in summary_flows:
-        # Extract just the RPC name for brevity in header
-        rpc_name = flow_display.split(".")[-1]
-        header_parts.append(rpc_name)
-    a("| " + " | ".join(header_parts) + " |")
-    a("|" + "|".join(["-----------"] + [":---:" for _ in summary_flows]) + "|")
-    
-    for conn_name in connectors_with_probe:
-        conn_data = probe_data[conn_name]
-        flows = conn_data.get("flows", {})
-        
-        display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-        row = [f"[{display}](connectors/{conn_name}.md)"]
-        
-        for flow_key, _ in summary_flows:
-            status_mark, _ = _get_flow_status(flows, flow_key)
-            row.append(status_mark)
-        
-        a("| " + " | ".join(row) + " |")
-    a("")
-    
     # ── Per-Service Flow Coverage Tables ───────────────────────────────────────
-    a("## Flow Details")
+    a("## Flow Coverage")
     a("")
     a("Flow names follow the gRPC service definitions. Each flow is prefixed with")
     a("its service name (e.g., `PaymentService.Authorize`, `RefundService.Get`).")
@@ -1083,25 +1141,15 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     for flow_key, (service_name, rpc_name, description) in proto_flow_defs.items():
         service_flows.setdefault(service_name, []).append((flow_key, rpc_name, description))
     
+    # Separate PM-aware flows from simple status flows
+    pm_aware_flows_data = []
+    simple_flows_data = []
+    
     for service_name in services_order:
         if service_name not in service_flows:
             continue
         
         flows_in_service = service_flows[service_name]
-        
-        # Check if any flow in this service has probe data
-        service_has_data = any(
-            any(
-                probe_data[c].get("flows", {}).get(flow_key)
-                for c in connectors_with_probe
-            )
-            for flow_key, _, _ in flows_in_service
-        )
-        if not service_has_data:
-            continue
-        
-        a(f"### {service_name}")
-        a("")
         
         for flow_key, rpc_name, description in flows_in_service:
             # Check if any connector has data for this flow
@@ -1112,72 +1160,95 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
             if not has_data:
                 continue
             
-            # Flow heading with full service.rpc name
-            a(f"#### {service_name}.{rpc_name}")
-            a("")
-            a(description)
-            a("")
-            
             if flow_key in _PM_AWARE_FLOWS:
-                # For PM-aware flows, show full PM breakdown
-                a("| Connector | " + " | ".join(_PROBE_PM_DISPLAY.values()) + " |")
-                a("|-----------|" + "|".join([":---:" for _ in _PROBE_PM_DISPLAY]) + "|")
-                
-                for conn_name in connectors_with_probe:
-                    conn_data = probe_data[conn_name]
-                    flow_data = conn_data.get("flows", {}).get(flow_key, {})
-                    
-                    display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-                    row = [f"[{display}](connectors/{conn_name}.md)"]
-                    
-                    for pm_key in _PROBE_PM_DISPLAY:
-                        pm_data = flow_data.get(pm_key, {})
-                        status = pm_data.get("status", "unknown")
-                        row.append(_status_to_mark(status))
-                    
-                    a("| " + " | ".join(row) + " |")
-                a("")
-                
-                # Legend
-                a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
-                a("")
+                pm_aware_flows_data.append((service_name, flow_key, rpc_name, description))
             else:
-                # For other flows, show simple supported/not supported
-                a("| Connector | Supported | Notes |")
-                a("|-----------|:---------:|-------|")
-                
-                for conn_name in connectors_with_probe:
-                    conn_data = probe_data[conn_name]
-                    flows = conn_data.get("flows", {})
-                    status_mark, notes = _get_flow_status(flows, flow_key)
-                    
-                    display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
-                    a(f"| [{display}](connectors/{conn_name}.md) | {status_mark} | {notes} |")
-                a("")
+                simple_flows_data.append((service_name, flow_key, rpc_name, description))
     
-    # ── Payment Method Legend ─────────────────────────────────────────────────
-    a("## Payment Methods")
-    a("")
-    a("Payment methods probed for authorize flow (configured in `crates/internal/field-probe/probe-config.toml`):")
-    a("")
-    a("| Key | Display Name | Description |")
-    a("|-----|--------------|-------------|")
-    a("| Card | Card | Credit/Debit card payments |")
-    a("| GooglePay | Google Pay | Google Pay digital wallet |")
-    a("| ApplePay | Apple Pay | Apple Pay digital wallet |")
-    a("| Sepa | SEPA | SEPA Direct Debit (EU bank transfers) |")
-    a("| Bacs | BACS | BACS Direct Debit (UK bank transfers) |")
-    a("| Ach | ACH | ACH Direct Debit (US bank transfers) |")
-    a("| Becs | BECS | BECS Direct Debit (AU bank transfers) |")
-    a("| Ideal | iDEAL | iDEAL (Netherlands bank redirect) |")
-    a("| PaypalRedirect | PayPal | PayPal redirect payments |")
-    a("| Blik | BLIK | BLIK (Polish mobile payment) |")
-    a("| Klarna | Klarna | Klarna Buy Now Pay Later |")
-    a("| Afterpay | Afterpay | Afterpay/Clearpay BNPL |")
-    a("| UpiCollect | UPI | UPI Collect (India) |")
-    a("| Affirm | Affirm | Affirm BNPL |")
-    a("| SamsungPay | Samsung Pay | Samsung Pay digital wallet |")
-    a("")
+    # Render PM-aware flows (like Authorize) with full payment method breakdown
+    for service_name, flow_key, rpc_name, description in pm_aware_flows_data:
+        a(f"### {service_name}.{rpc_name}")
+        a("")
+        a(description)
+        a("")
+        
+        # Build display names with category prefix for clarity
+        pm_display_with_category = []
+        pm_keys_ordered = []
+        for category, pm_list in _PROBE_PM_BY_CATEGORY:
+            for pm_key, pm_name in pm_list:
+                pm_keys_ordered.append(pm_key)
+                # Shorten category names for compact display
+                short_cat = {
+                    "Card": "CARD",
+                    "Wallet": "WALLET", 
+                    "BNPL": "BNPL",
+                    "UPI": "UPI",
+                    "Online Banking": "Online Banking",
+                    "Open Banking": "Open Banking",
+                    "Bank Redirect": "Bank Redirect",
+                    "Bank Transfer": "Bank Transfer",
+                    "Bank Debit": "Bank Debit",
+                    "Alternative": "Alternate PMs "
+                }.get(category, category[:4].upper())
+                pm_display_with_category.append(f"{short_cat} / {pm_name}")
+        
+        # Legend at top for clarity
+        a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
+        a("")
+        
+        a("| Connector | " + " | ".join(pm_display_with_category) + " |")
+        a("|-----------|" + "|".join([":---:" for _ in pm_display_with_category]) + "|")
+        
+        for conn_name in connectors_with_probe:
+            conn_data = probe_data[conn_name]
+            flow_data = conn_data.get("flows", {}).get(flow_key, {})
+            
+            display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
+            row = [f"[{display}](connectors/{conn_name}.md)"]
+            
+            for pm_key in pm_keys_ordered:
+                pm_data = flow_data.get(pm_key, {})
+                status = pm_data.get("status", "unknown")
+                row.append(_status_to_mark(status))
+            
+            a("| " + " | ".join(row) + " |")
+        a("")
+    
+    # Render consolidated table for all simple flows (Get, Void, Refund, etc.)
+    if simple_flows_data:
+        a("### Other Flows")
+        a("")
+        a("Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other non-payment flows.")
+        a("")
+        
+        # Build header with flow names
+        flow_headers = []
+        for service_name, flow_key, rpc_name, description in simple_flows_data:
+            # Shorten service name for compact display
+            short_service = service_name.replace("Service", "").replace("Payment", "Pay").replace("Recurring", "Rec")
+            flow_headers.append(f"{short_service}.{rpc_name}")
+        
+        # Legend at top for clarity
+        a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
+        a("")
+        
+        a("| Connector | " + " | ".join(flow_headers) + " |")
+        a("|-----------|" + "|".join([":---:" for _ in simple_flows_data]) + "|")
+        
+        for conn_name in connectors_with_probe:
+            conn_data = probe_data[conn_name]
+            flows = conn_data.get("flows", {})
+            
+            display = _DISPLAY_NAMES.get(conn_name, conn_name.replace("_", " ").title())
+            row = [f"[{display}](connectors/{conn_name}.md)"]
+            
+            for service_name, flow_key, rpc_name, description in simple_flows_data:
+                status_mark, _ = _get_flow_status(flows, flow_key)
+                row.append(status_mark)
+            
+            a("| " + " | ".join(row) + " |")
+        a("")
     
     # ── Services Reference ─────────────────────────────────────────────────────
     a("## Services Reference")
@@ -1272,7 +1343,7 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
         lines.append(f'            let mut auth = payment_pb2::ConnectorAuthType::new();')
         lines.append(f'            let mut specific = payment_pb2::ConnectorSpecificConfig::new();')
         lines.append(f'            let mut config = payment_pb2::{conn_var.title()}Config::new();')
-        for ftype, fname in config_fields[field_name]:
+        for _, fname in config_fields[field_name]:
             env_var = f"{env_prefix}_{fname.upper()}"
             lines.append(f'            config.{fname} = env::var("{env_var}").unwrap_or_default();')
         lines.append(f'            specific.set_{conn_var}(config);')
@@ -1347,7 +1418,7 @@ def main():
             sys.exit(1)
         cmd_generate(connectors, args.output_dir, args.probe_path)
     elif args.connectors:
-        cmd_generate(args.connectors, args.output_dir, args.probe_path)
+        cmd_generate(args.connectors, args.output_dir, args.probe_path, update_llms=False)
     else:
         parser.print_help()
         sys.exit(1)

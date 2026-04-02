@@ -98,11 +98,15 @@ pub(crate) struct ProbeSettings {
     pub(crate) max_iterations: usize,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub(crate) struct AccessTokenConfig {
     pub(crate) token: String,
     pub(crate) token_type: String,
     pub(crate) expires_in_seconds: i64,
+    /// Per-connector access token overrides. Key is lowercase connector name.
+    /// Some OAuth connectors require special token formats.
+    #[serde(default)]
+    pub(crate) overrides: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -146,6 +150,7 @@ impl Default for ProbeConfig {
                 token: "probe_access_token".to_string(),
                 token_type: "Bearer".to_string(),
                 expires_in_seconds: 3600,
+                overrides: HashMap::new(),
             },
             oauth_connectors: vec![
                 OAuthConnector {
@@ -217,4 +222,13 @@ pub(crate) fn connector_feature_data_json(connector: &ConnectorEnum) -> Option<S
 
     // Fall back to default if available
     config.connector_metadata.get("default").cloned()
+}
+
+/// Get connector-specific access token for OAuth connectors.
+/// Some connectors (like fiservcommercehub) require special token formats.
+/// Returns the default token if no override is configured.
+pub(crate) fn connector_access_token_override(connector: &ConnectorEnum) -> Option<String> {
+    let config = get_config();
+    let name = format!("{connector:?}").to_lowercase();
+    config.access_token.overrides.get(&name).cloned()
 }
