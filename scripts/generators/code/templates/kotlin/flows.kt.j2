@@ -39,8 +39,6 @@ object FlowRegistry {
 {% endif %}
 }
 
-// Per-service client classes — typed with concrete proto request/response types.
-
 {% for service in all_services %}
 class {{ service_to_client_name(service) }}(
     config: ConnectorConfig,
@@ -61,4 +59,4 @@ class {{ service_to_client_name(service) }}(
 {% endfor %}
 }
 
-{% endfor -%}
+{% endfor %}
