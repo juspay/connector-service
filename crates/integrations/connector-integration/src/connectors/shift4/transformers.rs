@@ -64,7 +64,7 @@ pub struct ApiErrorResponse {
 #[serde(rename_all = "camelCase")]
 pub struct Shift4CreateCustomerRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
+    pub email: Option<pii::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
@@ -106,7 +106,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .email
                 .clone()
-                .map(|e| e.expose().expose().expose()),
+                .map(|e| e.expose()),
             description: item.router_data.request.description.clone(),
         })
     }
