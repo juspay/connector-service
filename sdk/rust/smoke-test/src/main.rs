@@ -103,6 +103,7 @@ fn rand_hex() -> u32 {
 
 /// Compile-time dispatch: call process_* functions for a given connector.
 /// Returns Vec<(scenario_key, Result<String, Box<dyn Error>>)>.
+#[allow(unused_variables)]
 async fn run_connector_scenarios(
     connector_name: &str,
     client: &ConnectorClient,

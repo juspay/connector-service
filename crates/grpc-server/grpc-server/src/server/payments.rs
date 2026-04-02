@@ -40,7 +40,9 @@ use domain_types::{
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, proxied_authorize_to_base,
+        proxied_setup_recurring_to_base, tokenized_authorize_to_base,
+        tokenized_setup_recurring_to_base,
     },
     utils::ForeignTryFrom,
 };
@@ -67,9 +69,11 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
     PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
-    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceRefundRequest,
+    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
     PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
@@ -2385,6 +2389,249 @@ impl PaymentService for Payments {
             FlowName::IncrementalAuthorization,
             |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
                 self.internal_incremental_authorization(request_data).await
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "token_authorize",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "token_authorize",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authorize.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn token_authorize(
+        &self,
+        request: tonic::Request<PaymentServiceTokenAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("TOKEN_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authorize,
+            |request_data| {
+                let service_name = service_name.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let authorize_request = tokenized_authorize_to_base(request_data.payload);
+
+                    let mut inner_request = tonic::Request::new(authorize_request);
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    <Self as PaymentService>::authorize(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "token_setup_recurring",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "token_setup_recurring",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::SetupMandate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn token_setup_recurring(
+        &self,
+        request: tonic::Request<PaymentServiceTokenSetupRecurringRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSetupRecurringResponse>, tonic::Status> {
+        info!("TOKEN_SETUP_RECURRING_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::SetupMandate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let setup_recurring_request =
+                        tokenized_setup_recurring_to_base(request_data.payload);
+
+                    let mut inner_request = tonic::Request::new(setup_recurring_request);
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+    #[tracing::instrument(
+        name = "proxy_authorize",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "proxy_authorize",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authorize.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn proxy_authorize(
+        &self,
+        request: tonic::Request<PaymentServiceProxyAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("PROXY_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authorize,
+            |request_data| {
+                let service_name = service_name.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let authorize_request = proxied_authorize_to_base(request_data.payload)
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e:?}")))?;
+
+                    let mut inner_request = tonic::Request::new(authorize_request);
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    <Self as PaymentService>::authorize(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "proxy_setup_recurring",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "proxy_setup_recurring",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::SetupMandate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn proxy_setup_recurring(
+        &self,
+        request: tonic::Request<PaymentServiceProxySetupRecurringRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSetupRecurringResponse>, tonic::Status> {
+        info!("PROXY_SETUP_RECURRING_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::SetupMandate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let setup_recurring_request =
+                        proxied_setup_recurring_to_base(request_data.payload)
+                            .map_err(|e| tonic::Status::invalid_argument(format!("{e:?}")))?;
+
+                    let mut inner_request = tonic::Request::new(setup_recurring_request);
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                })
             },
         )
         .await
