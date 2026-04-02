@@ -268,7 +268,7 @@ pub enum StoredCredentialUsage {
 
 #[derive(Debug, Serialize)]
 pub struct DlocalRepeatPaymentCard {
-    pub card_id: String,
+    pub card_id: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capture: Option<String>,
     pub stored_credential_type: StoredCredentialType,
@@ -338,14 +338,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let country = *address.get_country()?;
         let name = address.get_full_name()?;
 
-        let email =
-            router_data
-                .request
-                .email
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
-                    field_name: "email",
-                })?;
+        let email = router_data.request.get_email()?;
 
         let amount = utils::convert_amount(
             item.connector.amount_converter,
@@ -380,7 +373,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 document: get_doc_from_currency(country.to_string()),
             },
             card: DlocalRepeatPaymentCard {
-                card_id,
+                card_id: Secret::new(card_id),
                 capture: Some(should_capture.to_string()),
                 stored_credential_type,
                 stored_credential_usage: StoredCredentialUsage::Used,
