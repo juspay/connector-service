@@ -1,0 +1,454 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/paysafe/transformers.rs",
+  "structs": [
+    {
+      "name": "PaysafeAuthType",
+      "visibility": "pub",
+      "fields": [
+        "username",
+        "password",
+        "account_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 31
+    },
+    {
+      "name": "PaysafeMandateMetadata",
+      "visibility": "pub",
+      "fields": [
+        "initial_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 60
+    },
+    {
+      "name": "PaysafeMeta",
+      "visibility": "pub",
+      "fields": [
+        "payment_handle_token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 65
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PaysafeAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 37
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 117
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 133
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 145
+    },
+    {
+      "type_name": "enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 157
+    },
+    {
+      "type_name": "PaysafeAchAccountType",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 167
+    },
+    {
+      "type_name": "PaysafePaymentMethodTokenRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 176
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 350
+    },
+    {
+      "type_name": "PaysafePaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 378
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 488
+    },
+    {
+      "type_name": "PaysafeRepeatPaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 533
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 627
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 663
+    },
+    {
+      "type_name": "PaysafeCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 730
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 759
+    },
+    {
+      "type_name": "PaysafeVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 790
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 824
+    },
+    {
+      "type_name": "PaysafeRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 853
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 878
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 899
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 39
+    },
+    {
+      "name": "create_paysafe_billing_details",
+      "visibility": "",
+      "parameters": [
+        "resource_common_data: &PaymentFlowData"
+      ],
+      "return_type": "Result<Option<PaysafeBillingDetails>, ConnectorError>",
+      "line": 71
+    },
+    {
+      "name": "get_paysafe_payment_status",
+      "visibility": "pub",
+      "parameters": [
+        "status: PaysafePaymentStatus",
+        "capture_method: Option<enums::CaptureMethod>"
+      ],
+      "return_type": "enums::AttemptStatus",
+      "line": 97
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafePaymentHandleStatus"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 119
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeSettlementStatus"
+      ],
+      "return_type": "Self",
+      "line": 134
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeVoidStatus"
+      ],
+      "return_type": "Self",
+      "line": 146
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 158
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "bank_type: &enums::BankType"
+      ],
+      "return_type": "Self",
+      "line": 168
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<\n                PaymentMethodToken,\n                PaymentFlowData,\n                PaymentMethodTokenizationData<T>,\n                PaymentMethodTokenResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 191
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafePaymentMethodTokenResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 360
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 393
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 493
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<\n                RepeatPayment,\n                PaymentFlowData,\n                RepeatPaymentData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 548
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeRepeatPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 634
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 673
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 740
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 764
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 800
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 829
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaysafeRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 863
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 883
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaysafeRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 904
+    }
+  ],
+  "use_statements": [
+    "use common_enums::enums;",
+    "use common_utils::{ext_traits::ValueExt, request::Method};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync, Refund, RepeatPayment, Void},\n    connector_types::{\n        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, ResponseId,\n    },\n    errors,\n    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::connectors::paysafe::PaysafeRouterData;",
+    "use crate::types::ResponseRouterData;",
+    "pub use super::requests::*;",
+    "pub use super::responses::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 290
+    },
+    {
+      "name": "vec",
+      "line": 305
+    },
+    {
+      "name": "matches",
+      "line": 446
+    },
+    {
+      "name": "matches",
+      "line": 455
+    },
+    {
+      "name": "matches",
+      "line": 597
+    }
+  ],
+  "modules": []
+}

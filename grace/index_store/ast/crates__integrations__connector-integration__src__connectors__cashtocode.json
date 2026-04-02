@@ -1,0 +1,503 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/cashtocode.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 54
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 64
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 69
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 73
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook"
+      ],
+      "line": 139
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 217
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 221
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 225
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 229
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 234
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 240
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 245
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 250
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 254
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 259
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 264
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 274
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 369
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 423
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 429
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 435
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 441
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 447
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 454
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 464
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 474
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 484
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 500
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 510
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 516
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 522
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 528
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 538
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 548
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 558
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 568
+    },
+    {
+      "type_name": "Cashtocode",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 577
+    }
+  ],
+  "functions": [
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secrets: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<errors::ConnectorError>>",
+      "line": 142
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>",
+      "line": 169
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::WebhookDetailsResponse,\n        error_stack::Report<errors::ConnectorError>,\n    >",
+      "line": 179
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 372
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 376
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 380
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 384
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 388
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 396
+    },
+    {
+      "name": "get_b64_auth_cashtocode",
+      "visibility": "",
+      "parameters": [
+        "payment_method_type: Option<common_enums::PaymentMethodType>",
+        "auth_type: &transformers::CashtocodeAuth"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 587
+    },
+    {
+      "name": "construct_basic_auth",
+      "visibility": "",
+      "parameters": [
+        "username: Option<Secret<String>>",
+        "password: Option<Secret<String>>"
+      ],
+      "return_type": "Result<Maskable<String>, errors::ConnectorError>",
+      "line": 591
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,\n        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,\n        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaymentsResponse};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 284
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 284
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 328
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 328
+    },
+    {
+      "name": "vec",
+      "line": 393
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 406
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 406
+    },
+    {
+      "name": "format",
+      "line": 597
+    },
+    {
+      "name": "vec",
+      "line": 620
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

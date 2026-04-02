@@ -1,0 +1,278 @@
+{
+  "file_path": "crates/types-traits/interfaces/src/events/routing_api_logs.rs",
+  "structs": [
+    {
+      "name": "RoutingEvent",
+      "visibility": "pub",
+      "fields": [
+        "routable_connectors",
+        "payment_connector",
+        "flow",
+        "request",
+        "response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "profile_id",
+        "merchant_id",
+        "created_at",
+        "status_code",
+        "request_id",
+        "routing_engine",
+        "routing_approach"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 44
+    }
+  ],
+  "enums": [
+    {
+      "name": "RoutingEngine",
+      "visibility": "pub",
+      "variants": [
+        "IntelligentRouter",
+        "DecisionEngine"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "line": 16
+    },
+    {
+      "name": "ApiMethod",
+      "visibility": "pub",
+      "variants": [
+        "Grpc",
+        "Rest"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "line": 26
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ApiMethod",
+      "trait_name": "fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 33
+    },
+    {
+      "type_name": "RoutingEvent",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "set_response_body",
+        "set_error_response_body",
+        "set_error",
+        "set_status_code",
+        "set_routable_connectors",
+        "set_payment_connector",
+        "set_routing_approach",
+        "get_request_id",
+        "get_merchant_id",
+        "get_payment_id",
+        "get_profile_id"
+      ],
+      "line": 64
+    }
+  ],
+  "functions": [
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 34
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "routable_connectors: String",
+        "flow: &str",
+        "request: serde_json::Value",
+        "url: String",
+        "method: ApiMethod",
+        "payment_id: String",
+        "profile_id: common_utils::id_type::ProfileId",
+        "merchant_id: common_utils::id_type::MerchantId",
+        "request_id: Option<RequestId>",
+        "routing_engine: RoutingEngine"
+      ],
+      "return_type": "Self",
+      "line": 67
+    },
+    {
+      "name": "set_response_body",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &T"
+      ],
+      "return_type": "",
+      "line": 104
+    },
+    {
+      "name": "set_error_response_body",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &T"
+      ],
+      "return_type": "",
+      "line": 114
+    },
+    {
+      "name": "set_error",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "error: serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 124
+    },
+    {
+      "name": "set_status_code",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "code: u16"
+      ],
+      "return_type": "",
+      "line": 129
+    },
+    {
+      "name": "set_routable_connectors",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "connectors: Vec<RoutableConnectorChoice>"
+      ],
+      "return_type": "",
+      "line": 134
+    },
+    {
+      "name": "set_payment_connector",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "connector: RoutableConnectorChoice"
+      ],
+      "return_type": "",
+      "line": 152
+    },
+    {
+      "name": "set_routing_approach",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "approach: String"
+      ],
+      "return_type": "",
+      "line": 164
+    },
+    {
+      "name": "get_request_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 169
+    },
+    {
+      "name": "get_merchant_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 174
+    },
+    {
+      "name": "get_payment_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 178
+    },
+    {
+      "name": "get_profile_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 183
+    }
+  ],
+  "use_statements": [
+    "use std::fmt;",
+    "use common_utils::request::Method;",
+    "use serde::Serialize;",
+    "use serde_json::json;",
+    "use time::OffsetDateTime;",
+    "use tracing_actix_web::RequestId;",
+    "use crate::routing::RoutableConnectorChoice;"
+  ],
+  "macro_calls": [
+    {
+      "name": "write",
+      "line": 36
+    },
+    {
+      "name": "write",
+      "line": 37
+    },
+    {
+      "name": "json",
+      "line": 109
+    },
+    {
+      "name": "json",
+      "line": 119
+    },
+    {
+      "name": "format",
+      "line": 138
+    },
+    {
+      "name": "format",
+      "line": 153
+    }
+  ],
+  "modules": []
+}

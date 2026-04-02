@@ -1,0 +1,257 @@
+{
+  "file_path": "crates/common/ucs_env/src/logger/formatter.rs",
+  "structs": [
+    {
+      "name": "FormattingLayer",
+      "visibility": "pub",
+      "fields": [
+        "dst_writer",
+        "pid",
+        "hostname",
+        "service",
+        "default_fields"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug"
+      ],
+      "line": 79
+    }
+  ],
+  "enums": [
+    {
+      "name": "RecordType",
+      "visibility": "pub",
+      "variants": [
+        "EnterSpan",
+        "ExitSpan",
+        "Event"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 54
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "RecordType",
+      "trait_name": "fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 63
+    },
+    {
+      "type_name": "FormattingLayer",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "new_with_implicit_entries",
+        "common_serialize",
+        "flush",
+        "span_serialize",
+        "event_serialize",
+        "span_message",
+        "event_message"
+      ],
+      "line": 90
+    },
+    {
+      "type_name": "FormattingLayer",
+      "trait_name": "Layer",
+      "methods": [
+        "on_event",
+        "on_enter",
+        "on_close"
+      ],
+      "line": 304
+    }
+  ],
+  "functions": [
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 64
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "service: &str",
+        "dst_writer: W"
+      ],
+      "return_type": "Self",
+      "line": 105
+    },
+    {
+      "name": "new_with_implicit_entries",
+      "visibility": "pub",
+      "parameters": [
+        "service: &str",
+        "dst_writer: W",
+        "mut default_fields: HashMap<String, Value>"
+      ],
+      "return_type": "Self",
+      "line": 110
+    },
+    {
+      "name": "common_serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "map_serializer: &mut impl SerializeMap<Error = serde_json::Error>",
+        "metadata: &Metadata<'_>",
+        "span: Option<&SpanRef<'_, S>>",
+        "storage: &Storage<'_>",
+        "name: &str"
+      ],
+      "return_type": "Result<(), std::io::Error>\n    where\n        S: Subscriber + for<'a> LookupSpan<'a>,",
+      "line": 142
+    },
+    {
+      "name": "flush",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "mut buffer: Vec<u8>"
+      ],
+      "return_type": "Result<(), std::io::Error>",
+      "line": 209
+    },
+    {
+      "name": "span_serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "span: &SpanRef<'_, S>",
+        "ty: RecordType"
+      ],
+      "return_type": "Result<Vec<u8>, std::io::Error>\n    where\n        S: Subscriber + for<'a> LookupSpan<'a>,",
+      "line": 215
+    },
+    {
+      "name": "event_serialize",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "span: &Option<&SpanRef<'_, S>>",
+        "event: &Event<'_>"
+      ],
+      "return_type": "std::io::Result<Vec<u8>>\n    where\n        S: Subscriber + for<'a> LookupSpan<'a>,",
+      "line": 243
+    },
+    {
+      "name": "span_message",
+      "visibility": "",
+      "parameters": [
+        "span: &SpanRef<'_, S>",
+        "ty: RecordType"
+      ],
+      "return_type": "String\n    where\n        S: Subscriber + for<'a> LookupSpan<'a>,",
+      "line": 272
+    },
+    {
+      "name": "event_message",
+      "visibility": "",
+      "parameters": [
+        "span: &Option<&SpanRef<'_, S>>",
+        "event: &Event<'_>",
+        "storage: &mut Storage<'_>"
+      ],
+      "return_type": "",
+      "line": 284
+    },
+    {
+      "name": "on_event",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "event: &Event<'_>",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 309
+    },
+    {
+      "name": "on_enter",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "id: &tracing::Id",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 319
+    },
+    {
+      "name": "on_close",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "id: tracing::Id",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 326
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    collections::{HashMap, HashSet},\n    fmt,\n    io::Write,\n};",
+    "use common_utils::consts::{\n    LOG_FILE as FILE, LOG_FN as FN, LOG_FULL_NAME as FULL_NAME, LOG_HOSTNAME as HOSTNAME,\n    LOG_LEVEL as LEVEL, LOG_LINE as LINE, LOG_MESSAGE as MESSAGE, LOG_PID as PID,\n    LOG_SERVICE as SERVICE, LOG_TARGET as TARGET, LOG_TIME as TIME,\n};",
+    "use once_cell::sync::Lazy;",
+    "use serde::ser::{SerializeMap, Serializer};",
+    "use serde_json::Value;",
+    "use super::storage::Storage;",
+    "use time::format_description::well_known::Iso8601;",
+    "use tracing::{Event, Metadata, Subscriber};",
+    "use tracing_subscriber::{\n    fmt::MakeWriter,\n    layer::Context,\n    registry::{LookupSpan, SpanRef},\n    Layer,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "write",
+      "line": 70
+    },
+    {
+      "name": "eprintln",
+      "line": 124
+    },
+    {
+      "name": "eprintln",
+      "line": 124
+    },
+    {
+      "name": "format_args",
+      "line": 157
+    },
+    {
+      "name": "format_args",
+      "line": 164
+    },
+    {
+      "name": "eprintln",
+      "line": 192
+    },
+    {
+      "name": "eprintln",
+      "line": 192
+    },
+    {
+      "name": "format",
+      "line": 276
+    },
+    {
+      "name": "format",
+      "line": 298
+    }
+  ],
+  "modules": []
+}

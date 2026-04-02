@@ -1,0 +1,19 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "pub use domain_types::errors;"
+  ],
+  "macro_calls": [],
+  "modules": [
+    "connectors",
+    "default_implementations",
+    "types",
+    "utils",
+    "webhook_utils"
+  ]
+}

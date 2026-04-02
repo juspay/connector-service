@@ -1,0 +1,668 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/billwerk/transformers.rs",
+  "structs": [
+    {
+      "name": "BillwerkAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "public_api_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 31
+    },
+    {
+      "name": "BillwerkErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "error",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 37
+    },
+    {
+      "name": "BillwerkTokenRequest",
+      "visibility": "pub",
+      "fields": [
+        "number",
+        "month",
+        "year",
+        "cvv",
+        "pkey",
+        "recurring",
+        "intent",
+        "strong_authentication_rule"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "BillwerkTokenResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "recurring"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 71
+    },
+    {
+      "name": "BillwerkPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "handle",
+        "amount",
+        "source",
+        "currency",
+        "customer",
+        "metadata",
+        "settle"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 77
+    },
+    {
+      "name": "BillwerkCustomerObject",
+      "visibility": "pub",
+      "fields": [
+        "handle",
+        "email",
+        "address",
+        "address2",
+        "city",
+        "country",
+        "first_name",
+        "last_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 99
+    },
+    {
+      "name": "BillwerkCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 111
+    },
+    {
+      "name": "BillwerkPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "state",
+        "handle",
+        "error",
+        "error_state"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 116
+    },
+    {
+      "name": "RefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "state"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 132
+    },
+    {
+      "name": "BillwerkRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "invoice",
+        "amount",
+        "text"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 138
+    }
+  ],
+  "enums": [
+    {
+      "name": "BillwerkTokenRequestIntent",
+      "visibility": "pub",
+      "variants": [
+        "ChargeAndStore"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 45
+    },
+    {
+      "name": "BillwerkStrongAuthRule",
+      "visibility": "pub",
+      "variants": [
+        "UseScaIfAvailableAuth"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 51
+    },
+    {
+      "name": "BillwerkPaymentState",
+      "visibility": "pub",
+      "variants": [
+        "Created",
+        "Authorized",
+        "Pending",
+        "Settled",
+        "Failed",
+        "Cancelled"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 89
+    },
+    {
+      "name": "RefundState",
+      "visibility": "pub",
+      "variants": [
+        "Refunded",
+        "Failed",
+        "Processing"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 125
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "BillwerkTokenRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 148
+    },
+    {
+      "type_name": "BillwerkPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 217
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 296
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 318
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 372
+    },
+    {
+      "type_name": "BillwerkAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 384
+    },
+    {
+      "type_name": "BillwerkCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 401
+    },
+    {
+      "type_name": "BillwerkRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 423
+    },
+    {
+      "type_name": "common_enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 443
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 453
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 469
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BillwerkRouterData<\n            RouterDataV2<\n                PaymentMethodToken,\n                PaymentFlowData,\n                PaymentMethodTokenizationData<T>,\n                PaymentMethodTokenResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 163
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BillwerkRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 232
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BillwerkTokenResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 306
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BillwerkPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 322
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: BillwerkPaymentState"
+      ],
+      "return_type": "Self",
+      "line": 373
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 386
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BillwerkRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 411
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BillwerkRouterData<\n            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 429
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: RefundState"
+      ],
+      "return_type": "Self",
+      "line": 444
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RefundsResponseRouterData<F, RefundResponse>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 457
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<RefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 474
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    types::MinorUnit,\n};",
+    "use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync},\n    connector_types::{\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,\n        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::{\n        ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,\n    },\n    router_data_v2::RouterDataV2,\n};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use serde::{Deserialize, Serialize};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

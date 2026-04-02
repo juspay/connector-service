@@ -1,0 +1,532 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/jpmorgan/requests.rs",
+  "structs": [
+    {
+      "name": "JpmorganTokenRequest",
+      "visibility": "pub",
+      "fields": [
+        "grant_type",
+        "scope"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 7
+    },
+    {
+      "name": "JpmorganPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "capture_method",
+        "amount",
+        "currency",
+        "merchant",
+        "payment_method_type",
+        "account_holder",
+        "statement_descriptor"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 14
+    },
+    {
+      "name": "JpmorganPaymentMethodType",
+      "visibility": "pub",
+      "fields": [
+        "card",
+        "ach"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 26
+    },
+    {
+      "name": "JpmorganCard",
+      "visibility": "pub",
+      "fields": [
+        "account_number",
+        "expiry"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 35
+    },
+    {
+      "name": "JpmorganAch",
+      "visibility": "pub",
+      "fields": [
+        "account_number",
+        "financial_institution_routing_number",
+        "account_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 43
+    },
+    {
+      "name": "JpmorganAccountHolder",
+      "visibility": "pub",
+      "fields": [
+        "first_name",
+        "last_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 52
+    },
+    {
+      "name": "Expiry",
+      "visibility": "pub",
+      "fields": [
+        "month",
+        "year"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 67
+    },
+    {
+      "name": "JpmorganMerchant",
+      "visibility": "pub",
+      "fields": [
+        "merchant_software",
+        "soft_merchant"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 74
+    },
+    {
+      "name": "JpmorganMerchantSoftware",
+      "visibility": "pub",
+      "fields": [
+        "company_name",
+        "product_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 81
+    },
+    {
+      "name": "JpmorganSoftMerchant",
+      "visibility": "pub",
+      "fields": [
+        "merchant_purchase_description"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 88
+    },
+    {
+      "name": "JpmorganCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "capture_method",
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Default",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 103
+    },
+    {
+      "name": "JpmorganVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "is_void"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Default",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 111
+    },
+    {
+      "name": "JpmorganRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant",
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Default",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 119
+    },
+    {
+      "name": "JpmorganMerchantRefund",
+      "visibility": "pub",
+      "fields": [
+        "merchant_software"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Default",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 127
+    }
+  ],
+  "enums": [
+    {
+      "name": "JpmorganAchAccountType",
+      "visibility": "pub",
+      "variants": [
+        "Checking",
+        "Savings"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 60
+    },
+    {
+      "name": "CapMethod",
+      "visibility": "pub",
+      "variants": [
+        "Now",
+        "Delayed",
+        "Manual"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Default",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 94
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use common_utils::types::MinorUnit;",
+    "use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};",
+    "use hyperswitch_masking::Secret;",
+    "use serde::{Deserialize, Serialize};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

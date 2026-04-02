@@ -1,0 +1,978 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/helcim/transformers.rs",
+  "structs": [
+    {
+      "name": "HelcimAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key"
+      ],
+      "derives": [],
+      "line": 38
+    },
+    {
+      "name": "HelcimPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "ip_address",
+        "card_data",
+        "invoice",
+        "billing_address",
+        "ecommerce"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 56
+    },
+    {
+      "name": "HelcimBillingAddress",
+      "visibility": "pub",
+      "fields": [
+        "name",
+        "street1",
+        "postal_code",
+        "street2",
+        "city",
+        "email"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 71
+    },
+    {
+      "name": "HelcimInvoice",
+      "visibility": "pub",
+      "fields": [
+        "invoice_number",
+        "line_items"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 85
+    },
+    {
+      "name": "HelcimLineItems",
+      "visibility": "pub",
+      "fields": [
+        "description",
+        "quantity",
+        "price",
+        "total"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 92
+    },
+    {
+      "name": "HelcimCard",
+      "visibility": "pub",
+      "fields": [
+        "card_number",
+        "card_expiry",
+        "card_c_v_v"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 101
+    },
+    {
+      "name": "HelcimPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "transaction_id",
+        "invoice_number",
+        "transaction_type",
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 247
+    },
+    {
+      "name": "HelcimMetaData",
+      "visibility": "pub",
+      "fields": [
+        "preauth_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 258
+    },
+    {
+      "name": "HelcimCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "pre_auth_transaction_id",
+        "amount",
+        "ip_address",
+        "ecommerce"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 363
+    },
+    {
+      "name": "HelcimVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "card_transaction_id",
+        "ip_address",
+        "ecommerce"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 443
+    },
+    {
+      "name": "HelcimSetupMandateRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "ip_address",
+        "card_data",
+        "invoice",
+        "billing_address",
+        "ecommerce"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 516
+    },
+    {
+      "name": "HelcimRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "original_transaction_id",
+        "ip_address",
+        "ecommerce"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 674
+    },
+    {
+      "name": "RefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "transaction_id",
+        "transaction_type"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 729
+    },
+    {
+      "name": "HelcimPaymentsErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "strum::Display",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 787
+    }
+  ],
+  "enums": [
+    {
+      "name": "HelcimPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Approved",
+        "Declined"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 207
+    },
+    {
+      "name": "HelcimTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Purchase",
+        "PreAuth",
+        "Capture",
+        "Verify",
+        "Reverse"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 214
+    },
+    {
+      "name": "HelcimRefundTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Refund"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 723
+    },
+    {
+      "name": "HelcimErrorTypes",
+      "visibility": "pub",
+      "variants": [
+        "StringType",
+        "JsonType"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "strum::Display",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 781
+    },
+    {
+      "name": "HelcimErrorResponse",
+      "visibility": "pub",
+      "variants": [
+        "Payment",
+        "General"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "strum::Display",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 793
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "HelcimAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 42
+    },
+    {
+      "type_name": "HelcimPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 109
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 222
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 262
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 312
+    },
+    {
+      "type_name": "HelcimCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 371
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 410
+    },
+    {
+      "type_name": "HelcimVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 450
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 482
+    },
+    {
+      "type_name": "HelcimSetupMandateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 530
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 629
+    },
+    {
+      "type_name": "HelcimRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 682
+    },
+    {
+      "type_name": "common_enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 736
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 747
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 763
+    }
+  ],
+  "functions": [
+    {
+      "name": "check_currency",
+      "visibility": "pub",
+      "parameters": [
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "Result<common_enums::Currency, ConnectorError>",
+      "line": 24
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 44
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 123
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimPaymentsResponse"
+      ],
+      "return_type": "Self",
+      "line": 223
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HelcimPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 267
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HelcimPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 316
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 380
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HelcimPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 414
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 459
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HelcimPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 486
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimRouterData<\n            RouterDataV2<\n                SetupMandate,\n                PaymentFlowData,\n                SetupMandateRequestData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 544
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HelcimPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 639
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HelcimRouterData<\n            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 687
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: RefundResponse"
+      ],
+      "return_type": "Self",
+      "line": 737
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<RefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 751
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<RefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 767
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{pii, types::FloatMajorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, SetupMandate, Void},\n    connector_types::{\n        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,\n        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,\n        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_request_types::SyncRequestType,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Secret;",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{connectors::helcim::HelcimRouterData, types::ResponseRouterData};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 31
+    },
+    {
+      "name": "vec",
+      "line": 169
+    },
+    {
+      "name": "json",
+      "line": 283
+    },
+    {
+      "name": "vec",
+      "line": 593
+    }
+  ],
+  "modules": []
+}

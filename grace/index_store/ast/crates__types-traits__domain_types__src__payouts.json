@@ -1,0 +1,16 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/payouts.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "payout_method_data",
+    "payouts_types",
+    "router_request_types",
+    "types"
+  ]
+}

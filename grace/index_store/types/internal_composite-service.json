@@ -1,0 +1,79 @@
+{
+  "structs": [
+    {
+      "name": "CompositeFlowSpec",
+      "visibility": "",
+      "fields": [
+        "name",
+        "composite_request_message",
+        "granular_request_messages",
+        "ignore_granular_only_fields",
+        "ignore_composite_only_fields"
+      ],
+      "derives": [],
+      "line": 19
+    },
+    {
+      "name": "FieldShape",
+      "visibility": "",
+      "fields": [
+        "type_code",
+        "type_name",
+        "repeated"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 72
+    },
+    {
+      "name": "CompositePayments",
+      "visibility": "pub",
+      "fields": [
+        "_payment_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 11
+    },
+    {
+      "name": "Payments",
+      "visibility": "pub",
+      "fields": [
+        "payment_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "refund_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 139
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "CompositeAccessTokenRequest",
+      "visibility": "pub",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 27
+    },
+    {
+      "name": "ForeignFrom",
+      "visibility": "pub",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 16
+    }
+  ]
+}

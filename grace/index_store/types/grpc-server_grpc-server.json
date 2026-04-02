@@ -1,0 +1,817 @@
+{
+  "structs": [
+    {
+      "name": "GenericInner",
+      "visibility": "",
+      "fields": [
+        "flag"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 673
+    },
+    {
+      "name": "GenericWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 678
+    },
+    {
+      "name": "OptionalGenericWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 683
+    },
+    {
+      "name": "JsonInner",
+      "visibility": "",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 714
+    },
+    {
+      "name": "JsonAssoc",
+      "visibility": "",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 719
+    },
+    {
+      "name": "Concrete",
+      "visibility": "",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq"
+      ],
+      "line": 729
+    },
+    {
+      "name": "JsonWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 737
+    },
+    {
+      "name": "JsonWrapperOpt",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 742
+    },
+    {
+      "name": "JsonHolder",
+      "visibility": "",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "PatchDerive"
+      ],
+      "line": 747
+    },
+    {
+      "name": "JsonHolderOpt",
+      "visibility": "",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "PatchDerive",
+        "PatchDerive"
+      ],
+      "line": 753
+    },
+    {
+      "name": "ConfigInterceptor",
+      "visibility": "",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 36
+    },
+    {
+      "name": "RequestData",
+      "visibility": "pub",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata",
+        "extensions"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 12
+    },
+    {
+      "name": "RequestExtensionsLayer",
+      "visibility": "pub",
+      "fields": [
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 13
+    },
+    {
+      "name": "TonicRequestExtensionsMiddleware",
+      "visibility": "pub",
+      "fields": [
+        "inner",
+        "base_config"
+      ],
+      "derives": [
+        "Clone",
+        "Clone"
+      ],
+      "line": 35
+    },
+    {
+      "name": "Service",
+      "visibility": "pub",
+      "fields": [
+        "health_check_service",
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service",
+        "payouts_service"
+      ],
+      "derives": [],
+      "line": 101
+    },
+    {
+      "name": "EventServiceImpl",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 29
+    },
+    {
+      "name": "Refunds",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 25
+    },
+    {
+      "name": "Payouts",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 40
+    },
+    {
+      "name": "EventParams",
+      "visibility": "",
+      "fields": [
+        "_connector_name",
+        "_service_name",
+        "service_type",
+        "request_id",
+        "lineage_ids",
+        "reference_id",
+        "resource_id",
+        "shadow_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 95
+    },
+    {
+      "name": "CardTokenData",
+      "visibility": "",
+      "fields": [
+        "card_number",
+        "cvv",
+        "exp_month",
+        "exp_year"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize"
+      ],
+      "line": 108
+    },
+    {
+      "name": "RecurringPayments",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "line": 234
+    },
+    {
+      "name": "MerchantAuthentication",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone"
+      ],
+      "line": 237
+    },
+    {
+      "name": "PaymentMethodAuthentication",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone",
+        "Clone"
+      ],
+      "line": 240
+    },
+    {
+      "name": "PaymentMethod",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone"
+      ],
+      "line": 243
+    },
+    {
+      "name": "Events",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone"
+      ],
+      "line": 246
+    },
+    {
+      "name": "Payments",
+      "visibility": "pub",
+      "fields": [
+        "merchant_authentication_service",
+        "customer_service"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone"
+      ],
+      "line": 249
+    },
+    {
+      "name": "Customer",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone",
+        "Clone"
+      ],
+      "line": 255
+    },
+    {
+      "name": "Disputes",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 42
+    },
+    {
+      "name": "HealthCheck",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 4
+    },
+    {
+      "name": "HttpError",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "message"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ErrorResponse",
+      "visibility": "",
+      "fields": [
+        "error"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 15
+    },
+    {
+      "name": "ErrorDetail",
+      "visibility": "",
+      "fields": [
+        "message",
+        "code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Serialize"
+      ],
+      "line": 20
+    },
+    {
+      "name": "HttpRequestExtensionsLayer",
+      "visibility": "pub",
+      "fields": [
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 25
+    },
+    {
+      "name": "HttpRequestExtensionsMiddleware",
+      "visibility": "pub",
+      "fields": [
+        "inner",
+        "base_config"
+      ],
+      "derives": [
+        "Clone",
+        "Clone"
+      ],
+      "line": 48
+    },
+    {
+      "name": "AppState",
+      "visibility": "pub",
+      "fields": [
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ValidatedJson",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 32
+    },
+    {
+      "name": "ConnectorAccountDetails",
+      "visibility": "pub",
+      "fields": [
+        "auth_type",
+        "api_key",
+        "key1",
+        "api_secret",
+        "key2",
+        "certificate",
+        "private_key",
+        "auth_key_map"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 22
+    },
+    {
+      "name": "ConnectorCredentials",
+      "visibility": "pub",
+      "fields": [
+        "connector_account_details",
+        "metadata"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 41
+    }
+  ],
+  "enums": [
+    {
+      "name": "CredentialError",
+      "visibility": "pub",
+      "variants": [
+        "FileReadError",
+        "ParseError",
+        "ConnectorNotFound",
+        "InvalidAuthType",
+        "MissingField",
+        "InvalidStructure"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 52
+    }
+  ],
+  "traits": [
+    {
+      "name": "AssocTrait",
+      "visibility": "",
+      "methods": [],
+      "line": 723
+    },
+    {
+      "name": "AutoClient",
+      "visibility": "pub",
+      "methods": [
+        "new"
+      ],
+      "line": 47
+    },
+    {
+      "name": "RefundOperationsInternal",
+      "visibility": "",
+      "methods": [
+        "internal_get"
+      ],
+      "line": 17
+    },
+    {
+      "name": "PayoutOperationsInternal",
+      "visibility": "pub(crate)",
+      "methods": [
+        "internal_payout_create",
+        "internal_payout_transfer",
+        "internal_payout_get",
+        "internal_payout_void",
+        "internal_payout_stage",
+        "internal_payout_create_link",
+        "internal_payout_create_recipient",
+        "internal_payout_enroll_disburse_account"
+      ],
+      "line": 205
+    },
+    {
+      "name": "ToTokenData",
+      "visibility": "",
+      "methods": [
+        "to_token_data",
+        "to_token_data_with_vault"
+      ],
+      "line": 115
+    },
+    {
+      "name": "PaymentOperationsInternal",
+      "visibility": "",
+      "methods": [
+        "internal_void_payment",
+        "internal_void_post_capture",
+        "internal_refund",
+        "internal_payment_capture",
+        "internal_incremental_authorization",
+        "internal_create_order"
+      ],
+      "line": 158
+    },
+    {
+      "name": "PaymentMethodAuthOperational",
+      "visibility": "",
+      "methods": [
+        "internal_pre_authenticate",
+        "internal_authenticate",
+        "internal_post_authenticate"
+      ],
+      "line": 190
+    },
+    {
+      "name": "RecurringPaymentOperational",
+      "visibility": "",
+      "methods": [
+        "internal_mandate_revoke"
+      ],
+      "line": 216
+    },
+    {
+      "name": "MerchantAuthenticationOperational",
+      "visibility": "",
+      "methods": [
+        "internal_sdk_session_token"
+      ],
+      "line": 223
+    },
+    {
+      "name": "DisputeOperationsInternal",
+      "visibility": "",
+      "methods": [
+        "internal_defend"
+      ],
+      "line": 34
+    }
+  ]
+}

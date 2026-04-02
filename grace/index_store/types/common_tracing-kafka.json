@@ -1,0 +1,125 @@
+{
+  "structs": [
+    {
+      "name": "MetricsProducerContext",
+      "visibility": "",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 28
+    },
+    {
+      "name": "KafkaWriter",
+      "visibility": "pub",
+      "fields": [
+        "producer",
+        "topic"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone"
+      ],
+      "line": 108
+    },
+    {
+      "name": "KafkaLayer",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [],
+      "line": 22
+    },
+    {
+      "name": "KafkaLayerBuilder",
+      "visibility": "pub",
+      "fields": [
+        "writer_builder",
+        "static_fields"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "line": 111
+    },
+    {
+      "name": "KafkaWriterBuilder",
+      "visibility": "pub",
+      "fields": [
+        "brokers",
+        "topic",
+        "batch_size",
+        "linger_ms",
+        "queue_buffering_max_messages",
+        "queue_buffering_max_kbytes",
+        "reconnect_backoff_min_ms",
+        "reconnect_backoff_max_ms"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "line": 9
+    }
+  ],
+  "enums": [
+    {
+      "name": "KafkaMessageType",
+      "visibility": "",
+      "variants": [
+        "Event",
+        "Log"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug"
+      ],
+      "line": 101
+    },
+    {
+      "name": "KafkaWriterError",
+      "visibility": "pub",
+      "variants": [
+        "ProducerCreation",
+        "MetadataFetch"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 278
+    },
+    {
+      "name": "KafkaLayerError",
+      "visibility": "pub",
+      "variants": [
+        "Writer",
+        "Logger",
+        "MissingBrokers",
+        "MissingTopic"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 95
+    }
+  ],
+  "traits": []
+}

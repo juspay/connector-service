@@ -1,0 +1,247 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/composite-service/src/transformers.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "ForeignFrom",
+      "visibility": "pub",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 16
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 20
+    },
+    {
+      "type_name": "CustomerServiceCreateRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 34
+    },
+    {
+      "type_name": "PaymentServiceAuthorizeRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 62
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 144
+    },
+    {
+      "type_name": "PaymentServiceGetRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 158
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 206
+    },
+    {
+      "type_name": "PaymentServiceRefundRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 220
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 270
+    },
+    {
+      "type_name": "RefundServiceGetRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 284
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 328
+    },
+    {
+      "type_name": "PaymentServiceVoidRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 342
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 387
+    },
+    {
+      "type_name": "PaymentServiceCaptureRequest",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 401
+    }
+  ],
+  "functions": [
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeAuthorizeRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 23
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "item: &CompositeAuthorizeRequest"
+      ],
+      "return_type": "Self",
+      "line": 35
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response, create_customer_response): (\n            &CompositeAuthorizeRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n            Option<&CustomerServiceCreateResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 69
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeGetRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 147
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response): (\n            &CompositeGetRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 164
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeRefundRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 209
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response): (\n            &CompositeRefundRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 226
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeRefundGetRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 273
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response): (\n            &CompositeRefundGetRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 290
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeVoidRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 331
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response): (\n            &CompositeVoidRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 348
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, connector): (&CompositeCaptureRequest, &ConnectorEnum)"
+      ],
+      "return_type": "Self",
+      "line": 390
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "(item, access_token_response): (\n            &CompositeCaptureRequest,\n            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 407
+    }
+  ],
+  "use_statements": [
+    "use domain_types::connector_types::ConnectorEnum;",
+    "use grpc_api_types::payments::{\n    CompositeAuthorizeRequest, CompositeCaptureRequest, CompositeGetRequest,\n    CompositeRefundGetRequest, CompositeRefundRequest, CompositeVoidRequest, ConnectorState,\n    CustomerServiceCreateRequest, CustomerServiceCreateResponse,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,\n    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,\n    PaymentServiceVoidRequest, RefundServiceGetRequest,\n};",
+    "use crate::utils::{\n    get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum,\n};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,487 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/stripe.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 69
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 74
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 78
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 98
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 102
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 120
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 124
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 128
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 132
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 140
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 144
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 164
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 169
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 174
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 179
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 184
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 194
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_create_connector_customer",
+        "should_do_payment_method_token"
+      ],
+      "line": 199
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 217
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 323
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 975
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 980
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 985
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 990
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 999
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1009
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1019
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1029
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1039
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1049
+    },
+    {
+      "type_name": "Stripe",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1058
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_create_connector_customer",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 202
+    },
+    {
+      "name": "should_do_payment_method_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payment_method: common_enums::PaymentMethod",
+        "payment_method_type: Option<common_enums::PaymentMethodType>"
+      ],
+      "return_type": "bool",
+      "line": 205
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 326
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 330
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 334
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 339
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 357
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    fmt::Debug,\n    marker::{Send, Sync},\n};",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self, ConnectorError},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    self as stripe, CancelRequest, CaptureRequest, CreateConnectorCustomerRequest,\n    CreateConnectorCustomerResponse, PaymentIncrementalAuthRequest, PaymentIntentRequest,\n    PaymentIntentRequest as RepeatPaymentRequest,\n    PaymentIntentResponse as PaymentIncrementalAuthResponse, PaymentSyncResponse,\n    PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,\n    PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,\n    RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,\n    StripeRefundRequest, StripeTokenResponse, TokenRequest,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};",
+    "use stripe::auth_headers;"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 210
+    },
+    {
+      "name": "matches",
+      "line": 211
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 222
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 222
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 223
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 223
+    },
+    {
+      "name": "vec",
+      "line": 345
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 367
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 367
+    },
+    {
+      "name": "format",
+      "line": 386
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 399
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 399
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 472
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 472
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 539
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 539
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 607
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 607
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 645
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 645
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 703
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 703
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 764
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 764
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 805
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 805
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 844
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 844
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 878
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 878
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 931
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 931
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

@@ -1,0 +1,248 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/connector_override/mod.rs",
+  "structs": [
+    {
+      "name": "OverrideRegistry",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 58
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "ConnectorOverride",
+      "visibility": "pub",
+      "methods": [
+        "connector_name",
+        "apply_overrides",
+        "normalize_tonic_request",
+        "transform_response",
+        "should_skip_scenario",
+        "extra_context_deferred_paths"
+      ],
+      "line": 16
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "OverrideRegistry",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "resolve"
+      ],
+      "line": 60
+    }
+  ],
+  "functions": [
+    {
+      "name": "apply_overrides",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &mut Value",
+        "assertions: &mut BTreeMap<String, FieldAssert>"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 19
+    },
+    {
+      "name": "normalize_tonic_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_suite: &str",
+        "_scenario: &str",
+        "_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 43
+    },
+    {
+      "name": "transform_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_suite: &str",
+        "_scenario: &str",
+        "_response: &mut Value"
+      ],
+      "return_type": "",
+      "line": 45
+    },
+    {
+      "name": "should_skip_scenario",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_suite: &str",
+        "_scenario: &str"
+      ],
+      "return_type": "bool",
+      "line": 47
+    },
+    {
+      "name": "extra_context_deferred_paths",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Vec<String>",
+      "line": 51
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 62
+    },
+    {
+      "name": "resolve",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "connector: &str"
+      ],
+      "return_type": "Box<dyn ConnectorOverride>",
+      "line": 69
+    },
+    {
+      "name": "apply_connector_overrides",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &mut Value",
+        "assertions: &mut BTreeMap<String, FieldAssert>"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 77
+    },
+    {
+      "name": "normalize_tonic_request_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 89
+    },
+    {
+      "name": "transform_response_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "response: &mut Value"
+      ],
+      "return_type": "",
+      "line": 100
+    },
+    {
+      "name": "should_skip_scenario_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "bool",
+      "line": 111
+    },
+    {
+      "name": "context_deferred_paths_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "Vec<String>",
+      "line": 118
+    },
+    {
+      "name": "apply_assertion_patch",
+      "visibility": "",
+      "parameters": [
+        "assertions: &mut BTreeMap<String, FieldAssert>",
+        "assertion_patch: &BTreeMap<String, Value>"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 126
+    },
+    {
+      "name": "assertion_patch_adds_replaces_and_removes_rules",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 160
+    }
+  ],
+  "use_statements": [
+    "use std::collections::BTreeMap;",
+    "use serde_json::Value;",
+    "use crate::harness::scenario_types::{FieldAssert, ScenarioError};",
+    "use serde_json::{json, Value};",
+    "use super::apply_assertion_patch;",
+    "use crate::harness::scenario_types::FieldAssert;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 140
+    },
+    {
+      "name": "vec",
+      "line": 165
+    },
+    {
+      "name": "json",
+      "line": 176
+    },
+    {
+      "name": "json",
+      "line": 180
+    },
+    {
+      "name": "assert",
+      "line": 186
+    },
+    {
+      "name": "assert",
+      "line": 186
+    },
+    {
+      "name": "assert",
+      "line": 190
+    },
+    {
+      "name": "assert",
+      "line": 190
+    },
+    {
+      "name": "assert",
+      "line": 191
+    },
+    {
+      "name": "assert",
+      "line": 191
+    }
+  ],
+  "modules": [
+    "default",
+    "json_merge",
+    "loader",
+    "tests"
+  ]
+}

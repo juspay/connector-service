@@ -1,0 +1,511 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/noon.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 69
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 79
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 83
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 132
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 145
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 153
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 157
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "get_event_type",
+        "verify_webhook_source",
+        "process_payment_webhook",
+        "get_webhook_resource_object"
+      ],
+      "line": 165
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 300
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 304
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 308
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 312
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 316
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 320
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 324
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 329
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 333
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 454
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 766
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 775
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 780
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 785
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 790
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 800
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 810
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [],
+      "line": 822
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 829
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 840
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 850
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 860
+    },
+    {
+      "type_name": "Noon",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 870
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_webhook_source_verification_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::ConnectorError>",
+      "line": 168
+    },
+    {
+      "name": "get_webhook_source_verification_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secrets: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::ConnectorError>",
+      "line": 185
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, error_stack::Report<errors::ConnectorError>>",
+      "line": 206
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<errors::ConnectorError>>",
+      "line": 233
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::WebhookDetailsResponse,\n        error_stack::Report<errors::ConnectorError>,\n    >",
+      "line": 258
+    },
+    {
+      "name": "get_webhook_resource_object",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails"
+      ],
+      "return_type": "CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>",
+      "line": 286
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 457
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 461
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 465
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 469
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{\n    crypto::{self, VerifySignature},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    types::StringMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use error_stack::ResultExt;",
+    "use transformers::{\n    self as noon, NoonAuthType, NoonErrorResponse, NoonPaymentsActionRequest,\n    NoonPaymentsActionRequest as NoonPaymentsRefundActionRequest, NoonPaymentsCancelRequest,\n    NoonPaymentsRequest, NoonPaymentsResponse, NoonPaymentsResponse as NoonPaymentsSyncResponse,\n    NoonPaymentsResponse as NoonPaymentsCaptureResponse,\n    NoonPaymentsResponse as NoonPaymentsVoidResponse, NoonRepeatPaymentRequest,\n    NoonRepeatPaymentResponse, NoonRevokeMandateRequest, NoonRevokeMandateResponse, RefundResponse,\n    RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 195
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 338
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 338
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 479
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 479
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 502
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 502
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 530
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 530
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 559
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 559
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 590
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 590
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 619
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 619
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 648
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 648
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 677
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 677
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 737
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 737
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

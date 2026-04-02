@@ -1,0 +1,233 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use grpc_api_types::payments::{\n    CustomerServiceCreateRequest,\n    CustomerServiceCreateResponse,\n    DisputeServiceAcceptRequest,\n    DisputeServiceAcceptResponse,\n    DisputeServiceDefendRequest,\n    DisputeServiceDefendResponse,\n    DisputeServiceSubmitEvidenceRequest,\n    DisputeServiceSubmitEvidenceResponse,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateAccessTokenResponse,\n    MerchantAuthenticationServiceCreateSessionTokenRequest,\n    MerchantAuthenticationServiceCreateSessionTokenResponse,\n    PaymentMethodAuthenticationServiceAuthenticateRequest,\n    PaymentMethodAuthenticationServiceAuthenticateResponse,\n    PaymentMethodAuthenticationServicePostAuthenticateRequest,\n    PaymentMethodAuthenticationServicePostAuthenticateResponse,\n    PaymentMethodAuthenticationServicePreAuthenticateRequest,\n    PaymentMethodAuthenticationServicePreAuthenticateResponse,\n    PaymentMethodServiceTokenizeRequest,\n    PaymentMethodServiceTokenizeResponse,\n    PaymentServiceAuthorizeRequest,\n    PaymentServiceAuthorizeResponse,\n    PaymentServiceCaptureRequest,\n    PaymentServiceCaptureResponse,\n    PaymentServiceCreateOrderRequest,\n    PaymentServiceCreateOrderResponse,\n    PaymentServiceGetRequest,\n    PaymentServiceGetResponse,\n    PaymentServiceRefundRequest,\n    PaymentServiceReverseRequest,\n    PaymentServiceReverseResponse,\n    PaymentServiceSetupRecurringRequest,\n    PaymentServiceSetupRecurringResponse,\n    PaymentServiceVoidRequest,\n    PaymentServiceVoidResponse,\n    RecurringPaymentServiceChargeRequest,\n    RecurringPaymentServiceChargeResponse,\n    RefundResponse,\n};",
+    "use grpc_api_types::payouts::{\n    PayoutServiceCreateLinkRequest,\n    PayoutServiceCreateLinkResponse,\n    PayoutServiceCreateRecipientRequest,\n    PayoutServiceCreateRecipientResponse,\n    PayoutServiceCreateRequest,\n    PayoutServiceCreateResponse,\n    PayoutServiceEnrollDisburseAccountRequest,\n    PayoutServiceEnrollDisburseAccountResponse,\n    PayoutServiceGetRequest,\n    PayoutServiceGetResponse,\n    PayoutServiceStageRequest,\n    PayoutServiceStageResponse,\n    PayoutServiceTransferRequest,\n    PayoutServiceTransferResponse,\n    PayoutServiceVoidRequest,\n    PayoutServiceVoidResponse,\n};",
+    "use crate::services::payments::{\n    accept_req_transformer, accept_res_transformer,\n    authenticate_req_transformer, authenticate_res_transformer,\n    authorize_req_transformer, authorize_res_transformer,\n    capture_req_transformer, capture_res_transformer,\n    charge_req_transformer, charge_res_transformer,\n    create_req_transformer, create_res_transformer,\n    create_access_token_req_transformer, create_access_token_res_transformer,\n    create_order_req_transformer, create_order_res_transformer,\n    create_session_token_req_transformer, create_session_token_res_transformer,\n    defend_req_transformer, defend_res_transformer,\n    get_req_transformer, get_res_transformer,\n    post_authenticate_req_transformer, post_authenticate_res_transformer,\n    pre_authenticate_req_transformer, pre_authenticate_res_transformer,\n    refund_req_transformer, refund_res_transformer,\n    reverse_req_transformer, reverse_res_transformer,\n    setup_recurring_req_transformer, setup_recurring_res_transformer,\n    submit_evidence_req_transformer, submit_evidence_res_transformer,\n    tokenize_req_transformer, tokenize_res_transformer,\n    void_req_transformer, void_res_transformer,\n};",
+    "use crate::services::payouts::{\n    payout_create_req_transformer, payout_create_res_transformer,\n    payout_create_link_req_transformer, payout_create_link_res_transformer,\n    payout_create_recipient_req_transformer, payout_create_recipient_res_transformer,\n    payout_enroll_disburse_account_req_transformer, payout_enroll_disburse_account_res_transformer,\n    payout_get_req_transformer, payout_get_res_transformer,\n    payout_stage_req_transformer, payout_stage_res_transformer,\n    payout_transfer_req_transformer, payout_transfer_res_transformer,\n    payout_void_req_transformer, payout_void_res_transformer,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "impl_flow_handlers",
+      "line": 96
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 96
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 98
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 98
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 100
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 100
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 102
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 102
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 104
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 104
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 106
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 106
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 108
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 108
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 110
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 110
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 112
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 112
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 114
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 114
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 116
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 116
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 118
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 118
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 120
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 120
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 122
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 122
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 124
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 124
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 126
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 126
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 128
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 128
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 130
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 130
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 132
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 132
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 134
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 134
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 136
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 136
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 138
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 138
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 140
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 140
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 142
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 142
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 144
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 144
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 146
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 146
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 148
+    },
+    {
+      "name": "impl_flow_handlers",
+      "line": 148
+    }
+  ],
+  "modules": []
+}

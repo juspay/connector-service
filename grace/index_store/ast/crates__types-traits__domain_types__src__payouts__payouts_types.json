@@ -1,0 +1,680 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+  "structs": [
+    {
+      "name": "PayoutFlowData",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "payout_id",
+        "connectors",
+        "connector_request_reference_id",
+        "raw_connector_response",
+        "connector_response_headers",
+        "raw_connector_request",
+        "access_token",
+        "test_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 12
+    },
+    {
+      "name": "PayoutCreateRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 73
+    },
+    {
+      "name": "PayoutCreateResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 88
+    },
+    {
+      "name": "PayoutTransferRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 96
+    },
+    {
+      "name": "PayoutTransferResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 110
+    },
+    {
+      "name": "PayoutGetRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 118
+    },
+    {
+      "name": "PayoutGetResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 124
+    },
+    {
+      "name": "PayoutStageRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_quote_id",
+        "amount",
+        "source_currency",
+        "destination_currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 132
+    },
+    {
+      "name": "PayoutStageResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 140
+    },
+    {
+      "name": "PayoutVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 148
+    },
+    {
+      "name": "PayoutVoidResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 154
+    },
+    {
+      "name": "PayoutCreateLinkRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 162
+    },
+    {
+      "name": "PayoutCreateLinkResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 176
+    },
+    {
+      "name": "PayoutCreateRecipientRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "amount",
+        "source_currency",
+        "payout_method_data",
+        "recipient_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 184
+    },
+    {
+      "name": "PayoutCreateRecipientResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 193
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "amount",
+        "source_currency",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 201
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountResponse",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 209
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PayoutFlowData",
+      "trait_name": "RawConnectorRequestResponse",
+      "methods": [
+        "set_raw_connector_response",
+        "get_raw_connector_response",
+        "get_raw_connector_request",
+        "set_raw_connector_request"
+      ],
+      "line": 24
+    },
+    {
+      "type_name": "PayoutFlowData",
+      "trait_name": "ConnectorResponseHeaders",
+      "methods": [
+        "set_connector_response_headers",
+        "get_connector_response_headers"
+      ],
+      "line": 42
+    },
+    {
+      "type_name": "PayoutFlowData",
+      "trait_name": null,
+      "methods": [
+        "get_access_token",
+        "get_access_token_data",
+        "set_access_token"
+      ],
+      "line": 52
+    }
+  ],
+  "functions": [
+    {
+      "name": "set_raw_connector_response",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "response: Option<Secret<String>>"
+      ],
+      "return_type": "",
+      "line": 25
+    },
+    {
+      "name": "get_raw_connector_response",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 29
+    },
+    {
+      "name": "get_raw_connector_request",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 33
+    },
+    {
+      "name": "set_raw_connector_request",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "request: Option<Secret<String>>"
+      ],
+      "return_type": "",
+      "line": 37
+    },
+    {
+      "name": "set_connector_response_headers",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "headers: Option<http::HeaderMap>"
+      ],
+      "return_type": "",
+      "line": 43
+    },
+    {
+      "name": "get_connector_response_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&http::HeaderMap>",
+      "line": 47
+    },
+    {
+      "name": "get_access_token",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 53
+    },
+    {
+      "name": "get_access_token_data",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<AccessTokenResponseData, Error>",
+      "line": 60
+    },
+    {
+      "name": "set_access_token",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "access_token: Option<AccessTokenResponseData>"
+      ],
+      "return_type": "Self",
+      "line": 66
+    }
+  ],
+  "use_statements": [
+    "use super::payout_method_data::PayoutMethodData;",
+    "use crate::{\n    connector_types::{\n        AccessTokenResponseData, ConnectorResponseHeaders, RawConnectorRequestResponse,\n    },\n    types::Connectors,\n    utils::{missing_field_err, Error},\n};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

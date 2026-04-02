@@ -1,0 +1,383 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/jpmorgan/transformers.rs",
+  "structs": [
+    {
+      "name": "JpmorganAuthType",
+      "visibility": "pub",
+      "fields": [
+        "client_id",
+        "client_secret",
+        "company_name",
+        "product_name",
+        "merchant_purchase_description",
+        "statement_descriptor"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 26
+    },
+    {
+      "name": "JpmorganConnectorMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "company_name",
+        "product_name",
+        "merchant_purchase_description",
+        "statement_descriptor"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 62
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "JpmorganAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 35
+    },
+    {
+      "type_name": "JpmorganConnectorMetadataObject",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 69
+    },
+    {
+      "type_name": "requests::JpmorganTokenRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 81
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 113
+    },
+    {
+      "type_name": "requests::JpmorganPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 172
+    },
+    {
+      "type_name": "requests::JpmorganCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 384
+    },
+    {
+      "type_name": "requests::JpmorganVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 415
+    },
+    {
+      "type_name": "requests::JpmorganRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 434
+    },
+    {
+      "type_name": "PaymentsResponseData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 496
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 512
+    },
+    {
+      "type_name": "RefundsResponseData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 522
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 541
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 563
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 584
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 605
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 626
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 651
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 37
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "meta_data: &Option<SecretSerdeValue>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 71
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: JpmorganRouterData<\n            RouterDataV2<\n                CreateAccessToken,\n                PaymentFlowData,\n                AccessTokenRequestData,\n                AccessTokenResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 95
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 117
+    },
+    {
+      "name": "map_capture_method",
+      "visibility": "",
+      "parameters": [
+        "capture_method: Option<CaptureMethod>"
+      ],
+      "return_type": "Result<requests::CapMethod, error_stack::Report<errors::ConnectorError>>",
+      "line": 131
+    },
+    {
+      "name": "extract_account_holder_names",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >",
+        "_bank_account_holder_name: &Option<Secret<String>>"
+      ],
+      "return_type": "Result<(Secret<String>, Secret<String>), error_stack::Report<errors::ConnectorError>>",
+      "line": 146
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: JpmorganRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 186
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: JpmorganRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 393
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: JpmorganRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 424
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: JpmorganRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 443
+    },
+    {
+      "name": "map_transaction_state_to_attempt_status",
+      "visibility": "",
+      "parameters": [
+        "transaction_state: &responses::JpmorganTransactionState",
+        "capture_method: &Option<requests::CapMethod>"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 479
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &responses::JpmorganPaymentsResponse"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 498
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &responses::JpmorganPaymentsResponse"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 514
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &responses::JpmorganRefundResponse"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 524
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 546
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 567
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 588
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 609
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 630
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::JpmorganRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 655
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{AttemptStatus, CaptureMethod};",
+    "use common_utils::pii::SecretSerdeValue;",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, CreateAccessToken, Refund, Void},\n    connector_types::{\n        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use super::{requests, responses, JpmorganAmountConvertor};",
+    "use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,203 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/connector_integration_v2.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "ConnectorIntegrationAnyV2",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_integration_v2"
+      ],
+      "line": 19
+    },
+    {
+      "name": "ConnectorIntegrationV2",
+      "visibility": "pub",
+      "methods": [
+        "get_headers",
+        "get_content_type",
+        "get_http_method",
+        "get_url",
+        "get_request_body",
+        "get_request_form_data",
+        "build_request_v2",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response",
+        "get_certificate",
+        "get_certificate_key"
+      ],
+      "line": 41
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "S",
+      "trait_name": "ConnectorIntegrationAnyV2",
+      "methods": [
+        "get_connector_integration_v2"
+      ],
+      "line": 28
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_connector_integration_v2",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "BoxedConnectorIntegrationV2<'_, Flow, ResourceCommonData, Req, Resp>",
+      "line": 33
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError>",
+      "line": 45
+    },
+    {
+      "name": "get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 53
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Method",
+      "line": 58
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<String, domain_types::errors::ConnectorError>",
+      "line": 63
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, domain_types::errors::ConnectorError>",
+      "line": 73
+    },
+    {
+      "name": "get_request_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<Option<reqwest::multipart::Form>, domain_types::errors::ConnectorError>",
+      "line": 81
+    },
+    {
+      "name": "build_request_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<Option<Request>, domain_types::errors::ConnectorError>",
+      "line": 89
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>",
+        "event_builder: Option<&mut events::Event>",
+        "_res: domain_types::router_response_types::Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<Flow, ResourceCommonData, Req, Resp>,\n        domain_types::errors::ConnectorError,\n    >\n    where\n        Flow: Clone,\n        ResourceCommonData: Clone,\n        Req: Clone,\n        Resp: Clone,",
+      "line": 107
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: domain_types::router_response_types::Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, domain_types::errors::ConnectorError>",
+      "line": 129
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: domain_types::router_response_types::Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, domain_types::errors::ConnectorError>",
+      "line": 141
+    },
+    {
+      "name": "get_certificate",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<\n        Option<hyperswitch_masking::Secret<String>>,\n        domain_types::errors::ConnectorError,\n    >",
+      "line": 188
+    },
+    {
+      "name": "get_certificate_key",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>"
+      ],
+      "return_type": "CustomResult<\n        Option<hyperswitch_masking::Secret<String>>,\n        domain_types::errors::ConnectorError,\n    >",
+      "line": 199
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    events,\n    request::{Method, Request, RequestBuilder, RequestContent},\n    CustomResult,\n};",
+    "use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2};",
+    "use hyperswitch_masking::Maskable;",
+    "use serde_json::json;",
+    "use crate::api;"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 49
+    },
+    {
+      "name": "json",
+      "line": 123
+    },
+    {
+      "name": "json",
+      "line": 135
+    },
+    {
+      "name": "json",
+      "line": 163
+    }
+  ],
+  "modules": []
+}

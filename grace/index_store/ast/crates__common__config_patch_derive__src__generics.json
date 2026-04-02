@@ -1,0 +1,224 @@
+{
+  "file_path": "crates/common/config_patch_derive/src/generics.rs",
+  "structs": [
+    {
+      "name": "GenericPatchCtx",
+      "visibility": "pub(crate)",
+      "fields": [
+        "generic_params",
+        "patch_params",
+        "patch_map",
+        "where_bounds",
+        "used_type_params",
+        "used_names",
+        "bound_keys"
+      ],
+      "derives": [],
+      "line": 5
+    },
+    {
+      "name": "GenericParamCollector",
+      "visibility": "",
+      "fields": [
+        "generic_params",
+        "used"
+      ],
+      "derives": [],
+      "line": 191
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GenericPatchCtx",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "patch_ident",
+        "add_bound",
+        "add_type_bound",
+        "unique_patch_ident",
+        "record_used_type_params_for_the_field"
+      ],
+      "line": 22
+    },
+    {
+      "type_name": "GenericParamCollector",
+      "trait_name": "Visit",
+      "methods": [
+        "visit_type_path"
+      ],
+      "line": 196
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "generics: &syn::Generics"
+      ],
+      "return_type": "Self",
+      "line": 24
+    },
+    {
+      "name": "patch_ident",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&mut self",
+        "ident: &syn::Ident"
+      ],
+      "return_type": "syn::Ident",
+      "line": 51
+    },
+    {
+      "name": "add_bound",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&mut self",
+        "ident: &syn::Ident",
+        "patch_ident: &syn::Ident",
+        "needs_default: bool"
+      ],
+      "return_type": "",
+      "line": 66
+    },
+    {
+      "name": "add_type_bound",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&mut self",
+        "ty: &Type",
+        "patch_ty: &Type",
+        "needs_default: bool"
+      ],
+      "return_type": "",
+      "line": 90
+    },
+    {
+      "name": "unique_patch_ident",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "base: &str"
+      ],
+      "return_type": "syn::Ident",
+      "line": 108
+    },
+    {
+      "name": "record_used_type_params_for_the_field",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&mut self",
+        "ty: &Type"
+      ],
+      "return_type": "",
+      "line": 120
+    },
+    {
+      "name": "append_patch_params",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "generics: &syn::Generics",
+        "patch_params: &[syn::TypeParam]"
+      ],
+      "return_type": "syn::Generics",
+      "line": 126
+    },
+    {
+      "name": "add_where_bounds",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "generics: &syn::Generics",
+        "bounds: &[WherePredicate]"
+      ],
+      "return_type": "syn::Generics",
+      "line": 138
+    },
+    {
+      "name": "build_patch_generics",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "generics: &syn::Generics",
+        "used_type_params: &HashSet<String>",
+        "patch_params: &[syn::TypeParam]"
+      ],
+      "return_type": "syn::Generics",
+      "line": 156
+    },
+    {
+      "name": "collect_generic_params",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "ty: &Type",
+        "generic_params: &HashSet<String>",
+        "used: &mut HashSet<String>"
+      ],
+      "return_type": "",
+      "line": 179
+    },
+    {
+      "name": "visit_type_path",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "node: &'ast TypePath"
+      ],
+      "return_type": "",
+      "line": 197
+    }
+  ],
+  "use_statements": [
+    "use quote::{format_ident, ToTokens};",
+    "use std::collections::{HashMap, HashSet};",
+    "use syn::{parse_quote, visit::Visit, Type, TypePath, WherePredicate};"
+  ],
+  "macro_calls": [
+    {
+      "name": "parse_quote",
+      "line": 57
+    },
+    {
+      "name": "format",
+      "line": 72
+    },
+    {
+      "name": "parse_quote",
+      "line": 76
+    },
+    {
+      "name": "parse_quote",
+      "line": 79
+    },
+    {
+      "name": "format",
+      "line": 91
+    },
+    {
+      "name": "parse_quote",
+      "line": 99
+    },
+    {
+      "name": "parse_quote",
+      "line": 100
+    },
+    {
+      "name": "format",
+      "line": 109
+    },
+    {
+      "name": "format",
+      "line": 112
+    },
+    {
+      "name": "format_ident",
+      "line": 116
+    },
+    {
+      "name": "parse_quote",
+      "line": 146
+    }
+  ],
+  "modules": []
+}

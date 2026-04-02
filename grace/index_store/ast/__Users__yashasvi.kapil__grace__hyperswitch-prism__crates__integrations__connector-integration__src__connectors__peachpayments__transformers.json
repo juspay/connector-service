@@ -1,0 +1,371 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/peachpayments/transformers.rs",
+  "structs": [
+    {
+      "name": "PeachpaymentsAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "tenant_id",
+        "client_merchant_reference_id",
+        "merchant_payment_method_route_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 99
+    },
+    {
+      "name": "PeachpaymentsConnectorMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "client_merchant_reference_id",
+        "merchant_payment_method_route_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 107
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PeachpaymentsAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 112
+    },
+    {
+      "type_name": "requests::PeachpaymentsAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 136
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 293
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 347
+    },
+    {
+      "type_name": "requests::PeachpaymentsCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 377
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 403
+    },
+    {
+      "type_name": "requests::PeachpaymentsVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 433
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 470
+    },
+    {
+      "type_name": "requests::PeachpaymentsRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 500
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 535
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 556
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 577
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 594
+    },
+    {
+      "type_name": "requests::CardNetworkLowercase",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 604
+    },
+    {
+      "type_name": "requests::CardOnFileData",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 628
+    },
+    {
+      "type_name": "requests::PeachpaymentsCofData",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 638
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_error_code",
+      "visibility": "pub",
+      "parameters": [
+        "response_code: Option<&responses::PeachpaymentsResponseCode>"
+      ],
+      "return_type": "String",
+      "line": 26
+    },
+    {
+      "name": "get_error_message",
+      "visibility": "pub",
+      "parameters": [
+        "response_code: Option<&responses::PeachpaymentsResponseCode>"
+      ],
+      "return_type": "String",
+      "line": 34
+    },
+    {
+      "name": "get_webhook_object_from_body",
+      "visibility": "pub",
+      "parameters": [
+        "body: &[u8]"
+      ],
+      "return_type": "CustomResult<responses::PeachpaymentsIncomingWebhook, errors::ConnectorError>",
+      "line": 44
+    },
+    {
+      "name": "get_webhook_response",
+      "visibility": "",
+      "parameters": [
+        "response: responses::PeachpaymentsIncomingWebhook",
+        "status_code: u16"
+      ],
+      "return_type": "CustomResult<\n    (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),\n    errors::ConnectorError,\n>",
+      "line": 54
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 115
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PeachpaymentsRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 151
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 299
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 352
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PeachpaymentsRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 387
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 408
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PeachpaymentsRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 443
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 475
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PeachpaymentsRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 510
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 540
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 561
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: responses::PeachpaymentsPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 578
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: responses::PeachpaymentsRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 595
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "card_network: common_enums::CardNetwork"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 607
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 629
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 639
+    }
+  ],
+  "use_statements": [
+    "use super::{requests, responses, PeachpaymentsRouterData};",
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::ext_traits::StringExt;",
+    "use common_utils::{consts, errors::CustomResult, types::MinorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use time::format_description::well_known::Iso8601;",
+    "use time::OffsetDateTime;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 129
+    },
+    {
+      "name": "format",
+      "line": 284
+    }
+  ],
+  "modules": []
+}

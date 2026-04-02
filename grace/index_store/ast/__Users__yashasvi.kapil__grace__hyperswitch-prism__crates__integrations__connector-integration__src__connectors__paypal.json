@@ -1,0 +1,872 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/paypal.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 70
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 80
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 85
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_access_token"
+      ],
+      "line": 127
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 134
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 138
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 142
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 150
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 158
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook",
+        "get_webhook_resource_object"
+      ],
+      "line": 162
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 445
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 449
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 453
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 458
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 462
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 466
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 470
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 474
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 478
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_content_type",
+        "get_http_method",
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2"
+      ],
+      "line": 682
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1253
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1258
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1263
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1268
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1277
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1287
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1297
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1306
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1316
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1326
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_content_type",
+        "get_http_method",
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2"
+      ],
+      "line": 1336
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1458
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1470
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_url",
+        "get_headers",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2"
+      ],
+      "line": 1481
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "connector_types::VerifyWebhookSourceV2",
+      "methods": [],
+      "line": 1588
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorErrorTypeMapping",
+      "methods": [
+        "get_connector_error_type"
+      ],
+      "line": 1593
+    },
+    {
+      "type_name": "Paypal",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 1706
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_access_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_payment_method: Option<common_enums::PaymentMethod>"
+      ],
+      "return_type": "bool",
+      "line": 130
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_request: domain_types::connector_types::RequestDetails",
+        "_connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<ConnectorError>>",
+      "line": 165
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: domain_types::connector_types::RequestDetails",
+        "_connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorError>>",
+      "line": 181
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: domain_types::connector_types::RequestDetails",
+        "_connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::WebhookDetailsResponse,\n        error_stack::Report<ConnectorError>,\n    >",
+      "line": 206
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: domain_types::connector_types::RequestDetails",
+        "_connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::RefundWebhookDetailsResponse,\n        error_stack::Report<ConnectorError>,\n    >",
+      "line": 255
+    },
+    {
+      "name": "process_dispute_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: domain_types::connector_types::RequestDetails",
+        "_connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::DisputeWebhookDetailsResponse,\n        error_stack::Report<ConnectorError>,\n    >",
+      "line": 298
+    },
+    {
+      "name": "get_webhook_resource_object",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: domain_types::connector_types::RequestDetails"
+      ],
+      "return_type": "Result<\n        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,\n        error_stack::Report<ConnectorError>,\n    >",
+      "line": 376
+    },
+    {
+      "name": "get_paypal_event_type",
+      "visibility": "",
+      "parameters": [
+        "event: paypal::PaypalWebhookEventType",
+        "outcome: Option<paypal::OutcomeCode>"
+      ],
+      "return_type": "domain_types::connector_types::EventType",
+      "line": 392
+    },
+    {
+      "name": "get_paypal_payment_webhook_status",
+      "visibility": "",
+      "parameters": [
+        "event: paypal::PaypalWebhookEventType"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 420
+    },
+    {
+      "name": "get_paypal_dispute_status_from_outcome",
+      "visibility": "",
+      "parameters": [
+        "outcome: &paypal::OutcomeCode"
+      ],
+      "return_type": "common_enums::DisputeStatus",
+      "line": 431
+    },
+    {
+      "name": "get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 690
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_utils::request::Method",
+      "line": 694
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 698
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, ConnectorError>",
+      "line": 725
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<common_utils::request::RequestContent>, ConnectorError>",
+      "line": 759
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,\n        ConnectorError,\n    >",
+      "line": 791
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 822
+    },
+    {
+      "name": "get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 1344
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_utils::request::Method",
+      "line": 1348
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            PostAuthenticate,\n            PaymentFlowData,\n            PaymentsPostAuthenticateData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 1352
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            PostAuthenticate,\n            PaymentFlowData,\n            PaymentsPostAuthenticateData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, ConnectorError>",
+      "line": 1379
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<\n            PostAuthenticate,\n            PaymentFlowData,\n            PaymentsPostAuthenticateData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<common_utils::request::RequestContent>, ConnectorError>",
+      "line": 1401
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            PostAuthenticate,\n            PaymentFlowData,\n            PaymentsPostAuthenticateData<T>,\n            PaymentsResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<\n            PostAuthenticate,\n            PaymentFlowData,\n            PaymentsPostAuthenticateData<T>,\n            PaymentsResponseData,\n        >,\n        ConnectorError,\n    >",
+      "line": 1413
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 1449
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            VerifyWebhookSource,\n            VerifyWebhookSourceFlowData,\n            VerifyWebhookSourceRequestData,\n            VerifyWebhookSourceResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, ConnectorError>",
+      "line": 1489
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            VerifyWebhookSource,\n            VerifyWebhookSourceFlowData,\n            VerifyWebhookSourceRequestData,\n            VerifyWebhookSourceResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 1505
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            VerifyWebhookSource,\n            VerifyWebhookSourceFlowData,\n            VerifyWebhookSourceRequestData,\n            VerifyWebhookSourceResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<common_utils::request::RequestContent>, ConnectorError>",
+      "line": 1529
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            VerifyWebhookSource,\n            VerifyWebhookSourceFlowData,\n            VerifyWebhookSourceRequestData,\n            VerifyWebhookSourceResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<\n            VerifyWebhookSource,\n            VerifyWebhookSourceFlowData,\n            VerifyWebhookSourceRequestData,\n            VerifyWebhookSourceResponseData,\n        >,\n        ConnectorError,\n    >",
+      "line": 1544
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 1579
+    },
+    {
+      "name": "get_connector_error_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "error_code: String",
+        "_error_message: String"
+      ],
+      "return_type": "ConnectorErrorType",
+      "line": 1596
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 1709
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 1713
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 1717
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 1721
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 1725
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 1738
+    },
+    {
+      "name": "construct_auth_assertion_header",
+      "visibility": "",
+      "parameters": [
+        "payer_id: &Secret<String>",
+        "client_id: &Secret<String>"
+      ],
+      "return_type": "String",
+      "line": 1803
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_enums::{AttemptStatus, CurrencyUnit};",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    StringMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyWebhookSource, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_request_types::VerifyWebhookSourceRequestData,\n    router_response_types::{Response, VerifyWebhookSourceResponseData},\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Mask, Maskable, Secret};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use std::fmt::{Debug, Write};",
+    "use super::macros;",
+    "use crate::{\n    connectors::paypal::transformers::{\n        self as paypal, auth_headers, PaypalAuthResponse, PaypalAuthUpdateRequest,\n        PaypalAuthUpdateResponse, PaypalCaptureResponse, PaypalPaymentsCancelResponse,\n        PaypalPaymentsCaptureRequest, PaypalPaymentsRequest, PaypalRefundRequest,\n        PaypalRepeatPaymentRequest, PaypalRepeatPaymentResponse, PaypalSetupMandatesResponse,\n        PaypalSyncResponse, PaypalZeroMandateRequest, RefundResponse, RefundSyncResponse,\n    },\n    types::ResponseRouterData,\n    utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},\n    with_error_response_body,\n};",
+    "use domain_types::connector_types::EventType as E;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 173
+    },
+    {
+      "name": "report",
+      "line": 316
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 483
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 483
+    },
+    {
+      "name": "format",
+      "line": 747
+    },
+    {
+      "name": "format",
+      "line": 750
+    },
+    {
+      "name": "format",
+      "line": 756
+    },
+    {
+      "name": "matches",
+      "line": 770
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 831
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 831
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 893
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 893
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 976
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 976
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1026
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1026
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1077
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1077
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1127
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1127
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1170
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1170
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1213
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1213
+    },
+    {
+      "name": "format",
+      "line": 1394
+    },
+    {
+      "name": "format",
+      "line": 1499
+    },
+    {
+      "name": "vec",
+      "line": 1520
+    },
+    {
+      "name": "vec",
+      "line": 1732
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 1748
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 1748
+    },
+    {
+      "name": "write",
+      "line": 1758
+    },
+    {
+      "name": "format",
+      "line": 1808
+    },
+    {
+      "name": "format",
+      "line": 1814
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

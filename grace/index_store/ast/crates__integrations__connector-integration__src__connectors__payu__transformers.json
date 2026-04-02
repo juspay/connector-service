@@ -1,0 +1,591 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+  "structs": [
+    {
+      "name": "PayuAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "api_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 73
+    },
+    {
+      "name": "PayuPaymentRequest",
+      "visibility": "pub",
+      "fields": [
+        "key",
+        "txnid",
+        "amount",
+        "currency",
+        "productinfo",
+        "firstname",
+        "lastname",
+        "email",
+        "phone",
+        "surl",
+        "furl",
+        "pg",
+        "bankcode",
+        "vpa",
+        "txn_s2s_flow",
+        "s2s_client_ip",
+        "s2s_device_info",
+        "api_version",
+        "hash",
+        "udf1",
+        "udf2",
+        "udf3",
+        "udf4",
+        "udf5",
+        "udf6",
+        "udf7",
+        "udf8",
+        "udf9",
+        "udf10",
+        "offer_key",
+        "si",
+        "si_details",
+        "beneficiarydetail",
+        "user_token",
+        "offer_auto_apply",
+        "additional_charges",
+        "additional_gst_charges",
+        "upi_app_name"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 101
+    },
+    {
+      "name": "PayuPaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "token",
+        "reference_id",
+        "return_url",
+        "merchant_name",
+        "merchant_vpa",
+        "amount",
+        "txn_id",
+        "intent_uri_data",
+        "apps",
+        "upi_push_disabled",
+        "push_service_url",
+        "push_service_url_v2",
+        "encoded_payu_id",
+        "vpa_regex",
+        "upi_service_poll_interval",
+        "sdk_upi_push_expiry",
+        "sdk_upi_verification_interval",
+        "disable_intent_seamless_failure",
+        "intent_sdk_combine_verify_and_pay_button",
+        "result",
+        "error",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 183
+    },
+    {
+      "name": "PayuResult",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "mihpayid"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 236
+    },
+    {
+      "name": "PayuUpiApp",
+      "visibility": "pub",
+      "fields": [
+        "name",
+        "package"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 242
+    },
+    {
+      "name": "PayuErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "result",
+        "status",
+        "error",
+        "message",
+        "error_code",
+        "error_message",
+        "error_description",
+        "transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 249
+    },
+    {
+      "name": "PayuSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "key",
+        "command",
+        "var1",
+        "hash"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 397
+    },
+    {
+      "name": "PayuSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "msg",
+        "transaction_details",
+        "result",
+        "field3"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 406
+    },
+    {
+      "name": "PayuTransactionDetail",
+      "visibility": "pub",
+      "fields": [
+        "mihpayid",
+        "txnid",
+        "amount",
+        "status",
+        "firstname",
+        "lastname",
+        "email",
+        "phone",
+        "productinfo",
+        "hash",
+        "field1",
+        "field2",
+        "field3",
+        "field9",
+        "error_code",
+        "error_message",
+        "card_token",
+        "card_category",
+        "offer_key",
+        "discount",
+        "net_amount_debit",
+        "addedon",
+        "payment_source",
+        "bank_ref_num",
+        "upi_va",
+        "cardnum",
+        "issuing_bank"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 417
+    }
+  ],
+  "enums": [
+    {
+      "name": "PayuStatusValue",
+      "visibility": "pub",
+      "variants": [
+        "IntStatus",
+        "StringStatus"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 41
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PayuAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 78
+    },
+    {
+      "type_name": "PayuPaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 263
+    },
+    {
+      "type_name": "PayuSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 448
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 736
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 860
+    }
+  ],
+  "functions": [
+    {
+      "name": "deserialize_payu_status",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<PayuStatusValue>, D::Error>\nwhere\n    D: serde::Deserializer<'de>,",
+      "line": 47
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 81
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::PayuRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 278
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::PayuRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 458
+    },
+    {
+      "name": "generate_payu_verify_hash",
+      "visibility": "",
+      "parameters": [
+        "request: &PayuSyncRequest",
+        "merchant_salt: &Secret<String>"
+      ],
+      "return_type": "Result<String, ConnectorError>",
+      "line": 498
+    },
+    {
+      "name": "generate_udf_fields",
+      "visibility": "",
+      "parameters": [
+        "payment_id: &str",
+        "merchant_id: &str",
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "[Option<String>; 10]",
+      "line": 534
+    },
+    {
+      "name": "determine_upi_app_name",
+      "visibility": "",
+      "parameters": [
+        "request: &PaymentsAuthorizeData<T>"
+      ],
+      "return_type": "Result<Option<String>, ConnectorError>",
+      "line": 587
+    },
+    {
+      "name": "determine_upi_flow",
+      "visibility": "",
+      "parameters": [
+        "request: &PaymentsAuthorizeData<T>"
+      ],
+      "return_type": "Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError>",
+      "line": 623
+    },
+    {
+      "name": "is_upi_collect_flow",
+      "visibility": "pub",
+      "parameters": [
+        "request: &PaymentsAuthorizeData<T>"
+      ],
+      "return_type": "bool",
+      "line": 673
+    },
+    {
+      "name": "generate_payu_hash",
+      "visibility": "",
+      "parameters": [
+        "request: &PayuPaymentRequest",
+        "merchant_salt: &Secret<String>"
+      ],
+      "return_type": "Result<String, ConnectorError>",
+      "line": 687
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayuPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 742
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayuSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 865
+    },
+    {
+      "name": "map_payu_sync_status",
+      "visibility": "",
+      "parameters": [
+        "payu_status: &str",
+        "txn_detail: &PayuTransactionDetail"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 960
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{self, AttemptStatus, Currency};",
+    "use common_utils::{pii::IpAddress, Email};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_request_types::AuthoriseIntegrityObject,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::{report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::types::ResponseRouterData;",
+    "use serde_json::Value;",
+    "use sha2::{Digest, Sha512};",
+    "use sha2::{Digest, Sha512};"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 354
+    },
+    {
+      "name": "format",
+      "line": 519
+    },
+    {
+      "name": "debug",
+      "line": 520
+    },
+    {
+      "name": "debug",
+      "line": 520
+    },
+    {
+      "name": "debug",
+      "line": 521
+    },
+    {
+      "name": "debug",
+      "line": 521
+    },
+    {
+      "name": "matches",
+      "line": 679
+    },
+    {
+      "name": "vec",
+      "line": 695
+    },
+    {
+      "name": "format",
+      "line": 722
+    },
+    {
+      "name": "debug",
+      "line": 723
+    },
+    {
+      "name": "debug",
+      "line": 723
+    },
+    {
+      "name": "debug",
+      "line": 724
+    },
+    {
+      "name": "debug",
+      "line": 724
+    }
+  ],
+  "modules": [
+    "constants"
+  ]
+}

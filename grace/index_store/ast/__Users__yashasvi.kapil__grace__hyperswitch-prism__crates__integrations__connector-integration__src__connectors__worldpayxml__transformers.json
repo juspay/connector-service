@@ -1,0 +1,311 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/worldpayxml/transformers.rs",
+  "structs": [
+    {
+      "name": "WorldpayxmlAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_username",
+        "api_password",
+        "merchant_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 30
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "WorldpayxmlAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 36
+    },
+    {
+      "type_name": "requests::WorldpayxmlPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 142
+    },
+    {
+      "type_name": "requests::WorldpayxmlCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 286
+    },
+    {
+      "type_name": "requests::WorldpayxmlVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 344
+    },
+    {
+      "type_name": "requests::WorldpayxmlRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 380
+    },
+    {
+      "type_name": "requests::WorldpayxmlPSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 434
+    },
+    {
+      "type_name": "requests::WorldpayxmlRSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 473
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 554
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 661
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 730
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 799
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 990
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1046
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 39
+    },
+    {
+      "name": "get_worldpayxml_payment_method",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>",
+        "card: &Card<T>",
+        "billing_address: Option<&requests::WorldpayxmlBillingAddress>"
+      ],
+      "return_type": "Result<requests::WorldpayxmlPaymentMethod, error_stack::Report<errors::ConnectorError>>\nwhere\n    T: PaymentMethodDataTypes,",
+      "line": 62
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 157
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 296
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 354
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 390
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 444
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayxmlRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 483
+    },
+    {
+      "name": "map_worldpayxml_authorize_status",
+      "visibility": "",
+      "parameters": [
+        "last_event: &WorldpayxmlLastEvent",
+        "is_auto_capture: bool",
+        "capture_sync_status: Option<&AttemptStatus>"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 507
+    },
+    {
+      "name": "map_worldpayxml_refund_status",
+      "visibility": "",
+      "parameters": [
+        "last_event: &WorldpayxmlLastEvent"
+      ],
+      "return_type": "RefundStatus",
+      "line": 537
+    },
+    {
+      "name": "parse_last_event",
+      "visibility": "",
+      "parameters": [
+        "event_str: &str"
+      ],
+      "return_type": "Result<WorldpayxmlLastEvent, errors::ConnectorError>",
+      "line": 548
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 560
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 666
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 735
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 804
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 995
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1051
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::Serialize;",
+    "use super::{\n    requests::{self, WorldpayxmlAction},\n    responses::{self, WorldpayxmlLastEvent},\n    WorldpayxmlRouterData,\n};",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 75
+    },
+    {
+      "name": "format",
+      "line": 99
+    },
+    {
+      "name": "format",
+      "line": 549
+    }
+  ],
+  "modules": []
+}

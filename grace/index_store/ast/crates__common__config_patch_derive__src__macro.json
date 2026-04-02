@@ -1,0 +1,74 @@
+{
+  "file_path": "crates/common/config_patch_derive/src/macro.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "derive_patch_impl",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "input: DeriveInput"
+      ],
+      "return_type": "syn::Result<proc_macro::TokenStream>",
+      "line": 10
+    },
+    {
+      "name": "derive_replace_patch_impl",
+      "visibility": "",
+      "parameters": [
+        "item_name: syn::Ident",
+        "vis: syn::Visibility",
+        "generics: Generics"
+      ],
+      "return_type": "syn::Result<proc_macro::TokenStream>",
+      "line": 95
+    }
+  ],
+  "use_statements": [
+    "use quote::{format_ident, quote};",
+    "use syn::{parse_quote, Attribute, Data, DeriveInput, Fields, Generics};",
+    "use crate::generics::{\n    add_where_bounds, append_patch_params, build_patch_generics, GenericPatchCtx,\n};",
+    "use crate::helper::build_patch_field_specific_metadata;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format_ident",
+      "line": 34
+    },
+    {
+      "name": "quote",
+      "line": 48
+    },
+    {
+      "name": "format",
+      "line": 70
+    },
+    {
+      "name": "parse_quote",
+      "line": 74
+    },
+    {
+      "name": "quote",
+      "line": 76
+    },
+    {
+      "name": "format_ident",
+      "line": 100
+    },
+    {
+      "name": "format",
+      "line": 102
+    },
+    {
+      "name": "parse_quote",
+      "line": 106
+    },
+    {
+      "name": "quote",
+      "line": 108
+    }
+  ],
+  "modules": []
+}

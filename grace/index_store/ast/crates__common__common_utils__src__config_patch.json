@@ -1,0 +1,33 @@
+{
+  "file_path": "crates/common/common_utils/src/config_patch.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "Patch",
+      "visibility": "pub",
+      "methods": [
+        "apply"
+      ],
+      "line": 17
+    }
+  ],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "deserialize_option_option",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<Option<T>>, D::Error>\nwhere\n    D: serde::Deserializer<'de>,\n    T: Deserialize<'de>,",
+      "line": 24
+    }
+  ],
+  "use_statements": [
+    "pub use config_patch_derive::Patch;",
+    "use serde::Deserialize;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

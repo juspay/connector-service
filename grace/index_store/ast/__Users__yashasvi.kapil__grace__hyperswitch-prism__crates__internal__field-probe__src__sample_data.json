@@ -1,0 +1,163 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/sample_data.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "usd_money",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "minor: i64"
+      ],
+      "return_type": "Money",
+      "line": 9
+    },
+    {
+      "name": "full_browser_info",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "BrowserInformation",
+      "line": 16
+    },
+    {
+      "name": "card_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 40
+    },
+    {
+      "name": "sepa_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 55
+    },
+    {
+      "name": "bacs_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 64
+    },
+    {
+      "name": "ach_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 74
+    },
+    {
+      "name": "becs_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 85
+    },
+    {
+      "name": "google_pay_decrypted_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 95
+    },
+    {
+      "name": "google_pay_encrypted_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 123
+    },
+    {
+      "name": "google_pay_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 149
+    },
+    {
+      "name": "apple_pay_encrypted_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 155
+    },
+    {
+      "name": "ideal_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 177
+    },
+    {
+      "name": "paypal_redirect_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 183
+    },
+    {
+      "name": "blik_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 191
+    },
+    {
+      "name": "klarna_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 199
+    },
+    {
+      "name": "afterpay_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 205
+    },
+    {
+      "name": "upi_collect_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 211
+    },
+    {
+      "name": "affirm_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 220
+    },
+    {
+      "name": "samsung_pay_payment_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 226
+    },
+    {
+      "name": "apple_pay_method",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethod",
+      "line": 246
+    }
+  ],
+  "use_statements": [
+    "use std::str::FromStr;",
+    "use grpc_api_types::payments::{\n    self as proto, payment_method::PaymentMethod as PmVariant, BrowserInformation, CardDetails,\n    Money, PaymentMethod,\n};",
+    "use hyperswitch_masking::Secret;",
+    "use proto::google_wallet::{tokenization_data::TokenizationData as TD, TokenizationData};",
+    "use proto::google_wallet::{tokenization_data::TokenizationData as TD, TokenizationData};",
+    "use proto::apple_wallet::{payment_data::PaymentData as PD, PaymentData};",
+    "use proto::samsung_wallet::{payment_credential::TokenData, PaymentCredential};",
+    "use proto::apple_wallet::{payment_data::PaymentData as PD, PaymentData};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,714 @@
+{
+  "structs": [
+    {
+      "name": "DisputePayload",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "dispute_stage",
+        "connector_status",
+        "connector_dispute_id",
+        "connector_reason",
+        "connector_reason_code",
+        "challenge_required_by",
+        "created_at",
+        "updated_at"
+      ],
+      "derives": [
+        "Default",
+        "Debug"
+      ],
+      "line": 7
+    },
+    {
+      "name": "IncomingWebhookRequestDetails",
+      "visibility": "pub",
+      "fields": [
+        "method",
+        "uri",
+        "headers",
+        "body",
+        "query_params"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 10
+    },
+    {
+      "name": "MerchantConnectorWebhookDetails",
+      "visibility": "pub",
+      "fields": [
+        "merchant_secret",
+        "additional_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Serialize",
+        "Deserialize",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 314
+    },
+    {
+      "name": "ExternalAuthenticationPayload",
+      "visibility": "pub",
+      "fields": [
+        "trans_status",
+        "authentication_value",
+        "eci"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 5
+    },
+    {
+      "name": "RoutableConnectorChoice",
+      "visibility": "pub",
+      "fields": [
+        "choice_kind",
+        "connector",
+        "merchant_connector_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema"
+      ],
+      "line": 6
+    },
+    {
+      "name": "RoutingEvent",
+      "visibility": "pub",
+      "fields": [
+        "routable_connectors",
+        "payment_connector",
+        "flow",
+        "request",
+        "response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "profile_id",
+        "merchant_id",
+        "created_at",
+        "status_code",
+        "request_id",
+        "routing_engine",
+        "routing_approach"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 44
+    },
+    {
+      "name": "ConnectorEvent",
+      "visibility": "pub",
+      "fields": [
+        "connector_name",
+        "flow",
+        "request",
+        "masked_response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "merchant_id",
+        "created_at",
+        "request_id",
+        "latency",
+        "refund_id",
+        "dispute_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 11
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConnectorSourceVerificationSecrets",
+      "visibility": "pub",
+      "variants": [
+        "AuthHeaders",
+        "WebhookSecret",
+        "RedirectResponseSecret",
+        "AuthWithWebHookSecret"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 9
+    },
+    {
+      "name": "IncomingWebhookFlowError",
+      "visibility": "pub",
+      "variants": [
+        "ResourceNotFound",
+        "InternalError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy"
+      ],
+      "line": 47
+    },
+    {
+      "name": "IncomingWebhookFlowError",
+      "visibility": "pub",
+      "variants": [
+        "ResourceNotFound",
+        "InternalError"
+      ],
+      "derives": [
+        "Debug",
+        "Debug"
+      ],
+      "line": 24
+    },
+    {
+      "name": "IncomingWebhookEvent",
+      "visibility": "pub",
+      "variants": [
+        "PaymentIntentFailure",
+        "PaymentIntentSuccess",
+        "PaymentIntentProcessing",
+        "PaymentIntentPartiallyFunded",
+        "PaymentIntentCancelled",
+        "PaymentIntentCancelFailure",
+        "PaymentIntentAuthorizationSuccess",
+        "PaymentIntentAuthorizationFailure",
+        "PaymentIntentCaptureSuccess",
+        "PaymentIntentCaptureFailure",
+        "PaymentActionRequired",
+        "EventNotSupported",
+        "SourceChargeable",
+        "SourceTransactionCreated",
+        "RefundFailure",
+        "RefundSuccess",
+        "DisputeOpened",
+        "DisputeExpired",
+        "DisputeAccepted",
+        "DisputeCancelled",
+        "DisputeChallenged",
+        "DisputeWon",
+        "DisputeLost",
+        "MandateActive",
+        "MandateRevoked",
+        "EndpointVerification",
+        "ExternalAuthenticationARes",
+        "FrmApproved",
+        "FrmRejected"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Serialize",
+        "Deserialize",
+        "Copy"
+      ],
+      "line": 276
+    },
+    {
+      "name": "RoutableChoiceKind",
+      "visibility": "pub",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema",
+        "PartialEq"
+      ],
+      "line": 15
+    },
+    {
+      "name": "RoutableChoiceSerde",
+      "visibility": "pub",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema",
+        "PartialEq",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 22
+    },
+    {
+      "name": "ApplicationResponse",
+      "visibility": "pub",
+      "variants": [
+        "Json",
+        "StatusOk",
+        "TextPlain",
+        "JsonForRedirection",
+        "Form",
+        "PaymentLinkForm",
+        "FileData",
+        "JsonWithHeaders",
+        "GenericLinkForm"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 67
+    },
+    {
+      "name": "RoutingEngine",
+      "visibility": "pub",
+      "variants": [
+        "IntelligentRouter",
+        "DecisionEngine"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "line": 16
+    },
+    {
+      "name": "ApiMethod",
+      "visibility": "pub",
+      "variants": [
+        "Grpc",
+        "Rest"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "line": 26
+    }
+  ],
+  "traits": [
+    {
+      "name": "SourceVerification",
+      "visibility": "pub",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_signature",
+        "get_message",
+        "verify"
+      ],
+      "line": 20
+    },
+    {
+      "name": "ConnectorServiceTrait",
+      "visibility": "pub",
+      "methods": [],
+      "line": 52
+    },
+    {
+      "name": "PaymentVoidV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 92
+    },
+    {
+      "name": "PaymentVoidPostCaptureV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 97
+    },
+    {
+      "name": "ValidationTrait",
+      "visibility": "pub",
+      "methods": [
+        "should_do_order_create",
+        "should_do_session_token",
+        "should_do_access_token",
+        "should_create_connector_customer",
+        "should_do_payment_method_token",
+        "requires_external_webhook_verification"
+      ],
+      "line": 109
+    },
+    {
+      "name": "PaymentOrderCreate",
+      "visibility": "pub",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "name": "PaymentSessionToken",
+      "visibility": "pub",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "name": "SdkSessionTokenV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "name": "PaymentAccessToken",
+      "visibility": "pub",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "name": "CreateConnectorCustomer",
+      "visibility": "pub",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "name": "PaymentTokenV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 201
+    },
+    {
+      "name": "PaymentAuthorizeV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 211
+    },
+    {
+      "name": "PaymentSyncV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 221
+    },
+    {
+      "name": "RefundV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 231
+    },
+    {
+      "name": "RefundSyncV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 236
+    },
+    {
+      "name": "PaymentCapture",
+      "visibility": "pub",
+      "methods": [],
+      "line": 241
+    },
+    {
+      "name": "SetupMandateV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 251
+    },
+    {
+      "name": "RepeatPaymentV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 261
+    },
+    {
+      "name": "MandateRevokeV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 271
+    },
+    {
+      "name": "AcceptDispute",
+      "visibility": "pub",
+      "methods": [],
+      "line": 281
+    },
+    {
+      "name": "SubmitEvidenceV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 291
+    },
+    {
+      "name": "DisputeDefend",
+      "visibility": "pub",
+      "methods": [],
+      "line": 301
+    },
+    {
+      "name": "PaymentPreAuthenticateV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 311
+    },
+    {
+      "name": "PaymentAuthenticateV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 321
+    },
+    {
+      "name": "PaymentPostAuthenticateV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 331
+    },
+    {
+      "name": "PaymentIncrementalAuthorization",
+      "visibility": "pub",
+      "methods": [],
+      "line": 341
+    },
+    {
+      "name": "VerifyWebhookSourceV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 351
+    },
+    {
+      "name": "PayoutCreateV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 361
+    },
+    {
+      "name": "IncomingWebhook",
+      "visibility": "pub",
+      "methods": [
+        "verify_webhook_source",
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook",
+        "get_webhook_resource_object",
+        "get_webhook_api_response"
+      ],
+      "line": 385
+    },
+    {
+      "name": "VerifyRedirectResponse",
+      "visibility": "pub",
+      "methods": [
+        "decode_redirect_response_body",
+        "verify_redirect_response_source",
+        "process_redirect_response"
+      ],
+      "line": 495
+    },
+    {
+      "name": "ConnectorValidation",
+      "visibility": "pub",
+      "methods": [
+        "validate_connector_against_payment_request",
+        "validate_mandate_payment",
+        "validate_psync_reference_id",
+        "is_webhook_source_verification_mandatory"
+      ],
+      "line": 530
+    },
+    {
+      "name": "PayoutTransferV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 665
+    },
+    {
+      "name": "PayoutGetV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 689
+    },
+    {
+      "name": "PayoutVoidV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 713
+    },
+    {
+      "name": "PayoutStageV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 737
+    },
+    {
+      "name": "PayoutCreateLinkV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 761
+    },
+    {
+      "name": "PayoutCreateRecipientV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 785
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountV2",
+      "visibility": "pub",
+      "methods": [],
+      "line": 809
+    },
+    {
+      "name": "FlowIntegrity",
+      "visibility": "pub",
+      "methods": [
+        "compare"
+      ],
+      "line": 51
+    },
+    {
+      "name": "GetIntegrityObject",
+      "visibility": "pub",
+      "methods": [
+        "get_response_integrity_object",
+        "get_request_integrity_object"
+      ],
+      "line": 73
+    },
+    {
+      "name": "CheckIntegrity",
+      "visibility": "pub",
+      "methods": [
+        "check_integrity"
+      ],
+      "line": 82
+    },
+    {
+      "name": "IncomingWebhook",
+      "visibility": "pub",
+      "methods": [
+        "get_webhook_body_decoding_algorithm",
+        "get_webhook_body_decoding_message",
+        "decode_webhook_body",
+        "get_webhook_source_verification_algorithm",
+        "get_webhook_source_verification_merchant_secret",
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "verify_webhook_source",
+        "get_webhook_event_type",
+        "get_webhook_resource_object",
+        "get_webhook_api_response",
+        "get_dispute_details",
+        "get_external_authentication_details",
+        "get_mandate_details",
+        "get_network_txn_id"
+      ],
+      "line": 33
+    },
+    {
+      "name": "BodyDecoding",
+      "visibility": "pub",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_message",
+        "decode"
+      ],
+      "line": 6
+    },
+    {
+      "name": "ConnectorIntegrationAnyV2",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_integration_v2"
+      ],
+      "line": 19
+    },
+    {
+      "name": "ConnectorIntegrationV2",
+      "visibility": "pub",
+      "methods": [
+        "get_headers",
+        "get_content_type",
+        "get_http_method",
+        "get_url",
+        "get_request_body",
+        "get_request_form_data",
+        "build_request_v2",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response",
+        "get_certificate",
+        "get_certificate_key"
+      ],
+      "line": 41
+    },
+    {
+      "name": "ConnectorCommon",
+      "visibility": "pub",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 14
+    }
+  ]
+}

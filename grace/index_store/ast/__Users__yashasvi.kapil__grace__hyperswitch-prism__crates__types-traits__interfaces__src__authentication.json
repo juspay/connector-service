@@ -1,0 +1,30 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/authentication.rs",
+  "structs": [
+    {
+      "name": "ExternalAuthenticationPayload",
+      "visibility": "pub",
+      "fields": [
+        "trans_status",
+        "authentication_value",
+        "eci"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 5
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

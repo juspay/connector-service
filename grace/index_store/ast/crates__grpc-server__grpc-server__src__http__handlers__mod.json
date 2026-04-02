@@ -1,0 +1,23 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/http/handlers/mod.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "pub use disputes::*;",
+    "pub use health::*;",
+    "pub use payments::*;",
+    "pub use refunds::*;"
+  ],
+  "macro_calls": [],
+  "modules": [
+    "composite",
+    "disputes",
+    "health",
+    "macros",
+    "payments",
+    "refunds"
+  ]
+}

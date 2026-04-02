@@ -1,0 +1,113 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/ucs_interface_common/src/config.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "merge_config_with_override",
+      "visibility": "pub",
+      "parameters": [
+        "config_override: String",
+        "config: configs::Config"
+      ],
+      "return_type": "CustomResult<Arc<configs::Config>, ApplicationErrorResponse>",
+      "line": 15
+    },
+    {
+      "name": "connectors_with_connector_config_overrides",
+      "visibility": "pub",
+      "parameters": [
+        "connector_config: &ConnectorSpecificConfig",
+        "base_config: &configs::Config"
+      ],
+      "return_type": "CustomResult<Connectors, ApplicationErrorResponse>",
+      "line": 91
+    },
+    {
+      "name": "connectors_with_connector_config_overrides_on_connectors",
+      "visibility": "pub",
+      "parameters": [
+        "connector_config: &ConnectorSpecificConfig",
+        "base_connectors: Connectors"
+      ],
+      "return_type": "CustomResult<Connectors, ApplicationErrorResponse>",
+      "line": 107
+    },
+    {
+      "name": "merge_configs",
+      "visibility": "pub",
+      "parameters": [
+        "override_val: &Value",
+        "base_val: &Value"
+      ],
+      "return_type": "Value",
+      "line": 137
+    },
+    {
+      "name": "connector_config_overrides_patch_effective_runtime_urls",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 159
+    }
+  ],
+  "use_statements": [
+    "use base64::{engine::general_purpose, Engine as _};",
+    "use common_utils::errors::CustomResult;",
+    "use domain_types::{\n    errors::{ApiError, ApplicationErrorResponse},\n    router_data::ConnectorSpecificConfig,\n    types::Connectors,\n};",
+    "use error_stack::Report;",
+    "use serde_json::Value;",
+    "use std::sync::Arc;",
+    "use ucs_env::configs::{self, ConfigPatch};",
+    "use common_utils::config_patch::Patch;",
+    "use super::connectors_with_connector_config_overrides;",
+    "use hyperswitch_masking::Secret;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 27
+    },
+    {
+      "name": "format",
+      "line": 58
+    },
+    {
+      "name": "format",
+      "line": 69
+    },
+    {
+      "name": "info",
+      "line": 84
+    },
+    {
+      "name": "info",
+      "line": 84
+    },
+    {
+      "name": "format",
+      "line": 119
+    },
+    {
+      "name": "assert_eq",
+      "line": 174
+    },
+    {
+      "name": "assert_eq",
+      "line": 174
+    },
+    {
+      "name": "assert_eq",
+      "line": 178
+    },
+    {
+      "name": "assert_eq",
+      "line": 178
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

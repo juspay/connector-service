@@ -1,0 +1,119 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/server/disputes.rs",
+  "structs": [
+    {
+      "name": "Disputes",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 42
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "DisputeOperationsInternal",
+      "visibility": "",
+      "methods": [
+        "internal_defend"
+      ],
+      "line": 34
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Disputes",
+      "trait_name": "DisputeOperationsInternal",
+      "methods": [],
+      "line": 44
+    },
+    {
+      "type_name": "Disputes",
+      "trait_name": "DisputeService",
+      "methods": [
+        "submit_evidence",
+        "get",
+        "defend",
+        "accept"
+      ],
+      "line": 62
+    }
+  ],
+  "functions": [
+    {
+      "name": "submit_evidence",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<DisputeServiceSubmitEvidenceRequest>"
+      ],
+      "return_type": "Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status>",
+      "line": 84
+    },
+    {
+      "name": "get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<DisputeServiceGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<DisputeResponse>, tonic::Status>",
+      "line": 211
+    },
+    {
+      "name": "defend",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<DisputeServiceDefendRequest>"
+      ],
+      "return_type": "Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status>",
+      "line": 260
+    },
+    {
+      "name": "accept",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<DisputeServiceAcceptRequest>"
+      ],
+      "return_type": "Result<tonic::Response<DisputeServiceAcceptResponse>, tonic::Status>",
+      "line": 301
+    }
+  ],
+  "use_statements": [
+    "use crate::utils::{self, get_config_from_request};",
+    "use crate::{\n    implement_connector_operation,\n    request::RequestData,\n    utils::{grpc_logging_wrapper, MetadataPayload},\n};",
+    "use connector_integration::types::ConnectorData;",
+    "use domain_types::{\n    connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},\n    connector_types::{\n        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        SubmitEvidenceData,\n    },\n    payment_method_data::DefaultPCIHolder,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    types::{\n        generate_accept_dispute_response, generate_defend_dispute_response,\n        generate_submit_evidence_response,\n    },\n    utils::ForeignTryFrom,\n};",
+    "use grpc_api_types::payments::{\n    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,\n    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,\n    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,\n    DisputeServiceSubmitEvidenceResponse,\n};",
+    "use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;",
+    "use tracing::info;",
+    "use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};"
+  ],
+  "macro_calls": [
+    {
+      "name": "implement_connector_operation",
+      "line": 45
+    },
+    {
+      "name": "info",
+      "line": 88
+    },
+    {
+      "name": "info",
+      "line": 88
+    },
+    {
+      "name": "info",
+      "line": 305
+    },
+    {
+      "name": "info",
+      "line": 305
+    }
+  ],
+  "modules": []
+}

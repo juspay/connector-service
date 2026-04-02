@@ -1,0 +1,116 @@
+{
+  "file_path": "crates/types-traits/interfaces/src/routing.rs",
+  "structs": [
+    {
+      "name": "RoutableConnectorChoice",
+      "visibility": "pub",
+      "fields": [
+        "choice_kind",
+        "connector",
+        "merchant_connector_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema"
+      ],
+      "line": 6
+    }
+  ],
+  "enums": [
+    {
+      "name": "RoutableChoiceKind",
+      "visibility": "pub",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema",
+        "PartialEq"
+      ],
+      "line": 15
+    },
+    {
+      "name": "RoutableChoiceSerde",
+      "visibility": "pub",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema",
+        "PartialEq",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 22
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "RoutableConnectorChoice",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 30
+    },
+    {
+      "type_name": "RoutableChoiceSerde",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 51
+    }
+  ],
+  "functions": [
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: RoutableChoiceSerde"
+      ],
+      "return_type": "Self",
+      "line": 31
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: RoutableConnectorChoice"
+      ],
+      "return_type": "Self",
+      "line": 52
+    }
+  ],
+  "use_statements": [
+    "use common_enums::RoutableConnectors;",
+    "use utoipa::ToSchema;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

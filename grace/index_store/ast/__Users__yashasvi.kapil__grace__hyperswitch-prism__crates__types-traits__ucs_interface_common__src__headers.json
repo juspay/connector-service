@@ -1,0 +1,93 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/ucs_interface_common/src/headers.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "HeaderSource",
+      "visibility": "pub",
+      "methods": [
+        "get_header"
+      ],
+      "line": 11
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "HashMap",
+      "trait_name": "HeaderSource",
+      "methods": [
+        "get_header"
+      ],
+      "line": 15
+    },
+    {
+      "type_name": "http::HeaderMap",
+      "trait_name": "HeaderSource",
+      "methods": [
+        "get_header"
+      ],
+      "line": 21
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<&str>",
+      "line": 16
+    },
+    {
+      "name": "get_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<&str>",
+      "line": 22
+    },
+    {
+      "name": "to_metadata_value",
+      "visibility": "",
+      "parameters": [
+        "key: &str",
+        "value: &str"
+      ],
+      "return_type": "Result<MetadataValue<Ascii>, InterfaceError>",
+      "line": 47
+    },
+    {
+      "name": "headers_to_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "headers: &H"
+      ],
+      "return_type": "Result<MetadataMap, InterfaceError>",
+      "line": 57
+    },
+    {
+      "name": "headers_to_masked_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "headers: &H",
+        "masking_config: HeaderMaskingConfig"
+      ],
+      "return_type": "Result<MaskedMetadata, InterfaceError>",
+      "line": 72
+    }
+  ],
+  "use_statements": [
+    "use common_utils::consts;",
+    "use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};",
+    "use std::collections::HashMap;",
+    "use tonic::metadata::{Ascii, MetadataMap, MetadataValue};",
+    "use crate::error::InterfaceError;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

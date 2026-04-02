@@ -1,0 +1,64 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/http/utils.rs",
+  "structs": [
+    {
+      "name": "ValidatedJson",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 32
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ValidatedJson",
+      "trait_name": "FromRequest",
+      "methods": [
+        "from_request"
+      ],
+      "line": 34
+    }
+  ],
+  "functions": [
+    {
+      "name": "http_headers_to_grpc_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "http_headers: &HeaderMap"
+      ],
+      "return_type": "Result<tonic::metadata::MetadataMap, Box<tonic::Status>>",
+      "line": 15
+    },
+    {
+      "name": "transfer_config_to_grpc_request",
+      "visibility": "pub",
+      "parameters": [
+        "config: &Arc<Config>",
+        "grpc_request: &mut tonic::Request<T>"
+      ],
+      "return_type": "",
+      "line": 24
+    },
+    {
+      "name": "from_request",
+      "visibility": "",
+      "parameters": [
+        "req: Request",
+        "state: &S"
+      ],
+      "return_type": "Result<Self, Self::Rejection>",
+      "line": 41
+    }
+  ],
+  "use_statements": [
+    "use axum::{\n    extract::{FromRequest, Request},\n    http::{HeaderMap, StatusCode},\n    response::{IntoResponse, Response},\n    Json,\n};",
+    "use serde::de::DeserializeOwned;",
+    "use std::sync::Arc;",
+    "use super::error::HttpError;",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

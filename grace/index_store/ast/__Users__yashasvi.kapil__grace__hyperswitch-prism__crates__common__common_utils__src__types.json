@@ -1,0 +1,1264 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/types.rs",
+  "structs": [
+    {
+      "name": "StringMinorUnitForConnector",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 45
+    },
+    {
+      "name": "StringMajorUnitForCore",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 68
+    },
+    {
+      "name": "StringMajorUnitForConnector",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 90
+    },
+    {
+      "name": "FloatMajorUnitForConnector",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 113
+    },
+    {
+      "name": "MinorUnitForConnector",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 135
+    },
+    {
+      "name": "MinorUnit",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd"
+      ],
+      "line": 170
+    },
+    {
+      "name": "StringMinorUnit",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd"
+      ],
+      "line": 305
+    },
+    {
+      "name": "FloatMajorUnit",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq"
+      ],
+      "line": 336
+    },
+    {
+      "name": "StringMajorUnit",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 374
+    },
+    {
+      "name": "Money",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema"
+      ],
+      "line": 419
+    },
+    {
+      "name": "TimeRange",
+      "visibility": "pub",
+      "fields": [
+        "start_time",
+        "end_time"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "Copy",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema"
+      ],
+      "line": 428
+    },
+    {
+      "name": "SemanticVersion",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "PartialOrd",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "Copy",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Ord",
+        "PartialOrd",
+        "Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 441
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "AmountConvertor",
+      "visibility": "pub",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 25
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "StringMinorUnitForConnector",
+      "trait_name": "AmountConvertor",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 47
+    },
+    {
+      "type_name": "StringMajorUnitForCore",
+      "trait_name": "AmountConvertor",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 69
+    },
+    {
+      "type_name": "StringMajorUnitForConnector",
+      "trait_name": "AmountConvertor",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 92
+    },
+    {
+      "type_name": "FloatMajorUnitForConnector",
+      "trait_name": "AmountConvertor",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 115
+    },
+    {
+      "type_name": "MinorUnitForConnector",
+      "trait_name": "AmountConvertor",
+      "methods": [
+        "convert",
+        "convert_back"
+      ],
+      "line": 137
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": null,
+      "methods": [
+        "get_amount_as_i64",
+        "zero",
+        "new",
+        "is_greater_than",
+        "to_major_unit_as_string",
+        "to_major_unit_as_f64",
+        "to_minor_unit_as_string"
+      ],
+      "line": 172
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": "Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 257
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": "Add",
+      "methods": [
+        "add"
+      ],
+      "line": 263
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": "Sub",
+      "methods": [
+        "sub"
+      ],
+      "line": 270
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": "Mul",
+      "methods": [
+        "mul"
+      ],
+      "line": 277
+    },
+    {
+      "type_name": "MinorUnit",
+      "trait_name": "Sum",
+      "methods": [
+        "sum"
+      ],
+      "line": 285
+    },
+    {
+      "type_name": "StringMinorUnit",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "to_minor_unit_as_i64"
+      ],
+      "line": 307
+    },
+    {
+      "type_name": "StringMinorUnit",
+      "trait_name": "Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 328
+    },
+    {
+      "type_name": "FloatMajorUnit",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "zero",
+        "to_minor_unit_as_i64"
+      ],
+      "line": 338
+    },
+    {
+      "type_name": "StringMajorUnit",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "to_minor_unit_as_i64",
+        "zero",
+        "get_amount_as_string"
+      ],
+      "line": 376
+    },
+    {
+      "type_name": "SemanticVersion",
+      "trait_name": null,
+      "methods": [
+        "get_major",
+        "get_minor",
+        "new"
+      ],
+      "line": 443
+    },
+    {
+      "type_name": "SemanticVersion",
+      "trait_name": "Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 459
+    },
+    {
+      "type_name": "SemanticVersion",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 465
+    }
+  ],
+  "functions": [
+    {
+      "name": "convert",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "_currency: enums::Currency"
+      ],
+      "return_type": "Result<Self::Output, error_stack::Report<ParsingError>>",
+      "line": 49
+    },
+    {
+      "name": "convert_back",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: Self::Output",
+        "_currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 57
+    },
+    {
+      "name": "convert",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<Self::Output, error_stack::Report<ParsingError>>",
+      "line": 71
+    },
+    {
+      "name": "convert_back",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: StringMajorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 79
+    },
+    {
+      "name": "convert",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<Self::Output, error_stack::Report<ParsingError>>",
+      "line": 94
+    },
+    {
+      "name": "convert_back",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: StringMajorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 102
+    },
+    {
+      "name": "convert",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<Self::Output, error_stack::Report<ParsingError>>",
+      "line": 117
+    },
+    {
+      "name": "convert_back",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: FloatMajorUnit",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 124
+    },
+    {
+      "name": "convert",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "_currency: enums::Currency"
+      ],
+      "return_type": "Result<Self::Output, error_stack::Report<ParsingError>>",
+      "line": 139
+    },
+    {
+      "name": "convert_back",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "amount: MinorUnit",
+        "_currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 146
+    },
+    {
+      "name": "get_amount_as_i64",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "i64",
+      "line": 174
+    },
+    {
+      "name": "zero",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 179
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "value: i64"
+      ],
+      "return_type": "Self",
+      "line": 184
+    },
+    {
+      "name": "is_greater_than",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "value: i64"
+      ],
+      "return_type": "bool",
+      "line": 189
+    },
+    {
+      "name": "to_major_unit_as_string",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<StringMajorUnit, error_stack::Report<ParsingError>>",
+      "line": 197
+    },
+    {
+      "name": "to_major_unit_as_f64",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<FloatMajorUnit, error_stack::Report<ParsingError>>",
+      "line": 222
+    },
+    {
+      "name": "to_minor_unit_as_string",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<StringMinorUnit, error_stack::Report<ParsingError>>",
+      "line": 252
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 258
+    },
+    {
+      "name": "add",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "a2: Self"
+      ],
+      "return_type": "Self",
+      "line": 265
+    },
+    {
+      "name": "sub",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "a2: Self"
+      ],
+      "return_type": "Self",
+      "line": 272
+    },
+    {
+      "name": "mul",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "a2: u16"
+      ],
+      "return_type": "Self::Output",
+      "line": 280
+    },
+    {
+      "name": "sum",
+      "visibility": "",
+      "parameters": [
+        "iter: I"
+      ],
+      "return_type": "Self",
+      "line": 286
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Self",
+      "line": 309
+    },
+    {
+      "name": "to_minor_unit_as_i64",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 314
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 329
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "value: f64"
+      ],
+      "return_type": "Self",
+      "line": 340
+    },
+    {
+      "name": "zero",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 345
+    },
+    {
+      "name": "to_minor_unit_as_i64",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 350
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Self",
+      "line": 378
+    },
+    {
+      "name": "to_minor_unit_as_i64",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "currency: enums::Currency"
+      ],
+      "return_type": "Result<MinorUnit, error_stack::Report<ParsingError>>",
+      "line": 383
+    },
+    {
+      "name": "zero",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 406
+    },
+    {
+      "name": "get_amount_as_string",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 410
+    },
+    {
+      "name": "get_major",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "u64",
+      "line": 445
+    },
+    {
+      "name": "get_minor",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "u64",
+      "line": 450
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "major: u64",
+        "minor: u64",
+        "patch: u64"
+      ],
+      "return_type": "Self",
+      "line": 454
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 460
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 468
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    fmt::Display,\n    iter::Sum,\n    ops::{Add, Mul, Sub},\n    str::FromStr,\n};",
+    "use common_enums::enums;",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Deserialize;",
+    "use rust_decimal::{\n    prelude::{FromPrimitive, ToPrimitive},\n    Decimal,\n};",
+    "use semver::Version;",
+    "use serde::Serialize;",
+    "use time::PrimitiveDateTime;",
+    "use utoipa::ToSchema;",
+    "use crate::errors::ParsingError;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 211
+    },
+    {
+      "name": "format",
+      "line": 213
+    },
+    {
+      "name": "format",
+      "line": 215
+    },
+    {
+      "name": "write",
+      "line": 259
+    },
+    {
+      "name": "write",
+      "line": 330
+    },
+    {
+      "name": "write",
+      "line": 461
+    }
+  ],
+  "modules": []
+}

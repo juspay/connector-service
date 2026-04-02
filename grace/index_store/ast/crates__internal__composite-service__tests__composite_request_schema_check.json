@@ -1,0 +1,157 @@
+{
+  "file_path": "crates/internal/composite-service/tests/composite_request_schema_check.rs",
+  "structs": [
+    {
+      "name": "CompositeFlowSpec",
+      "visibility": "",
+      "fields": [
+        "name",
+        "composite_request_message",
+        "granular_request_messages",
+        "ignore_granular_only_fields",
+        "ignore_composite_only_fields"
+      ],
+      "derives": [],
+      "line": 19
+    },
+    {
+      "name": "FieldShape",
+      "visibility": "",
+      "fields": [
+        "type_code",
+        "type_name",
+        "repeated"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 72
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "decode_descriptor_set",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "FileDescriptorSet",
+      "line": 78
+    },
+    {
+      "name": "find_message",
+      "visibility": "",
+      "parameters": [
+        "descriptor_set: &'a FileDescriptorSet",
+        "message_name: &str"
+      ],
+      "return_type": "&'a DescriptorProto",
+      "line": 83
+    },
+    {
+      "name": "field_name",
+      "visibility": "",
+      "parameters": [
+        "field: &FieldDescriptorProto"
+      ],
+      "return_type": "String",
+      "line": 95
+    },
+    {
+      "name": "field_shape",
+      "visibility": "",
+      "parameters": [
+        "field: &FieldDescriptorProto"
+      ],
+      "return_type": "FieldShape",
+      "line": 102
+    },
+    {
+      "name": "message_field_map",
+      "visibility": "",
+      "parameters": [
+        "message: &DescriptorProto",
+        "ignored_fields: &BTreeSet<&str>"
+      ],
+      "return_type": "BTreeMap<String, FieldShape>",
+      "line": 111
+    },
+    {
+      "name": "merge_into_union",
+      "visibility": "",
+      "parameters": [
+        "union_fields: &mut BTreeMap<String, FieldShape>",
+        "message: &DescriptorProto",
+        "ignored_fields: &BTreeSet<&str>",
+        "flow_name: &str"
+      ],
+      "return_type": "",
+      "line": 129
+    },
+    {
+      "name": "validate_composite_flow_schema",
+      "visibility": "",
+      "parameters": [
+        "spec: &CompositeFlowSpec",
+        "descriptor_set: &FileDescriptorSet"
+      ],
+      "return_type": "",
+      "line": 156
+    },
+    {
+      "name": "composite_request_schemas_match_granular_unions",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 217
+    }
+  ],
+  "use_statements": [
+    "use std::collections::{BTreeMap, BTreeSet};",
+    "use prost::Message as _;",
+    "use prost_types::{\n    field_descriptor_proto::Label, DescriptorProto, FieldDescriptorProto, FileDescriptorSet,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "panic",
+      "line": 92
+    },
+    {
+      "name": "assert_eq",
+      "line": 144
+    },
+    {
+      "name": "assert_eq",
+      "line": 144
+    },
+    {
+      "name": "assert",
+      "line": 186
+    },
+    {
+      "name": "assert",
+      "line": 186
+    },
+    {
+      "name": "assert",
+      "line": 191
+    },
+    {
+      "name": "assert",
+      "line": 191
+    },
+    {
+      "name": "assert",
+      "line": 209
+    },
+    {
+      "name": "assert",
+      "line": 209
+    }
+  ],
+  "modules": []
+}

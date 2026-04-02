@@ -1,0 +1,19 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/uniffi-bindgen/src/main.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

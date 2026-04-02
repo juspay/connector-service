@@ -1,0 +1,35 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/razorpayv2/test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_upi_flow_determination",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 8
+    },
+    {
+      "name": "test_create_order_request_building",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 14
+    },
+    {
+      "name": "test_payments_request_building",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 20
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "tests"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "file_path": "crates/types-traits/interfaces/src/events.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "connector_api_logs",
+    "routing_api_logs"
+  ]
+}

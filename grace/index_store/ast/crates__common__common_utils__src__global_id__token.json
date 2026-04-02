@@ -1,0 +1,68 @@
+{
+  "file_path": "crates/common/common_utils/src/global_id/token.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalTokenId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr",
+        "generate"
+      ],
+      "line": 12
+    },
+    {
+      "type_name": "GlobalTokenId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 25
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 14
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "Self",
+      "line": 19
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 26
+    }
+  ],
+  "use_statements": [
+    "use crate::global_id::CellId;"
+  ],
+  "macro_calls": [
+    {
+      "name": "global_id_type",
+      "line": 3
+    },
+    {
+      "name": "global_id_type",
+      "line": 3
+    }
+  ],
+  "modules": []
+}

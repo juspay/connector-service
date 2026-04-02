@@ -1,0 +1,77 @@
+{
+  "crate": "types_traits_cards",
+  "structs": [
+    {
+      "name": "CardNumberValidationErr",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Error"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardNumber",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NetworkToken",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardExpirationMonth",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardExpirationYear",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "CardNumberStrategy",
+      "file": "crates/types-traits/cards/src/validate.rs",
+      "variants": [],
+      "derives": [],
+      "visibility": "pub"
+    }
+  ],
+  "traits": []
+}

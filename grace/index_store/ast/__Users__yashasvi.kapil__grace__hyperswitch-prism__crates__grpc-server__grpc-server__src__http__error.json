@@ -1,0 +1,94 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/http/error.rs",
+  "structs": [
+    {
+      "name": "HttpError",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "message"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ErrorResponse",
+      "visibility": "",
+      "fields": [
+        "error"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 15
+    },
+    {
+      "name": "ErrorDetail",
+      "visibility": "",
+      "fields": [
+        "message",
+        "code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Serialize"
+      ],
+      "line": 20
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "HttpError",
+      "trait_name": "IntoResponse",
+      "methods": [
+        "into_response"
+      ],
+      "line": 25
+    },
+    {
+      "type_name": "HttpError",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 38
+    }
+  ],
+  "functions": [
+    {
+      "name": "into_response",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Response",
+      "line": 26
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: tonic::Status"
+      ],
+      "return_type": "Self",
+      "line": 39
+    }
+  ],
+  "use_statements": [
+    "use axum::{\n    http::StatusCode,\n    response::{IntoResponse, Response},\n    Json,\n};",
+    "use serde::Serialize;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 30
+    }
+  ],
+  "modules": []
+}

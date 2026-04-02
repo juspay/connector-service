@@ -1,0 +1,601 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/worldpay/transformers.rs",
+  "structs": [
+    {
+      "name": "WorldpayConnectorMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "merchant_name"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "WorldpayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "entity_id",
+        "merchant_name"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 589
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "ForeignTryFrom",
+      "visibility": "pub",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 30
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "WorldpayConnectorMetadataObject",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 61
+    },
+    {
+      "type_name": "PaymentMethod",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 225
+    },
+    {
+      "type_name": "WorldpayAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 395
+    },
+    {
+      "type_name": "WorldpayRepeatPaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 479
+    },
+    {
+      "type_name": "WorldpayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 595
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 622
+    },
+    {
+      "type_name": "enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 640
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 657
+    },
+    {
+      "type_name": "enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 676
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 696
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 712
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 733
+    },
+    {
+      "type_name": "WorldpayPartialRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 938
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 970
+    },
+    {
+      "type_name": "WorldpayPartialRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1000
+    },
+    {
+      "type_name": "WorldpayEventResponse",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1024
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1035
+    },
+    {
+      "type_name": "WorldpayPartialRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1071
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1093
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1118
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1167
+    },
+    {
+      "type_name": "ResponseIdStr",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 1197
+    },
+    {
+      "type_name": "ResponseId",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 1206
+    },
+    {
+      "type_name": "WorldpayPreAuthenticateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1218
+    },
+    {
+      "type_name": "WorldpayPostAuthenticateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1259
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1302
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1340
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "meta_data: Option<&pii::SecretSerdeValue>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 63
+    },
+    {
+      "name": "fetch_payment_instrument",
+      "visibility": "",
+      "parameters": [
+        "payment_method: PaymentMethodData<T>",
+        "billing_address: Option<&domain_types::payment_address::Address>"
+      ],
+      "return_type": "CustomResult<PaymentInstrument<T>, ConnectorError>",
+      "line": 73
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "src: (enums::PaymentMethod, Option<enums::PaymentMethodType>)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 227
+    },
+    {
+      "name": "create_three_ds_request",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >",
+        "is_mandate_payment: bool"
+      ],
+      "return_type": "Result<Option<ThreeDSRequest>, error_stack::Report<ConnectorError>>",
+      "line": 254
+    },
+    {
+      "name": "get_settlement_info",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >",
+        "amount: MinorUnit"
+      ],
+      "return_type": "Option<AutoSettlement>",
+      "line": 328
+    },
+    {
+      "name": "get_token_and_agreement",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>",
+        "setup_future_usage: Option<enums::FutureUsage>",
+        "off_session: Option<bool>",
+        "mandate_ids: Option<MandateIds>"
+      ],
+      "return_type": "(Option<TokenCreation>, Option<CustomerAgreement>)",
+      "line": 352
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 409
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::RepeatPayment,\n                PaymentFlowData,\n                RepeatPaymentData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 493
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 597
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymentOutcome"
+      ],
+      "return_type": "Self",
+      "line": 623
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymentOutcome"
+      ],
+      "return_type": "Self",
+      "line": 641
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: &EventType"
+      ],
+      "return_type": "Self",
+      "line": 658
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: EventType"
+      ],
+      "return_type": "Self",
+      "line": 677
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 701
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 723
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: (\n            ResponseRouterData<WorldpayPaymentsResponse, Self>,\n            Option<String>,\n            MinorUnit,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 741
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 947
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 974
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "req: (\n            &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,\n            MinorUnit,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1007
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "event: WorldpayWebhookEventType"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1026
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayEventResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1039
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1077
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1097
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayEventResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1122
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: WorldpayRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1156
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1171
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: (WorldpayPaymentsResponse, Option<String>)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1199
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: (WorldpayPaymentsResponse, Option<String>)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1208
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::PreAuthenticate,\n                PaymentFlowData,\n                domain_types::connector_types::PaymentsPreAuthenticateData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1232
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: WorldpayRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::PostAuthenticate,\n                PaymentFlowData,\n                domain_types::connector_types::PaymentsPostAuthenticateData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1273
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1313
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<WorldpayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1351
+    },
+    {
+      "name": "extract_redirection_data",
+      "visibility": "",
+      "parameters": [
+        "response: &WorldpayPaymentsResponse"
+      ],
+      "return_type": "Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorError>>",
+      "line": 1376
+    },
+    {
+      "name": "extract_three_ds_metadata",
+      "visibility": "",
+      "parameters": [
+        "response: &WorldpayPaymentsResponse"
+      ],
+      "return_type": "Option<serde_json::Value>",
+      "line": 1427
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use common_enums as enums;",
+    "use common_utils::{ext_traits::OptionExt, pii, types::MinorUnit, CustomResult};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, Void},\n    connector_types::{\n        MandateIds, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,\n        ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{\n        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,\n        WalletData as WalletDataPaymentMethod,\n    },\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n    utils,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{connectors::worldpay::WorldpayRouterData, types::ResponseRouterData};",
+    "use super::requests::*;",
+    "use super::response::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 606
+    },
+    {
+      "name": "format",
+      "line": 607
+    }
+  ],
+  "modules": []
+}

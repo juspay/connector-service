@@ -1,0 +1,557 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/authorizedotnet.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 71
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorServiceTrait",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentSessionToken",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentAccessToken",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "SetupMandateV2",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ValidationTrait",
+      "methods": [
+        "should_create_connector_customer"
+      ],
+      "line": 111
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "IncomingWebhook",
+      "methods": [
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook"
+      ],
+      "line": 118
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "SubmitEvidenceV2",
+      "methods": [],
+      "line": 320
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "DisputeDefend",
+      "methods": [],
+      "line": 324
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "RefundSyncV2",
+      "methods": [],
+      "line": 328
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "AcceptDispute",
+      "methods": [],
+      "line": 332
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "RepeatPaymentV2",
+      "methods": [],
+      "line": 336
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 340
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentOrderCreate",
+      "methods": [],
+      "line": 344
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentAuthorizeV2",
+      "methods": [],
+      "line": 348
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentSyncV2",
+      "methods": [],
+      "line": 352
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentVoidV2",
+      "methods": [],
+      "line": 356
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "RefundV2",
+      "methods": [],
+      "line": 360
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentCapture",
+      "methods": [],
+      "line": 364
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "PaymentTokenV2",
+      "methods": [],
+      "line": 368
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 373
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 378
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 383
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 388
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 393
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 398
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 403
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 408
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response",
+        "get_currency_unit"
+      ],
+      "line": 414
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 848
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 858
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 868
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 878
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 883
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 888
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 893
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 903
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 913
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 923
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 933
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 943
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 953
+    },
+    {
+      "type_name": "Authorizedotnet",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [],
+      "line": 963
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_create_connector_customer",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 114
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<ConnectorError>>",
+      "line": 121
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, error_stack::Report<ConnectorError>>",
+      "line": 196
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>>",
+      "line": 244
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorError>>",
+      "line": 286
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 417
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 421
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 425
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 429
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 462
+    }
+  ],
+  "use_statements": [
+    "use common_enums;",
+    "use common_utils::{\n    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,\n        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,\n        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData, WebhookDetailsResponse,\n    },\n    errors::{self, ConnectorError},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Maskable;",
+    "use interfaces::{\n    api::ConnectorCommon,\n    connector_integration_v2::ConnectorIntegrationV2,\n    connector_types::{\n        self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook,\n        PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,\n        PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidPostCaptureV2,\n        PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,\n        ValidationTrait,\n    },\n    decode::BodyDecoding,\n    verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use self::transformers::{\n    get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,\n    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateConnectorCustomerRequest,\n    AuthorizedotnetCreateConnectorCustomerResponse, AuthorizedotnetCreateSyncRequest,\n    AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,\n    AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,\n    AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,\n    AuthorizedotnetSetupMandateRequest, AuthorizedotnetSetupMandateResponse,\n    AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType,\n    AuthorizedotnetWebhookObjectId,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_response_body};",
+    "use common_utils::crypto::{HmacSha512, SignMessage};"
+  ],
+  "macro_calls": [
+    {
+      "name": "warn",
+      "line": 141
+    },
+    {
+      "name": "warn",
+      "line": 141
+    },
+    {
+      "name": "warn",
+      "line": 153
+    },
+    {
+      "name": "warn",
+      "line": 153
+    },
+    {
+      "name": "warn",
+      "line": 166
+    },
+    {
+      "name": "warn",
+      "line": 166
+    },
+    {
+      "name": "error",
+      "line": 183
+    },
+    {
+      "name": "error",
+      "line": 183
+    },
+    {
+      "name": "warn",
+      "line": 232
+    },
+    {
+      "name": "warn",
+      "line": 232
+    },
+    {
+      "name": "report",
+      "line": 237
+    },
+    {
+      "name": "format",
+      "line": 260
+    },
+    {
+      "name": "format",
+      "line": 302
+    },
+    {
+      "name": "with_response_body",
+      "line": 439
+    },
+    {
+      "name": "with_response_body",
+      "line": 439
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 468
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 468
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 574
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 574
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 604
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 604
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 634
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 634
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 664
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 664
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 694
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 694
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 725
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 725
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 757
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 757
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 787
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 787
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 818
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 818
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

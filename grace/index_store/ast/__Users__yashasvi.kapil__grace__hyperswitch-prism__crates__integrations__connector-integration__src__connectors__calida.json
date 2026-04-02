@@ -1,0 +1,561 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/calida.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 72
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "verify_webhook_source",
+        "process_payment_webhook",
+        "get_event_type"
+      ],
+      "line": 87
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 169
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 174
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 178
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 182
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 190
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 194
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 198
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 202
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 206
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 210
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 214
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 218
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 222
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 226
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 230
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 234
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 238
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 243
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 248
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 253
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 257
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 262
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 267
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 272
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 277
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 287
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 293
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 298
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 304
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 314
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 320
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 326
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 332
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 342
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 347
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 357
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 367
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 377
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 387
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 397
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 407
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 417
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 434
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 439
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 444
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 461
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 521
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorValidation",
+      "methods": [
+        "validate_mandate_payment",
+        "validate_psync_reference_id",
+        "is_webhook_source_verification_mandatory"
+      ],
+      "line": 578
+    },
+    {
+      "type_name": "Calida",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [
+        "get_connector_about",
+        "get_supported_payment_methods",
+        "get_supported_webhook_flows"
+      ],
+      "line": 705
+    }
+  ],
+  "functions": [
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "CustomResult<bool, ConnectorError>",
+      "line": 90
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>>",
+      "line": 124
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, error_stack::Report<ConnectorError>>",
+      "line": 160
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 524
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 528
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 532
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 536
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 540
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 552
+    },
+    {
+      "name": "validate_mandate_payment",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_pm_type: Option<PaymentMethodType>",
+        "pm_data: PaymentMethodData<DefaultPCIHolder>"
+      ],
+      "return_type": "CustomResult<(), ConnectorError>",
+      "line": 579
+    },
+    {
+      "name": "validate_psync_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_data: &PaymentsSyncData",
+        "_is_three_ds: bool",
+        "_status: enums::AttemptStatus",
+        "_connector_meta_data: Option<common_utils::pii::SecretSerdeValue>"
+      ],
+      "return_type": "CustomResult<(), ConnectorError>",
+      "line": 593
+    },
+    {
+      "name": "is_webhook_source_verification_mandatory",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 603
+    },
+    {
+      "name": "get_connector_about",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static ConnectorInfo>",
+      "line": 706
+    },
+    {
+      "name": "get_supported_payment_methods",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static SupportedPaymentMethods>",
+      "line": 710
+    },
+    {
+      "name": "get_supported_webhook_flows",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static [enums::EventClass]>",
+      "line": 714
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    fmt::Debug,\n    marker::{Send, Sync},\n    sync::LazyLock,\n};",
+    "use common_enums::{enums, PaymentMethodType};",
+    "use common_utils::{\n    consts,\n    errors::CustomResult,\n    events,\n    ext_traits::{ByteSliceExt, BytesExt},\n    types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,\n        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,\n        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,\n        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,\n    },\n    errors::ConnectorError,\n    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{\n        self, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDetails,\n        SupportedPaymentMethods,\n    },\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon,\n    connector_integration_v2::ConnectorIntegrationV2,\n    connector_types::{self, ConnectorValidation},\n    decode::BodyDecoding,\n    verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::*;",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 478
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 478
+    },
+    {
+      "name": "vec",
+      "line": 546
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 562
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 562
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 608
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 608
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 640
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 640
+    },
+    {
+      "name": "vec",
+      "line": 679
+    }
+  ],
+  "modules": [
+    "test",
+    "transformers",
+    "headers"
+  ]
+}

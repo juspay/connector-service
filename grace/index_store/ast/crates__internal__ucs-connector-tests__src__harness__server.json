@@ -1,0 +1,108 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/server.rs",
+  "structs": [
+    {
+      "name": "ConfigInterceptor",
+      "visibility": "",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 15
+    },
+    {
+      "name": "UcsServer",
+      "visibility": "pub",
+      "fields": [
+        "channel",
+        "task",
+        "_socket"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 27
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ConfigInterceptor",
+      "trait_name": "tonic::service::Interceptor",
+      "methods": [
+        "call"
+      ],
+      "line": 19
+    },
+    {
+      "type_name": "UcsServer",
+      "trait_name": null,
+      "methods": [
+        "payment_client"
+      ],
+      "line": 33
+    },
+    {
+      "type_name": "UcsServer",
+      "trait_name": "Drop",
+      "methods": [
+        "drop"
+      ],
+      "line": 40
+    }
+  ],
+  "functions": [
+    {
+      "name": "call",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "mut req: tonic::Request<()>"
+      ],
+      "return_type": "Result<tonic::Request<()>, tonic::Status>",
+      "line": 20
+    },
+    {
+      "name": "payment_client",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "PaymentServiceClient<Channel>",
+      "line": 35
+    },
+    {
+      "name": "drop",
+      "visibility": "",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "",
+      "line": 41
+    },
+    {
+      "name": "spawn",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<UcsServer, Box<dyn Error>>",
+      "line": 48
+    }
+  ],
+  "use_statements": [
+    "use std::{error::Error, sync::Arc};",
+    "use grpc_api_types::payments::payment_service_client::PaymentServiceClient;",
+    "use http::Uri;",
+    "use hyper_util::rt::TokioIo;",
+    "use tempfile::{NamedTempFile, TempPath};",
+    "use tokio::{net::UnixListener, task::JoinHandle};",
+    "use tokio_stream::wrappers::UnixListenerStream;",
+    "use tonic::transport::{Channel, Endpoint, Server};",
+    "use tower::service_fn;",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

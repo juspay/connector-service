@@ -1,0 +1,276 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/ucs_env/src/error.rs",
+  "structs": [
+    {
+      "name": "PaymentAuthorizationError",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "error_message",
+        "error_code",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone"
+      ],
+      "line": 283
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConfigurationError",
+      "visibility": "pub",
+      "variants": [
+        "AddressError",
+        "GrpcReflectionServiceError",
+        "MetricsServerError",
+        "ServerError",
+        "IoError"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 78
+    }
+  ],
+  "traits": [
+    {
+      "name": "ReportSwitchExt",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ErrorSwitch",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 34
+    },
+    {
+      "name": "ErrorSwitchFrom",
+      "visibility": "pub",
+      "methods": [
+        "switch_from"
+      ],
+      "line": 42
+    },
+    {
+      "name": "IntoGrpcStatus",
+      "visibility": "pub",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 56
+    },
+    {
+      "name": "ResultExtGrpc",
+      "visibility": "pub",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 60
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Result",
+      "trait_name": "ReportSwitchExt",
+      "methods": [
+        "switch"
+      ],
+      "line": 15
+    },
+    {
+      "type_name": "S",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 48
+    },
+    {
+      "type_name": "error_stack::Result",
+      "trait_name": "ResultExtGrpc",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 65
+    },
+    {
+      "type_name": "ConnectorError",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 91
+    },
+    {
+      "type_name": "ApiClientError",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 206
+    },
+    {
+      "type_name": "error_stack::Report",
+      "trait_name": "IntoGrpcStatus",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 250
+    },
+    {
+      "type_name": "PaymentAuthorizationError",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 290
+    },
+    {
+      "type_name": "PaymentServiceAuthorizeResponse",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 306
+    },
+    {
+      "type_name": "ApplicationErrorResponse",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 340
+    },
+    {
+      "type_name": "ApplicationErrorResponse",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 353
+    }
+  ],
+  "functions": [
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<T, error_stack::Report<U>>",
+      "line": 21
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "T",
+      "line": 52
+    },
+    {
+      "name": "into_grpc_status",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<T, Status>",
+      "line": 69
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "ApplicationErrorResponse",
+      "line": 92
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "ApplicationErrorResponse",
+      "line": 207
+    },
+    {
+      "name": "into_grpc_status",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Status",
+      "line": 251
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "status: grpc_api_types::payments::PaymentStatus",
+        "error_message: Option<String>",
+        "error_code: Option<String>",
+        "status_code: Option<u32>"
+      ],
+      "return_type": "Self",
+      "line": 291
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "error: PaymentAuthorizationError"
+      ],
+      "return_type": "Self",
+      "line": 307
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "grpc_api_types::payments::IntegrationError",
+      "line": 341
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "grpc_api_types::payments::ConnectorResponseTransformationError",
+      "line": 356
+    }
+  ],
+  "use_statements": [
+    "use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse, ConnectorError};",
+    "use grpc_api_types::payments::PaymentServiceAuthorizeResponse;",
+    "use tonic::Status;",
+    "use crate::logger;"
+  ],
+  "macro_calls": [
+    {
+      "name": "error",
+      "line": 252
+    },
+    {
+      "name": "error",
+      "line": 252
+    }
+  ],
+  "modules": []
+}

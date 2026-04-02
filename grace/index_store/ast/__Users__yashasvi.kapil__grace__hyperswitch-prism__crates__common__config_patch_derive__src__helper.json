@@ -1,0 +1,466 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/config_patch_derive/src/helper.rs",
+  "structs": [
+    {
+      "name": "FieldSpec",
+      "visibility": "pub(crate)",
+      "fields": [
+        "ident",
+        "doc_attrs",
+        "serde_attrs",
+        "patch_field_ty",
+        "apply_stmt"
+      ],
+      "derives": [],
+      "line": 10
+    },
+    {
+      "name": "FieldPatchConfig",
+      "visibility": "",
+      "fields": [
+        "ignore",
+        "patch_type"
+      ],
+      "derives": [],
+      "line": 23
+    },
+    {
+      "name": "SerdeAttrFlags",
+      "visibility": "",
+      "fields": [
+        "has_deserialize_with",
+        "has_bound"
+      ],
+      "derives": [],
+      "line": 489
+    }
+  ],
+  "enums": [
+    {
+      "name": "FieldPatchKind",
+      "visibility": "",
+      "variants": [
+        "Replace",
+        "Nested",
+        "OptionalReplace",
+        "OptionalNested",
+        "Unsupported"
+      ],
+      "derives": [],
+      "line": 28
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "build_patch_field_specific_metadata",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "field: &syn::Field",
+        "patch_ctx: &mut GenericPatchCtx"
+      ],
+      "return_type": "syn::Result<Option<FieldSpec>>",
+      "line": 37
+    },
+    {
+      "name": "get_field_patch_config",
+      "visibility": "",
+      "parameters": [
+        "attrs: &[Attribute]"
+      ],
+      "return_type": "syn::Result<FieldPatchConfig>",
+      "line": 82
+    },
+    {
+      "name": "field_patch_kind",
+      "visibility": "",
+      "parameters": [
+        "field_ty: &'a Type",
+        "patch_type_override: Option<&'a Type>"
+      ],
+      "return_type": "FieldPatchKind<'a>",
+      "line": 140
+    },
+    {
+      "name": "classify_non_optional",
+      "visibility": "",
+      "parameters": [
+        "field_ty: &Type"
+      ],
+      "return_type": "FieldPatchKind<'_>",
+      "line": 189
+    },
+    {
+      "name": "is_replaceable_scalar",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "bool",
+      "line": 206
+    },
+    {
+      "name": "is_replaceable_container",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "bool",
+      "line": 210
+    },
+    {
+      "name": "replaceable_container_ident",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "Option<String>",
+      "line": 214
+    },
+    {
+      "name": "field_doc_attrs",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "kind: &FieldPatchKind<'_>"
+      ],
+      "return_type": "Vec<Attribute>",
+      "line": 234
+    },
+    {
+      "name": "build_patch_field_specification",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "field_ty: &Type",
+        "field_kind: &FieldPatchKind<'_>",
+        "patch_ctx: &mut GenericPatchCtx",
+        "patch_type_override: Option<&Type>"
+      ],
+      "return_type": "syn::Result<(TokenStream2, TokenStream2)>",
+      "line": 248
+    },
+    {
+      "name": "build_replace_spec",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "field_ty: &Type",
+        "patch_ctx: &mut GenericPatchCtx"
+      ],
+      "return_type": "syn::Result<(TokenStream2, TokenStream2)>",
+      "line": 280
+    },
+    {
+      "name": "build_optional_replace_spec",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "field_ty: &Type",
+        "inner_ty: &Type",
+        "patch_ctx: &mut GenericPatchCtx"
+      ],
+      "return_type": "syn::Result<(TokenStream2, TokenStream2)>",
+      "line": 296
+    },
+    {
+      "name": "nested_unsupported_error",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "field_ty: &Type",
+        "detail: &str"
+      ],
+      "return_type": "syn::Error",
+      "line": 313
+    },
+    {
+      "name": "optional_nested_apply_stmt",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident"
+      ],
+      "return_type": "TokenStream2",
+      "line": 320
+    },
+    {
+      "name": "plain_nested_apply_stmt",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident"
+      ],
+      "return_type": "TokenStream2",
+      "line": 336
+    },
+    {
+      "name": "build_patch_specification_for_optional_nested_field",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "inner_ty: &Type",
+        "patch_ctx: &mut GenericPatchCtx",
+        "patch_type_override: Option<&Type>"
+      ],
+      "return_type": "syn::Result<(TokenStream2, TokenStream2)>",
+      "line": 345
+    },
+    {
+      "name": "build_patch_specification_for_plain_nested_field",
+      "visibility": "",
+      "parameters": [
+        "field_ident: &syn::Ident",
+        "field_ty: &Type",
+        "patch_ctx: &mut GenericPatchCtx",
+        "patch_type_override: Option<&Type>"
+      ],
+      "return_type": "syn::Result<(TokenStream2, TokenStream2)>",
+      "line": 387
+    },
+    {
+      "name": "build_serde_attributes",
+      "visibility": "",
+      "parameters": [
+        "field_attrs: &[Attribute]",
+        "field_ty: &Type",
+        "patch_field_ty: &proc_macro2::TokenStream"
+      ],
+      "return_type": "syn::Result<Vec<Attribute>>",
+      "line": 429
+    },
+    {
+      "name": "add_option_deserializer",
+      "visibility": "",
+      "parameters": [
+        "serde_attrs: &mut Vec<Attribute>"
+      ],
+      "return_type": "",
+      "line": 453
+    },
+    {
+      "name": "create_deserialize_bound",
+      "visibility": "",
+      "parameters": [
+        "patch_field_ty: &proc_macro2::TokenStream"
+      ],
+      "return_type": "syn::Result<Option<Attribute>>",
+      "line": 462
+    },
+    {
+      "name": "serde_field_attrs",
+      "visibility": "",
+      "parameters": [
+        "attrs: &[Attribute]"
+      ],
+      "return_type": "Vec<Attribute>",
+      "line": 480
+    },
+    {
+      "name": "serde_attr_flags",
+      "visibility": "",
+      "parameters": [
+        "serde_attrs: &[Attribute]"
+      ],
+      "return_type": "SerdeAttrFlags",
+      "line": 494
+    },
+    {
+      "name": "strip_serde_default",
+      "visibility": "",
+      "parameters": [
+        "attr: &Attribute"
+      ],
+      "return_type": "Option<Attribute>",
+      "line": 530
+    },
+    {
+      "name": "option_inner_type",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "Option<&Type>",
+      "line": 556
+    },
+    {
+      "name": "option_option_inner_type",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "Option<&Type>",
+      "line": 579
+    },
+    {
+      "name": "has_type_args",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "bool",
+      "line": 584
+    },
+    {
+      "name": "generic_param_ident",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type",
+        "generic_params: &std::collections::HashSet<String>"
+      ],
+      "return_type": "Option<syn::Ident>",
+      "line": 599
+    },
+    {
+      "name": "replaceable_scalar_ident",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "Option<String>",
+      "line": 620
+    },
+    {
+      "name": "patch_type",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "syn::Result<Type>",
+      "line": 641
+    },
+    {
+      "name": "type_display",
+      "visibility": "",
+      "parameters": [
+        "ty: &Type"
+      ],
+      "return_type": "String",
+      "line": 671
+    }
+  ],
+  "use_statements": [
+    "use proc_macro2::{Span, TokenStream as TokenStream2};",
+    "use quote::{format_ident, quote, ToTokens};",
+    "use syn::{\n    parse_quote, punctuated::Punctuated, Attribute, GenericArgument, Meta, PathArguments, Token,\n    Type, TypePath,\n};",
+    "use crate::generics::GenericPatchCtx;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 148
+    },
+    {
+      "name": "format",
+      "line": 167
+    },
+    {
+      "name": "format",
+      "line": 197
+    },
+    {
+      "name": "format",
+      "line": 201
+    },
+    {
+      "name": "matches",
+      "line": 222
+    },
+    {
+      "name": "format",
+      "line": 243
+    },
+    {
+      "name": "vec",
+      "line": 244
+    },
+    {
+      "name": "quote",
+      "line": 287
+    },
+    {
+      "name": "quote",
+      "line": 288
+    },
+    {
+      "name": "quote",
+      "line": 304
+    },
+    {
+      "name": "quote",
+      "line": 305
+    },
+    {
+      "name": "format",
+      "line": 316
+    },
+    {
+      "name": "quote",
+      "line": 321
+    },
+    {
+      "name": "quote",
+      "line": 337
+    },
+    {
+      "name": "quote",
+      "line": 356
+    },
+    {
+      "name": "quote",
+      "line": 367
+    },
+    {
+      "name": "quote",
+      "line": 375
+    },
+    {
+      "name": "quote",
+      "line": 398
+    },
+    {
+      "name": "quote",
+      "line": 409
+    },
+    {
+      "name": "quote",
+      "line": 417
+    },
+    {
+      "name": "parse_quote",
+      "line": 454
+    },
+    {
+      "name": "quote",
+      "line": 469
+    },
+    {
+      "name": "parse_quote",
+      "line": 471
+    },
+    {
+      "name": "Token",
+      "line": 502
+    },
+    {
+      "name": "Token",
+      "line": 532
+    },
+    {
+      "name": "Token",
+      "line": 538
+    },
+    {
+      "name": "parse_quote",
+      "line": 549
+    },
+    {
+      "name": "matches",
+      "line": 591
+    },
+    {
+      "name": "format_ident",
+      "line": 666
+    }
+  ],
+  "modules": []
+}

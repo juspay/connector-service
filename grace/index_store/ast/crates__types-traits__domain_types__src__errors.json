@@ -1,0 +1,660 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/errors.rs",
+  "structs": [
+    {
+      "name": "ApiError",
+      "visibility": "pub",
+      "fields": [
+        "sub_code",
+        "error_identifier",
+        "error_message",
+        "error_object"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "line": 102
+    }
+  ],
+  "enums": [
+    {
+      "name": "ApiClientError",
+      "visibility": "pub",
+      "variants": [
+        "HeaderMapConstructionFailed",
+        "InvalidProxyConfiguration",
+        "ClientConstructionFailed",
+        "CertificateDecodeFailed",
+        "BodySerializationFailed",
+        "UnexpectedState",
+        "UrlParsingFailed",
+        "UrlEncodingFailed",
+        "RequestNotSent",
+        "ResponseDecodingFailed",
+        "RequestTimeoutReceived",
+        "ConnectionClosedIncompleteMessage",
+        "InternalServerErrorReceived",
+        "BadGatewayReceived",
+        "ServiceUnavailableReceived",
+        "GatewayTimeoutReceived",
+        "UnexpectedServerResponse"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone"
+      ],
+      "line": 7
+    },
+    {
+      "name": "ApplicationErrorResponse",
+      "visibility": "pub",
+      "variants": [
+        "Unauthorized",
+        "ForbiddenCommonResource",
+        "ForbiddenPrivateResource",
+        "Conflict",
+        "Gone",
+        "Unprocessable",
+        "InternalServerError",
+        "NotImplemented",
+        "NotFound",
+        "MethodNotAllowed",
+        "BadRequest",
+        "DomainError"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display"
+      ],
+      "line": 48
+    },
+    {
+      "name": "ParsingError",
+      "visibility": "pub",
+      "variants": [
+        "StructParseFailure",
+        "EncodeError"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 110
+    },
+    {
+      "name": "ErrorType",
+      "visibility": "pub",
+      "variants": [
+        "InvalidRequestError",
+        "ObjectNotFound",
+        "RouterError",
+        "ProcessingError",
+        "BadGateway",
+        "ServerNotAvailable",
+        "DuplicateRequest",
+        "ValidationError",
+        "ConnectorError",
+        "LockTimeout"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Debug",
+        "serde::Serialize"
+      ],
+      "line": 119
+    },
+    {
+      "name": "ApiErrorResponse",
+      "visibility": "pub",
+      "variants": [
+        "ExternalConnectorError",
+        "PaymentAuthorizationFailed",
+        "PaymentAuthenticationFailed",
+        "PaymentCaptureFailed",
+        "InvalidCardData",
+        "CardExpired",
+        "RefundFailed",
+        "VerificationFailed",
+        "DisputeFailed",
+        "ResourceBusy",
+        "InternalServerError",
+        "HealthCheckError",
+        "CurrencyConversionFailed",
+        "DuplicateRefundRequest",
+        "DuplicateMandate",
+        "DuplicateMerchantAccount",
+        "DuplicateMerchantConnectorAccount",
+        "DuplicatePaymentMethod",
+        "DuplicatePayment",
+        "DuplicatePayout",
+        "DuplicateConfig",
+        "RefundNotFound",
+        "PaymentLinkNotFound",
+        "CustomerNotFound",
+        "ConfigNotFound",
+        "PaymentNotFound",
+        "PaymentMethodNotFound",
+        "MerchantAccountNotFound",
+        "MerchantConnectorAccountNotFound",
+        "ProfileNotFound",
+        "ProfileAcquirerNotFound",
+        "PollNotFound",
+        "ResourceIdNotFound",
+        "MandateNotFound",
+        "AuthenticationNotFound",
+        "MandateUpdateFailed",
+        "ApiKeyNotFound",
+        "PayoutNotFound",
+        "EventNotFound",
+        "MandateSerializationFailed",
+        "MandateDeserializationFailed",
+        "ReturnUrlUnavailable",
+        "RefundNotPossible",
+        "MandateValidationFailed",
+        "PaymentNotSucceeded",
+        "MerchantConnectorAccountDisabled",
+        "PaymentBlockedError",
+        "FileValidationFailed",
+        "DisputeStatusValidationFailed",
+        "SuccessfulPaymentNotFound",
+        "IncorrectConnectorNameGiven",
+        "AddressNotFound",
+        "DisputeNotFound",
+        "FileNotFound",
+        "FileNotAvailable",
+        "MissingTenantId",
+        "InvalidTenant",
+        "AmountConversionFailed",
+        "NotImplemented",
+        "Unauthorized",
+        "InvalidRequestUrl",
+        "InvalidHttpMethod",
+        "MissingRequiredField",
+        "InvalidDataFormat",
+        "InvalidRequestData",
+        "InvalidDataValue",
+        "ClientSecretNotGiven",
+        "ClientSecretExpired",
+        "ClientSecretInvalid",
+        "MandateActive",
+        "CustomerRedacted",
+        "MaximumRefundCount",
+        "RefundAmountExceedsPaymentAmount",
+        "PaymentUnexpectedState",
+        "InvalidEphemeralKey",
+        "PreconditionFailed",
+        "InvalidJwtToken",
+        "GenericUnauthorized",
+        "NotSupported",
+        "FlowNotSupported",
+        "MissingRequiredFields",
+        "AccessForbidden",
+        "FileProviderNotSupported",
+        "InvalidWalletToken",
+        "PaymentMethodDeleteFailed",
+        "InvalidCookie",
+        "ExtendedCardInfoNotFound",
+        "CurrencyNotSupported",
+        "UnprocessableEntity",
+        "InvalidConnectorConfiguration",
+        "InvalidCardIin",
+        "InvalidCardIinLength",
+        "MissingFile",
+        "MissingDisputeId",
+        "MissingFilePurpose",
+        "MissingFileContentType",
+        "GenericNotFoundError",
+        "GenericDuplicateError",
+        "IncorrectPaymentMethodConfiguration",
+        "LinkConfigurationError",
+        "PayoutFailed",
+        "CookieNotFound",
+        "PlatformAccountAuthNotSupported",
+        "InvalidPlatformOperation",
+        "ExternalVaultFailed",
+        "WebhookAuthenticationFailed",
+        "WebhookBadRequest",
+        "WebhookProcessingFailure",
+        "WebhookResourceNotFound",
+        "WebhookUnprocessableEntity",
+        "WebhookInvalidMerchantSecret",
+        "IntegrityCheckFailed"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "router_derive::ApiError"
+      ],
+      "line": 139
+    },
+    {
+      "name": "NotImplementedMessage",
+      "visibility": "pub",
+      "variants": [
+        "Reason",
+        "Default"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "router_derive::ApiError",
+        "Clone"
+      ],
+      "line": 425
+    },
+    {
+      "name": "ConnectorError",
+      "visibility": "pub",
+      "variants": [
+        "FailedToObtainIntegrationUrl",
+        "RequestEncodingFailed",
+        "RequestEncodingFailedWithReason",
+        "ParsingFailed",
+        "IntegrityCheckFailed",
+        "ResponseDeserializationFailed",
+        "ProcessingStepFailed",
+        "UnexpectedResponseError",
+        "RoutingRulesParsingError",
+        "FailedToObtainPreferredConnector",
+        "InvalidConnectorName",
+        "InvalidWallet",
+        "ResponseHandlingFailed",
+        "MissingRequiredField",
+        "MissingRequiredFields",
+        "FailedToObtainAuthType",
+        "FailedToObtainCertificate",
+        "NoConnectorMetaData",
+        "NoConnectorWalletDetails",
+        "FailedToObtainCertificateKey",
+        "SourceVerificationFailed",
+        "DecodingFailed",
+        "NotImplemented",
+        "NotSupported",
+        "FlowNotSupported",
+        "CaptureMethodNotSupported",
+        "MissingConnectorMandateID",
+        "MissingConnectorMandateMetadata",
+        "MissingConnectorTransactionID",
+        "MissingConnectorRefundID",
+        "MissingApplePayTokenData",
+        "WebhooksNotImplemented",
+        "WebhookBodyDecodingFailed",
+        "WebhookDecodingFailed",
+        "WebhookSignatureNotFound",
+        "WebhookSourceVerificationFailed",
+        "WebhookVerificationSecretNotFound",
+        "WebhookVerificationSecretInvalid",
+        "WebhookReferenceIdNotFound",
+        "WebhookEventTypeNotFound",
+        "WebhookResourceObjectNotFound",
+        "WebhookResponseEncodingFailed",
+        "InvalidDateFormat",
+        "DateFormattingFailed",
+        "InvalidDataFormat",
+        "MismatchedPaymentData",
+        "InvalidWalletToken",
+        "MissingConnectorRelatedTransactionID",
+        "FileValidationFailed",
+        "MissingConnectorRedirectionPayload",
+        "FailedAtConnector",
+        "MissingPaymentMethodType",
+        "InSufficientBalanceInPaymentMethod",
+        "RequestTimeoutReceived",
+        "CurrencyNotSupported",
+        "InvalidConnectorConfig",
+        "AmountConversionFailed",
+        "GenericError",
+        "MandatePaymentDataMismatch",
+        "MaxFieldLengthViolated",
+        "ConfigResolutionFailed"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "router_derive::ApiError",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "PartialEq"
+      ],
+      "line": 839
+    },
+    {
+      "name": "HttpClientError",
+      "visibility": "pub",
+      "variants": [
+        "HeaderMapConstructionFailed",
+        "InvalidProxyConfiguration",
+        "ClientConstructionFailed",
+        "CertificateDecodeFailed",
+        "BodySerializationFailed",
+        "UnexpectedState",
+        "UrlParsingFailed",
+        "UrlEncodingFailed",
+        "RequestNotSent",
+        "ResponseDecodingFailed",
+        "RequestTimeoutReceived",
+        "ConnectionClosedIncompleteMessage",
+        "InternalServerErrorReceived",
+        "BadGatewayReceived",
+        "ServiceUnavailableReceived",
+        "GatewayTimeoutReceived",
+        "UnexpectedServerResponse"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display",
+        "Debug",
+        "serde::Serialize",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "router_derive::ApiError",
+        "Clone",
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq"
+      ],
+      "line": 1015
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ApplicationErrorResponse",
+      "trait_name": null,
+      "methods": [
+        "get_api_error",
+        "missing_required_field",
+        "empty_field_error"
+      ],
+      "line": 63
+    },
+    {
+      "type_name": "NotImplementedMessage",
+      "trait_name": "std::fmt::Debug",
+      "methods": [
+        "fmt"
+      ],
+      "line": 430
+    },
+    {
+      "type_name": "ApiErrorResponse",
+      "trait_name": "::core::fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 444
+    },
+    {
+      "type_name": "crate::router_data::ErrorResponse",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 817
+    },
+    {
+      "type_name": "ConnectorError",
+      "trait_name": null,
+      "methods": [
+        "is_connector_timeout"
+      ],
+      "line": 981
+    },
+    {
+      "type_name": "common_utils::errors::ParsingError",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 988
+    },
+    {
+      "type_name": "ConnectorError",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 994
+    },
+    {
+      "type_name": "HttpClientError",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 1056
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_api_error",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&ApiError",
+      "line": 65
+    },
+    {
+      "name": "missing_required_field",
+      "visibility": "pub",
+      "parameters": [
+        "field_name: &'static str"
+      ],
+      "return_type": "Self",
+      "line": 82
+    },
+    {
+      "name": "empty_field_error",
+      "visibility": "pub",
+      "parameters": [
+        "field_name: &str"
+      ],
+      "return_type": "Self",
+      "line": 91
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "fmt: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 431
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 445
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "error: ApiErrorResponse"
+      ],
+      "return_type": "Self",
+      "line": 818
+    },
+    {
+      "name": "is_connector_timeout",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 983
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "ConnectorError",
+      "line": 989
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "ApiErrorResponse",
+      "line": 995
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "ApiClientError",
+      "line": 1057
+    }
+  ],
+  "use_statements": [
+    "use common_utils::errors::ErrorSwitch;",
+    "use strum::Display;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 86
+    },
+    {
+      "name": "format",
+      "line": 93
+    },
+    {
+      "name": "format",
+      "line": 95
+    },
+    {
+      "name": "write",
+      "line": 433
+    },
+    {
+      "name": "write",
+      "line": 435
+    },
+    {
+      "name": "write",
+      "line": 446
+    }
+  ],
+  "modules": []
+}

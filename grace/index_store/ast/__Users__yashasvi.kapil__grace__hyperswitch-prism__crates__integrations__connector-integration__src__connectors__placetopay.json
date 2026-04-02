@@ -1,0 +1,418 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/placetopay.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 165
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 170
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 180
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 190
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 195
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 200
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 205
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 210
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 215
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 220
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 225
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 230
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 235
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 240
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 245
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 250
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 255
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 259
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 264
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 269
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 274
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 279
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 283
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 287
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 297
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 302
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 307
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 312
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 535
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 545
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 551
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 557
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 563
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 573
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 583
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 592
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 601
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 611
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 621
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 631
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 641
+    },
+    {
+      "type_name": "Placetopay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 651
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 315
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 319
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 323
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 327
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Maskable;",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use transformers::{\n    self as placetopay, PlacetopayNextActionRequest,\n    PlacetopayNextActionRequest as PlacetopayVoidRequest, PlacetopayPaymentsRequest,\n    PlacetopayPaymentsResponse as PlacetopayPSyncResponse, PlacetopayPaymentsResponse,\n    PlacetopayPaymentsResponse as PlacetopayCaptureResponse,\n    PlacetopayPaymentsResponse as PlacetopayVoidResponse, PlacetopayPsyncRequest,\n    PlacetopayRefundRequest, PlacetopayRefundResponse as PlacetopayRSyncResponse,\n    PlacetopayRefundResponse, PlacetopayRsyncRequest,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 62
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 62
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 337
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 337
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 361
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 361
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 390
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 390
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 419
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 419
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 448
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 448
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 477
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 477
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 506
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 506
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

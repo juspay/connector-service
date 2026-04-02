@@ -1,0 +1,445 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/getnet.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 61
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 71
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 156
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_access_token"
+      ],
+      "line": 196
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 204
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 294
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 503
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 513
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 602
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 612
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 622
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 632
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 642
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 652
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 658
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 664
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 670
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 680
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 690
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 700
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 710
+    },
+    {
+      "type_name": "Getnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 720
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_access_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_payment_method: Option<common_enums::PaymentMethod>"
+      ],
+      "return_type": "bool",
+      "line": 199
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 297
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 301
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 305
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 309
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 313
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    self as getnet, GetnetAccessTokenRequest, GetnetAccessTokenResponse, GetnetAuthorizeRequest,\n    GetnetAuthorizeResponse, GetnetCaptureRequest, GetnetCaptureResponse, GetnetRefundRequest,\n    GetnetRefundResponse, GetnetRefundSyncResponse, GetnetSyncResponse, GetnetVoidRequest,\n    GetnetVoidResponse,\n};",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 209
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 209
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 324
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 324
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 340
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 340
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 372
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 372
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 439
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 439
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 471
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 471
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 523
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 523
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 555
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 555
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

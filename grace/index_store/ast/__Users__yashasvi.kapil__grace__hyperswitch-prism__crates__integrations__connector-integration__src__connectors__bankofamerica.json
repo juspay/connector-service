@@ -1,0 +1,441 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/bankofamerica.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 73
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 83
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 120
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 124
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 128
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 132
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 140
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 144
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 148
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 152
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 156
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 160
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 165
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 170
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 180
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 190
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 195
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 200
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 205
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 210
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 220
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 226
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 232
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 238
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 248
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 258
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 268
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 278
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 288
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 298
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 308
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 318
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 328
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 338
+    },
+    {
+      "type_name": "Bankofamerica",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 348
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 351
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 355
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 359
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 363
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "_event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 367
+    }
+  ],
+  "use_statements": [
+    "use super::macros;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::BytesExt,\n    request::Method,\n    types::StringMajorUnit,\n};",
+    "use std::fmt::Debug;",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{Connectors, HasConnectors},\n};",
+    "use base64::Engine;",
+    "use error_stack::{Report, ResultExt};",
+    "use ring::{digest, hmac};",
+    "use serde::Serialize;",
+    "use time::OffsetDateTime;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use crate::types::ResponseRouterData;",
+    "use transformers::{\n    BankOfAmericaAuthType, BankOfAmericaPaymentsResponseForSetupMandate,\n    BankOfAmericaPaymentsResponseForVoid, BankOfAmericaRefundRequestForRefund,\n    BankOfAmericaRefundResponseForRefund, BankOfAmericaRsyncResponseForRSync,\n    BankOfAmericaTransactionResponse, BankofamericaCaptureRequest, BankofamericaErrorResponse,\n    BankofamericaPaymentsRequest, BankofamericaPaymentsRequestForSetupMandate,\n    BankofamericaPaymentsResponse, BankofamericaPaymentsResponseForCapture,\n    BankofamericaVoidRequestForVoid,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 389
+    },
+    {
+      "name": "format",
+      "line": 407
+    },
+    {
+      "name": "error",
+      "line": 452
+    },
+    {
+      "name": "error",
+      "line": 452
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 462
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 462
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 641
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 641
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 673
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 673
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 746
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 746
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 782
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 782
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 814
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 814
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 850
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 850
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

@@ -1,0 +1,798 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/paybox/transformers.rs",
+  "structs": [
+    {
+      "name": "PayboxAuthType",
+      "visibility": "pub",
+      "fields": [
+        "site",
+        "rank",
+        "key",
+        "merchant_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 42
+    },
+    {
+      "name": "PayboxMeta",
+      "visibility": "pub",
+      "fields": [
+        "connector_request_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 86
+    },
+    {
+      "name": "PayboxPaymentRequest",
+      "visibility": "pub",
+      "fields": [
+        "version",
+        "transaction_type",
+        "site",
+        "rank",
+        "key",
+        "paybox_request_number",
+        "amount",
+        "currency",
+        "reference",
+        "date",
+        "card_number",
+        "expiration_date",
+        "cvv",
+        "activity"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 165
+    },
+    {
+      "name": "PayboxPaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_number",
+        "paybox_order_id",
+        "paybox_request_number",
+        "site",
+        "rank",
+        "authorization",
+        "response_code",
+        "response_message",
+        "carrier_id",
+        "customer_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 275
+    },
+    {
+      "name": "PayboxSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "version",
+        "transaction_type",
+        "site",
+        "rank",
+        "key",
+        "paybox_request_number",
+        "date",
+        "transaction_number",
+        "paybox_order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 366
+    },
+    {
+      "name": "PayboxPSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_number",
+        "paybox_order_id",
+        "paybox_request_number",
+        "site",
+        "rank",
+        "authorization",
+        "response_code",
+        "response_message",
+        "status"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 439
+    },
+    {
+      "name": "PayboxCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "version",
+        "transaction_type",
+        "site",
+        "rank",
+        "key",
+        "paybox_request_number",
+        "amount",
+        "currency",
+        "reference",
+        "date",
+        "transaction_number",
+        "paybox_order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 494
+    },
+    {
+      "name": "PayboxVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "version",
+        "transaction_type",
+        "site",
+        "rank",
+        "key",
+        "paybox_request_number",
+        "amount",
+        "currency",
+        "reference",
+        "date",
+        "transaction_number",
+        "paybox_order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 640
+    },
+    {
+      "name": "PayboxRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "version",
+        "transaction_type",
+        "site",
+        "rank",
+        "key",
+        "paybox_request_number",
+        "amount",
+        "currency",
+        "reference",
+        "date",
+        "transaction_number",
+        "paybox_order_id",
+        "activity"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 795
+    },
+    {
+      "name": "PayboxRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_number",
+        "paybox_order_id",
+        "paybox_request_number",
+        "site",
+        "rank",
+        "authorization",
+        "response_code",
+        "response_message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 883
+    },
+    {
+      "name": "PayboxRSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_number",
+        "paybox_order_id",
+        "paybox_request_number",
+        "site",
+        "rank",
+        "authorization",
+        "response_code",
+        "response_message",
+        "status"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 981
+    },
+    {
+      "name": "PayboxErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "status_code",
+        "code",
+        "message",
+        "reason"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 1042
+    }
+  ],
+  "enums": [
+    {
+      "name": "PayboxStatus",
+      "visibility": "pub",
+      "variants": [
+        "Refunded",
+        "Cancelled",
+        "Authorised",
+        "Captured",
+        "Rejected"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 90
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PayboxAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 49
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 103
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 115
+    },
+    {
+      "type_name": "PayboxPaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 192
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 297
+    },
+    {
+      "type_name": "PayboxSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 387
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 458
+    },
+    {
+      "type_name": "PayboxCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 521
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 588
+    },
+    {
+      "type_name": "PayboxVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 667
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 741
+    },
+    {
+      "type_name": "PayboxRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 824
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 902
+    },
+    {
+      "type_name": "PayboxSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 944
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1002
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 52
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxStatus"
+      ],
+      "return_type": "Self",
+      "line": 104
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxStatus"
+      ],
+      "return_type": "Self",
+      "line": 116
+    },
+    {
+      "name": "get_transaction_type",
+      "visibility": "",
+      "parameters": [
+        "capture_method: Option<common_enums::CaptureMethod>"
+      ],
+      "return_type": "Result<&'static str, error_stack::Report<errors::ConnectorError>>",
+      "line": 131
+    },
+    {
+      "name": "generate_request_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 141
+    },
+    {
+      "name": "generate_date_time",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 154
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 207
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 302
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 397
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxPSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 463
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 531
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 593
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 677
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 746
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 831
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 907
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayboxRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 954
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayboxRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1007
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use std::marker::{Send, Sync};",
+    "use std::time::{SystemTime, UNIX_EPOCH};",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::{\n    date_time::{format_date, now, DateFormat},\n    errors::CustomResult,\n    types::MinorUnit,\n};",
+    "use domain_types::payment_method_data::RawCardNumber;",
+    "use domain_types::{\n    connector_flow::*,\n    connector_types::*,\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::types::ResponseRouterData;",
+    "use crate::utils;",
+    "use super::PayboxRouterData;",
+    "use domain_types::router_data::ErrorResponse;"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 305
+    },
+    {
+      "name": "json",
+      "line": 318
+    },
+    {
+      "name": "json",
+      "line": 748
+    }
+  ],
+  "modules": []
+}

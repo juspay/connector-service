@@ -1,0 +1,574 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/cybersource.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 92
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 100
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 104
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 108
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 125
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 133
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 137
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 145
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 153
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 157
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 165
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 169
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 173
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 177
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 193
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 198
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 203
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 208
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 212
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 428
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_http_method",
+        "get_content_type",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2"
+      ],
+      "line": 927
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1051
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1061
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1067
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1073
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1079
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1088
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1097
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1107
+    },
+    {
+      "type_name": "Cybersource",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1117
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 431
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 435
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 439
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 443
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            MandateRevoke,\n            PaymentFlowData,\n            MandateRevokeRequestData,\n            MandateRevokeResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 935
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Method",
+      "line": 946
+    },
+    {
+      "name": "get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 949
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            MandateRevoke,\n            PaymentFlowData,\n            MandateRevokeRequestData,\n            MandateRevokeResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 952
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<\n            MandateRevoke,\n            PaymentFlowData,\n            MandateRevokeRequestData,\n            MandateRevokeResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError>",
+      "line": 972
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            MandateRevoke,\n            PaymentFlowData,\n            MandateRevokeRequestData,\n            MandateRevokeResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<\n            MandateRevoke,\n            PaymentFlowData,\n            MandateRevokeRequestData,\n            MandateRevokeResponseData,\n        >,\n        errors::ConnectorError,\n    >",
+      "line": 983
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 1040
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::BytesExt,\n    types::StringMajorUnit,\n    Method,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{Connectors, HasConnectors},\n    utils,\n};",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use base64::Engine;",
+    "use error_stack::{Report, ResultExt};",
+    "use ring::{digest, hmac};",
+    "use time::OffsetDateTime;",
+    "use transformers::{\n    self as cybersource, CybersourceAuthEnrollmentRequest, CybersourceAuthSetupRequest,\n    CybersourceAuthSetupResponse, CybersourceAuthValidateRequest, CybersourceAuthenticateResponse,\n    CybersourceAuthenticateResponse as CybersourcePostAuthenticateResponse,\n    CybersourcePaymentsCaptureRequest, CybersourcePaymentsRequest, CybersourcePaymentsResponse,\n    CybersourcePaymentsResponse as CybersourceCaptureResponse,\n    CybersourcePaymentsResponse as CybersourceVoidResponse,\n    CybersourcePaymentsResponse as CybersourceSetupMandateResponse,\n    CybersourcePaymentsResponse as CybersourceRepeatPaymentResponse, CybersourceRefundRequest,\n    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRsyncResponse,\n    CybersourceTransactionResponse, CybersourceVoidRequest, CybersourceZeroMandateRequest,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 217
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 217
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 460
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 460
+    },
+    {
+      "name": "format",
+      "line": 467
+    },
+    {
+      "name": "format",
+      "line": 485
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 520
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 520
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 534
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 534
+    },
+    {
+      "name": "format",
+      "line": 539
+    },
+    {
+      "name": "json",
+      "line": 561
+    },
+    {
+      "name": "error",
+      "line": 563
+    },
+    {
+      "name": "error",
+      "line": 563
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 570
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 570
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 598
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 598
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 629
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 629
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 660
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 660
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 691
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 691
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 720
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 720
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 756
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 756
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 795
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 795
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 828
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 828
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 862
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 862
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 894
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 894
+    },
+    {
+      "name": "format",
+      "line": 966
+    },
+    {
+      "name": "matches",
+      "line": 1002
+    },
+    {
+      "name": "json",
+      "line": 1003
+    },
+    {
+      "name": "json",
+      "line": 1019
+    },
+    {
+      "name": "info",
+      "line": 1022
+    },
+    {
+      "name": "info",
+      "line": 1022
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

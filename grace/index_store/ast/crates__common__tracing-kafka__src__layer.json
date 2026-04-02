@@ -1,0 +1,309 @@
+{
+  "file_path": "crates/common/tracing-kafka/src/layer.rs",
+  "structs": [
+    {
+      "name": "KafkaLayer",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [],
+      "line": 22
+    },
+    {
+      "name": "KafkaLayerBuilder",
+      "visibility": "pub",
+      "fields": [
+        "writer_builder",
+        "static_fields"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "line": 111
+    }
+  ],
+  "enums": [
+    {
+      "name": "KafkaLayerError",
+      "visibility": "pub",
+      "variants": [
+        "Writer",
+        "Logger",
+        "MissingBrokers",
+        "MissingTopic"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 95
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "KafkaLayer",
+      "trait_name": null,
+      "methods": [
+        "builder",
+        "from_writer"
+      ],
+      "line": 26
+    },
+    {
+      "type_name": "KafkaLayer",
+      "trait_name": "Layer",
+      "methods": [
+        "on_event",
+        "on_new_span",
+        "on_enter",
+        "on_exit",
+        "on_close"
+      ],
+      "line": 52
+    },
+    {
+      "type_name": "KafkaLayer",
+      "trait_name": null,
+      "methods": [
+        "boxed"
+      ],
+      "line": 82
+    },
+    {
+      "type_name": "KafkaLayerBuilder",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "brokers",
+        "topic",
+        "batch_size",
+        "linger_ms",
+        "linger",
+        "queue_buffering_max_messages",
+        "queue_buffering_max_kbytes",
+        "reconnect_backoff",
+        "static_fields",
+        "add_static_field",
+        "build"
+      ],
+      "line": 116
+    }
+  ],
+  "functions": [
+    {
+      "name": "builder",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "KafkaLayerBuilder",
+      "line": 28
+    },
+    {
+      "name": "from_writer",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "kafka_writer: KafkaWriter",
+        "static_fields: HashMap<String, serde_json::Value>"
+      ],
+      "return_type": "Result<Self, KafkaLayerError>",
+      "line": 34
+    },
+    {
+      "name": "on_event",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "event: &tracing::Event<'_>",
+        "ctx: tracing_subscriber::layer::Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 56
+    },
+    {
+      "name": "on_new_span",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "attrs: &tracing::span::Attributes<'_>",
+        "id: &tracing::span::Id",
+        "ctx: tracing_subscriber::layer::Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 60
+    },
+    {
+      "name": "on_enter",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "id: &tracing::span::Id",
+        "ctx: tracing_subscriber::layer::Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 69
+    },
+    {
+      "name": "on_exit",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "id: &tracing::span::Id",
+        "ctx: tracing_subscriber::layer::Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 73
+    },
+    {
+      "name": "on_close",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "id: tracing::span::Id",
+        "ctx: tracing_subscriber::layer::Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 77
+    },
+    {
+      "name": "boxed",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Box<dyn Layer<S> + Send + Sync + 'static>\n    where\n        Self: Layer<S> + Sized + Send + Sync + 'static,\n        S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,",
+      "line": 84
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 118
+    },
+    {
+      "name": "brokers",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "brokers: &[&str]"
+      ],
+      "return_type": "Self",
+      "line": 123
+    },
+    {
+      "name": "topic",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "topic: impl Into<String>"
+      ],
+      "return_type": "Self",
+      "line": 131
+    },
+    {
+      "name": "batch_size",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 137
+    },
+    {
+      "name": "linger_ms",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "ms: u64"
+      ],
+      "return_type": "Self",
+      "line": 143
+    },
+    {
+      "name": "linger",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "duration: Duration"
+      ],
+      "return_type": "Self",
+      "line": 149
+    },
+    {
+      "name": "queue_buffering_max_messages",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 155
+    },
+    {
+      "name": "queue_buffering_max_kbytes",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 161
+    },
+    {
+      "name": "reconnect_backoff",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "min: Duration",
+        "max: Duration"
+      ],
+      "return_type": "Self",
+      "line": 167
+    },
+    {
+      "name": "static_fields",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "fields: HashMap<String, serde_json::Value>"
+      ],
+      "return_type": "Self",
+      "line": 174
+    },
+    {
+      "name": "add_static_field",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "key: String",
+        "value: serde_json::Value"
+      ],
+      "return_type": "Self",
+      "line": 180
+    },
+    {
+      "name": "build",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<KafkaLayer, KafkaLayerError>",
+      "line": 186
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    collections::{HashMap, HashSet},\n    time::Duration,\n};",
+    "use log_utils::{\n    AdditionalFieldsPlacement, JsonFormattingLayer, JsonFormattingLayerConfig, LoggerError,\n};",
+    "use tracing::Subscriber;",
+    "use tracing_subscriber::Layer;",
+    "use crate::{\n    builder::KafkaWriterBuilder,\n    writer::{KafkaWriter, KafkaWriterError},\n};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

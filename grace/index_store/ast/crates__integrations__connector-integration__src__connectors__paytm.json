@@ -1,0 +1,442 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/paytm.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 200
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_session_token",
+        "should_do_order_create"
+      ],
+      "line": 210
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 228
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 233
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 238
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 243
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 248
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 253
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 258
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 262
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 266
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 270
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 274
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 278
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 283
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 293
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 297
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 301
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 305
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 309
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 313
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 317
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 321
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 325
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 329
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 333
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 338
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 344
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 349
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 354
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 359
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 440
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 451
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 549
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 554
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 559
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 563
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 568
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 577
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 582
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 587
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 592
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 601
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 610
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 621
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 631
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 641
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 651
+    },
+    {
+      "type_name": "Paytm",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 661
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_session_token",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 213
+    },
+    {
+      "name": "should_do_order_create",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 217
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 362
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 366
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 370
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 374
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 384
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use hyperswitch_masking::{Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use paytm::constants;",
+    "use serde::Serialize;",
+    "use transformers as paytm;",
+    "use self::{\n    request::{PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},\n    response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},\n};",
+    "use crate::{connectors::macros, types::ResponseRouterData};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 52
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 52
+    },
+    {
+      "name": "vec",
+      "line": 378
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 394
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 394
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 462
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 462
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 509
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 509
+    }
+  ],
+  "modules": [
+    "request",
+    "response",
+    "transformers"
+  ]
+}

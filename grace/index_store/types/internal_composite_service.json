@@ -1,0 +1,82 @@
+{
+  "crate": "internal_composite_service",
+  "structs": [
+    {
+      "name": "CompositePayments",
+      "file": "crates/internal/composite-service/src/composite_payments.rs",
+      "fields": [
+        "_payment_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Payments",
+      "file": "crates/internal/composite-service/src/payments.rs",
+      "fields": [
+        "payment_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "refund_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CompositeFlowSpec",
+      "file": "crates/internal/composite-service/tests/composite_request_schema_check.rs",
+      "fields": [
+        "name",
+        "composite_request_message",
+        "granular_request_messages",
+        "ignore_granular_only_fields",
+        "ignore_composite_only_fields"
+      ],
+      "derives": [],
+      "visibility": ""
+    },
+    {
+      "name": "FieldShape",
+      "file": "crates/internal/composite-service/tests/composite_request_schema_check.rs",
+      "fields": [
+        "type_code",
+        "type_name",
+        "repeated"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": ""
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "CompositeAccessTokenRequest",
+      "file": "crates/internal/composite-service/src/payments.rs",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ForeignFrom",
+      "file": "crates/internal/composite-service/src/transformers.rs",
+      "methods": [
+        "foreign_from"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    }
+  ]
+}

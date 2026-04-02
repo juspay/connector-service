@@ -1,0 +1,841 @@
+{
+  "structs": [
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 528
+    },
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "all",
+        "all_connectors",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 312
+    },
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 403
+    },
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "help",
+        "path"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 44
+    },
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "all",
+        "all_connectors",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 336
+    },
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 427
+    },
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "scenario",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "set_defaults",
+        "show_defaults",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 348
+    },
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 364
+    },
+    {
+      "name": "ScenarioDef",
+      "visibility": "pub",
+      "fields": [
+        "grpc_req",
+        "assert_rules",
+        "is_default"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 19
+    },
+    {
+      "name": "SuiteSpec",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "suite_type",
+        "depends_on",
+        "strict_dependencies",
+        "dependency_scope"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 31
+    },
+    {
+      "name": "ConnectorSuiteSpec",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "supported_suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 90
+    },
+    {
+      "name": "ConfigInterceptor",
+      "visibility": "",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 15
+    },
+    {
+      "name": "UcsServer",
+      "visibility": "pub",
+      "fields": [
+        "channel",
+        "task",
+        "_socket"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 27
+    },
+    {
+      "name": "ReportEntry",
+      "visibility": "pub",
+      "fields": [
+        "run_at_epoch_ms",
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "endpoint",
+        "is_dependency",
+        "assertion_result",
+        "response_status",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 25
+    },
+    {
+      "name": "ScenarioRunReport",
+      "visibility": "pub",
+      "fields": [
+        "runs"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 65
+    },
+    {
+      "name": "MatrixEntry",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "result",
+        "error",
+        "response_status",
+        "run_at",
+        "run_index",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 282
+    },
+    {
+      "name": "GrpcurlRequest",
+      "visibility": "pub",
+      "fields": [
+        "endpoint",
+        "method",
+        "payload",
+        "headers",
+        "plaintext"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 101
+    },
+    {
+      "name": "GrpcExecutionResult",
+      "visibility": "pub",
+      "fields": [
+        "response_body",
+        "request_command",
+        "response_output",
+        "success"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 110
+    },
+    {
+      "name": "SuiteScenarioResult",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "scenario",
+        "is_dependency",
+        "passed",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1626
+    },
+    {
+      "name": "ExecutedScenario",
+      "visibility": "",
+      "fields": [
+        "effective_req",
+        "response_json",
+        "assertions",
+        "grpc_request",
+        "grpc_response",
+        "execution_error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1640
+    },
+    {
+      "name": "SuiteRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "connector",
+        "passed",
+        "failed",
+        "results"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1654
+    },
+    {
+      "name": "AllSuitesRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "passed",
+        "failed",
+        "suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1663
+    },
+    {
+      "name": "AllConnectorsRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "passed",
+        "failed",
+        "connectors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1671
+    },
+    {
+      "name": "SuiteRunOptions",
+      "visibility": "pub",
+      "fields": [
+        "endpoint",
+        "merchant_id",
+        "tenant_id",
+        "plaintext",
+        "backend",
+        "report"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Copy"
+      ],
+      "line": 1684
+    },
+    {
+      "name": "ConnectorExecutor",
+      "visibility": "pub",
+      "fields": [
+        "server",
+        "auth",
+        "connector",
+        "merchant_id",
+        "tenant_id"
+      ],
+      "derives": [],
+      "line": 13
+    },
+    {
+      "name": "OverrideRegistry",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 58
+    },
+    {
+      "name": "ScenarioOverridePatch",
+      "visibility": "pub",
+      "fields": [
+        "grpc_req",
+        "assert_rules"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Deserialize"
+      ],
+      "line": 10
+    },
+    {
+      "name": "DefaultConnectorOverride",
+      "visibility": "pub",
+      "fields": [
+        "connector"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 5
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConnectorSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 567
+    },
+    {
+      "name": "SuiteSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 573
+    },
+    {
+      "name": "ScenarioSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 579
+    },
+    {
+      "name": "DependencyScope",
+      "visibility": "pub",
+      "variants": [
+        "Suite",
+        "Scenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 47
+    },
+    {
+      "name": "SuiteDependency",
+      "visibility": "pub",
+      "variants": [
+        "SuiteName",
+        "SuiteWithScenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 55
+    },
+    {
+      "name": "FieldAssert",
+      "visibility": "pub",
+      "variants": [
+        "MustExist",
+        "MustNotExist",
+        "Equals",
+        "OneOf",
+        "Contains",
+        "Echo"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 99
+    },
+    {
+      "name": "ScenarioError",
+      "visibility": "pub",
+      "variants": [
+        "ScenarioFileRead",
+        "ScenarioFileParse",
+        "ScenarioNotFound",
+        "InvalidAssertionRule",
+        "AssertionFailed",
+        "UnsupportedSuite",
+        "JsonSerialize",
+        "CredentialLoad",
+        "GrpcurlExecution",
+        "SdkExecution",
+        "SuiteSpecRead",
+        "SuiteSpecParse",
+        "SuiteSpecMissing",
+        "DefaultScenarioMissing",
+        "MultipleDefaultScenarios",
+        "ConnectorSpecRead",
+        "ConnectorSpecParse",
+        "ConnectorOverrideRead",
+        "ConnectorOverrideParse"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 109
+    },
+    {
+      "name": "ConnectorAuth",
+      "visibility": "pub",
+      "variants": [
+        "HeaderKey",
+        "BodyKey",
+        "SignatureKey"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 5
+    },
+    {
+      "name": "CredentialError",
+      "visibility": "pub",
+      "variants": [
+        "FileRead",
+        "Parse",
+        "ConnectorNotFound",
+        "MissingAccountDetails",
+        "InvalidAuthType",
+        "MissingField"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 22
+    },
+    {
+      "name": "ExecutionBackend",
+      "visibility": "pub",
+      "variants": [
+        "Grpcurl",
+        "SdkFfi"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 1678
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorOverride",
+      "visibility": "pub",
+      "methods": [
+        "connector_name",
+        "apply_overrides",
+        "normalize_tonic_request",
+        "transform_response",
+        "should_skip_scenario",
+        "extra_context_deferred_paths"
+      ],
+      "line": 16
+    }
+  ]
+}

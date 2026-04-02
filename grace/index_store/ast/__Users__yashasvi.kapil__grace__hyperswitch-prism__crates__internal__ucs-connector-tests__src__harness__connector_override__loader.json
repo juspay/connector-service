@@ -1,0 +1,168 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/connector_override/loader.rs",
+  "structs": [
+    {
+      "name": "ScenarioOverridePatch",
+      "visibility": "pub",
+      "fields": [
+        "grpc_req",
+        "assert_rules"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Deserialize"
+      ],
+      "line": 10
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "connector_override_file_path",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 21
+    },
+    {
+      "name": "connector_override_root",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 28
+    },
+    {
+      "name": "legacy_connector_suite_override_file_path",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 35
+    },
+    {
+      "name": "load_scenario_override_patch",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<Option<ScenarioOverridePatch>, ScenarioError>",
+      "line": 47
+    },
+    {
+      "name": "load_connector_override_file",
+      "visibility": "",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "Result<Option<ConnectorOverrideFile>, ScenarioError>",
+      "line": 68
+    },
+    {
+      "name": "load_legacy_suite_override_file",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str"
+      ],
+      "return_type": "Result<Option<SuiteOverrideFile>, ScenarioError>",
+      "line": 93
+    },
+    {
+      "name": "unique_temp_dir",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 134
+    },
+    {
+      "name": "missing_override_file_returns_none",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 143
+    },
+    {
+      "name": "loads_scenario_override_patch_from_connector_file",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 164
+    }
+  ],
+  "use_statements": [
+    "use std::{collections::BTreeMap, fs, path::PathBuf};",
+    "use serde::Deserialize;",
+    "use serde_json::Value;",
+    "use crate::harness::{scenario_loader::connector_specs_root, scenario_types::ScenarioError};",
+    "use std::{\n        fs,\n        path::PathBuf,\n        time::{SystemTime, UNIX_EPOCH},\n    };",
+    "use serde_json::json;",
+    "use super::{\n        connector_override_file_path, load_scenario_override_patch, ScenarioOverridePatch,\n    };"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 39
+    },
+    {
+      "name": "format",
+      "line": 139
+    },
+    {
+      "name": "assert",
+      "line": 153
+    },
+    {
+      "name": "assert",
+      "line": 153
+    },
+    {
+      "name": "json",
+      "line": 171
+    },
+    {
+      "name": "assert",
+      "line": 203
+    },
+    {
+      "name": "assert",
+      "line": 203
+    },
+    {
+      "name": "assert_eq",
+      "line": 204
+    },
+    {
+      "name": "assert_eq",
+      "line": 204
+    },
+    {
+      "name": "assert",
+      "line": 216
+    },
+    {
+      "name": "assert",
+      "line": 216
+    },
+    {
+      "name": "assert_eq",
+      "line": 219
+    },
+    {
+      "name": "assert_eq",
+      "line": 219
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

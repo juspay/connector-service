@@ -1,0 +1,1293 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/stax/transformers.rs",
+  "structs": [
+    {
+      "name": "StaxPSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default"
+      ],
+      "line": 31
+    },
+    {
+      "name": "StaxVoidRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default"
+      ],
+      "line": 34
+    },
+    {
+      "name": "StaxRSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default"
+      ],
+      "line": 37
+    },
+    {
+      "name": "StaxAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 118
+    },
+    {
+      "name": "StaxErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "id",
+        "message",
+        "transaction_type",
+        "is_captured",
+        "is_voided",
+        "validation",
+        "error",
+        "code",
+        "other"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 149
+    },
+    {
+      "name": "StaxAuthorizeRequest",
+      "visibility": "pub",
+      "fields": [
+        "total",
+        "payment_method_id",
+        "is_refundable",
+        "pre_auth",
+        "meta",
+        "idempotency_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 216
+    },
+    {
+      "name": "StaxMeta",
+      "visibility": "pub",
+      "fields": [
+        "tax"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 233
+    },
+    {
+      "name": "StaxPaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "id",
+        "is_captured",
+        "is_voided",
+        "child_captures",
+        "transaction_type",
+        "pre_auth",
+        "settled_at",
+        "child_transactions",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 336
+    },
+    {
+      "name": "ChildCapture",
+      "visibility": "pub",
+      "fields": [
+        "id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 361
+    },
+    {
+      "name": "StaxMetaData",
+      "visibility": "pub",
+      "fields": [
+        "capture_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 367
+    },
+    {
+      "name": "ChildTransaction",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "transaction_type",
+        "success",
+        "total",
+        "reference_id",
+        "created_at"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 373
+    },
+    {
+      "name": "StaxCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "total"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 476
+    },
+    {
+      "name": "StaxRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "total"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 579
+    },
+    {
+      "name": "StaxCustomerRequest",
+      "visibility": "pub",
+      "fields": [
+        "email",
+        "firstname"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 785
+    },
+    {
+      "name": "StaxCustomerResponse",
+      "visibility": "pub",
+      "fields": [
+        "id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 840
+    },
+    {
+      "name": "StaxCardTokenizeData",
+      "visibility": "pub",
+      "fields": [
+        "person_name",
+        "card_number",
+        "card_exp",
+        "card_cvv",
+        "customer_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 870
+    },
+    {
+      "name": "StaxBankTokenizeData",
+      "visibility": "pub",
+      "fields": [
+        "person_name",
+        "bank_account",
+        "bank_routing",
+        "bank_name",
+        "bank_type",
+        "bank_holder_type",
+        "customer_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 883
+    },
+    {
+      "name": "StaxTokenResponse",
+      "visibility": "pub",
+      "fields": [
+        "id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 1076
+    }
+  ],
+  "enums": [
+    {
+      "name": "StaxTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Charge",
+        "PreAuth",
+        "Refund",
+        "Void"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 98
+    },
+    {
+      "name": "StaxTokenRequest",
+      "visibility": "pub",
+      "variants": [
+        "Card",
+        "Bank"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 900
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "StaxPSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "StaxVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 59
+    },
+    {
+      "type_name": "StaxRSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 79
+    },
+    {
+      "type_name": "StaxTransactionType",
+      "trait_name": null,
+      "methods": [
+        "as_str"
+      ],
+      "line": 105
+    },
+    {
+      "type_name": "StaxAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 122
+    },
+    {
+      "type_name": "StaxErrorResponse",
+      "trait_name": null,
+      "methods": [
+        "get_error_message",
+        "get_connector_transaction_id"
+      ],
+      "line": 167
+    },
+    {
+      "type_name": "StaxAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 238
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 383
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 427
+    },
+    {
+      "type_name": "StaxCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 481
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 511
+    },
+    {
+      "type_name": "StaxRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 584
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 614
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 653
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 748
+    },
+    {
+      "type_name": "StaxCustomerRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 792
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 844
+    },
+    {
+      "type_name": "StaxTokenRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 905
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1080
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: StaxRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 49
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: StaxRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 69
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: StaxRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 86
+    },
+    {
+      "name": "as_str",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 106
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 125
+    },
+    {
+      "name": "get_error_message",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 169
+    },
+    {
+      "name": "get_connector_transaction_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<String>",
+      "line": 203
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: StaxRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 253
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 388
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 432
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: StaxRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 491
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 516
+    },
+    {
+      "name": "get_payment_status",
+      "visibility": "",
+      "parameters": [
+        "response: &StaxPaymentResponse"
+      ],
+      "return_type": "Result<AttemptStatus, errors::ConnectorError>",
+      "line": 543
+    },
+    {
+      "name": "get_capture_status",
+      "visibility": "",
+      "parameters": [
+        "response: &StaxPaymentResponse"
+      ],
+      "return_type": "Result<AttemptStatus, errors::ConnectorError>",
+      "line": 566
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: StaxRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 591
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 619
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 658
+    },
+    {
+      "name": "get_refund_status",
+      "visibility": "",
+      "parameters": [
+        "response: &StaxPaymentResponse",
+        "refund_amount: FloatMajorUnit"
+      ],
+      "return_type": "Result<RefundStatus, errors::ConnectorError>",
+      "line": 680
+    },
+    {
+      "name": "extract_refund_id",
+      "visibility": "",
+      "parameters": [
+        "response: &StaxPaymentResponse",
+        "refund_amount: FloatMajorUnit"
+      ],
+      "return_type": "Result<String, errors::ConnectorError>",
+      "line": 716
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxPaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 753
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: StaxRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::CreateConnectorCustomer,\n                PaymentFlowData,\n                domain_types::connector_types::ConnectorCustomerData,\n                domain_types::connector_types::ConnectorCustomerResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 807
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxCustomerResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 854
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: StaxRouterData<\n            RouterDataV2<\n                PaymentMethodToken,\n                PaymentFlowData,\n                PaymentMethodTokenizationData<T>,\n                PaymentMethodTokenResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 920
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StaxTokenResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1090
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::{\n    consts,\n    pii::Email,\n    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit},\n};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        ResponseId,\n    },\n    errors,\n    payment_method_data::{\n        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,\n    },\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use super::StaxRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 130
+    },
+    {
+      "name": "json",
+      "line": 397
+    },
+    {
+      "name": "json",
+      "line": 441
+    },
+    {
+      "name": "format",
+      "line": 964
+    },
+    {
+      "name": "format",
+      "line": 1018
+    }
+  ],
+  "modules": []
+}

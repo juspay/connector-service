@@ -1,0 +1,311 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "record_fields_from_header",
+      "visibility": "pub",
+      "parameters": [
+        "request: &Request<B>"
+      ],
+      "return_type": "tracing::Span",
+      "line": 33
+    },
+    {
+      "name": "validate_environment",
+      "visibility": "pub",
+      "parameters": [
+        "environment: &str"
+      ],
+      "return_type": "Result<Env, String>",
+      "line": 58
+    },
+    {
+      "name": "get_resolved_connectors",
+      "visibility": "pub",
+      "parameters": [
+        "config: &configs::Config",
+        "connector: &connector_types::ConnectorEnum",
+        "connector_config: &ConnectorSpecificConfig",
+        "environment: Option<&str>"
+      ],
+      "return_type": "Result<domain_types::types::Connectors, ApplicationErrorResponse>",
+      "line": 78
+    },
+    {
+      "name": "resolve_connector_urls",
+      "visibility": "pub",
+      "parameters": [
+        "superposition_config: Option<&SuperpositionConfig>",
+        "connector: &connector_types::ConnectorEnum",
+        "environment: &str"
+      ],
+      "return_type": "Option<ConnectorUrls>",
+      "line": 186
+    },
+    {
+      "name": "auth_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap",
+        "connector: &connector_types::ConnectorEnum"
+      ],
+      "return_type": "CustomResult<ConnectorSpecificConfig, ApplicationErrorResponse>",
+      "line": 229
+    },
+    {
+      "name": "generic_auth_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<domain_types::router_data::ConnectorAuthType, ApplicationErrorResponse>",
+      "line": 246
+    },
+    {
+      "name": "merge_config_with_override",
+      "visibility": "pub",
+      "parameters": [
+        "config_override: String",
+        "config: configs::Config"
+      ],
+      "return_type": "CustomResult<Arc<configs::Config>, ApplicationErrorResponse>",
+      "line": 301
+    },
+    {
+      "name": "merge_configs",
+      "visibility": "pub",
+      "parameters": [
+        "override_val: &Value",
+        "base_val: &Value"
+      ],
+      "return_type": "Value",
+      "line": 377
+    },
+    {
+      "name": "log_before_initialization",
+      "visibility": "pub",
+      "parameters": [
+        "request_data: &RequestData<T>",
+        "service_name: &str"
+      ],
+      "return_type": "CustomResult<(), ApplicationErrorResponse>\nwhere\n    T: serde::Serialize,",
+      "line": 392
+    },
+    {
+      "name": "log_after_initialization",
+      "visibility": "pub",
+      "parameters": [
+        "result: &Result<tonic::Response<T>, tonic::Status>"
+      ],
+      "return_type": "",
+      "line": 425
+    },
+    {
+      "name": "grpc_logging_wrapper",
+      "visibility": "pub",
+      "parameters": [
+        "request: tonic::Request<T>",
+        "service_name: &str",
+        "config: Arc<configs::Config>",
+        "flow_name: FlowName",
+        "handler: F"
+      ],
+      "return_type": "Result<tonic::Response<R>, tonic::Status>\nwhere\n    T: serde::Serialize\n        + std::fmt::Debug\n        + Send\n        + 'static\n        + hyperswitch_masking::ErasedMaskSerialize,\n    F: FnOnce(RequestData<T>) -> Fut + Send,\n    Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,\n    R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,",
+      "line": 465
+    },
+    {
+      "name": "create_and_emit_grpc_event",
+      "visibility": "",
+      "parameters": [
+        "masked_request_data: Option<MaskedSerdeValue>",
+        "grpc_response: &Result<tonic::Response<R>, tonic::Status>",
+        "start_time: tokio::time::Instant",
+        "flow_name: FlowName",
+        "service_name: &str",
+        "config: &configs::Config",
+        "metadata_payload: Option<&MetadataPayload>",
+        "masked_headers: HashMap<String, String>"
+      ],
+      "return_type": "",
+      "line": 519
+    },
+    {
+      "name": "get_config_from_request",
+      "visibility": "pub",
+      "parameters": [
+        "request: &tonic::Request<T>"
+      ],
+      "return_type": "Result<Arc<configs::Config>, tonic::Status>\nwhere\n    T: serde::Serialize,",
+      "line": 564
+    }
+  ],
+  "use_statements": [
+    "pub use ucs_interface_common::auth::*;",
+    "pub use ucs_interface_common::config::*;",
+    "pub use ucs_interface_common::flow::*;",
+    "pub use ucs_interface_common::metadata::*;",
+    "use base64::{engine::general_purpose, Engine as _};",
+    "use common_utils::{\n    config_patch::Patch,\n    consts::{self, Env, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},\n    errors::CustomResult,\n    events::{Event, EventStage, FlowName, MaskedSerdeValue},\n    lineage::LineageIds,\n    superposition_config::{get_connector_urls, ConnectorUrls, SuperpositionConfig},\n};",
+    "use domain_types::{\n    connector_types,\n    errors::{ApiError, ApplicationErrorResponse},\n    router_data::ConnectorSpecificConfig,\n    utils::ForeignTryFrom,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use http::request::Request;",
+    "use hyperswitch_masking;",
+    "use serde_json::Value;",
+    "use std::{collections::HashMap, sync::Arc};",
+    "use tonic::metadata;",
+    "use ucs_env::{configs, configs::ConfigPatch, error::ResultExtGrpc};",
+    "use crate::request::RequestData;",
+    "use domain_types::router_data::ConnectorAuthType;"
+  ],
+  "macro_calls": [
+    {
+      "name": "debug_span",
+      "line": 36
+    },
+    {
+      "name": "format",
+      "line": 64
+    },
+    {
+      "name": "info",
+      "line": 101
+    },
+    {
+      "name": "info",
+      "line": 101
+    },
+    {
+      "name": "format",
+      "line": 112
+    },
+    {
+      "name": "info",
+      "line": 118
+    },
+    {
+      "name": "info",
+      "line": 118
+    },
+    {
+      "name": "format",
+      "line": 126
+    },
+    {
+      "name": "info",
+      "line": 138
+    },
+    {
+      "name": "info",
+      "line": 138
+    },
+    {
+      "name": "format",
+      "line": 143
+    },
+    {
+      "name": "warn",
+      "line": 200
+    },
+    {
+      "name": "warn",
+      "line": 200
+    },
+    {
+      "name": "info",
+      "line": 207
+    },
+    {
+      "name": "info",
+      "line": 207
+    },
+    {
+      "name": "warn",
+      "line": 216
+    },
+    {
+      "name": "warn",
+      "line": 216
+    },
+    {
+      "name": "format",
+      "line": 238
+    },
+    {
+      "name": "format",
+      "line": 294
+    },
+    {
+      "name": "format",
+      "line": 313
+    },
+    {
+      "name": "format",
+      "line": 344
+    },
+    {
+      "name": "format",
+      "line": 355
+    },
+    {
+      "name": "info",
+      "line": 370
+    },
+    {
+      "name": "info",
+      "line": 370
+    },
+    {
+      "name": "error",
+      "line": 411
+    },
+    {
+      "name": "error",
+      "line": 411
+    },
+    {
+      "name": "info",
+      "line": 421
+    },
+    {
+      "name": "info",
+      "line": 421
+    },
+    {
+      "name": "warn",
+      "line": 454
+    },
+    {
+      "name": "warn",
+      "line": 454
+    },
+    {
+      "name": "info",
+      "line": 462
+    },
+    {
+      "name": "info",
+      "line": 462
+    },
+    {
+      "name": "info",
+      "line": 572
+    },
+    {
+      "name": "info",
+      "line": 572
+    },
+    {
+      "name": "info",
+      "line": 576
+    },
+    {
+      "name": "info",
+      "line": 576
+    }
+  ],
+  "modules": []
+}

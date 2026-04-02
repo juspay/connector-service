@@ -1,0 +1,473 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/billwerk.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 156
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 196
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 201
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_payment_method_token"
+      ],
+      "line": 206
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 218
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 228
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 238
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 248
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 258
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 268
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 278
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 284
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 290
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 296
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 306
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 316
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 326
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 336
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 346
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 356
+    },
+    {
+      "type_name": "Billwerk",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 445
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_payment_method_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_payment_method: common_enums::PaymentMethod",
+        "_payment_method_type: Option<common_enums::PaymentMethodType>"
+      ],
+      "return_type": "bool",
+      "line": 209
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 448
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 452
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 456
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 460
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 464
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 477
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n};",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use base64::Engine;",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers as billwerk;",
+    "use transformers::{\n    BillwerkCaptureRequest, BillwerkPaymentsRequest, BillwerkPaymentsResponse,\n    BillwerkPaymentsResponse as BillwerkPaymentsSyncResponse,\n    BillwerkPaymentsResponse as BillwerkPaymentsVoidResponse,\n    BillwerkPaymentsResponse as BillwerkCaptureResponse, BillwerkRefundRequest,\n    BillwerkTokenRequest, BillwerkTokenResponse, RefundResponse as BillwerkRefundResponse,\n    RefundResponse as BillwerkRSyncResponse,\n};",
+    "use crate::{types::ResponseRouterData, with_response_body};",
+    "use super::macros;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 366
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 366
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 369
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 369
+    },
+    {
+      "name": "format",
+      "line": 470
+    },
+    {
+      "name": "vec",
+      "line": 471
+    },
+    {
+      "name": "with_response_body",
+      "line": 487
+    },
+    {
+      "name": "with_response_body",
+      "line": 487
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 505
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 505
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 538
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 538
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 566
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 566
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 600
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 600
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 637
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 637
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 667
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 667
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 696
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 696
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

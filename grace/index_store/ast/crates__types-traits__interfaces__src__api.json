@@ -1,0 +1,92 @@
+{
+  "file_path": "crates/types-traits/interfaces/src/api.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "ApplicationResponse",
+      "visibility": "pub",
+      "variants": [
+        "Json",
+        "StatusOk",
+        "TextPlain",
+        "JsonForRedirection",
+        "Form",
+        "PaymentLinkForm",
+        "FileData",
+        "JsonWithHeaders",
+        "GenericLinkForm"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 67
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorCommon",
+      "visibility": "pub",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 14
+    }
+  ],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 19
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<\n        Vec<(String, hyperswitch_masking::Maskable<String>)>,\n        domain_types::errors::ConnectorError,\n    >",
+      "line": 24
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 36
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: domain_types::router_response_types::Response",
+        "_event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, domain_types::errors::ConnectorError>",
+      "line": 47
+    }
+  ],
+  "use_statements": [
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    events, CustomResult,\n};",
+    "use domain_types::{\n    api::{GenericLinks, PaymentLinkAction, RedirectionFormData},\n    payment_address::RedirectionResponse,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    types::Connectors,\n};",
+    "use hyperswitch_masking;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

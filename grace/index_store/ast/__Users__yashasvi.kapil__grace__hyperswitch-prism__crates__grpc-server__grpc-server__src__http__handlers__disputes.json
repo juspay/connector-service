@@ -1,0 +1,59 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/http/handlers/disputes.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use crate::http::handlers::macros::http_handler;",
+    "use crate::http::{\n    error::HttpError, http_headers_to_grpc_metadata, state::AppState,\n    transfer_config_to_grpc_request, utils::ValidatedJson,\n};",
+    "use axum::{\n    extract::{Extension, State},\n    http::{HeaderMap, StatusCode},\n    Json,\n};",
+    "use grpc_api_types::payments::{\n    dispute_service_server::DisputeService, event_service_server::EventService, DisputeResponse,\n    DisputeServiceAcceptRequest, DisputeServiceAcceptResponse, DisputeServiceDefendRequest,\n    DisputeServiceDefendResponse, DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,\n    DisputeServiceSubmitEvidenceResponse, EventServiceHandleRequest, EventServiceHandleResponse,\n};",
+    "use std::sync::Arc;",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [
+    {
+      "name": "http_handler",
+      "line": 20
+    },
+    {
+      "name": "http_handler",
+      "line": 20
+    },
+    {
+      "name": "http_handler",
+      "line": 28
+    },
+    {
+      "name": "http_handler",
+      "line": 28
+    },
+    {
+      "name": "http_handler",
+      "line": 36
+    },
+    {
+      "name": "http_handler",
+      "line": 36
+    },
+    {
+      "name": "http_handler",
+      "line": 44
+    },
+    {
+      "name": "http_handler",
+      "line": 44
+    },
+    {
+      "name": "http_handler",
+      "line": 52
+    },
+    {
+      "name": "http_handler",
+      "line": 52
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,21 @@
+{
+  "file_path": "crates/types-traits/grpc-api-types/build.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 3
+    }
+  ],
+  "use_statements": [
+    "use std::{env, path::PathBuf};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

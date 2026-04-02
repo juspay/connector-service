@@ -1,0 +1,244 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/ucs_env/src/logger/config.rs",
+  "structs": [
+    {
+      "name": "Log",
+      "visibility": "pub",
+      "fields": [
+        "console",
+        "kafka"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 8
+    },
+    {
+      "name": "LogConsole",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "level",
+        "log_format",
+        "filtering_directive"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 18
+    },
+    {
+      "name": "Level",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 31
+    },
+    {
+      "name": "LogKafka",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "level",
+        "filtering_directive",
+        "brokers",
+        "topic",
+        "batch_size",
+        "flush_interval_ms",
+        "buffer_limit"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "config_patch_derive::Patch"
+      ],
+      "line": 84
+    }
+  ],
+  "enums": [
+    {
+      "name": "LogFormat",
+      "visibility": "pub",
+      "variants": [
+        "Default",
+        "Json"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 74
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Level",
+      "trait_name": "Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 33
+    },
+    {
+      "type_name": "Level",
+      "trait_name": null,
+      "methods": [
+        "into_level"
+      ],
+      "line": 42
+    },
+    {
+      "type_name": "Level",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 49
+    },
+    {
+      "type_name": "Level",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 55
+    }
+  ],
+  "functions": [
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: serde::Serializer,",
+      "line": 34
+    },
+    {
+      "name": "into_level",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "tracing::Level",
+      "line": 44
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 50
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 56
+    }
+  ],
+  "use_statements": [
+    "use serde::{Deserialize, Serialize};",
+    "use std::str::FromStr as _;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

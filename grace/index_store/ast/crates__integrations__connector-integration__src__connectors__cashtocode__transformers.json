@@ -1,0 +1,442 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/cashtocode/transformers.rs",
+  "structs": [
+    {
+      "name": "CashtocodePaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "transaction_id",
+        "user_id",
+        "currency",
+        "first_name",
+        "last_name",
+        "user_alias",
+        "requested_url",
+        "cancel_url",
+        "email",
+        "mid"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 25
+    },
+    {
+      "name": "CashtocodeAuthType",
+      "visibility": "pub",
+      "fields": [
+        "auths"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize"
+      ],
+      "line": 126
+    },
+    {
+      "name": "CashtocodeAuth",
+      "visibility": "pub",
+      "fields": [
+        "password_classic",
+        "password_evoucher",
+        "username_classic",
+        "username_evoucher",
+        "merchant_id_classic",
+        "merchant_id_evoucher"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize"
+      ],
+      "line": 131
+    },
+    {
+      "name": "CashtocodeErrors",
+      "visibility": "pub",
+      "fields": [
+        "message",
+        "path",
+        "event_type"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 208
+    },
+    {
+      "name": "CashtocodePaymentsResponseData",
+      "visibility": "pub",
+      "fields": [
+        "pay_url"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 224
+    },
+    {
+      "name": "CashtocodePaymentsSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "amount"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 230
+    },
+    {
+      "name": "CashtocodeErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error",
+        "error_description",
+        "errors"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 326
+    },
+    {
+      "name": "CashtocodeIncomingWebhook",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "foreign_transaction_id",
+        "event_type",
+        "transaction_id"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 334
+    }
+  ],
+  "enums": [
+    {
+      "name": "CashtocodePaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Succeeded",
+        "Processing"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 192
+    },
+    {
+      "name": "CashtocodePaymentsResponse",
+      "visibility": "pub",
+      "variants": [
+        "CashtoCodeError",
+        "CashtoCodeData"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 217
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "CashtocodePaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 63
+    },
+    {
+      "type_name": "CashtocodeAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 140
+    },
+    {
+      "type_name": "CashtocodeAuth",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 162
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 198
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 257
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_mid",
+      "visibility": "",
+      "parameters": [
+        "connector_config: &ConnectorSpecificConfig",
+        "payment_method_type: Option<common_enums::PaymentMethodType>",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "Result<Secret<String>, error_stack::Report<ConnectorError>>",
+      "line": 39
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: CashtocodeRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 77
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 143
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: (&ConnectorSpecificConfig, &common_enums::Currency)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 165
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: CashtocodePaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 199
+    },
+    {
+      "name": "get_redirect_form_data",
+      "visibility": "",
+      "parameters": [
+        "payment_method_type: common_enums::PaymentMethodType",
+        "response_data: CashtocodePaymentsResponseData"
+      ],
+      "return_type": "CustomResult<RedirectForm, ConnectorError>",
+      "line": 235
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<CashtocodePaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 264
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use common_utils::{\n    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::FloatMajorUnit,\n    Email,\n};",
+    "use domain_types::{\n    connector_flow::Authorize,\n    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},\n    errors::ConnectorError,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n    utils,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Secret;",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{connectors::cashtocode::CashtocodeRouterData, types::ResponseRouterData};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 46
+    }
+  ],
+  "modules": []
+}

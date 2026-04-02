@@ -1,0 +1,433 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/loonio.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 104
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 109
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 114
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 124
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 134
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 144
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 164
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 169
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 174
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 179
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 184
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 194
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 199
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 204
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 209
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 214
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 219
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 227
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 231
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 235
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 240
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 313
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 319
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 325
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 335
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 340
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 346
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 356
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 366
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 376
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 386
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 392
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 398
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 404
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 414
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 424
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 434
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 444
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 454
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 464
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 474
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 484
+    },
+    {
+      "type_name": "Loonio",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 496
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 499
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 503
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 507
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 511
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 515
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 522
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt,\n    types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::*,\n    connector_types::*,\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    LoonioAuthorizeRequest, LoonioAuthorizeResponse, LoonioErrorResponse, LoonioPaymentResponseData,\n};",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 43
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 43
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 247
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 247
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 278
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 278
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 532
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 532
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

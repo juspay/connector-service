@@ -1,0 +1,262 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+  "structs": [
+    {
+      "name": "ScenarioDef",
+      "visibility": "pub",
+      "fields": [
+        "grpc_req",
+        "assert_rules",
+        "is_default"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 19
+    },
+    {
+      "name": "SuiteSpec",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "suite_type",
+        "depends_on",
+        "strict_dependencies",
+        "dependency_scope"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 31
+    },
+    {
+      "name": "ConnectorSuiteSpec",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "supported_suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 90
+    }
+  ],
+  "enums": [
+    {
+      "name": "DependencyScope",
+      "visibility": "pub",
+      "variants": [
+        "Suite",
+        "Scenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 47
+    },
+    {
+      "name": "SuiteDependency",
+      "visibility": "pub",
+      "variants": [
+        "SuiteName",
+        "SuiteWithScenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 55
+    },
+    {
+      "name": "FieldAssert",
+      "visibility": "pub",
+      "variants": [
+        "MustExist",
+        "MustNotExist",
+        "Equals",
+        "OneOf",
+        "Contains",
+        "Echo"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 99
+    },
+    {
+      "name": "ScenarioError",
+      "visibility": "pub",
+      "variants": [
+        "ScenarioFileRead",
+        "ScenarioFileParse",
+        "ScenarioNotFound",
+        "InvalidAssertionRule",
+        "AssertionFailed",
+        "UnsupportedSuite",
+        "JsonSerialize",
+        "CredentialLoad",
+        "GrpcurlExecution",
+        "SdkExecution",
+        "SuiteSpecRead",
+        "SuiteSpecParse",
+        "SuiteSpecMissing",
+        "DefaultScenarioMissing",
+        "MultipleDefaultScenarios",
+        "ConnectorSpecRead",
+        "ConnectorSpecParse",
+        "ConnectorOverrideRead",
+        "ConnectorOverrideParse"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 109
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "SuiteDependency",
+      "trait_name": null,
+      "methods": [
+        "suite",
+        "scenario",
+        "context_map"
+      ],
+      "line": 66
+    }
+  ],
+  "functions": [
+    {
+      "name": "suite",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 67
+    },
+    {
+      "name": "scenario",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&str>",
+      "line": 74
+    },
+    {
+      "name": "context_map",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ContextMap>",
+      "line": 81
+    }
+  ],
+  "use_statements": [
+    "use std::collections::{BTreeMap, HashMap};",
+    "use std::path::PathBuf;",
+    "use serde::Deserialize;",
+    "use serde_json::Value;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

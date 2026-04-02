@@ -1,0 +1,44 @@
+{
+  "file_path": "crates/types-traits/ucs_interface_common/src/error.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "InterfaceError",
+      "visibility": "pub",
+      "variants": [
+        "MissingRequiredHeader",
+        "InvalidHeaderValue"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 4
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "tonic::Status",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 11
+    }
+  ],
+  "functions": [
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "err: InterfaceError"
+      ],
+      "return_type": "Self",
+      "line": 12
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

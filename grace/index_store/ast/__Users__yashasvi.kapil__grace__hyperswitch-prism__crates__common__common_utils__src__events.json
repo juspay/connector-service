@@ -1,0 +1,544 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/events.rs",
+  "structs": [
+    {
+      "name": "MaskedSerdeValue",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 20
+    },
+    {
+      "name": "Event",
+      "visibility": "pub",
+      "fields": [
+        "request_id",
+        "timestamp",
+        "flow_type",
+        "connector",
+        "url",
+        "stage",
+        "latency_ms",
+        "status_code",
+        "request_data",
+        "response_data",
+        "headers",
+        "additional_fields",
+        "lineage_ids"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 214
+    },
+    {
+      "name": "EventConfig",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "topic",
+        "brokers",
+        "partition_key_field",
+        "transformations",
+        "static_values",
+        "extractions"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "strum::Display",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 394
+    }
+  ],
+  "enums": [
+    {
+      "name": "ApiEventsType",
+      "visibility": "pub",
+      "variants": [
+        "Payout",
+        "Payment",
+        "Refund",
+        "PaymentMethod",
+        "PaymentMethodCreate",
+        "Customer",
+        "BusinessProfile",
+        "ApiKey",
+        "User",
+        "PaymentMethodList",
+        "PaymentMethodListForPaymentMethods",
+        "Webhooks",
+        "Routing",
+        "ResourceListAPI",
+        "PaymentRedirectionResponse",
+        "Gsm",
+        "Miscellaneous",
+        "Keymanager",
+        "RustLocker",
+        "ApplePayCertificatesMigration",
+        "FraudCheck",
+        "Recon",
+        "ExternalServiceAuth",
+        "Dispute",
+        "Events",
+        "PaymentMethodCollectLink",
+        "Poll",
+        "Analytics",
+        "ClientSecret",
+        "PaymentMethodSession",
+        "Token",
+        "ProcessTracker",
+        "ProfileAcquirer",
+        "ThreeDsDecisionRule"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 54
+    },
+    {
+      "name": "FlowName",
+      "visibility": "pub",
+      "variants": [
+        "Authorize",
+        "Refund",
+        "Capture",
+        "Void",
+        "VoidPostCapture",
+        "Psync",
+        "Rsync",
+        "AcceptDispute",
+        "SubmitEvidence",
+        "DefendDispute",
+        "Dsync",
+        "IncomingWebhook",
+        "VerifyRedirectResponse",
+        "SetupMandate",
+        "RepeatPayment",
+        "CreateOrder",
+        "CreateSessionToken",
+        "CreateAccessToken",
+        "CreateConnectorCustomer",
+        "PaymentMethodToken",
+        "PreAuthenticate",
+        "Authenticate",
+        "PostAuthenticate",
+        "SdkSessionToken",
+        "MandateRevoke",
+        "Unknown",
+        "IncrementalAuthorization",
+        "PayoutCreate",
+        "PayoutTransfer",
+        "PayoutGet",
+        "PayoutVoid",
+        "PayoutStage",
+        "PayoutCreateLink",
+        "PayoutCreateRecipient",
+        "PayoutEnrollDisburseAccount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "strum::Display",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 297
+    },
+    {
+      "name": "EventStage",
+      "visibility": "pub",
+      "variants": [
+        "ConnectorCall",
+        "GrpcRequest"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "strum::Display",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 378
+    }
+  ],
+  "traits": [
+    {
+      "name": "ApiEventMetric",
+      "visibility": "pub",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 148
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "MaskedSerdeValue",
+      "trait_name": null,
+      "methods": [
+        "from_masked",
+        "from_masked_optional",
+        "inner"
+      ],
+      "line": 24
+    },
+    {
+      "type_name": "serde_json::Value",
+      "trait_name": "ApiEventMetric",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "GlobalPaymentId",
+      "trait_name": "ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 157
+    },
+    {
+      "type_name": "Result",
+      "trait_name": "ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 165
+    },
+    {
+      "type_name": "Vec",
+      "trait_name": "ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 175
+    },
+    {
+      "type_name": "TimeRange",
+      "trait_name": "ApiEventMetric",
+      "methods": [],
+      "line": 211
+    },
+    {
+      "type_name": "Event",
+      "trait_name": null,
+      "methods": [
+        "add_reference_id",
+        "add_resource_id",
+        "add_service_type",
+        "add_service_name",
+        "set_grpc_error_response",
+        "set_grpc_success_response",
+        "set_connector_response"
+      ],
+      "line": 232
+    },
+    {
+      "type_name": "FlowName",
+      "trait_name": null,
+      "methods": [
+        "as_str"
+      ],
+      "line": 335
+    },
+    {
+      "type_name": "EventStage",
+      "trait_name": null,
+      "methods": [
+        "as_str"
+      ],
+      "line": 383
+    },
+    {
+      "type_name": "EventConfig",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 407
+    }
+  ],
+  "functions": [
+    {
+      "name": "from_masked",
+      "visibility": "pub",
+      "parameters": [
+        "value: &T"
+      ],
+      "return_type": "Result<Self, serde_json::Error>",
+      "line": 25
+    },
+    {
+      "name": "from_masked_optional",
+      "visibility": "pub",
+      "parameters": [
+        "value: &T",
+        "context: &str"
+      ],
+      "return_type": "Option<Self>",
+      "line": 32
+    },
+    {
+      "name": "inner",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&serde_json::Value",
+      "line": 47
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<ApiEventsType>",
+      "line": 149
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<ApiEventsType>",
+      "line": 158
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<ApiEventsType>",
+      "line": 166
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<ApiEventsType>",
+      "line": 176
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<ApiEventsType>",
+      "line": 206
+    },
+    {
+      "name": "add_reference_id",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "reference_id: Option<&str>"
+      ],
+      "return_type": "",
+      "line": 233
+    },
+    {
+      "name": "add_resource_id",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "resource_id: Option<&str>"
+      ],
+      "return_type": "",
+      "line": 244
+    },
+    {
+      "name": "add_service_type",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "service_type: &str"
+      ],
+      "return_type": "",
+      "line": 255
+    },
+    {
+      "name": "add_service_name",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "service_name: &str"
+      ],
+      "return_type": "",
+      "line": 264
+    },
+    {
+      "name": "set_grpc_error_response",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "tonic_error: &tonic::Status"
+      ],
+      "return_type": "",
+      "line": 273
+    },
+    {
+      "name": "set_grpc_success_response",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &R"
+      ],
+      "return_type": "",
+      "line": 283
+    },
+    {
+      "name": "set_connector_response",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &R"
+      ],
+      "return_type": "",
+      "line": 289
+    },
+    {
+      "name": "as_str",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 336
+    },
+    {
+      "name": "as_str",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 384
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 408
+    }
+  ],
+  "use_statements": [
+    "use serde::{Deserialize, Serialize};",
+    "use std::collections::HashMap;",
+    "use crate::{\n    global_id::{\n        customer::GlobalCustomerId,\n        payment::GlobalPaymentId,\n        payment_methods::{GlobalPaymentMethodId, GlobalPaymentMethodSessionId},\n        refunds::GlobalRefundId,\n        token::GlobalTokenId,\n    },\n    id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},\n    lineage,\n    types::TimeRange,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "error",
+      "line": 38
+    },
+    {
+      "name": "error",
+      "line": 38
+    },
+    {
+      "name": "impl_api_event_type",
+      "line": 194
+    },
+    {
+      "name": "impl_api_event_type",
+      "line": 194
+    },
+    {
+      "name": "json",
+      "line": 275
+    },
+    {
+      "name": "vec",
+      "line": 412
+    }
+  ],
+  "modules": []
+}

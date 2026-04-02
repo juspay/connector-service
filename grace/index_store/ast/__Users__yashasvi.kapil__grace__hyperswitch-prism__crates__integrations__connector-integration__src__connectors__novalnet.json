@@ -1,0 +1,584 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/novalnet.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 74
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 84
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 89
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 93
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 97
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 105
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 109
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 113
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 117
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 125
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 133
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 137
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 142
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 163
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 167
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 196
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 293
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook"
+      ],
+      "line": 605
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 863
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 873
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 879
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 885
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 891
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 901
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 911
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 920
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 930
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 934
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 938
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 944
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 954
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 964
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 974
+    },
+    {
+      "type_name": "Novalnet",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 984
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 296
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 300
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 304
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 308
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 312
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 326
+    },
+    {
+      "name": "get_webhook_source_verification_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 608
+    },
+    {
+      "name": "get_webhook_source_verification_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "connector_webhook_secrets: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 620
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<errors::ConnectorError>>",
+      "line": 669
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, error_stack::Report<errors::ConnectorError>>",
+      "line": 729
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 764
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 783
+    },
+    {
+      "name": "process_dispute_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 804
+    },
+    {
+      "name": "get_webhook_object_from_body",
+      "visibility": "",
+      "parameters": [
+        "body: &[u8]"
+      ],
+      "return_type": "CustomResult<novalnet::NovalnetWebhookNotificationResponse, errors::ConnectorError>",
+      "line": 852
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    crypto::{self, VerifySignature},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    types::StringMinorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,\n        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, MandateRevokeRequestData,\n        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,\n        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,\n        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,\n        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,\n        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,\n        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData, WebhookDetailsResponse,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n    utils::{self, ForeignTryFrom},\n};",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,\n    NovalnetCaptureResponse, NovalnetPSyncResponse, NovalnetPaymentsRequest,\n    NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate,\n    NovalnetPaymentsRequest as NovalnetRepeatPaymentsRequest, NovalnetPaymentsResponse,\n    NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate,\n    NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest,\n    NovalnetRefundResponse, NovalnetRefundSyncResponse, NovalnetSyncRequest,\n    NovalnetSyncRequest as NovalnetRSyncRequest,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};",
+    "use error_stack::ResultExt;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 200
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 200
+    },
+    {
+      "name": "vec",
+      "line": 320
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 336
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 336
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 352
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 352
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 387
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 387
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 418
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 418
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 449
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 449
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 480
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 480
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 511
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 511
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 540
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 540
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 569
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 569
+    },
+    {
+      "name": "format",
+      "line": 656
+    },
+    {
+      "name": "warn",
+      "line": 680
+    },
+    {
+      "name": "warn",
+      "line": 680
+    },
+    {
+      "name": "warn",
+      "line": 693
+    },
+    {
+      "name": "warn",
+      "line": 693
+    },
+    {
+      "name": "warn",
+      "line": 707
+    },
+    {
+      "name": "warn",
+      "line": 707
+    },
+    {
+      "name": "warn",
+      "line": 719
+    },
+    {
+      "name": "warn",
+      "line": 719
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

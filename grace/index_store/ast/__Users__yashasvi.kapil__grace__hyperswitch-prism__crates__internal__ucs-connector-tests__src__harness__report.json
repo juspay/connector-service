@@ -1,0 +1,1120 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/report.rs",
+  "structs": [
+    {
+      "name": "ReportEntry",
+      "visibility": "pub",
+      "fields": [
+        "run_at_epoch_ms",
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "endpoint",
+        "is_dependency",
+        "assertion_result",
+        "response_status",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 25
+    },
+    {
+      "name": "ScenarioRunReport",
+      "visibility": "pub",
+      "fields": [
+        "runs"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 65
+    },
+    {
+      "name": "MatrixEntry",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "result",
+        "error",
+        "response_status",
+        "run_at",
+        "run_index",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 282
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "report_path",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 74
+    },
+    {
+      "name": "md_path",
+      "visibility": "",
+      "parameters": [
+        "json_path: &Path"
+      ],
+      "return_type": "PathBuf",
+      "line": 81
+    },
+    {
+      "name": "report_dir_path",
+      "visibility": "",
+      "parameters": [
+        "json_path: &Path"
+      ],
+      "return_type": "PathBuf",
+      "line": 87
+    },
+    {
+      "name": "legacy_md_path",
+      "visibility": "",
+      "parameters": [
+        "json_path: &Path"
+      ],
+      "return_type": "PathBuf",
+      "line": 91
+    },
+    {
+      "name": "clear_report",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "",
+      "line": 100
+    },
+    {
+      "name": "append_report",
+      "visibility": "pub",
+      "parameters": [
+        "entry: ReportEntry"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 120
+    },
+    {
+      "name": "append_report_batch",
+      "visibility": "pub",
+      "parameters": [
+        "entries: Vec<ReportEntry>"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 125
+    },
+    {
+      "name": "regenerate_markdown_from_path",
+      "visibility": "pub",
+      "parameters": [
+        "json_path: &Path"
+      ],
+      "return_type": "Result<PathBuf, String>",
+      "line": 169
+    },
+    {
+      "name": "regenerate_markdown_from_disk",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<PathBuf, String>",
+      "line": 180
+    },
+    {
+      "name": "append_report_best_effort",
+      "visibility": "pub",
+      "parameters": [
+        "entry: ReportEntry"
+      ],
+      "return_type": "",
+      "line": 187
+    },
+    {
+      "name": "append_report_batch_best_effort",
+      "visibility": "pub",
+      "parameters": [
+        "entries: Vec<ReportEntry>"
+      ],
+      "return_type": "",
+      "line": 194
+    },
+    {
+      "name": "now_epoch_ms",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "u128",
+      "line": 205
+    },
+    {
+      "name": "extract_pm_and_pmt",
+      "visibility": "pub",
+      "parameters": [
+        "grpc_req: Option<&Value>"
+      ],
+      "return_type": "(Option<String>, Option<String>)",
+      "line": 214
+    },
+    {
+      "name": "suite_service_name",
+      "visibility": "",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "&'static str",
+      "line": 257
+    },
+    {
+      "name": "suite_sort_key",
+      "visibility": "",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "usize",
+      "line": 273
+    },
+    {
+      "name": "sanitize_report_entry_in_place",
+      "visibility": "",
+      "parameters": [
+        "entry: &mut ReportEntry"
+      ],
+      "return_type": "",
+      "line": 302
+    },
+    {
+      "name": "normalize_sensitive_key",
+      "visibility": "",
+      "parameters": [
+        "key: &str"
+      ],
+      "return_type": "String",
+      "line": 324
+    },
+    {
+      "name": "is_sensitive_key",
+      "visibility": "",
+      "parameters": [
+        "key: &str"
+      ],
+      "return_type": "bool",
+      "line": 331
+    },
+    {
+      "name": "mask_json_value",
+      "visibility": "",
+      "parameters": [
+        "value: &mut Value"
+      ],
+      "return_type": "",
+      "line": 352
+    },
+    {
+      "name": "mask_sensitive_text",
+      "visibility": "",
+      "parameters": [
+        "text: &str"
+      ],
+      "return_type": "String",
+      "line": 375
+    },
+    {
+      "name": "mask_sensitive_header_line",
+      "visibility": "",
+      "parameters": [
+        "line: &str"
+      ],
+      "return_type": "String",
+      "line": 384
+    },
+    {
+      "name": "mask_bearer_tokens",
+      "visibility": "",
+      "parameters": [
+        "line: &str"
+      ],
+      "return_type": "String",
+      "line": 411
+    },
+    {
+      "name": "sanitize_anchor",
+      "visibility": "",
+      "parameters": [
+        "value: &str"
+      ],
+      "return_type": "String",
+      "line": 443
+    },
+    {
+      "name": "connector_suite_relative_path",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str"
+      ],
+      "return_type": "String",
+      "line": 468
+    },
+    {
+      "name": "connector_suite_file_path",
+      "visibility": "",
+      "parameters": [
+        "report_dir: &Path",
+        "connector: &str",
+        "suite: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 476
+    },
+    {
+      "name": "connector_scenario_relative_path_from_suite",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "String",
+      "line": 483
+    },
+    {
+      "name": "connector_scenario_file_path",
+      "visibility": "",
+      "parameters": [
+        "report_dir: &Path",
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 491
+    },
+    {
+      "name": "split_dependency_label",
+      "visibility": "",
+      "parameters": [
+        "label: &str"
+      ],
+      "return_type": "Option<(&str, &str)>",
+      "line": 504
+    },
+    {
+      "name": "latest_dependency_entry_before",
+      "visibility": "",
+      "parameters": [
+        "report: &ScenarioRunReport",
+        "main: &MatrixEntry",
+        "dependency_label: &str"
+      ],
+      "return_type": "Option<ReportEntry>",
+      "line": 523
+    },
+    {
+      "name": "dependency_chain_summary",
+      "visibility": "",
+      "parameters": [
+        "report: &ScenarioRunReport",
+        "main: &MatrixEntry"
+      ],
+      "return_type": "String",
+      "line": 544
+    },
+    {
+      "name": "generate_md",
+      "visibility": "",
+      "parameters": [
+        "json_path: &Path",
+        "report: &ScenarioRunReport"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 560
+    },
+    {
+      "name": "push_collapsible_code_block",
+      "visibility": "",
+      "parameters": [
+        "md: &mut String",
+        "summary: &str",
+        "language: &str",
+        "content: Option<&str>",
+        "empty_message: &str"
+      ],
+      "return_type": "",
+      "line": 811
+    },
+    {
+      "name": "render_connector_suite_markdown",
+      "visibility": "",
+      "parameters": [
+        "report: &ScenarioRunReport",
+        "connector: &str",
+        "suite: &str",
+        "entries: &[MatrixEntry]"
+      ],
+      "return_type": "String",
+      "line": 854
+    },
+    {
+      "name": "render_connector_scenario_markdown",
+      "visibility": "",
+      "parameters": [
+        "report: &ScenarioRunReport",
+        "entry: &MatrixEntry"
+      ],
+      "return_type": "String",
+      "line": 927
+    },
+    {
+      "name": "percent",
+      "visibility": "",
+      "parameters": [
+        "numerator: usize",
+        "denominator: usize"
+      ],
+      "return_type": "f64",
+      "line": 1062
+    },
+    {
+      "name": "extract_pm_and_pmt_from_card_request",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1080
+    },
+    {
+      "name": "extract_pm_and_pmt_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1095
+    },
+    {
+      "name": "suite_ordering_is_consistent",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1103
+    },
+    {
+      "name": "generated_markdown_uses_plain_status_without_badges",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1114
+    },
+    {
+      "name": "sanitization_masks_sensitive_grpc_trace_and_json_fields",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1261
+    },
+    {
+      "name": "bearer_masking_is_idempotent_and_masks_multiple_tokens",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1338
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    collections::{BTreeMap, BTreeSet},\n    fs,\n    path::{Path, PathBuf},\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json::Value;",
+    "use std::fs;",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "env",
+      "line": 78
+    },
+    {
+      "name": "vec",
+      "line": 121
+    },
+    {
+      "name": "format",
+      "line": 133
+    },
+    {
+      "name": "format",
+      "line": 156
+    },
+    {
+      "name": "format",
+      "line": 158
+    },
+    {
+      "name": "eprintln",
+      "line": 162
+    },
+    {
+      "name": "eprintln",
+      "line": 162
+    },
+    {
+      "name": "format",
+      "line": 171
+    },
+    {
+      "name": "format",
+      "line": 173
+    },
+    {
+      "name": "eprintln",
+      "line": 189
+    },
+    {
+      "name": "eprintln",
+      "line": 189
+    },
+    {
+      "name": "eprintln",
+      "line": 196
+    },
+    {
+      "name": "eprintln",
+      "line": 196
+    },
+    {
+      "name": "format",
+      "line": 401
+    },
+    {
+      "name": "format",
+      "line": 469
+    },
+    {
+      "name": "format",
+      "line": 480
+    },
+    {
+      "name": "format",
+      "line": 484
+    },
+    {
+      "name": "format",
+      "line": 501
+    },
+    {
+      "name": "format",
+      "line": 554
+    },
+    {
+      "name": "format",
+      "line": 563
+    },
+    {
+      "name": "format",
+      "line": 572
+    },
+    {
+      "name": "format",
+      "line": 582
+    },
+    {
+      "name": "format",
+      "line": 589
+    },
+    {
+      "name": "format",
+      "line": 649
+    },
+    {
+      "name": "format",
+      "line": 707
+    },
+    {
+      "name": "format",
+      "line": 721
+    },
+    {
+      "name": "format",
+      "line": 732
+    },
+    {
+      "name": "format",
+      "line": 742
+    },
+    {
+      "name": "format",
+      "line": 759
+    },
+    {
+      "name": "format",
+      "line": 766
+    },
+    {
+      "name": "format",
+      "line": 775
+    },
+    {
+      "name": "format",
+      "line": 786
+    },
+    {
+      "name": "format",
+      "line": 795
+    },
+    {
+      "name": "format",
+      "line": 822
+    },
+    {
+      "name": "format",
+      "line": 828
+    },
+    {
+      "name": "format",
+      "line": 866
+    },
+    {
+      "name": "format",
+      "line": 871
+    },
+    {
+      "name": "format",
+      "line": 876
+    },
+    {
+      "name": "format",
+      "line": 898
+    },
+    {
+      "name": "format",
+      "line": 914
+    },
+    {
+      "name": "format",
+      "line": 919
+    },
+    {
+      "name": "format",
+      "line": 929
+    },
+    {
+      "name": "format",
+      "line": 935
+    },
+    {
+      "name": "format",
+      "line": 940
+    },
+    {
+      "name": "format",
+      "line": 941
+    },
+    {
+      "name": "format",
+      "line": 943
+    },
+    {
+      "name": "format",
+      "line": 961
+    },
+    {
+      "name": "format",
+      "line": 1013
+    },
+    {
+      "name": "format",
+      "line": 1054
+    },
+    {
+      "name": "json",
+      "line": 1081
+    },
+    {
+      "name": "assert_eq",
+      "line": 1090
+    },
+    {
+      "name": "assert_eq",
+      "line": 1090
+    },
+    {
+      "name": "assert_eq",
+      "line": 1091
+    },
+    {
+      "name": "assert_eq",
+      "line": 1091
+    },
+    {
+      "name": "json",
+      "line": 1096
+    },
+    {
+      "name": "assert",
+      "line": 1098
+    },
+    {
+      "name": "assert",
+      "line": 1098
+    },
+    {
+      "name": "assert",
+      "line": 1099
+    },
+    {
+      "name": "assert",
+      "line": 1099
+    },
+    {
+      "name": "assert",
+      "line": 1104
+    },
+    {
+      "name": "assert",
+      "line": 1104
+    },
+    {
+      "name": "assert",
+      "line": 1105
+    },
+    {
+      "name": "assert",
+      "line": 1105
+    },
+    {
+      "name": "assert",
+      "line": 1106
+    },
+    {
+      "name": "assert",
+      "line": 1106
+    },
+    {
+      "name": "assert",
+      "line": 1107
+    },
+    {
+      "name": "assert",
+      "line": 1107
+    },
+    {
+      "name": "assert",
+      "line": 1108
+    },
+    {
+      "name": "assert",
+      "line": 1108
+    },
+    {
+      "name": "assert",
+      "line": 1109
+    },
+    {
+      "name": "assert",
+      "line": 1109
+    },
+    {
+      "name": "assert",
+      "line": 1110
+    },
+    {
+      "name": "assert",
+      "line": 1110
+    },
+    {
+      "name": "format",
+      "line": 1115
+    },
+    {
+      "name": "vec",
+      "line": 1120
+    },
+    {
+      "name": "assert",
+      "line": 1184
+    },
+    {
+      "name": "assert",
+      "line": 1184
+    },
+    {
+      "name": "assert",
+      "line": 1185
+    },
+    {
+      "name": "assert",
+      "line": 1185
+    },
+    {
+      "name": "assert",
+      "line": 1186
+    },
+    {
+      "name": "assert",
+      "line": 1186
+    },
+    {
+      "name": "assert",
+      "line": 1187
+    },
+    {
+      "name": "assert",
+      "line": 1187
+    },
+    {
+      "name": "assert",
+      "line": 1188
+    },
+    {
+      "name": "assert",
+      "line": 1188
+    },
+    {
+      "name": "assert",
+      "line": 1190
+    },
+    {
+      "name": "assert",
+      "line": 1190
+    },
+    {
+      "name": "assert",
+      "line": 1191
+    },
+    {
+      "name": "assert",
+      "line": 1191
+    },
+    {
+      "name": "assert",
+      "line": 1192
+    },
+    {
+      "name": "assert",
+      "line": 1192
+    },
+    {
+      "name": "assert",
+      "line": 1193
+    },
+    {
+      "name": "assert",
+      "line": 1193
+    },
+    {
+      "name": "assert",
+      "line": 1194
+    },
+    {
+      "name": "assert",
+      "line": 1194
+    },
+    {
+      "name": "assert",
+      "line": 1195
+    },
+    {
+      "name": "assert",
+      "line": 1195
+    },
+    {
+      "name": "assert",
+      "line": 1196
+    },
+    {
+      "name": "assert",
+      "line": 1196
+    },
+    {
+      "name": "assert",
+      "line": 1205
+    },
+    {
+      "name": "assert",
+      "line": 1205
+    },
+    {
+      "name": "assert",
+      "line": 1206
+    },
+    {
+      "name": "assert",
+      "line": 1206
+    },
+    {
+      "name": "assert",
+      "line": 1218
+    },
+    {
+      "name": "assert",
+      "line": 1218
+    },
+    {
+      "name": "assert",
+      "line": 1221
+    },
+    {
+      "name": "assert",
+      "line": 1221
+    },
+    {
+      "name": "assert",
+      "line": 1222
+    },
+    {
+      "name": "assert",
+      "line": 1222
+    },
+    {
+      "name": "assert",
+      "line": 1223
+    },
+    {
+      "name": "assert",
+      "line": 1223
+    },
+    {
+      "name": "assert",
+      "line": 1224
+    },
+    {
+      "name": "assert",
+      "line": 1224
+    },
+    {
+      "name": "assert",
+      "line": 1225
+    },
+    {
+      "name": "assert",
+      "line": 1225
+    },
+    {
+      "name": "assert",
+      "line": 1226
+    },
+    {
+      "name": "assert",
+      "line": 1226
+    },
+    {
+      "name": "assert",
+      "line": 1227
+    },
+    {
+      "name": "assert",
+      "line": 1227
+    },
+    {
+      "name": "assert",
+      "line": 1239
+    },
+    {
+      "name": "assert",
+      "line": 1239
+    },
+    {
+      "name": "assert",
+      "line": 1242
+    },
+    {
+      "name": "assert",
+      "line": 1242
+    },
+    {
+      "name": "assert",
+      "line": 1245
+    },
+    {
+      "name": "assert",
+      "line": 1245
+    },
+    {
+      "name": "assert",
+      "line": 1246
+    },
+    {
+      "name": "assert",
+      "line": 1246
+    },
+    {
+      "name": "assert",
+      "line": 1255
+    },
+    {
+      "name": "assert",
+      "line": 1255
+    },
+    {
+      "name": "vec",
+      "line": 1274
+    },
+    {
+      "name": "json",
+      "line": 1275
+    },
+    {
+      "name": "json",
+      "line": 1284
+    },
+    {
+      "name": "assert",
+      "line": 1303
+    },
+    {
+      "name": "assert",
+      "line": 1303
+    },
+    {
+      "name": "assert",
+      "line": 1304
+    },
+    {
+      "name": "assert",
+      "line": 1304
+    },
+    {
+      "name": "assert",
+      "line": 1305
+    },
+    {
+      "name": "assert",
+      "line": 1305
+    },
+    {
+      "name": "assert",
+      "line": 1306
+    },
+    {
+      "name": "assert",
+      "line": 1306
+    },
+    {
+      "name": "assert",
+      "line": 1307
+    },
+    {
+      "name": "assert",
+      "line": 1307
+    },
+    {
+      "name": "assert",
+      "line": 1308
+    },
+    {
+      "name": "assert",
+      "line": 1308
+    },
+    {
+      "name": "assert",
+      "line": 1309
+    },
+    {
+      "name": "assert",
+      "line": 1309
+    },
+    {
+      "name": "assert",
+      "line": 1310
+    },
+    {
+      "name": "assert",
+      "line": 1310
+    },
+    {
+      "name": "assert_eq",
+      "line": 1315
+    },
+    {
+      "name": "assert_eq",
+      "line": 1315
+    },
+    {
+      "name": "assert_eq",
+      "line": 1319
+    },
+    {
+      "name": "assert_eq",
+      "line": 1319
+    },
+    {
+      "name": "assert_eq",
+      "line": 1325
+    },
+    {
+      "name": "assert_eq",
+      "line": 1325
+    },
+    {
+      "name": "assert_eq",
+      "line": 1331
+    },
+    {
+      "name": "assert_eq",
+      "line": 1331
+    },
+    {
+      "name": "assert_eq",
+      "line": 1343
+    },
+    {
+      "name": "assert_eq",
+      "line": 1343
+    },
+    {
+      "name": "assert",
+      "line": 1344
+    },
+    {
+      "name": "assert",
+      "line": 1344
+    },
+    {
+      "name": "assert",
+      "line": 1345
+    },
+    {
+      "name": "assert",
+      "line": 1345
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

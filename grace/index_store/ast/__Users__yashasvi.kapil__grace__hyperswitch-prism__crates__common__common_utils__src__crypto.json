@@ -1,0 +1,1219 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/crypto.rs",
+  "structs": [
+    {
+      "name": "NonceSequence",
+      "visibility": "",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 18
+    },
+    {
+      "name": "NoAlgorithm",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug"
+      ],
+      "line": 114
+    },
+    {
+      "name": "HmacSha1",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 159
+    },
+    {
+      "name": "HmacSha256",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 187
+    },
+    {
+      "name": "HmacSha512",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 215
+    },
+    {
+      "name": "Blake3",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 243
+    },
+    {
+      "name": "GcmAes256",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 279
+    },
+    {
+      "name": "Ed25519",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 335
+    },
+    {
+      "name": "Sha512",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 413
+    },
+    {
+      "name": "Sha256",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 417
+    },
+    {
+      "name": "Md5",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 451
+    },
+    {
+      "name": "Encryptable",
+      "visibility": "pub",
+      "fields": [
+        "inner",
+        "encrypted"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Clone"
+      ],
+      "line": 518
+    },
+    {
+      "name": "TripleDesEde3CBC",
+      "visibility": "pub",
+      "fields": [
+        "padding",
+        "iv"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Clone"
+      ],
+      "line": 628
+    },
+    {
+      "name": "RsaOaepSha256",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 688
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "SignMessage",
+      "visibility": "pub",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 70
+    },
+    {
+      "name": "VerifySignature",
+      "visibility": "pub",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 80
+    },
+    {
+      "name": "EncodeMessage",
+      "visibility": "pub",
+      "methods": [
+        "encode_message"
+      ],
+      "line": 92
+    },
+    {
+      "name": "DecodeMessage",
+      "visibility": "pub",
+      "methods": [
+        "decode_message"
+      ],
+      "line": 102
+    },
+    {
+      "name": "GenerateDigest",
+      "visibility": "pub",
+      "methods": [
+        "generate_digest"
+      ],
+      "line": 420
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "NonceSequence",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "current",
+        "from_bytes"
+      ],
+      "line": 20
+    },
+    {
+      "type_name": "NonceSequence",
+      "trait_name": "aead::NonceSequence",
+      "methods": [
+        "advance"
+      ],
+      "line": 56
+    },
+    {
+      "type_name": "NoAlgorithm",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 116
+    },
+    {
+      "type_name": "NoAlgorithm",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 126
+    },
+    {
+      "type_name": "NoAlgorithm",
+      "trait_name": "EncodeMessage",
+      "methods": [
+        "encode_message"
+      ],
+      "line": 137
+    },
+    {
+      "type_name": "NoAlgorithm",
+      "trait_name": "DecodeMessage",
+      "methods": [
+        "decode_message"
+      ],
+      "line": 147
+    },
+    {
+      "type_name": "HmacSha1",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 161
+    },
+    {
+      "type_name": "HmacSha1",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 172
+    },
+    {
+      "type_name": "HmacSha256",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 189
+    },
+    {
+      "type_name": "HmacSha256",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 200
+    },
+    {
+      "type_name": "HmacSha512",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 217
+    },
+    {
+      "type_name": "HmacSha512",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 228
+    },
+    {
+      "type_name": "Blake3",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 245
+    },
+    {
+      "type_name": "Blake3",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 252
+    },
+    {
+      "type_name": "Blake3",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 264
+    },
+    {
+      "type_name": "GcmAes256",
+      "trait_name": "EncodeMessage",
+      "methods": [
+        "encode_message"
+      ],
+      "line": 281
+    },
+    {
+      "type_name": "GcmAes256",
+      "trait_name": "DecodeMessage",
+      "methods": [
+        "decode_message"
+      ],
+      "line": 303
+    },
+    {
+      "type_name": "Ed25519",
+      "trait_name": null,
+      "methods": [
+        "validate_inputs"
+      ],
+      "line": 337
+    },
+    {
+      "type_name": "Ed25519",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 368
+    },
+    {
+      "type_name": "Ed25519",
+      "trait_name": "SignMessage",
+      "methods": [
+        "sign_message"
+      ],
+      "line": 391
+    },
+    {
+      "type_name": "Sha512",
+      "trait_name": "GenerateDigest",
+      "methods": [
+        "generate_digest"
+      ],
+      "line": 425
+    },
+    {
+      "type_name": "Sha512",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 431
+    },
+    {
+      "type_name": "Md5",
+      "trait_name": "GenerateDigest",
+      "methods": [
+        "generate_digest"
+      ],
+      "line": 453
+    },
+    {
+      "type_name": "Md5",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 460
+    },
+    {
+      "type_name": "Sha256",
+      "trait_name": "GenerateDigest",
+      "methods": [
+        "generate_digest"
+      ],
+      "line": 474
+    },
+    {
+      "type_name": "Sha256",
+      "trait_name": "VerifySignature",
+      "methods": [
+        "verify_signature"
+      ],
+      "line": 481
+    },
+    {
+      "type_name": "Encryptable",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 523
+    },
+    {
+      "type_name": "Encryptable",
+      "trait_name": null,
+      "methods": [
+        "into_inner",
+        "get_inner",
+        "into_encrypted",
+        "deserialize_inner_value",
+        "map"
+      ],
+      "line": 536
+    },
+    {
+      "type_name": "Encryptable",
+      "trait_name": "Deref",
+      "methods": [
+        "deref"
+      ],
+      "line": 581
+    },
+    {
+      "type_name": "Encryptable",
+      "trait_name": "hyperswitch_masking::Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 588
+    },
+    {
+      "type_name": "Encryptable",
+      "trait_name": "PartialEq",
+      "methods": [
+        "eq"
+      ],
+      "line": 600
+    },
+    {
+      "type_name": "TripleDesEde3CBC",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 633
+    },
+    {
+      "type_name": "TripleDesEde3CBC",
+      "trait_name": "EncodeMessage",
+      "methods": [
+        "encode_message"
+      ],
+      "line": 659
+    },
+    {
+      "type_name": "RsaOaepSha256",
+      "trait_name": null,
+      "methods": [
+        "encrypt"
+      ],
+      "line": 690
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<Self, ring::error::Unspecified>",
+      "line": 27
+    },
+    {
+      "name": "current",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "[u8; aead::NONCE_LEN]",
+      "line": 41
+    },
+    {
+      "name": "from_bytes",
+      "visibility": "",
+      "parameters": [
+        "bytes: [u8; aead::NONCE_LEN]"
+      ],
+      "return_type": "Self",
+      "line": 48
+    },
+    {
+      "name": "advance",
+      "visibility": "",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "Result<aead::Nonce, ring::error::Unspecified>",
+      "line": 57
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "_msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 117
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "_signature: &[u8]",
+        "_msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 127
+    },
+    {
+      "name": "encode_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 138
+    },
+    {
+      "name": "decode_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "msg: Secret<Vec<u8>, EncryptionStrategy>"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 148
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 162
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 173
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 190
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 201
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 218
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 229
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "key: impl Into<String>"
+      ],
+      "return_type": "Self",
+      "line": 247
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 253
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 265
+    },
+    {
+      "name": "encode_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 282
+    },
+    {
+      "name": "decode_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: Secret<Vec<u8>, EncryptionStrategy>"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 304
+    },
+    {
+      "name": "validate_inputs",
+      "visibility": "",
+      "parameters": [
+        "public_key: &[u8]",
+        "signature: &[u8]"
+      ],
+      "return_type": "CustomResult<(), errors::CryptoError>",
+      "line": 342
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "public_key: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 369
+    },
+    {
+      "name": "sign_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 392
+    },
+    {
+      "name": "generate_digest",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "message: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 426
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 432
+    },
+    {
+      "name": "generate_digest",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "message: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 454
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 461
+    },
+    {
+      "name": "generate_digest",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "message: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 475
+    },
+    {
+      "name": "verify_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secret: &[u8]",
+        "signature: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, errors::CryptoError>",
+      "line": 482
+    },
+    {
+      "name": "generate_cryptographically_secure_random_string",
+      "visibility": "pub",
+      "parameters": [
+        "length: usize"
+      ],
+      "return_type": "String",
+      "line": 499
+    },
+    {
+      "name": "generate_cryptographically_secure_random_bytes",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "[u8; N]",
+      "line": 508
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "masked_data: Secret<T, S>",
+        "encrypted_data: Secret<Vec<u8>, EncryptionStrategy>"
+      ],
+      "return_type": "Self",
+      "line": 525
+    },
+    {
+      "name": "into_inner",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "T",
+      "line": 539
+    },
+    {
+      "name": "get_inner",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&T",
+      "line": 545
+    },
+    {
+      "name": "into_encrypted",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Secret<Vec<u8>, EncryptionStrategy>",
+      "line": 551
+    },
+    {
+      "name": "deserialize_inner_value",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "f: F"
+      ],
+      "return_type": "CustomResult<Encryptable<U>, errors::ParsingError>\n    where\n        F: FnOnce(T) -> CustomResult<U, errors::ParsingError>,\n        U: Clone,",
+      "line": 556
+    },
+    {
+      "name": "map",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "f: impl FnOnce(T) -> U"
+      ],
+      "return_type": "U) -> Encryptable<U>",
+      "line": 571
+    },
+    {
+      "name": "deref",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Self::Target",
+      "line": 583
+    },
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: serde::Serializer,",
+      "line": 592
+    },
+    {
+      "name": "eq",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "other: &Self"
+      ],
+      "return_type": "bool",
+      "line": 604
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "padding: Option<common_enums::CryptoPadding>",
+        "iv: Vec<u8>"
+      ],
+      "return_type": "CustomResult<Self, errors::CryptoError>",
+      "line": 647
+    },
+    {
+      "name": "encode_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secret: &[u8]",
+        "msg: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 660
+    },
+    {
+      "name": "encrypt",
+      "visibility": "pub",
+      "parameters": [
+        "public_key_der: &[u8]",
+        "plaintext: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::CryptoError>",
+      "line": 692
+    },
+    {
+      "name": "test_hmac_sha256_sign_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 745
+    },
+    {
+      "name": "test_hmac_sha256_verify_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 760
+    },
+    {
+      "name": "test_sha256_verify_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 784
+    },
+    {
+      "name": "test_hmac_sha512_sign_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 808
+    },
+    {
+      "name": "test_hmac_sha512_verify_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 822
+    },
+    {
+      "name": "test_gcm_aes_256_encode_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 845
+    },
+    {
+      "name": "test_gcm_aes_256_decode_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 865
+    },
+    {
+      "name": "test_md5_digest",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 901
+    },
+    {
+      "name": "test_md5_verify_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 913
+    }
+  ],
+  "use_statements": [
+    "use std::ops::Deref;",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use md5;",
+    "use ring::{\n    aead::{self, BoundKey, OpeningKey, SealingKey, UnboundKey},\n    hmac,\n};",
+    "use crate::{\n    errors::{self, CustomResult},\n    pii::{self, EncryptionStrategy},\n};",
+    "use ring::rand::{SecureRandom, SystemRandom};",
+    "use rand::distributions::DistString;",
+    "use rand::RngCore;",
+    "use openssl::md::Md;",
+    "use openssl::pkey::PKey;",
+    "use openssl::pkey_ctx::PkeyCtx;",
+    "use openssl::rsa::Padding;",
+    "use super::{DecodeMessage, EncodeMessage, SignMessage, VerifySignature};",
+    "use crate::crypto::GenerateDigest;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 348
+    },
+    {
+      "name": "format",
+      "line": 357
+    },
+    {
+      "name": "format",
+      "line": 398
+    },
+    {
+      "name": "vec",
+      "line": 674
+    },
+    {
+      "name": "vec",
+      "line": 726
+    },
+    {
+      "name": "assert_eq",
+      "line": 756
+    },
+    {
+      "name": "assert_eq",
+      "line": 756
+    },
+    {
+      "name": "assert",
+      "line": 774
+    },
+    {
+      "name": "assert",
+      "line": 774
+    },
+    {
+      "name": "assert",
+      "line": 780
+    },
+    {
+      "name": "assert",
+      "line": 780
+    },
+    {
+      "name": "assert",
+      "line": 798
+    },
+    {
+      "name": "assert",
+      "line": 798
+    },
+    {
+      "name": "assert",
+      "line": 804
+    },
+    {
+      "name": "assert",
+      "line": 804
+    },
+    {
+      "name": "assert_eq",
+      "line": 818
+    },
+    {
+      "name": "assert_eq",
+      "line": 818
+    },
+    {
+      "name": "assert",
+      "line": 835
+    },
+    {
+      "name": "assert",
+      "line": 835
+    },
+    {
+      "name": "assert",
+      "line": 841
+    },
+    {
+      "name": "assert",
+      "line": 841
+    },
+    {
+      "name": "assert_eq",
+      "line": 856
+    },
+    {
+      "name": "assert_eq",
+      "line": 856
+    },
+    {
+      "name": "assert_eq",
+      "line": 889
+    },
+    {
+      "name": "assert_eq",
+      "line": 889
+    },
+    {
+      "name": "assert",
+      "line": 897
+    },
+    {
+      "name": "assert",
+      "line": 897
+    },
+    {
+      "name": "assert_eq",
+      "line": 903
+    },
+    {
+      "name": "assert_eq",
+      "line": 903
+    },
+    {
+      "name": "assert",
+      "line": 926
+    },
+    {
+      "name": "assert",
+      "line": 926
+    },
+    {
+      "name": "assert",
+      "line": 932
+    },
+    {
+      "name": "assert",
+      "line": 932
+    }
+  ],
+  "modules": [
+    "crypto_tests"
+  ]
+}

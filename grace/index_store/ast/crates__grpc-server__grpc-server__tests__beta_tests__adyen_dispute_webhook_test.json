@@ -1,0 +1,236 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/beta_tests/adyen_dispute_webhook_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "build_adyen_webhook_json_body",
+      "visibility": "",
+      "parameters": [
+        "event_code: &str",
+        "reason: &str",
+        "adyen_dispute_status: Option<&str>"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 18
+    },
+    {
+      "name": "process_webhook_and_get_response",
+      "visibility": "",
+      "parameters": [
+        "client: &mut PaymentServiceClient<Channel>",
+        "json_body: serde_json::Value"
+      ],
+      "return_type": "DisputesSyncResponse",
+      "line": 63
+    },
+    {
+      "name": "test_notification_of_chargeback_undefended",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 151
+    },
+    {
+      "name": "test_notification_of_chargeback_pending",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 176
+    },
+    {
+      "name": "test_chargeback_undefended",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 201
+    },
+    {
+      "name": "test_chargeback_pending",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 226
+    },
+    {
+      "name": "test_chargeback_lost",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 251
+    },
+    {
+      "name": "test_chargeback_accepted",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 276
+    },
+    {
+      "name": "test_chargeback_reversed_pending",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 301
+    },
+    {
+      "name": "test_chargeback_reversed_won",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 326
+    },
+    {
+      "name": "test_second_chargeback_lost",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 351
+    },
+    {
+      "name": "test_prearbitration_won_with_status_won",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 376
+    },
+    {
+      "name": "test_prearbitration_won_with_status_pending",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 401
+    },
+    {
+      "name": "test_prearbitration_lost",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 426
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use hyperswitch_masking::ExposeInterface;",
+    "use grpc_api_types::payments::{\n    payment_service_client::PaymentServiceClient,\n    webhook_response_content::Content as GrpcWebhookContent, DisputeStage as GrpcDisputeStage,\n    DisputeStatus as GrpcDisputeStatus, DisputesSyncResponse, PaymentServiceTransformRequest,\n    RequestDetails,\n};",
+    "use serde_json::json;",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "json",
+      "line": 25
+    },
+    {
+      "name": "json",
+      "line": 37
+    },
+    {
+      "name": "panic",
+      "line": 96
+    },
+    {
+      "name": "grpc_test",
+      "line": 152
+    },
+    {
+      "name": "grpc_test",
+      "line": 152
+    },
+    {
+      "name": "grpc_test",
+      "line": 177
+    },
+    {
+      "name": "grpc_test",
+      "line": 177
+    },
+    {
+      "name": "grpc_test",
+      "line": 202
+    },
+    {
+      "name": "grpc_test",
+      "line": 202
+    },
+    {
+      "name": "grpc_test",
+      "line": 227
+    },
+    {
+      "name": "grpc_test",
+      "line": 227
+    },
+    {
+      "name": "grpc_test",
+      "line": 252
+    },
+    {
+      "name": "grpc_test",
+      "line": 252
+    },
+    {
+      "name": "grpc_test",
+      "line": 277
+    },
+    {
+      "name": "grpc_test",
+      "line": 277
+    },
+    {
+      "name": "grpc_test",
+      "line": 302
+    },
+    {
+      "name": "grpc_test",
+      "line": 302
+    },
+    {
+      "name": "grpc_test",
+      "line": 327
+    },
+    {
+      "name": "grpc_test",
+      "line": 327
+    },
+    {
+      "name": "grpc_test",
+      "line": 352
+    },
+    {
+      "name": "grpc_test",
+      "line": 352
+    },
+    {
+      "name": "grpc_test",
+      "line": 377
+    },
+    {
+      "name": "grpc_test",
+      "line": 377
+    },
+    {
+      "name": "grpc_test",
+      "line": 402
+    },
+    {
+      "name": "grpc_test",
+      "line": 402
+    },
+    {
+      "name": "grpc_test",
+      "line": 427
+    },
+    {
+      "name": "grpc_test",
+      "line": 427
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

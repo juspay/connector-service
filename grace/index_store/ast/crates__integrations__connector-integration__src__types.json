@@ -1,0 +1,71 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/types.rs",
+  "structs": [
+    {
+      "name": "ConnectorData",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "connector_name"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ResponseRouterData",
+      "visibility": "pub",
+      "fields": [
+        "response",
+        "router_data",
+        "http_code"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 110
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ConnectorData",
+      "trait_name": null,
+      "methods": [
+        "get_connector_by_name",
+        "convert_connector"
+      ],
+      "line": 14
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_connector_by_name",
+      "visibility": "pub",
+      "parameters": [
+        "connector_name: &ConnectorEnum"
+      ],
+      "return_type": "Self",
+      "line": 17
+    },
+    {
+      "name": "convert_connector",
+      "visibility": "",
+      "parameters": [
+        "connector_name: ConnectorEnum"
+      ],
+      "return_type": "BoxedConnector<T>",
+      "line": 25
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};",
+    "use interfaces::connector_types::BoxedConnector;",
+    "use crate::connectors;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

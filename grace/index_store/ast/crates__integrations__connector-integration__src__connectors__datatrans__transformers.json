@@ -1,0 +1,1396 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/datatrans/transformers.rs",
+  "structs": [
+    {
+      "name": "DatatransAuthType",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "password"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 26
+    },
+    {
+      "name": "DatatransErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 62
+    },
+    {
+      "name": "DatatransErrorDetail",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 67
+    },
+    {
+      "name": "DatatransCard",
+      "visibility": "pub",
+      "fields": [
+        "alias",
+        "expiry_month",
+        "expiry_year",
+        "number",
+        "cvv",
+        "card_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 96
+    },
+    {
+      "name": "DatatransPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "currency",
+        "refno",
+        "amount",
+        "card",
+        "auto_settle",
+        "option"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 117
+    },
+    {
+      "name": "DatatransPaymentOptions",
+      "visibility": "pub",
+      "fields": [
+        "create_alias"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 133
+    },
+    {
+      "name": "DatatransCardResponse",
+      "visibility": "pub",
+      "fields": [
+        "masked"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 207
+    },
+    {
+      "name": "DatatransPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "acquirer_authorization_code",
+        "card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 215
+    },
+    {
+      "name": "DatatransSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 272
+    },
+    {
+      "name": "DatatransHistoryEntry",
+      "visibility": "pub",
+      "fields": [
+        "action",
+        "amount",
+        "success",
+        "date"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 332
+    },
+    {
+      "name": "DatatransSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "transaction_type",
+        "status",
+        "currency",
+        "refno",
+        "refno2",
+        "payment_method",
+        "detail",
+        "card",
+        "history"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 342
+    },
+    {
+      "name": "DatatransTransactionDetail",
+      "visibility": "pub",
+      "fields": [
+        "authorize",
+        "settle"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 364
+    },
+    {
+      "name": "DatatransActionDetail",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "acquirer_authorization_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 374
+    },
+    {
+      "name": "DatatransCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "refno",
+        "refno2"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 432
+    },
+    {
+      "name": "DatatransCaptureResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "acquirer_authorization_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 476
+    },
+    {
+      "name": "DatatransRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "refno",
+        "refno2"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 528
+    },
+    {
+      "name": "DatatransRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "acquirer_authorization_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 572
+    },
+    {
+      "name": "DatatransRefundSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 605
+    },
+    {
+      "name": "DatatransRefundSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "transaction_type",
+        "status",
+        "currency",
+        "refno",
+        "refno2"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 657
+    },
+    {
+      "name": "DatatransVoidRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 701
+    },
+    {
+      "name": "DatatransVoidResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "acquirer_authorization_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 731
+    }
+  ],
+  "enums": [
+    {
+      "name": "DatatransPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Initialized",
+        "Authenticated",
+        "Authorized",
+        "Settled",
+        "Transmitted",
+        "Canceled",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 298
+    },
+    {
+      "name": "DatatransRefundStatus",
+      "visibility": "pub",
+      "variants": [
+        "Initialized",
+        "Settled",
+        "Transmitted",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 631
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "DatatransAuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_basic_auth"
+      ],
+      "line": 31
+    },
+    {
+      "type_name": "DatatransAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "DatatransErrorResponse",
+      "trait_name": null,
+      "methods": [
+        "code",
+        "message"
+      ],
+      "line": 72
+    },
+    {
+      "type_name": "DatatransErrorResponse",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 82
+    },
+    {
+      "type_name": "DatatransPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 138
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 223
+    },
+    {
+      "type_name": "DatatransSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 274
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 309
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 380
+    },
+    {
+      "type_name": "DatatransCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 440
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 483
+    },
+    {
+      "type_name": "DatatransRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 536
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 578
+    },
+    {
+      "type_name": "DatatransRefundSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 607
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 639
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 668
+    },
+    {
+      "type_name": "DatatransVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 705
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 738
+    }
+  ],
+  "functions": [
+    {
+      "name": "generate_basic_auth",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 32
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 42
+    },
+    {
+      "name": "code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 73
+    },
+    {
+      "name": "message",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 77
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 83
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::DatatransRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 153
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 229
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: super::DatatransRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 284
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: DatatransPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 310
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 385
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::DatatransRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 450
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 488
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::DatatransRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 546
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 583
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: super::DatatransRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 617
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: DatatransRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 640
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransRefundSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 673
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: super::DatatransRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 715
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<DatatransVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 743
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use base64::{engine::general_purpose::STANDARD, Engine};",
+    "use common_enums::{AttemptStatus, Currency, RefundStatus};",
+    "use common_utils::MinorUnit;",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 33
+    },
+    {
+      "name": "format",
+      "line": 35
+    },
+    {
+      "name": "report",
+      "line": 52
+    }
+  ],
+  "modules": []
+}

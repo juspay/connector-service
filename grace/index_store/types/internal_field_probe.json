@@ -1,0 +1,352 @@
+{
+  "crate": "internal_field_probe",
+  "structs": [
+    {
+      "name": "FlowInfo",
+      "file": "crates/internal/field-probe/build.rs",
+      "fields": [
+        "key",
+        "service",
+        "rpc",
+        "request_type",
+        "transformer_fn",
+        "needs_oauth",
+        "needs_feature_data",
+        "needs_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "Rule",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "aliases",
+        "patch_type",
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "PatchConfig",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "rules"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "ConnectorRequestOverrides",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "connector_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "ProbeConfig",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "probe",
+        "access_token",
+        "oauth_connectors",
+        "skip_connectors",
+        "payment_methods",
+        "connector_metadata",
+        "connector_overrides"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "ProbeSettings",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "max_iterations"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "AccessTokenConfig",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "token",
+        "token_type",
+        "expires_in_seconds"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "OAuthConnector",
+      "file": "crates/internal/field-probe/src/config.rs",
+      "fields": [
+        "name"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "FlowMetadata",
+      "file": "crates/internal/field-probe/src/flow_metadata.rs",
+      "fields": [
+        "flow_key",
+        "service_rpc",
+        "description",
+        "service_name",
+        "rpc_name",
+        "category",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MessageSchema",
+      "file": "crates/internal/field-probe/src/flow_metadata.rs",
+      "fields": [
+        "comments",
+        "field_types"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ErrorStats",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "missing_field",
+        "not_implemented",
+        "not_supported",
+        "invalid_config",
+        "other"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "SamplePayload",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "url",
+        "method",
+        "headers",
+        "body"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "FlowResult",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "status",
+        "required_fields",
+        "proto_request",
+        "sample",
+        "error",
+        "service_rpc",
+        "description"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "ConnectorResult",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "connector",
+        "flows"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "ProbeManifest",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "flow_metadata",
+        "connectors",
+        "message_schemas",
+        "schema_version"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "CompactFlowResult",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "status",
+        "proto_request",
+        "sample",
+        "error"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "CompactConnectorResult",
+      "file": "crates/internal/field-probe/src/types.rs",
+      "fields": [
+        "connector",
+        "flows"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub(crate)"
+    }
+  ],
+  "enums": [
+    {
+      "name": "ProbeAttemptResult",
+      "file": "crates/internal/field-probe/src/probe_engine.rs",
+      "variants": [
+        "Success",
+        "NotImplemented",
+        "Error"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "ErrorAction",
+      "file": "crates/internal/field-probe/src/probe_engine.rs",
+      "variants": [
+        "Stop",
+        "PatchAndRetry"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "FlowStatus",
+      "file": "crates/internal/field-probe/src/status.rs",
+      "variants": [
+        "Supported",
+        "NotImplemented",
+        "NotSupported",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ErrorCategory",
+      "file": "crates/internal/field-probe/src/status.rs",
+      "variants": [
+        "NotImplemented",
+        "NotSupported",
+        "MissingField",
+        "InvalidConfig",
+        "Other"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": []
+}

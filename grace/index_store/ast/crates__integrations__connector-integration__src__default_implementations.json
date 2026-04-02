@@ -1,0 +1,25 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/default_implementations.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use crate::connectors::*;",
+    "use domain_types::{\n    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,\n    payment_method_data::PaymentMethodDataTypes,\n    router_request_types::VerifyWebhookSourceRequestData,\n    router_response_types::VerifyWebhookSourceResponseData,\n};",
+    "use interfaces::connector_integration_v2::ConnectorIntegrationV2;",
+    "use interfaces::connector_types::VerifyWebhookSourceV2;"
+  ],
+  "macro_calls": [
+    {
+      "name": "default_impl_verify_webhook_source_v2",
+      "line": 50
+    },
+    {
+      "name": "default_impl_verify_webhook_source_v2",
+      "line": 50
+    }
+  ],
+  "modules": []
+}

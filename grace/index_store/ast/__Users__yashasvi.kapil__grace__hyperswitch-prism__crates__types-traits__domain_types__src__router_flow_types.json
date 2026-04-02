@@ -1,0 +1,84 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/domain_types/src/router_flow_types.rs",
+  "structs": [
+    {
+      "name": "VerifyWebhookSource",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 4
+    },
+    {
+      "name": "ConnectorMandateDetails",
+      "visibility": "pub",
+      "fields": [
+        "connector_mandate_id"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 7
+    },
+    {
+      "name": "ConnectorNetworkTxnId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 12
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ConnectorNetworkTxnId",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "get_id"
+      ],
+      "line": 14
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "txn_id: hyperswitch_masking::Secret<String>"
+      ],
+      "return_type": "Self",
+      "line": 15
+    },
+    {
+      "name": "get_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&hyperswitch_masking::Secret<String>",
+      "line": 18
+    }
+  ],
+  "use_statements": [
+    "use serde::Serialize;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

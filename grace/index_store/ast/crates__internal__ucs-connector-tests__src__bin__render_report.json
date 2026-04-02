@@ -1,0 +1,138 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/bin/render_report.rs",
+  "structs": [
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "help",
+        "path"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 44
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 11
+    },
+    {
+      "name": "parse_args",
+      "visibility": "",
+      "parameters": [
+        "args: I"
+      ],
+      "return_type": "Result<CliArgs, String>\nwhere\n    I: IntoIterator,\n    I::Item: Into<String>,",
+      "line": 49
+    },
+    {
+      "name": "print_usage",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 73
+    },
+    {
+      "name": "parses_help_flag",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 87
+    },
+    {
+      "name": "parses_path_flag",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 98
+    },
+    {
+      "name": "errors_on_unknown_flag",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 109
+    }
+  ],
+  "use_statements": [
+    "use std::path::PathBuf;",
+    "use ucs_connector_tests::harness::report::{\n    regenerate_markdown_from_disk, regenerate_markdown_from_path, report_path,\n};",
+    "use super::parse_args;",
+    "use std::path::Path;"
+  ],
+  "macro_calls": [
+    {
+      "name": "eprintln",
+      "line": 15
+    },
+    {
+      "name": "eprintln",
+      "line": 15
+    },
+    {
+      "name": "println",
+      "line": 34
+    },
+    {
+      "name": "println",
+      "line": 34
+    },
+    {
+      "name": "eprintln",
+      "line": 37
+    },
+    {
+      "name": "eprintln",
+      "line": 37
+    },
+    {
+      "name": "format",
+      "line": 66
+    },
+    {
+      "name": "eprintln",
+      "line": 75
+    },
+    {
+      "name": "eprintln",
+      "line": 75
+    },
+    {
+      "name": "assert",
+      "line": 88
+    },
+    {
+      "name": "assert",
+      "line": 88
+    },
+    {
+      "name": "assert",
+      "line": 99
+    },
+    {
+      "name": "assert",
+      "line": 99
+    },
+    {
+      "name": "assert",
+      "line": 110
+    },
+    {
+      "name": "assert",
+      "line": 110
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

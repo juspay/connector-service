@@ -1,0 +1,44 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/flow_registry.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "probe_flow_by_definition",
+      "visibility": "pub",
+      "parameters": [
+        "def: &FlowDefinition",
+        "connector: &ConnectorEnum",
+        "config: &Arc<ucs_env::configs::Config>",
+        "auth: ConnectorSpecificConfig",
+        "metadata: &MaskedMetadata",
+        "pm_variants: &HashMap<String, fn() -> PaymentMethod>"
+      ],
+      "return_type": "PaymentMethod>,\n) -> Option<BTreeMap<String, FlowResult>>",
+      "line": 24
+    }
+  ],
+  "use_statements": [
+    "pub use generated::*;",
+    "use std::collections::BTreeMap;",
+    "use std::collections::HashMap;",
+    "use std::sync::Arc;",
+    "use common_utils::metadata::MaskedMetadata;",
+    "use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificConfig};",
+    "use grpc_api_types::payments::PaymentMethod;",
+    "use crate::types::FlowResult;"
+  ],
+  "macro_calls": [
+    {
+      "name": "include",
+      "line": 7
+    },
+    {
+      "name": "include",
+      "line": 7
+    }
+  ],
+  "modules": []
+}

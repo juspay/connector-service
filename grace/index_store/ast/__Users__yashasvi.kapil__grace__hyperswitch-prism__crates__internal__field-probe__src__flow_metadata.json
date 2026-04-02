@@ -1,0 +1,353 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/flow_metadata.rs",
+  "structs": [
+    {
+      "name": "FlowMetadata",
+      "visibility": "pub",
+      "fields": [
+        "flow_key",
+        "service_rpc",
+        "description",
+        "service_name",
+        "rpc_name",
+        "category",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 15
+    },
+    {
+      "name": "MessageSchema",
+      "visibility": "pub",
+      "fields": [
+        "comments",
+        "field_types"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 320
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "FlowMetadata",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 34
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "flow_key: String",
+        "service_name: String",
+        "rpc_name: String",
+        "description: String",
+        "grpc_request: String",
+        "grpc_response: String"
+      ],
+      "return_type": "Self",
+      "line": 36
+    },
+    {
+      "name": "get_category_for_service",
+      "visibility": "",
+      "parameters": [
+        "service_name: &str"
+      ],
+      "return_type": "String",
+      "line": 59
+    },
+    {
+      "name": "get_flow_key_mapping",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "HashMap<(&'static str, &'static str), &'static str>",
+      "line": 76
+    },
+    {
+      "name": "parse_services_proto",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Vec<FlowMetadata>",
+      "line": 150
+    },
+    {
+      "name": "parse_proto_content",
+      "visibility": "",
+      "parameters": [
+        "content: &str"
+      ],
+      "return_type": "Vec<FlowMetadata>",
+      "line": 177
+    },
+    {
+      "name": "extract_message_names",
+      "visibility": "",
+      "parameters": [
+        "rpc_line: &str"
+      ],
+      "return_type": "(String, String)",
+      "line": 270
+    },
+    {
+      "name": "clean_description",
+      "visibility": "",
+      "parameters": [
+        "desc: &str"
+      ],
+      "return_type": "String",
+      "line": 292
+    },
+    {
+      "name": "parse_message_schemas",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "BTreeMap<String, MessageSchema>",
+      "line": 359
+    },
+    {
+      "name": "parse_proto_dir",
+      "visibility": "",
+      "parameters": [
+        "dir: &Path"
+      ],
+      "return_type": "BTreeMap<String, MessageSchema>",
+      "line": 385
+    },
+    {
+      "name": "parse_proto_messages",
+      "visibility": "",
+      "parameters": [
+        "content: &str"
+      ],
+      "return_type": "BTreeMap<String, MessageSchema>",
+      "line": 406
+    },
+    {
+      "name": "parse_field_line",
+      "visibility": "",
+      "parameters": [
+        "trimmed: &str"
+      ],
+      "return_type": "Option<(String, String, String)>",
+      "line": 526
+    },
+    {
+      "name": "test_extract_message_names",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 585
+    },
+    {
+      "name": "test_clean_description",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 593
+    },
+    {
+      "name": "test_get_category_for_service",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 603
+    },
+    {
+      "name": "test_flow_key_mapping_exists",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 610
+    }
+  ],
+  "use_statements": [
+    "use serde::{Deserialize, Serialize};",
+    "use std::collections::{BTreeMap, HashMap};",
+    "use std::path::Path;",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 47
+    },
+    {
+      "name": "concat",
+      "line": 154
+    },
+    {
+      "name": "eprintln",
+      "line": 167
+    },
+    {
+      "name": "eprintln",
+      "line": 167
+    },
+    {
+      "name": "eprintln",
+      "line": 255
+    },
+    {
+      "name": "eprintln",
+      "line": 255
+    },
+    {
+      "name": "eprintln",
+      "line": 259
+    },
+    {
+      "name": "eprintln",
+      "line": 259
+    },
+    {
+      "name": "format",
+      "line": 306
+    },
+    {
+      "name": "concat",
+      "line": 362
+    },
+    {
+      "name": "eprintln",
+      "line": 372
+    },
+    {
+      "name": "eprintln",
+      "line": 372
+    },
+    {
+      "name": "eprintln",
+      "line": 381
+    },
+    {
+      "name": "eprintln",
+      "line": 381
+    },
+    {
+      "name": "matches",
+      "line": 464
+    },
+    {
+      "name": "assert_eq",
+      "line": 588
+    },
+    {
+      "name": "assert_eq",
+      "line": 588
+    },
+    {
+      "name": "assert_eq",
+      "line": 589
+    },
+    {
+      "name": "assert_eq",
+      "line": 589
+    },
+    {
+      "name": "assert_eq",
+      "line": 594
+    },
+    {
+      "name": "assert_eq",
+      "line": 594
+    },
+    {
+      "name": "assert_eq",
+      "line": 595
+    },
+    {
+      "name": "assert_eq",
+      "line": 595
+    },
+    {
+      "name": "assert_eq",
+      "line": 596
+    },
+    {
+      "name": "assert_eq",
+      "line": 596
+    },
+    {
+      "name": "assert_eq",
+      "line": 604
+    },
+    {
+      "name": "assert_eq",
+      "line": 604
+    },
+    {
+      "name": "assert_eq",
+      "line": 605
+    },
+    {
+      "name": "assert_eq",
+      "line": 605
+    },
+    {
+      "name": "assert_eq",
+      "line": 606
+    },
+    {
+      "name": "assert_eq",
+      "line": 606
+    },
+    {
+      "name": "assert",
+      "line": 613
+    },
+    {
+      "name": "assert",
+      "line": 613
+    },
+    {
+      "name": "assert",
+      "line": 614
+    },
+    {
+      "name": "assert",
+      "line": 614
+    },
+    {
+      "name": "assert",
+      "line": 615
+    },
+    {
+      "name": "assert",
+      "line": 615
+    },
+    {
+      "name": "assert",
+      "line": 616
+    },
+    {
+      "name": "assert",
+      "line": 616
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

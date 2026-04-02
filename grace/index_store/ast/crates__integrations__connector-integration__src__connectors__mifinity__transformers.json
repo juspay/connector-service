@@ -1,0 +1,652 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/mifinity/transformers.rs",
+  "structs": [
+    {
+      "name": "MifinityConnectorMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "brand_id",
+        "destination_account_number"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 26
+    },
+    {
+      "name": "MifinityPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "money",
+        "client",
+        "address",
+        "validation_key",
+        "client_reference",
+        "trace_id",
+        "description",
+        "destination_account_number",
+        "brand_id",
+        "return_url",
+        "language_preference"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq"
+      ],
+      "line": 33
+    },
+    {
+      "name": "Money",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq"
+      ],
+      "line": 49
+    },
+    {
+      "name": "MifinityClient",
+      "visibility": "pub",
+      "fields": [
+        "first_name",
+        "last_name",
+        "phone",
+        "dialing_code",
+        "nationality",
+        "email_address",
+        "dob"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq"
+      ],
+      "line": 56
+    },
+    {
+      "name": "MifinityAddress",
+      "visibility": "pub",
+      "fields": [
+        "address_line1",
+        "country_code",
+        "city"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq"
+      ],
+      "line": 68
+    },
+    {
+      "name": "MifinityAuthType",
+      "visibility": "pub",
+      "fields": [
+        "key",
+        "brand_id",
+        "destination_account_number"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq"
+      ],
+      "line": 254
+    },
+    {
+      "name": "MifinityPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "payload"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 280
+    },
+    {
+      "name": "MifinityPayload",
+      "visibility": "pub",
+      "fields": [
+        "trace_id",
+        "initialization_token"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 286
+    },
+    {
+      "name": "MifinityPsyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "payload"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 347
+    },
+    {
+      "name": "MifinityPsyncPayload",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "payment_response"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 353
+    },
+    {
+      "name": "PaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "trace_id",
+        "client_reference",
+        "validation_key",
+        "transaction_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 360
+    },
+    {
+      "name": "MifinityErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 466
+    },
+    {
+      "name": "MifinityErrorList",
+      "visibility": "pub",
+      "fields": [
+        "error_type",
+        "error_code",
+        "message",
+        "field"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 472
+    }
+  ],
+  "enums": [
+    {
+      "name": "MifinityPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Successful",
+        "Pending",
+        "Failed",
+        "NotCompleted"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 369
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "MifinityPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 74
+    },
+    {
+      "type_name": "MifinityAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 260
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 291
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 376
+    },
+    {
+      "type_name": "enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 454
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: MifinityRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 88
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 262
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MifinityPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 296
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MifinityPsyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 380
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: MifinityPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 455
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{enums, Currency};",
+    "use common_utils::{pii::Email, types::StringMajorUnit};",
+    "use domain_types::{\n    connector_flow::Authorize,\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use time::Date;",
+    "use super::MifinityRouterData;",
+    "use crate::{types::ResponseRouterData, utils};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 150
+    }
+  ],
+  "modules": [
+    "auth_headers"
+  ]
+}

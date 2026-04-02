@@ -1,0 +1,483 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/barclaycard.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 57
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 67
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 72
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 92
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 97
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 102
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 117
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 122
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 132
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 137
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 142
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 152
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 157
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 162
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 167
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 172
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 177
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 182
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 187
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 192
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 197
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 202
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 207
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 212
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 222
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 232
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 242
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 252
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 262
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 272
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 282
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 292
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 302
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 312
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 322
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 332
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 342
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 352
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 362
+    },
+    {
+      "type_name": "Barclaycard",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 740
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 743
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 747
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 751
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 755
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 759
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 767
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, Method};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{Connectors, HasConnectors},\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use ring::{digest, hmac};",
+    "use serde::Serialize;",
+    "use time::OffsetDateTime;",
+    "use transformers::{self as barclaycard};",
+    "use requests::{\n    BarclaycardCaptureRequest, BarclaycardPaymentsRequest, BarclaycardRefundRequest,\n    BarclaycardVoidRequest,\n};",
+    "use responses::{\n    BarclaycardAuthorizeResponse, BarclaycardCaptureResponse, BarclaycardRefundResponse,\n    BarclaycardRsyncResponse, BarclaycardTransactionResponse, BarclaycardVoidResponse,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 55
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 55
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 372
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 372
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 538
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 538
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 567
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 567
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 604
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 604
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 637
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 637
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 673
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 673
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 707
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 707
+    },
+    {
+      "name": "vec",
+      "line": 764
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 779
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 779
+    },
+    {
+      "name": "format",
+      "line": 789
+    },
+    {
+      "name": "format",
+      "line": 803
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 830
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 830
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 863
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 863
+    }
+  ],
+  "modules": [
+    "requests",
+    "responses",
+    "transformers",
+    "headers"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "crate": "types_traits_ucs_interface_common",
+  "structs": [
+    {
+      "name": "MetadataPayload",
+      "file": "crates/types-traits/ucs_interface_common/src/metadata.rs",
+      "fields": [
+        "tenant_id",
+        "request_id",
+        "merchant_id",
+        "connector",
+        "lineage_ids",
+        "connector_config",
+        "reference_id",
+        "shadow_mode",
+        "resource_id",
+        "environment"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "InterfaceRequestData",
+      "file": "crates/types-traits/ucs_interface_common/src/request.rs",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata",
+        "extensions"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "InterfaceError",
+      "file": "crates/types-traits/ucs_interface_common/src/error.rs",
+      "variants": [
+        "MissingRequiredHeader",
+        "InvalidHeaderValue"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "HeaderSource",
+      "file": "crates/types-traits/ucs_interface_common/src/headers.rs",
+      "methods": [
+        "get_header"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    }
+  ]
+}

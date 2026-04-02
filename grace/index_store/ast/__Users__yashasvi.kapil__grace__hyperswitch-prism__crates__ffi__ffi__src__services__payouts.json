@@ -1,0 +1,144 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/services/payouts.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use grpc_api_types::payouts::{\n    PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse,\n    PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse,\n    PayoutServiceCreateRequest, PayoutServiceCreateResponse,\n    PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse,\n    PayoutServiceGetRequest, PayoutServiceGetResponse, PayoutServiceStageRequest,\n    PayoutServiceStageResponse, PayoutServiceTransferRequest, PayoutServiceTransferResponse,\n    PayoutServiceVoidRequest, PayoutServiceVoidResponse,\n};",
+    "use crate::macros::{payout_req_transformer, payout_res_transformer};",
+    "use domain_types::{\n    connector_flow::{\n        PayoutCreate, PayoutCreateLink, PayoutCreateRecipient, PayoutEnrollDisburseAccount,\n        PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid,\n    },\n    payouts::payouts_types::{\n        PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,\n        PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,\n        PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,\n        PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,\n        PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,\n    },\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "payout_req_transformer",
+      "line": 28
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 28
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 38
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 38
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 50
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 50
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 60
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 60
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 72
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 72
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 82
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 82
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 94
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 94
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 104
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 104
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 116
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 116
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 126
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 126
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 138
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 138
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 148
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 148
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 160
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 160
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 170
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 170
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 182
+    },
+    {
+      "name": "payout_req_transformer",
+      "line": 182
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 192
+    },
+    {
+      "name": "payout_res_transformer",
+      "line": 192
+    }
+  ],
+  "modules": []
+}

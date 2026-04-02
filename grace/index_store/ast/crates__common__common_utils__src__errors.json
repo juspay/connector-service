@@ -1,0 +1,244 @@
+{
+  "file_path": "crates/common/common_utils/src/errors.rs",
+  "structs": [
+    {
+      "name": "IntegrityCheckError",
+      "visibility": "pub",
+      "fields": [
+        "field_names",
+        "connector_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq",
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Default"
+      ],
+      "line": 174
+    }
+  ],
+  "enums": [
+    {
+      "name": "ParsingError",
+      "visibility": "pub",
+      "variants": [
+        "EnumParseFailure",
+        "StructParseFailure",
+        "EncodeError",
+        "UnknownError",
+        "DateTimeParsingError",
+        "EmailParsingError",
+        "PhoneNumberParsingError",
+        "FloatToDecimalConversionFailure",
+        "DecimalToI64ConversionFailure",
+        "StringToFloatConversionFailure",
+        "I64ToDecimalConversionFailure",
+        "StringToDecimalConversionFailure",
+        "IntegerOverflow"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 15
+    },
+    {
+      "name": "ValidationError",
+      "visibility": "pub",
+      "variants": [
+        "MissingRequiredField",
+        "IncorrectValueProvided",
+        "InvalidValue"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq"
+      ],
+      "line": 60
+    },
+    {
+      "name": "PercentageError",
+      "visibility": "pub",
+      "variants": [
+        "InvalidPercentageValue",
+        "UnableToApplyPercentage"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq"
+      ],
+      "line": 76
+    },
+    {
+      "name": "CryptoError",
+      "visibility": "pub",
+      "variants": [
+        "EncodingFailed",
+        "DecodingFailed",
+        "MessageSigningFailed",
+        "SignatureVerificationFailed",
+        "InvalidKeyLength",
+        "InvalidIvLength"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 141
+    },
+    {
+      "name": "EventPublisherError",
+      "visibility": "pub",
+      "variants": [
+        "KafkaWriterInitializationFailed",
+        "EventSerializationFailed",
+        "EventPublishFailed",
+        "InvalidConfiguration",
+        "AlreadyInitialized",
+        "EventProcessingFailed",
+        "InvalidPath"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq",
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Default",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 183
+    }
+  ],
+  "traits": [
+    {
+      "name": "ErrorSwitch",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 92
+    },
+    {
+      "name": "ErrorSwitchFrom",
+      "visibility": "pub",
+      "methods": [
+        "switch_from"
+      ],
+      "line": 100
+    },
+    {
+      "name": "ReportSwitchExt",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 117
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "S",
+      "trait_name": "ErrorSwitch",
+      "methods": [
+        "switch"
+      ],
+      "line": 106
+    },
+    {
+      "type_name": "Result",
+      "trait_name": "ReportSwitchExt",
+      "methods": [
+        "switch"
+      ],
+      "line": 123
+    },
+    {
+      "type_name": "ParsingError",
+      "trait_name": "ErrorSwitchFrom",
+      "methods": [
+        "switch_from"
+      ],
+      "line": 162
+    }
+  ],
+  "functions": [
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "T",
+      "line": 110
+    },
+    {
+      "name": "switch",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<T, error_stack::Report<U>>",
+      "line": 129
+    },
+    {
+      "name": "switch_from",
+      "visibility": "",
+      "parameters": [
+        "error: &common_enums::CurrencyError"
+      ],
+      "return_type": "Self",
+      "line": 163
+    }
+  ],
+  "use_statements": [
+    "use crate::types::MinorUnit;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

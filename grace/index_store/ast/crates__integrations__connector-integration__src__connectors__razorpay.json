@@ -1,0 +1,1157 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/razorpay.rs",
+  "structs": [
+    {
+      "name": "Razorpay",
+      "visibility": "pub",
+      "fields": [
+        "amount_converter",
+        "_phantom"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 73
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 80
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_order_create"
+      ],
+      "line": 90
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 104
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 108
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 120
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 124
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 128
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 132
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 140
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 144
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 148
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 152
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 157
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 165
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 169
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 173
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 177
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 198
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 203
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 208
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 213
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 218
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 222
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 231
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 305
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_http_method",
+        "get_headers",
+        "get_url",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 493
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 590
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_http_method",
+        "get_headers",
+        "get_url",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 705
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook"
+      ],
+      "line": 777
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 868
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 874
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_url",
+        "get_request_body",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response"
+      ],
+      "line": 956
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1051
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1061
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1067
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1073
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1078
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1088
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1098
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1108
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1118
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "connector_types::ConnectorValidation",
+      "methods": [
+        "validate_mandate_payment",
+        "validate_psync_reference_id",
+        "is_webhook_source_verification_mandatory"
+      ],
+      "line": 1130
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [
+        "get_connector_about",
+        "get_supported_webhook_flows",
+        "get_supported_payment_methods"
+      ],
+      "line": 1211
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1227
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1237
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1247
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1257
+    },
+    {
+      "type_name": "Razorpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1267
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_order_create",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 93
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "&'static Self",
+      "line": 223
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 234
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 237
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 240
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 251
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 255
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>\n    where\n        Self: ConnectorIntegrationV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >,",
+      "line": 313
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 345
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, errors::ConnectorError>",
+      "line": 363
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,\n        errors::ConnectorError,\n    >",
+      "line": 395
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 476
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 484
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Method",
+      "line": 497
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>\n    where\n        Self: ConnectorIntegrationV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >,",
+      "line": 500
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 521
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n        errors::ConnectorError,\n    >",
+      "line": 546
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 573
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 581
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 598
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 622
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, errors::ConnectorError>",
+      "line": 637
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >,\n        errors::ConnectorError,\n    >",
+      "line": 658
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 688
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 696
+    },
+    {
+      "name": "get_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Method",
+      "line": 709
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>\n    where\n        Self: ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,",
+      "line": 713
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 729
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n        errors::ConnectorError,\n    >",
+      "line": 740
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 760
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 768
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, error_stack::Report<errors::ConnectorError>>",
+      "line": 780
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 798
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 836
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>\n    where\n        Self: ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,",
+      "line": 878
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 894
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, errors::ConnectorError>",
+      "line": 905
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n        errors::ConnectorError,\n    >",
+      "line": 919
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 939
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 947
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>\n    where\n        Self: ConnectorIntegrationV2<\n            Capture,\n            PaymentFlowData,\n            PaymentsCaptureData,\n            PaymentsResponseData,\n        >,",
+      "line": 960
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 981
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, errors::ConnectorError>",
+      "line": 997
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n        errors::ConnectorError,\n    >",
+      "line": 1011
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 1034
+    },
+    {
+      "name": "get_5xx_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 1042
+    },
+    {
+      "name": "validate_mandate_payment",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "pm_type: Option<PaymentMethodType>",
+        "pm_data: PaymentMethodData<DefaultPCIHolder>"
+      ],
+      "return_type": "CustomResult<(), errors::ConnectorError>",
+      "line": 1131
+    },
+    {
+      "name": "validate_psync_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &PaymentsSyncData",
+        "_is_three_ds: bool",
+        "_status: AttemptStatus",
+        "_connector_meta_data: Option<SecretSerdeValue>"
+      ],
+      "return_type": "CustomResult<(), errors::ConnectorError>",
+      "line": 1140
+    },
+    {
+      "name": "is_webhook_source_verification_mandatory",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 1155
+    },
+    {
+      "name": "get_connector_about",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static ConnectorInfo>",
+      "line": 1214
+    },
+    {
+      "name": "get_supported_webhook_flows",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static [EventClass]>",
+      "line": 1218
+    },
+    {
+      "name": "get_supported_payment_methods",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static SupportedPaymentMethods>",
+      "line": 1222
+    }
+  ],
+  "use_statements": [
+    "use std::sync::LazyLock;",
+    "use common_enums::{\n    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,\n};",
+    "use common_utils::{\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    pii::SecretSerdeValue,\n    request::{Method, RequestContent},\n    types::{AmountConvertor, MinorUnit},\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,\n        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,\n        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,\n        SupportedPaymentMethodsExt, WebhookDetailsResponse,\n    },\n    errors,\n    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{\n        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,\n        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,\n        SupportedPaymentMethods,\n    },\n};",
+    "use error_stack::{report, ResultExt};",
+    "use hyperswitch_masking::{Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon,\n    connector_integration_v2::ConnectorIntegrationV2,\n    connector_types::{self, is_mandate_supported},\n    decode::BodyDecoding,\n    verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{self as razorpay, ForeignTryFrom};",
+    "use crate::{\n    connectors::razorpayv2::transformers::RazorpayV2SyncResponse, with_error_response_body,\n    with_response_body,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 246
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 265
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 265
+    },
+    {
+      "name": "vec",
+      "line": 330
+    },
+    {
+      "name": "format",
+      "line": 358
+    },
+    {
+      "name": "format",
+      "line": 359
+    },
+    {
+      "name": "with_response_body",
+      "line": 421
+    },
+    {
+      "name": "with_response_body",
+      "line": 421
+    },
+    {
+      "name": "with_response_body",
+      "line": 441
+    },
+    {
+      "name": "with_response_body",
+      "line": 441
+    },
+    {
+      "name": "with_response_body",
+      "line": 461
+    },
+    {
+      "name": "with_response_body",
+      "line": 461
+    },
+    {
+      "name": "vec",
+      "line": 512
+    },
+    {
+      "name": "format",
+      "line": 531
+    },
+    {
+      "name": "format",
+      "line": 541
+    },
+    {
+      "name": "with_response_body",
+      "line": 561
+    },
+    {
+      "name": "with_response_body",
+      "line": 561
+    },
+    {
+      "name": "vec",
+      "line": 607
+    },
+    {
+      "name": "format",
+      "line": 631
+    },
+    {
+      "name": "with_response_body",
+      "line": 682
+    },
+    {
+      "name": "with_response_body",
+      "line": 682
+    },
+    {
+      "name": "vec",
+      "line": 720
+    },
+    {
+      "name": "format",
+      "line": 734
+    },
+    {
+      "name": "with_response_body",
+      "line": 754
+    },
+    {
+      "name": "with_response_body",
+      "line": 754
+    },
+    {
+      "name": "report",
+      "line": 787
+    },
+    {
+      "name": "format",
+      "line": 788
+    },
+    {
+      "name": "report",
+      "line": 806
+    },
+    {
+      "name": "format",
+      "line": 807
+    },
+    {
+      "name": "report",
+      "line": 844
+    },
+    {
+      "name": "format",
+      "line": 845
+    },
+    {
+      "name": "vec",
+      "line": 885
+    },
+    {
+      "name": "format",
+      "line": 899
+    },
+    {
+      "name": "with_response_body",
+      "line": 933
+    },
+    {
+      "name": "with_response_body",
+      "line": 933
+    },
+    {
+      "name": "vec",
+      "line": 972
+    },
+    {
+      "name": "format",
+      "line": 991
+    },
+    {
+      "name": "report",
+      "line": 1024
+    },
+    {
+      "name": "format",
+      "line": 1025
+    },
+    {
+      "name": "with_response_body",
+      "line": 1028
+    },
+    {
+      "name": "with_response_body",
+      "line": 1028
+    },
+    {
+      "name": "vec",
+      "line": 1162
+    },
+    {
+      "name": "vec",
+      "line": 1169
+    }
+  ],
+  "modules": [
+    "test",
+    "transformers",
+    "headers"
+  ]
+}

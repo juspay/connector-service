@@ -1,0 +1,1271 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/hipay/transformers.rs",
+  "structs": [
+    {
+      "name": "HipayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "api_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 26
+    },
+    {
+      "name": "HipayErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 52
+    },
+    {
+      "name": "Reason",
+      "visibility": "pub",
+      "fields": [
+        "reason",
+        "code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 193
+    },
+    {
+      "name": "HipayRefundSyncJsonResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "status"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 219
+    },
+    {
+      "name": "HipayPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "payment_product",
+        "orderid",
+        "operation",
+        "description",
+        "currency",
+        "amount",
+        "cardtoken",
+        "accept_url",
+        "decline_url",
+        "pending_url",
+        "cancel_url",
+        "notify_url",
+        "authentication_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 254
+    },
+    {
+      "name": "PaymentOrder",
+      "visibility": "pub",
+      "fields": [
+        "id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 433
+    },
+    {
+      "name": "HipayPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "message",
+        "order",
+        "forward_url",
+        "transaction_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 439
+    },
+    {
+      "name": "HipayMaintenanceResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "message",
+        "transaction_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 452
+    },
+    {
+      "name": "HipayTokenRequest",
+      "visibility": "pub",
+      "fields": [
+        "card_number",
+        "card_expiry_month",
+        "card_expiry_year",
+        "card_holder",
+        "cvc"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 530
+    },
+    {
+      "name": "HipayTokenResponse",
+      "visibility": "pub",
+      "fields": [
+        "token",
+        "request_id",
+        "brand",
+        "pan",
+        "card_holder",
+        "card_expiry_month",
+        "card_expiry_year",
+        "issuer",
+        "country"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 607
+    },
+    {
+      "name": "HipayCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "operation",
+        "currency",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 741
+    },
+    {
+      "name": "HipayRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "operation",
+        "currency",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 836
+    },
+    {
+      "name": "HipayVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "operation",
+        "currency",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 931
+    }
+  ],
+  "enums": [
+    {
+      "name": "HipayPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "AuthenticationFailed",
+        "Blocked",
+        "Denied",
+        "AuthorizedAndPending",
+        "Refused",
+        "Expired",
+        "Cancelled",
+        "Authorized",
+        "CaptureRequested",
+        "Captured",
+        "PartiallyCaptured",
+        "ChargedBack",
+        "CaptureRefused",
+        "AwaitingTerminal",
+        "AuthorizationCancellationRequested",
+        "ChallengeRequested",
+        "SoftDeclined",
+        "PendingPayment",
+        "Created",
+        "UnableToAuthenticate",
+        "CardholderAuthenticated",
+        "AuthenticationAttempted",
+        "CouldNotAuthenticate",
+        "Collected",
+        "PartiallyCollected",
+        "Settled",
+        "PartiallySettled",
+        "AuthenticationRequested",
+        "Authenticated",
+        "AcquirerNotFound",
+        "RiskAccepted",
+        "AuthorizationRefused"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 60
+    },
+    {
+      "name": "HipayRefundStatus",
+      "visibility": "pub",
+      "variants": [
+        "RefundRequested",
+        "Refunded",
+        "PartiallyRefunded",
+        "RefundRefused"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 169
+    },
+    {
+      "name": "HipaySyncResponse",
+      "visibility": "pub",
+      "variants": [
+        "Response",
+        "Error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 201
+    },
+    {
+      "name": "HipayOperation",
+      "visibility": "pub",
+      "variants": [
+        "Capture",
+        "Refund",
+        "Cancel"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 230
+    },
+    {
+      "name": "Operation",
+      "visibility": "pub",
+      "variants": [
+        "Authorization",
+        "Sale"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 248
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "HipayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 31
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 127
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 180
+    },
+    {
+      "type_name": "HipayOperation",
+      "trait_name": "std::fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 236
+    },
+    {
+      "type_name": "HipayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 277
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 467
+    },
+    {
+      "type_name": "HipayTokenRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 538
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 619
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 682
+    },
+    {
+      "type_name": "HipayCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 749
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 785
+    },
+    {
+      "type_name": "HipayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 844
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 877
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 899
+    },
+    {
+      "type_name": "HipayVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 939
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 965
+    },
+    {
+      "type_name": "HipayTokenRequest",
+      "trait_name": "GetFormData",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 1019
+    },
+    {
+      "type_name": "HipayPaymentsRequest",
+      "trait_name": "GetFormData",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 1026
+    },
+    {
+      "type_name": "HipayCaptureRequest",
+      "trait_name": "GetFormData",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 1033
+    },
+    {
+      "type_name": "HipayVoidRequest",
+      "trait_name": "GetFormData",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 1040
+    },
+    {
+      "type_name": "HipayRefundRequest",
+      "trait_name": "GetFormData",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 1047
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 34
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: HipayPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 128
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 181
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 237
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 292
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 472
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRouterData<\n            RouterDataV2<\n                PaymentMethodToken,\n                PaymentFlowData,\n                PaymentMethodTokenizationData<T>,\n                PaymentMethodTokenResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 553
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayTokenResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 629
+    },
+    {
+      "name": "get_sync_status",
+      "visibility": "",
+      "parameters": [
+        "state: i32"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 642
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayPSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 687
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 759
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 790
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 851
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 882
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 904
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: HipayRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 949
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<HipayVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 970
+    },
+    {
+      "name": "get_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "MultipartData",
+      "line": 1020
+    },
+    {
+      "name": "get_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "MultipartData",
+      "line": 1027
+    },
+    {
+      "name": "get_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "MultipartData",
+      "line": 1034
+    },
+    {
+      "name": "get_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "MultipartData",
+      "line": 1041
+    },
+    {
+      "name": "get_form_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "MultipartData",
+      "line": 1048
+    }
+  ],
+  "use_statements": [
+    "use crate::{\n    connectors::{hipay::HipayRouterData, macros::GetFormData},\n    types::ResponseRouterData,\n    utils::build_form_from_struct,\n};",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::{request::MultipartData, types::StringMajorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenType},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use hyperswitch_masking::ExposeInterface;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 44
+    },
+    {
+      "name": "write",
+      "line": 239
+    },
+    {
+      "name": "write",
+      "line": 240
+    },
+    {
+      "name": "write",
+      "line": 241
+    }
+  ],
+  "modules": []
+}

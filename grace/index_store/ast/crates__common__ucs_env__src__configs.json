@@ -1,0 +1,685 @@
+{
+  "file_path": "crates/common/ucs_env/src/configs.rs",
+  "structs": [
+    {
+      "name": "Config",
+      "visibility": "pub",
+      "fields": [
+        "common",
+        "server",
+        "metrics",
+        "log",
+        "proxy",
+        "connectors",
+        "events",
+        "lineage",
+        "unmasked_headers",
+        "test",
+        "api_tags",
+        "webhook_source_verification_call",
+        "superposition_config"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch"
+      ],
+      "line": 23
+    },
+    {
+      "name": "LineageConfig",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "header_name",
+        "field_prefix"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 50
+    },
+    {
+      "name": "TestConfig",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "mock_server_url"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 71
+    },
+    {
+      "name": "ApiTagConfig",
+      "visibility": "pub",
+      "fields": [
+        "tags"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 116
+    },
+    {
+      "name": "Common",
+      "visibility": "pub",
+      "fields": [
+        "environment"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 166
+    },
+    {
+      "name": "Server",
+      "visibility": "pub",
+      "fields": [
+        "host",
+        "port",
+        "type_"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 188
+    },
+    {
+      "name": "MetricsServer",
+      "visibility": "pub",
+      "fields": [
+        "host",
+        "port"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 196
+    },
+    {
+      "name": "WebhookSourceVerificationCall",
+      "visibility": "pub",
+      "fields": [
+        "connectors_with_webhook_source_verification_call"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 267
+    }
+  ],
+  "enums": [
+    {
+      "name": "ServiceType",
+      "visibility": "pub",
+      "variants": [
+        "Grpc",
+        "Http"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 203
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "TestConfig",
+      "trait_name": null,
+      "methods": [
+        "create_test_context"
+      ],
+      "line": 77
+    },
+    {
+      "type_name": "ApiTagConfig",
+      "trait_name": null,
+      "methods": [
+        "get_tag"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "Common",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 170
+    },
+    {
+      "type_name": "Common",
+      "trait_name": null,
+      "methods": [
+        "validate"
+      ],
+      "line": 178
+    },
+    {
+      "type_name": "WebhookSourceVerificationCall",
+      "trait_name": null,
+      "methods": [
+        "requires_external_verification"
+      ],
+      "line": 275
+    },
+    {
+      "type_name": "Config",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "new_with_config_path",
+        "builder",
+        "config_path"
+      ],
+      "line": 285
+    },
+    {
+      "type_name": "Server",
+      "trait_name": null,
+      "methods": [
+        "tcp_listener"
+      ],
+      "line": 356
+    },
+    {
+      "type_name": "MetricsServer",
+      "trait_name": null,
+      "methods": [
+        "tcp_listener"
+      ],
+      "line": 366
+    }
+  ],
+  "functions": [
+    {
+      "name": "default_lineage_header",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 61
+    },
+    {
+      "name": "default_lineage_prefix",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 65
+    },
+    {
+      "name": "create_test_context",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "request_id: &str"
+      ],
+      "return_type": "Result<Option<external_services::service::TestContext>, config::ConfigError>",
+      "line": 79
+    },
+    {
+      "name": "get_tag",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "flow: common_utils::events::FlowName",
+        "payment_method_type: Option<common_enums::PaymentMethodType>"
+      ],
+      "return_type": "Option<String>",
+      "line": 130
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 171
+    },
+    {
+      "name": "validate",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<(), config::ConfigError>",
+      "line": 179
+    },
+    {
+      "name": "deserialize_hashset_inner",
+      "visibility": "",
+      "parameters": [
+        "value: impl AsRef<str>"
+      ],
+      "return_type": "Result<HashSet<T>, String>\nwhere\n    T: Eq + FromStr + std::hash::Hash,\n    <T as FromStr>::Err: std::fmt::Display,",
+      "line": 210
+    },
+    {
+      "name": "deserialize_hashset",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<HashSet<T>>, D::Error>\nwhere\n    D: Deserializer<'a>,\n    T: Eq + FromStr + std::hash::Hash,\n    <T as FromStr>::Err: std::fmt::Display,",
+      "line": 250
+    },
+    {
+      "name": "requires_external_verification",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "bool",
+      "line": 277
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<Self, config::ConfigError>",
+      "line": 287
+    },
+    {
+      "name": "new_with_config_path",
+      "visibility": "pub",
+      "parameters": [
+        "explicit_config_path: Option<PathBuf>"
+      ],
+      "return_type": "Result<Self, config::ConfigError>",
+      "line": 292
+    },
+    {
+      "name": "builder",
+      "visibility": "pub",
+      "parameters": [
+        "environment: &consts::Env"
+      ],
+      "return_type": "Result<config::ConfigBuilder<config::builder::DefaultState>, config::ConfigError>",
+      "line": 326
+    },
+    {
+      "name": "config_path",
+      "visibility": "pub",
+      "parameters": [
+        "environment: &consts::Env",
+        "explicit_config_path: Option<PathBuf>"
+      ],
+      "return_type": "PathBuf",
+      "line": 337
+    },
+    {
+      "name": "tcp_listener",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<tokio::net::TcpListener, ConfigurationError>",
+      "line": 357
+    },
+    {
+      "name": "tcp_listener",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<tokio::net::TcpListener, ConfigurationError>",
+      "line": 367
+    },
+    {
+      "name": "workspace_path",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 376
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashSet;",
+    "use std::path::PathBuf;",
+    "use std::str::FromStr;",
+    "use std::sync::Arc;",
+    "use common_utils::{\n    consts,\n    events::{EventConfig, EventConfigPatch},\n    metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},\n    SuperpositionConfig,\n};",
+    "use domain_types::{\n    connector_types::ConnectorEnum,\n    types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch},\n};",
+    "use crate::{\n    error::ConfigurationError,\n    logger::config::{Log, LogPatch},\n};",
+    "use serde::{de::Error, Deserialize, Deserializer, Serialize};"
+  ],
+  "macro_calls": [
+    {
+      "name": "debug",
+      "line": 141
+    },
+    {
+      "name": "debug",
+      "line": 141
+    },
+    {
+      "name": "format",
+      "line": 150
+    },
+    {
+      "name": "debug",
+      "line": 153
+    },
+    {
+      "name": "debug",
+      "line": 153
+    },
+    {
+      "name": "format",
+      "line": 221
+    },
+    {
+      "name": "format",
+      "line": 242
+    },
+    {
+      "name": "eprintln",
+      "line": 316
+    },
+    {
+      "name": "eprintln",
+      "line": 316
+    },
+    {
+      "name": "format",
+      "line": 358
+    },
+    {
+      "name": "info",
+      "line": 360
+    },
+    {
+      "name": "info",
+      "line": 360
+    },
+    {
+      "name": "format",
+      "line": 368
+    },
+    {
+      "name": "info",
+      "line": 370
+    },
+    {
+      "name": "info",
+      "line": 370
+    }
+  ],
+  "modules": []
+}

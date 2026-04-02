@@ -1,0 +1,78 @@
+{
+  "structs": [
+    {
+      "name": "GenericPatchCtx",
+      "visibility": "pub(crate)",
+      "fields": [
+        "generic_params",
+        "patch_params",
+        "patch_map",
+        "where_bounds",
+        "used_type_params",
+        "used_names",
+        "bound_keys"
+      ],
+      "derives": [],
+      "line": 5
+    },
+    {
+      "name": "GenericParamCollector",
+      "visibility": "",
+      "fields": [
+        "generic_params",
+        "used"
+      ],
+      "derives": [],
+      "line": 191
+    },
+    {
+      "name": "FieldSpec",
+      "visibility": "pub(crate)",
+      "fields": [
+        "ident",
+        "doc_attrs",
+        "serde_attrs",
+        "patch_field_ty",
+        "apply_stmt"
+      ],
+      "derives": [],
+      "line": 10
+    },
+    {
+      "name": "FieldPatchConfig",
+      "visibility": "",
+      "fields": [
+        "ignore",
+        "patch_type"
+      ],
+      "derives": [],
+      "line": 23
+    },
+    {
+      "name": "SerdeAttrFlags",
+      "visibility": "",
+      "fields": [
+        "has_deserialize_with",
+        "has_bound"
+      ],
+      "derives": [],
+      "line": 489
+    }
+  ],
+  "enums": [
+    {
+      "name": "FieldPatchKind",
+      "visibility": "",
+      "variants": [
+        "Replace",
+        "Nested",
+        "OptionalReplace",
+        "OptionalNested",
+        "Unsupported"
+      ],
+      "derives": [],
+      "line": 28
+    }
+  ],
+  "traits": []
+}

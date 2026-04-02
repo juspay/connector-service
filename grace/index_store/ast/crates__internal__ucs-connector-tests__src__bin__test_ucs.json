@@ -1,0 +1,531 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/bin/test_ucs.rs",
+  "structs": [
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 528
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConnectorSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 567
+    },
+    {
+      "name": "SuiteSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 573
+    },
+    {
+      "name": "ScenarioSelection",
+      "visibility": "",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 579
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 35
+    },
+    {
+      "name": "run_interactive",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), String>",
+      "line": 43
+    },
+    {
+      "name": "execute_plan",
+      "visibility": "",
+      "parameters": [
+        "connector_selection: &ConnectorSelection",
+        "suite_selection: &SuiteSelection",
+        "scenario_selection: &ScenarioSelection",
+        "options: SuiteRunOptions<'_>",
+        "endpoint: &str"
+      ],
+      "return_type": "Result<(usize, usize), ScenarioError>",
+      "line": 122
+    },
+    {
+      "name": "print_suite_results",
+      "visibility": "",
+      "parameters": [
+        "summary: &SuiteRunSummary",
+        "endpoint: &str",
+        "report: bool"
+      ],
+      "return_type": "",
+      "line": 178
+    },
+    {
+      "name": "compact_error_for_console",
+      "visibility": "",
+      "parameters": [
+        "error: Option<&str>"
+      ],
+      "return_type": "String",
+      "line": 233
+    },
+    {
+      "name": "truncate_for_console",
+      "visibility": "",
+      "parameters": [
+        "text: &str",
+        "max_chars: usize"
+      ],
+      "return_type": "String",
+      "line": 266
+    },
+    {
+      "name": "write_report_entry",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "endpoint: &str",
+        "pm: Option<&str>",
+        "pmt: Option<&str>",
+        "is_dependency: bool",
+        "assertion_result: &str",
+        "response_status: Option<String>",
+        "error: Option<String>",
+        "dependency: Vec<String>",
+        "req_body: Option<Value>",
+        "res_body: Option<Value>",
+        "grpc_request: Option<String>",
+        "grpc_response: Option<String>"
+      ],
+      "return_type": "",
+      "line": 277
+    },
+    {
+      "name": "prompt_connector_selection",
+      "visibility": "",
+      "parameters": [
+        "discovered_connectors: &[String]"
+      ],
+      "return_type": "Result<ConnectorSelection, String>",
+      "line": 315
+    },
+    {
+      "name": "prompt_suite_selection",
+      "visibility": "",
+      "parameters": [
+        "available_suites: &[String]"
+      ],
+      "return_type": "Result<SuiteSelection, String>",
+      "line": 368
+    },
+    {
+      "name": "prompt_scenario_selection",
+      "visibility": "",
+      "parameters": [
+        "available_scenarios: &[String]"
+      ],
+      "return_type": "Result<ScenarioSelection, String>",
+      "line": 395
+    },
+    {
+      "name": "prompt_backend",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<ExecutionBackend, String>",
+      "line": 428
+    },
+    {
+      "name": "prompt_choice",
+      "visibility": "",
+      "parameters": [
+        "label: &str",
+        "options: &[&str]"
+      ],
+      "return_type": "Result<usize, String>",
+      "line": 439
+    },
+    {
+      "name": "prompt_input",
+      "visibility": "",
+      "parameters": [
+        "label: &str"
+      ],
+      "return_type": "Result<String, String>",
+      "line": 466
+    },
+    {
+      "name": "runnable_configured_connectors",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<Vec<String>, String>",
+      "line": 486
+    },
+    {
+      "name": "suites_for_connector_selection",
+      "visibility": "",
+      "parameters": [
+        "selection: &ConnectorSelection"
+      ],
+      "return_type": "Result<Vec<String>, String>",
+      "line": 504
+    },
+    {
+      "name": "scenario_names_for_suite",
+      "visibility": "",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "Result<Vec<String>, ScenarioError>",
+      "line": 523
+    },
+    {
+      "name": "defaults_path",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 534
+    },
+    {
+      "name": "load_defaults",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "StoredDefaults",
+      "line": 550
+    },
+    {
+      "name": "print_usage",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 560
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    collections::BTreeSet,\n    fs,\n    io::{self, Write},\n    path::PathBuf,\n};",
+    "use serde::Deserialize;",
+    "use serde_json::Value;",
+    "use ucs_connector_tests::harness::{\n    credentials::load_connector_auth,\n    report::{\n        append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,\n    },\n    scenario_api::{\n        get_the_grpc_req_for_connector, run_all_suites_with_options,\n        run_scenario_test_with_options, run_suite_test_with_options, ExecutionBackend,\n        SuiteRunOptions, SuiteRunSummary, DEFAULT_ENDPOINT,\n    },\n    scenario_loader::{\n        configured_all_connectors, discover_all_connectors, is_suite_supported_for_connector,\n        load_suite_scenarios, load_supported_suites_for_connector,\n    },\n    scenario_types::ScenarioError,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "eprintln",
+      "line": 37
+    },
+    {
+      "name": "eprintln",
+      "line": 37
+    },
+    {
+      "name": "format",
+      "line": 53
+    },
+    {
+      "name": "println",
+      "line": 74
+    },
+    {
+      "name": "println",
+      "line": 74
+    },
+    {
+      "name": "println",
+      "line": 75
+    },
+    {
+      "name": "println",
+      "line": 75
+    },
+    {
+      "name": "println",
+      "line": 99
+    },
+    {
+      "name": "println",
+      "line": 99
+    },
+    {
+      "name": "println",
+      "line": 113
+    },
+    {
+      "name": "println",
+      "line": 113
+    },
+    {
+      "name": "vec",
+      "line": 134
+    },
+    {
+      "name": "println",
+      "line": 138
+    },
+    {
+      "name": "println",
+      "line": 138
+    },
+    {
+      "name": "println",
+      "line": 151
+    },
+    {
+      "name": "println",
+      "line": 151
+    },
+    {
+      "name": "println",
+      "line": 180
+    },
+    {
+      "name": "println",
+      "line": 180
+    },
+    {
+      "name": "println",
+      "line": 214
+    },
+    {
+      "name": "println",
+      "line": 214
+    },
+    {
+      "name": "println",
+      "line": 219
+    },
+    {
+      "name": "println",
+      "line": 219
+    },
+    {
+      "name": "println",
+      "line": 227
+    },
+    {
+      "name": "println",
+      "line": 227
+    },
+    {
+      "name": "format",
+      "line": 270
+    },
+    {
+      "name": "println",
+      "line": 318
+    },
+    {
+      "name": "println",
+      "line": 318
+    },
+    {
+      "name": "println",
+      "line": 332
+    },
+    {
+      "name": "println",
+      "line": 332
+    },
+    {
+      "name": "println",
+      "line": 340
+    },
+    {
+      "name": "println",
+      "line": 340
+    },
+    {
+      "name": "println",
+      "line": 351
+    },
+    {
+      "name": "println",
+      "line": 351
+    },
+    {
+      "name": "println",
+      "line": 358
+    },
+    {
+      "name": "println",
+      "line": 358
+    },
+    {
+      "name": "println",
+      "line": 369
+    },
+    {
+      "name": "println",
+      "line": 369
+    },
+    {
+      "name": "println",
+      "line": 380
+    },
+    {
+      "name": "println",
+      "line": 380
+    },
+    {
+      "name": "println",
+      "line": 390
+    },
+    {
+      "name": "println",
+      "line": 390
+    },
+    {
+      "name": "println",
+      "line": 396
+    },
+    {
+      "name": "println",
+      "line": 396
+    },
+    {
+      "name": "println",
+      "line": 410
+    },
+    {
+      "name": "println",
+      "line": 410
+    },
+    {
+      "name": "println",
+      "line": 423
+    },
+    {
+      "name": "println",
+      "line": 423
+    },
+    {
+      "name": "println",
+      "line": 429
+    },
+    {
+      "name": "println",
+      "line": 429
+    },
+    {
+      "name": "println",
+      "line": 440
+    },
+    {
+      "name": "println",
+      "line": 440
+    },
+    {
+      "name": "println",
+      "line": 442
+    },
+    {
+      "name": "println",
+      "line": 442
+    },
+    {
+      "name": "print",
+      "line": 446
+    },
+    {
+      "name": "print",
+      "line": 446
+    },
+    {
+      "name": "println",
+      "line": 461
+    },
+    {
+      "name": "println",
+      "line": 461
+    },
+    {
+      "name": "print",
+      "line": 468
+    },
+    {
+      "name": "print",
+      "line": 468
+    },
+    {
+      "name": "println",
+      "line": 481
+    },
+    {
+      "name": "println",
+      "line": 481
+    },
+    {
+      "name": "println",
+      "line": 493
+    },
+    {
+      "name": "vec",
+      "line": 507
+    },
+    {
+      "name": "eprintln",
+      "line": 561
+    },
+    {
+      "name": "eprintln",
+      "line": 561
+    }
+  ],
+  "modules": []
+}

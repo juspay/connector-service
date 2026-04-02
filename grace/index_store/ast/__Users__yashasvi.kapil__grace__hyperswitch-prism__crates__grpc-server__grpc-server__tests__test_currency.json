@@ -1,0 +1,270 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/tests/test_currency.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_zero_decimal_currencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 7
+    },
+    {
+      "name": "test_two_decimal_currencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 42
+    },
+    {
+      "name": "test_three_decimal_currencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 77
+    },
+    {
+      "name": "test_four_decimal_currencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 112
+    },
+    {
+      "name": "test_currency_classification_completeness",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 123
+    },
+    {
+      "name": "test_currency_error_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 179
+    },
+    {
+      "name": "test_comprehensive_currency_coverage",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 192
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{Currency, CurrencyError};"
+  ],
+  "macro_calls": [
+    {
+      "name": "assert_eq",
+      "line": 9
+    },
+    {
+      "name": "assert_eq",
+      "line": 9
+    },
+    {
+      "name": "assert_eq",
+      "line": 15
+    },
+    {
+      "name": "assert_eq",
+      "line": 15
+    },
+    {
+      "name": "assert_eq",
+      "line": 21
+    },
+    {
+      "name": "assert_eq",
+      "line": 21
+    },
+    {
+      "name": "assert_eq",
+      "line": 27
+    },
+    {
+      "name": "assert_eq",
+      "line": 27
+    },
+    {
+      "name": "assert_eq",
+      "line": 33
+    },
+    {
+      "name": "assert_eq",
+      "line": 33
+    },
+    {
+      "name": "assert_eq",
+      "line": 44
+    },
+    {
+      "name": "assert_eq",
+      "line": 44
+    },
+    {
+      "name": "assert_eq",
+      "line": 50
+    },
+    {
+      "name": "assert_eq",
+      "line": 50
+    },
+    {
+      "name": "assert_eq",
+      "line": 56
+    },
+    {
+      "name": "assert_eq",
+      "line": 56
+    },
+    {
+      "name": "assert_eq",
+      "line": 62
+    },
+    {
+      "name": "assert_eq",
+      "line": 62
+    },
+    {
+      "name": "assert_eq",
+      "line": 68
+    },
+    {
+      "name": "assert_eq",
+      "line": 68
+    },
+    {
+      "name": "assert_eq",
+      "line": 79
+    },
+    {
+      "name": "assert_eq",
+      "line": 79
+    },
+    {
+      "name": "assert_eq",
+      "line": 85
+    },
+    {
+      "name": "assert_eq",
+      "line": 85
+    },
+    {
+      "name": "assert_eq",
+      "line": 91
+    },
+    {
+      "name": "assert_eq",
+      "line": 91
+    },
+    {
+      "name": "assert_eq",
+      "line": 97
+    },
+    {
+      "name": "assert_eq",
+      "line": 97
+    },
+    {
+      "name": "assert_eq",
+      "line": 103
+    },
+    {
+      "name": "assert_eq",
+      "line": 103
+    },
+    {
+      "name": "assert_eq",
+      "line": 114
+    },
+    {
+      "name": "assert_eq",
+      "line": 114
+    },
+    {
+      "name": "vec",
+      "line": 129
+    },
+    {
+      "name": "println",
+      "line": 160
+    },
+    {
+      "name": "println",
+      "line": 160
+    },
+    {
+      "name": "assert",
+      "line": 166
+    },
+    {
+      "name": "assert",
+      "line": 166
+    },
+    {
+      "name": "println",
+      "line": 171
+    },
+    {
+      "name": "println",
+      "line": 171
+    },
+    {
+      "name": "assert_eq",
+      "line": 172
+    },
+    {
+      "name": "assert_eq",
+      "line": 172
+    },
+    {
+      "name": "format",
+      "line": 186
+    },
+    {
+      "name": "assert",
+      "line": 187
+    },
+    {
+      "name": "assert",
+      "line": 187
+    },
+    {
+      "name": "assert",
+      "line": 188
+    },
+    {
+      "name": "assert",
+      "line": 188
+    },
+    {
+      "name": "vec",
+      "line": 194
+    },
+    {
+      "name": "assert_eq",
+      "line": 235
+    },
+    {
+      "name": "assert_eq",
+      "line": 235
+    },
+    {
+      "name": "panic",
+      "line": 239
+    },
+    {
+      "name": "panic",
+      "line": 239
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

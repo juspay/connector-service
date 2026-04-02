@@ -1,0 +1,103 @@
+{
+  "file_path": "crates/ffi/ffi/src/bindings/utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "build_ffi_request_bytes",
+      "visibility": "pub",
+      "parameters": [
+        "request: &common_utils::request::Request"
+      ],
+      "return_type": "Result<Vec<u8>, IntegrationError>",
+      "line": 22
+    },
+    {
+      "name": "build_domain_response",
+      "visibility": "pub",
+      "parameters": [
+        "response_bytes: Vec<u8>"
+      ],
+      "return_type": "Result<Response, ConnectorResponseTransformationError>",
+      "line": 57
+    },
+    {
+      "name": "parse_ffi_options_for_req",
+      "visibility": "pub",
+      "parameters": [
+        "options_bytes: Vec<u8>"
+      ],
+      "return_type": "Result<FfiOptions, IntegrationError>",
+      "line": 97
+    },
+    {
+      "name": "parse_ffi_options_for_res",
+      "visibility": "pub",
+      "parameters": [
+        "options_bytes: Vec<u8>"
+      ],
+      "return_type": "Result<FfiOptions, ConnectorResponseTransformationError>",
+      "line": 116
+    },
+    {
+      "name": "parse_metadata_for_req",
+      "visibility": "pub",
+      "parameters": [
+        "options: &FfiOptions"
+      ],
+      "return_type": "Result<crate::types::FfiMetadataPayload, IntegrationError>",
+      "line": 138
+    },
+    {
+      "name": "parse_metadata_for_res",
+      "visibility": "pub",
+      "parameters": [
+        "options: &FfiOptions"
+      ],
+      "return_type": "Result<crate::types::FfiMetadataPayload, ConnectorResponseTransformationError>",
+      "line": 181
+    }
+  ],
+  "use_statements": [
+    "use bytes::Bytes;",
+    "use domain_types::connector_types::ConnectorEnum;",
+    "use domain_types::errors::{ApplicationErrorResponse, ConnectorError};",
+    "use domain_types::router_data::ConnectorSpecificConfig;",
+    "use domain_types::router_response_types::Response;",
+    "use domain_types::utils::ForeignTryFrom;",
+    "use error_stack::Report;",
+    "use grpc_api_types::payments::{\n    ConnectorResponseTransformationError, FfiConnectorHttpRequest, FfiConnectorHttpResponse,\n    FfiOptions, IntegrationError,\n};",
+    "use http::header::{HeaderMap, HeaderName, HeaderValue};",
+    "use prost::Message;",
+    "use ucs_env::error::ErrorSwitch;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 32
+    },
+    {
+      "name": "format",
+      "line": 42
+    },
+    {
+      "name": "format",
+      "line": 62
+    },
+    {
+      "name": "format",
+      "line": 87
+    },
+    {
+      "name": "format",
+      "line": 107
+    },
+    {
+      "name": "format",
+      "line": 128
+    }
+  ],
+  "modules": []
+}

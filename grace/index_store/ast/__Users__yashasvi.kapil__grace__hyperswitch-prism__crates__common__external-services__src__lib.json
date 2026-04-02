@@ -1,0 +1,16 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/external-services/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "pub use service::*;"
+  ],
+  "macro_calls": [],
+  "modules": [
+    "service",
+    "shared_metrics"
+  ]
+}

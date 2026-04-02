@@ -1,0 +1,851 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+  "structs": [
+    {
+      "name": "RazorpayV2RouterData",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "order_id",
+        "router_data",
+        "billing_address",
+        "phantom"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 77
+    },
+    {
+      "name": "RazorpayV2CreateOrderRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "receipt",
+        "payment_capture",
+        "notes"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 129
+    },
+    {
+      "name": "RazorpayV2CreateOrderResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "entity",
+        "amount",
+        "amount_paid",
+        "amount_due",
+        "currency",
+        "receipt",
+        "status",
+        "attempts",
+        "notes",
+        "offer_id",
+        "created_at"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 142
+    },
+    {
+      "name": "RazorpayV2PaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "order_id",
+        "email",
+        "contact",
+        "method",
+        "description",
+        "notes",
+        "callback_url",
+        "upi",
+        "customer_id",
+        "save",
+        "recurring"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 162
+    },
+    {
+      "name": "RazorpayV2UpiDetails",
+      "visibility": "pub",
+      "fields": [
+        "flow",
+        "vpa",
+        "expiry_time",
+        "upi_type",
+        "end_date"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 189
+    },
+    {
+      "name": "RazorpayV2PaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "entity",
+        "amount",
+        "currency",
+        "status",
+        "order_id",
+        "invoice_id",
+        "international",
+        "method",
+        "amount_refunded",
+        "refund_status",
+        "captured",
+        "description",
+        "card_id",
+        "bank",
+        "wallet",
+        "vpa",
+        "email",
+        "contact",
+        "notes",
+        "fee",
+        "tax",
+        "error_code",
+        "error_description",
+        "error_reason"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 203
+    },
+    {
+      "name": "RazorpayV2OrderPaymentsCollectionResponse",
+      "visibility": "pub",
+      "fields": [
+        "entity",
+        "count",
+        "items"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 252
+    },
+    {
+      "name": "RazorpayV2ErrorDetails",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "description",
+        "source",
+        "step",
+        "reason",
+        "metadata",
+        "field"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 288
+    },
+    {
+      "name": "RazorpayV2UpiResponseDetails",
+      "visibility": "pub",
+      "fields": [
+        "flow",
+        "vpa",
+        "expiry_time"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 299
+    },
+    {
+      "name": "RazorpayV2RefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 438
+    },
+    {
+      "name": "RazorpayV2RefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "entity",
+        "amount",
+        "currency",
+        "payment_id",
+        "status",
+        "speed_requested",
+        "speed_processed",
+        "receipt",
+        "created_at"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 443
+    }
+  ],
+  "enums": [
+    {
+      "name": "RazorpayV2AuthType",
+      "visibility": "pub",
+      "variants": [
+        "AuthToken",
+        "ApiKeySecret"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 31
+    },
+    {
+      "name": "UpiFlow",
+      "visibility": "pub",
+      "variants": [
+        "Collect",
+        "Intent"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 183
+    },
+    {
+      "name": "RazorpayStatus",
+      "visibility": "pub",
+      "variants": [
+        "Created",
+        "Authorized",
+        "Captured",
+        "Refunded",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 233
+    },
+    {
+      "name": "RazorpayV2SyncResponse",
+      "visibility": "pub",
+      "variants": [
+        "PaymentResponse",
+        "OrderPaymentsCollection"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 260
+    },
+    {
+      "name": "RazorpayV2UpiPaymentsResponse",
+      "visibility": "pub",
+      "variants": [
+        "SuccessIntent",
+        "SuccessCollect",
+        "Error"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 267
+    },
+    {
+      "name": "RazorpayV2ErrorResponse",
+      "visibility": "pub",
+      "variants": [
+        "StandardError",
+        "SimpleError"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 282
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "RazorpayV2AuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_authorization_header"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "RazorpayV2AuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 55
+    },
+    {
+      "type_name": "RazorpayV2RouterData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 89
+    },
+    {
+      "type_name": "RazorpayV2RouterData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 108
+    },
+    {
+      "type_name": "RazorpayV2CreateOrderRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 310
+    },
+    {
+      "type_name": "RazorpayV2PaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 334
+    },
+    {
+      "type_name": "RazorpayV2RefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 456
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 471
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 514
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 557
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 633
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 700
+    }
+  ],
+  "functions": [
+    {
+      "name": "generate_authorization_header",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 40
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 58
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "(amount, item, order_id, billing_address): (MinorUnit, T, Option<String>, Option<Address>)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 94
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "(amount, item, order_id): (MinorUnit, T, Option<String>)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 113
+    },
+    {
+      "name": "get_psync_razorpay_payment_status",
+      "visibility": "",
+      "parameters": [
+        "razorpay_status: RazorpayStatus"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 241
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RazorpayV2RouterData<&PaymentCreateOrderData, U>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 315
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RazorpayV2RouterData<\n            &RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<U>,\n                PaymentsResponseData,\n            >,\n            U,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 348
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RazorpayV2RouterData<&RefundsData, U>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 461
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(response, data, _status_code, _raw_response): (\n            RazorpayV2RefundResponse,\n            Self,\n            u16,\n            Vec<u8>,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 481
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(response, data, _status_code, _raw_response): (\n            RazorpayV2RefundResponse,\n            Self,\n            u16,\n            Vec<u8>,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 524
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(sync_response, data, _status_code, _raw_response): (\n            RazorpayV2SyncResponse,\n            Self,\n            u16,\n            Vec<u8>,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 567
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(upi_response, data, _status_code, _raw_response): (\n            RazorpayV2UpiPaymentsResponse,\n            Self,\n            u16,\n            Vec<u8>,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 644
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(response, data, _status_code, __raw_response): (\n            RazorpayV2PaymentsResponse,\n            Self,\n            u16,\n            Vec<u8>,\n        )"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 711
+    }
+  ],
+  "use_statements": [
+    "use std::str::FromStr;",
+    "use base64::{engine::general_purpose::STANDARD, Engine};",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::{consts, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync, RSync, Refund},\n    connector_types::{\n        PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        ResponseId,\n    },\n    errors,\n    payment_address::Address,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n};",
+    "use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json::Value;",
+    "use crate::connectors::razorpay::transformers::ForeignTryFrom;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 42
+    },
+    {
+      "name": "format",
+      "line": 47
+    },
+    {
+      "name": "format",
+      "line": 49
+    }
+  ],
+  "modules": []
+}

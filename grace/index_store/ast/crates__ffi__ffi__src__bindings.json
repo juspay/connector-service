@@ -1,0 +1,15 @@
+{
+  "file_path": "crates/ffi/ffi/src/bindings.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "macros",
+    "uniffi",
+    "utils"
+  ]
+}

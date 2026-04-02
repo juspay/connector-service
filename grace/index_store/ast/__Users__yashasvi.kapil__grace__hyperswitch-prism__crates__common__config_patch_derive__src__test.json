@@ -1,0 +1,87 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/config_patch_derive/src/test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "used_params",
+      "visibility": "",
+      "parameters": [
+        "ty: &str",
+        "params: &[&str]"
+      ],
+      "return_type": "HashSet<String>",
+      "line": 7
+    },
+    {
+      "name": "collects_from_qself",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 19
+    },
+    {
+      "name": "collects_from_trait_object_assoc",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 25
+    },
+    {
+      "name": "collects_from_bare_fn",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "V\", &[\"T\", \"U\", \"V\"]);\n    for param in [\"T\", \"U\", \"V\"]",
+      "line": 31
+    },
+    {
+      "name": "collects_from_ptr",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 39
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashSet;",
+    "use crate::generics::collect_generic_params;",
+    "use syn::Type;"
+  ],
+  "macro_calls": [
+    {
+      "name": "assert",
+      "line": 21
+    },
+    {
+      "name": "assert",
+      "line": 21
+    },
+    {
+      "name": "assert",
+      "line": 27
+    },
+    {
+      "name": "assert",
+      "line": 27
+    },
+    {
+      "name": "assert",
+      "line": 34
+    },
+    {
+      "name": "assert",
+      "line": 34
+    },
+    {
+      "name": "assert",
+      "line": 41
+    },
+    {
+      "name": "assert",
+      "line": 41
+    }
+  ],
+  "modules": []
+}

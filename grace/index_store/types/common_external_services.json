@@ -1,0 +1,153 @@
+{
+  "crate": "common_external_services",
+  "structs": [
+    {
+      "name": "TestContext",
+      "file": "crates/common/external-services/src/service.rs",
+      "fields": [
+        "session_id",
+        "mock_server_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "EventProcessingParams",
+      "file": "crates/common/external-services/src/service.rs",
+      "fields": [
+        "connector_name",
+        "service_name",
+        "service_type",
+        "flow_name",
+        "event_config",
+        "request_id",
+        "lineage_ids",
+        "reference_id",
+        "resource_id",
+        "shadow_mode"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GrpcMetricsLayer",
+      "file": "crates/common/external-services/src/shared_metrics.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GrpcMetricsService",
+      "file": "crates/common/external-services/src/shared_metrics.rs",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "ApplicationResponse",
+      "file": "crates/common/external-services/src/service.rs",
+      "variants": [
+        "Json"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "Tag",
+      "file": "crates/common/external-services/src/service.rs",
+      "variants": [
+        "General",
+        "RedisGet",
+        "RedisSet",
+        "ApiIncomingRequest",
+        "ApiOutgoingRequestBody",
+        "ApiOutgoingRequestHeaders",
+        "EndRequest",
+        "InitiatedToConnector",
+        "IncomingApi",
+        "OutgoingApi"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "serde::Deserialize",
+        "Clone",
+        "strum::EnumString"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MetricsError",
+      "file": "crates/common/external-services/src/shared_metrics.rs",
+      "variants": [
+        "EncodingError",
+        "Utf8Error"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorRequestReference",
+      "file": "crates/common/external-services/src/service.rs",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "AdditionalHeaders",
+      "file": "crates/common/external-services/src/service.rs",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ToHttpMethod",
+      "file": "crates/common/external-services/src/service.rs",
+      "methods": [
+        "to_http_method"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "HeaderExt",
+      "file": "crates/common/external-services/src/service.rs",
+      "methods": [
+        "construct_header_map"
+      ],
+      "supertraits": [],
+      "visibility": "pub(super)"
+    },
+    {
+      "name": "RequestBuilderExt",
+      "file": "crates/common/external-services/src/service.rs",
+      "methods": [
+        "add_headers"
+      ],
+      "supertraits": [],
+      "visibility": "pub(super)"
+    }
+  ]
+}

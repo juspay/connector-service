@@ -1,0 +1,149 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/probe_engine.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "ProbeAttemptResult",
+      "visibility": "",
+      "variants": [
+        "Success",
+        "NotImplemented",
+        "Error"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 66
+    },
+    {
+      "name": "ErrorAction",
+      "visibility": "",
+      "variants": [
+        "Stop",
+        "PatchAndRetry"
+      ],
+      "derives": [
+        "Debug",
+        "Debug"
+      ],
+      "line": 77
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "run_probe",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "flow_name: &str",
+        "mut req: Req",
+        "mut call: F",
+        "mut patch: impl FnMut(&mut Req, &str)"
+      ],
+      "return_type": "FlowResult\nwhere\n    Req: Clone + Serialize,\n    F: FnMut(\n        Req,\n    ) -> Result<\n        Option<common_utils::request::Request>,\n        grpc_api_types::payments::IntegrationError,\n    >,",
+      "line": 101
+    },
+    {
+      "name": "attempt_probe",
+      "visibility": "",
+      "parameters": [
+        "_flow_name: &str",
+        "req: &Req",
+        "call: &mut F"
+      ],
+      "return_type": "ProbeAttemptResult\nwhere\n    Req: Clone + Serialize,\n    F: FnMut(\n        Req,\n    ) -> Result<\n        Option<common_utils::request::Request>,\n        grpc_api_types::payments::IntegrationError,\n    >,",
+      "line": 150
+    },
+    {
+      "name": "handle_success",
+      "visibility": "",
+      "parameters": [
+        "req: Req",
+        "connector_req: common_utils::request::Request",
+        "required_fields: Vec<String>"
+      ],
+      "return_type": "FlowResult",
+      "line": 181
+    },
+    {
+      "name": "handle_not_implemented",
+      "visibility": "",
+      "parameters": [
+        "required_fields: Vec<String>"
+      ],
+      "return_type": "FlowResult",
+      "line": 203
+    },
+    {
+      "name": "classify_error_action",
+      "visibility": "",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "ErrorAction",
+      "line": 216
+    },
+    {
+      "name": "handle_error_status",
+      "visibility": "",
+      "parameters": [
+        "status: FlowStatus",
+        "required_fields: Vec<String>",
+        "msg: String"
+      ],
+      "return_type": "FlowResult",
+      "line": 229
+    },
+    {
+      "name": "handle_patch_attempt",
+      "visibility": "",
+      "parameters": [
+        "field: &str",
+        "seen_fields: &mut HashSet<String>",
+        "required_fields: &mut Vec<String>",
+        "patch: &mut impl FnMut(&mut Req, &str)",
+        "req: &mut Req"
+      ],
+      "return_type": "bool\nwhere\n    Req: Serialize,",
+      "line": 249
+    },
+    {
+      "name": "handle_stuck_field",
+      "visibility": "",
+      "parameters": [
+        "field: &str",
+        "msg: &str",
+        "required_fields: Vec<String>"
+      ],
+      "return_type": "FlowResult",
+      "line": 271
+    },
+    {
+      "name": "handle_max_iterations_reached",
+      "visibility": "",
+      "parameters": [
+        "required_fields: Vec<String>"
+      ],
+      "return_type": "FlowResult",
+      "line": 284
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashSet;",
+    "use serde::Serialize;",
+    "use crate::config::max_iterations;",
+    "use crate::error_parsing::{\n    is_not_implemented, is_not_supported, parse_missing_field, parse_missing_field_alt,\n};",
+    "use crate::json_utils::{clean_proto_request, convert_rust_to_proto_json};",
+    "use crate::normalizer::extract_sample;",
+    "use crate::status::FlowStatus;",
+    "use crate::types::FlowResult;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 277
+    }
+  ],
+  "modules": []
+}

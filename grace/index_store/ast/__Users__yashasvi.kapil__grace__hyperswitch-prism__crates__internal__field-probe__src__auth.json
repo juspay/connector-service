@@ -1,0 +1,62 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/auth.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "load_config",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "Arc<ucs_env::configs::Config>",
+      "line": 14
+    },
+    {
+      "name": "make_masked_metadata",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "MaskedMetadata",
+      "line": 19
+    },
+    {
+      "name": "dummy_auth",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "ConnectorSpecificConfig",
+      "line": 26
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use std::sync::Arc;",
+    "use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};",
+    "use domain_types::{\n    connector_types::ConnectorEnum,\n    router_data::{\n        ConnectorSpecificConfig, PaysafeAchAccountId, PaysafeCardAccountId,\n        PaysafePaymentMethodDetails,\n    },\n};",
+    "use hyperswitch_masking::Secret;"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 254
+    },
+    {
+      "name": "vec",
+      "line": 255
+    },
+    {
+      "name": "vec",
+      "line": 259
+    },
+    {
+      "name": "vec",
+      "line": 260
+    },
+    {
+      "name": "json",
+      "line": 503
+    }
+  ],
+  "modules": []
+}

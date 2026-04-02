@@ -1,0 +1,127 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/test_amount_conversion.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_amount_conversion_with_currency_validation",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 11
+    },
+    {
+      "name": "test_currency_validation_errors_propagate",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 41
+    },
+    {
+      "name": "test_amount_conversion_precision",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 78
+    }
+  ],
+  "use_statements": [
+    "use common_enums::Currency;",
+    "use common_utils::{\n        types::{MinorUnit, StringMajorUnitForConnector},\n        AmountConvertor,\n    };"
+  ],
+  "macro_calls": [
+    {
+      "name": "assert",
+      "line": 17
+    },
+    {
+      "name": "assert",
+      "line": 17
+    },
+    {
+      "name": "assert_eq",
+      "line": 19
+    },
+    {
+      "name": "assert_eq",
+      "line": 19
+    },
+    {
+      "name": "assert",
+      "line": 23
+    },
+    {
+      "name": "assert",
+      "line": 23
+    },
+    {
+      "name": "assert_eq",
+      "line": 25
+    },
+    {
+      "name": "assert_eq",
+      "line": 25
+    },
+    {
+      "name": "assert",
+      "line": 29
+    },
+    {
+      "name": "assert",
+      "line": 29
+    },
+    {
+      "name": "assert_eq",
+      "line": 31
+    },
+    {
+      "name": "assert_eq",
+      "line": 31
+    },
+    {
+      "name": "assert",
+      "line": 35
+    },
+    {
+      "name": "assert",
+      "line": 35
+    },
+    {
+      "name": "assert_eq",
+      "line": 37
+    },
+    {
+      "name": "assert_eq",
+      "line": 37
+    },
+    {
+      "name": "vec",
+      "line": 51
+    },
+    {
+      "name": "assert",
+      "line": 71
+    },
+    {
+      "name": "assert",
+      "line": 71
+    },
+    {
+      "name": "vec",
+      "line": 82
+    },
+    {
+      "name": "assert",
+      "line": 111
+    },
+    {
+      "name": "assert",
+      "line": 111
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

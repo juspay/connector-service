@@ -1,0 +1,174 @@
+{
+  "file_path": "crates/internal/field-probe/src/normalizer.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "normalize_content",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 7
+    },
+    {
+      "name": "push_char_at",
+      "visibility": "",
+      "parameters": [
+        "result: &mut String",
+        "s: &str",
+        "i: &mut usize"
+      ],
+      "return_type": "",
+      "line": 31
+    },
+    {
+      "name": "replace_uuids",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 44
+    },
+    {
+      "name": "replace_timestamps",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 93
+    },
+    {
+      "name": "replace_base64_signatures",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 132
+    },
+    {
+      "name": "replace_datetimes",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 184
+    },
+    {
+      "name": "replace_hex_digests",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 250
+    },
+    {
+      "name": "replace_json_dynamic_fields",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "String",
+      "line": 288
+    },
+    {
+      "name": "replace_json_alphanum_value",
+      "visibility": "",
+      "parameters": [
+        "s: &str",
+        "json_key: &str",
+        "replacement: &str"
+      ],
+      "return_type": "String",
+      "line": 312
+    },
+    {
+      "name": "replace_json_digit_value",
+      "visibility": "",
+      "parameters": [
+        "s: &str",
+        "json_key: &str",
+        "replacement: &str"
+      ],
+      "return_type": "String",
+      "line": 358
+    },
+    {
+      "name": "replace_url_param_digits",
+      "visibility": "",
+      "parameters": [
+        "s: &str",
+        "param_name: &str",
+        "placeholder: &str"
+      ],
+      "return_type": "String",
+      "line": 398
+    },
+    {
+      "name": "test_normalize_content",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 433
+    },
+    {
+      "name": "normalize_header_value",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "name: &str",
+        "value: String"
+      ],
+      "return_type": "String",
+      "line": 448
+    },
+    {
+      "name": "extract_sample",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "req: &common_utils::request::Request"
+      ],
+      "return_type": "SamplePayload",
+      "line": 458
+    }
+  ],
+  "use_statements": [
+    "use std::collections::BTreeMap;",
+    "use crate::types::SamplePayload;",
+    "use hyperswitch_masking::ExposeInterface;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 399
+    },
+    {
+      "name": "assert",
+      "line": 437
+    },
+    {
+      "name": "assert",
+      "line": 437
+    },
+    {
+      "name": "assert",
+      "line": 442
+    },
+    {
+      "name": "assert",
+      "line": 442
+    },
+    {
+      "name": "format",
+      "line": 460
+    }
+  ],
+  "modules": []
+}

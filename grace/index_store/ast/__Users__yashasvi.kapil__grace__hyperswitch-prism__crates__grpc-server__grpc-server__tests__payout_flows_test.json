@@ -1,0 +1,149 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/tests/payout_flows_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "add_mock_metadata",
+      "visibility": "",
+      "parameters": [
+        "request: &mut Request<T>"
+      ],
+      "return_type": "",
+      "line": 15
+    },
+    {
+      "name": "test_payout_create_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 37
+    },
+    {
+      "name": "test_payout_transfer_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 55
+    },
+    {
+      "name": "test_payout_get_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 73
+    },
+    {
+      "name": "test_payout_void_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 86
+    },
+    {
+      "name": "test_payout_stage_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 99
+    },
+    {
+      "name": "test_payout_create_link_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 117
+    },
+    {
+      "name": "test_payout_create_recipient_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 135
+    },
+    {
+      "name": "test_payout_enroll_disburse_account_client_basic",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 152
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use grpc_api_types::payouts::{\n    payout_service_client::PayoutServiceClient, Currency, Money, PayoutServiceCreateLinkRequest,\n    PayoutServiceCreateRecipientRequest, PayoutServiceCreateRequest,\n    PayoutServiceEnrollDisburseAccountRequest, PayoutServiceGetRequest, PayoutServiceStageRequest,\n    PayoutServiceTransferRequest, PayoutServiceVoidRequest,\n};",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "grpc_test",
+      "line": 38
+    },
+    {
+      "name": "grpc_test",
+      "line": 38
+    },
+    {
+      "name": "grpc_test",
+      "line": 56
+    },
+    {
+      "name": "grpc_test",
+      "line": 56
+    },
+    {
+      "name": "grpc_test",
+      "line": 74
+    },
+    {
+      "name": "grpc_test",
+      "line": 74
+    },
+    {
+      "name": "grpc_test",
+      "line": 87
+    },
+    {
+      "name": "grpc_test",
+      "line": 87
+    },
+    {
+      "name": "grpc_test",
+      "line": 100
+    },
+    {
+      "name": "grpc_test",
+      "line": 100
+    },
+    {
+      "name": "grpc_test",
+      "line": 118
+    },
+    {
+      "name": "grpc_test",
+      "line": 118
+    },
+    {
+      "name": "grpc_test",
+      "line": 136
+    },
+    {
+      "name": "grpc_test",
+      "line": 136
+    },
+    {
+      "name": "grpc_test",
+      "line": 153
+    },
+    {
+      "name": "grpc_test",
+      "line": 153
+    }
+  ],
+  "modules": [
+    "common"
+  ]
+}

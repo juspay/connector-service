@@ -1,0 +1,168 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/macros.rs",
+  "structs": [
+    {
+      "name": "NoRequestBody",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 76
+    },
+    {
+      "name": "NoRequestBodyTemplating",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 77
+    },
+    {
+      "name": "Bridge",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 151
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "ContentTypeSelector",
+      "visibility": "pub",
+      "methods": [
+        "get_dynamic_content_type"
+      ],
+      "line": 12
+    },
+    {
+      "name": "FlowTypes",
+      "visibility": "pub",
+      "methods": [],
+      "line": 20
+    },
+    {
+      "name": "GetFormData",
+      "visibility": "pub",
+      "methods": [
+        "get_form_data"
+      ],
+      "line": 41
+    },
+    {
+      "name": "GetSoapXml",
+      "visibility": "pub",
+      "methods": [
+        "to_soap_xml"
+      ],
+      "line": 47
+    },
+    {
+      "name": "BridgeRequestResponse",
+      "visibility": "pub",
+      "methods": [
+        "request_body",
+        "response",
+        "router_data"
+      ],
+      "line": 104
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "FlowTypes",
+      "methods": [],
+      "line": 27
+    },
+    {
+      "type_name": "NoRequestBody",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 79
+    }
+  ],
+  "functions": [
+    {
+      "name": "validate_xml_structure",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "xml_str: &str"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 56
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_value: RouterDataV2<F, FCD, Req, Resp>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 82
+    },
+    {
+      "name": "request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "rd: Self::ConnectorInputData"
+      ],
+      "return_type": "CustomResult<Self::RequestBody, errors::ConnectorError>\n    where\n        Self::RequestBody:\n            TryFrom<Self::ConnectorInputData, Error = error_stack::Report<errors::ConnectorError>>,",
+      "line": 108
+    },
+    {
+      "name": "response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "bytes: bytes::Bytes"
+      ],
+      "return_type": "CustomResult<Self::ResponseBody, errors::ConnectorError>\n    where\n        Self::ResponseBody: for<'a> serde::Deserialize<'a>,",
+      "line": 119
+    },
+    {
+      "name": "router_data",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "response: ResponseRouterDataType<Self::ConnectorInputData, Self::ResponseBody>"
+      ],
+      "return_type": "CustomResult<RouterDataType<Self::ConnectorInputData>, errors::ConnectorError>\n    where\n        RouterDataType<Self::ConnectorInputData>: TryFrom<\n            ResponseRouterDataType<Self::ConnectorInputData, Self::ResponseBody>,\n            Error = error_stack::Report<errors::ConnectorError>,\n        >,",
+      "line": 136
+    }
+  ],
+  "use_statements": [
+    "use std::marker::PhantomData;",
+    "use common_enums::DynamicContentType;",
+    "use common_utils::{errors::CustomResult, ext_traits::BytesExt};",
+    "use domain_types::{errors, router_data_v2::RouterDataV2};",
+    "use error_stack::ResultExt;",
+    "use crate::types;",
+    "use quick_xml::{events::Event, Reader};",
+    "pub(crate) use expand_fn_get_request_body;",
+    "pub(crate) use expand_fn_handle_response;",
+    "pub(crate) use expand_default_functions;",
+    "pub(crate) use macro_connector_implementation;",
+    "pub(crate) use impl_templating;",
+    "pub(crate) use impl_templating_mixed;",
+    "pub(crate) use resolve_request_body_type;",
+    "pub(crate) use resolve_templating_type;",
+    "pub(crate) use expand_connector_input_data;",
+    "pub(crate) use create_all_prerequisites;",
+    "pub(crate) use create_all_prerequisites_impl_templating;",
+    "pub(crate) use create_all_prerequisites_resolve_request_body_type;",
+    "pub(crate) use create_all_prerequisites_resolve_templating_type;",
+    "pub(crate) use expand_imports;",
+    "pub(crate) use create_amount_converter_wrapper;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 67
+    }
+  ],
+  "modules": []
+}

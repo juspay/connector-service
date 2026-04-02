@@ -1,0 +1,18 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/http/handlers/macros.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use axum::{\n    extract::{Extension, State},\n    http::{HeaderMap, StatusCode},\n    Json,\n};",
+    "use tonic;",
+    "use crate::http::{\n    error::HttpError, http_headers_to_grpc_metadata, state::AppState,\n    transfer_config_to_grpc_request, utils::ValidatedJson,\n};",
+    "use std::sync::Arc;",
+    "use ucs_env::configs::Config;",
+    "pub(crate) use http_handler;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,43 @@
+{
+  "file_path": "crates/common/tracing-kafka/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "init",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "",
+      "line": 64
+    },
+    {
+      "name": "init",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "",
+      "line": 69
+    }
+  ],
+  "use_statements": [
+    "pub use layer::{KafkaLayer, KafkaLayerError};",
+    "pub use writer::{KafkaWriter, KafkaWriterError};"
+  ],
+  "macro_calls": [
+    {
+      "name": "warn",
+      "line": 70
+    },
+    {
+      "name": "warn",
+      "line": 70
+    }
+  ],
+  "modules": [
+    "builder",
+    "layer",
+    "writer",
+    "metrics"
+  ]
+}

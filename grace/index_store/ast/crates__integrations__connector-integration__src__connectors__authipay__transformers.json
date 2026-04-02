@@ -1,0 +1,1691 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/authipay/transformers.rs",
+  "structs": [
+    {
+      "name": "AuthipayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "api_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 31
+    },
+    {
+      "name": "AuthipayErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "message",
+        "details",
+        "api_trace_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 101
+    },
+    {
+      "name": "ErrorDetail",
+      "visibility": "pub",
+      "fields": [
+        "field",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 110
+    },
+    {
+      "name": "AuthipayPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "request_type",
+        "merchant_transaction_id",
+        "transaction_amount",
+        "order",
+        "payment_method"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 142
+    },
+    {
+      "name": "TransactionAmount",
+      "visibility": "pub",
+      "fields": [
+        "total",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 151
+    },
+    {
+      "name": "OrderDetails",
+      "visibility": "pub",
+      "fields": [
+        "order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 158
+    },
+    {
+      "name": "PaymentMethod",
+      "visibility": "pub",
+      "fields": [
+        "payment_card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 164
+    },
+    {
+      "name": "PaymentCard",
+      "visibility": "pub",
+      "fields": [
+        "number",
+        "expiry_date",
+        "security_code",
+        "holder"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 170
+    },
+    {
+      "name": "ExpiryDate",
+      "visibility": "pub",
+      "fields": [
+        "month",
+        "year"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 180
+    },
+    {
+      "name": "AuthipayCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "request_type",
+        "transaction_amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 281
+    },
+    {
+      "name": "AuthipayPaymentCardResponse",
+      "visibility": "pub",
+      "fields": [
+        "expiry_date",
+        "bin",
+        "last4",
+        "brand"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 382
+    },
+    {
+      "name": "AuthipayPaymentMethodDetails",
+      "visibility": "pub",
+      "fields": [
+        "payment_card",
+        "payment_method_type",
+        "payment_method_brand"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 391
+    },
+    {
+      "name": "AmountDetails",
+      "visibility": "pub",
+      "fields": [
+        "total",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 399
+    },
+    {
+      "name": "AvsResponse",
+      "visibility": "pub",
+      "fields": [
+        "street_match",
+        "postal_code_match"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 406
+    },
+    {
+      "name": "Processor",
+      "visibility": "pub",
+      "fields": [
+        "reference_number",
+        "authorization_code",
+        "response_code",
+        "response_message",
+        "network",
+        "association_response_code",
+        "association_response_message",
+        "avs_response",
+        "security_code_response",
+        "merchant_advice_code_indicator",
+        "response_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 413
+    },
+    {
+      "name": "PaymentToken",
+      "visibility": "pub",
+      "fields": [
+        "value",
+        "reusable",
+        "decline_duplicates"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 429
+    },
+    {
+      "name": "AuthipayPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "client_request_id",
+        "api_trace_id",
+        "response_type",
+        "response_type_field",
+        "ipg_transaction_id",
+        "order_id",
+        "user_id",
+        "transaction_type",
+        "payment_method_details",
+        "merchant_transaction_id",
+        "transaction_time",
+        "approved_amount",
+        "transaction_amount",
+        "transaction_status",
+        "transaction_result",
+        "transaction_state",
+        "approval_code",
+        "scheme_response_code",
+        "error_message",
+        "scheme_transaction_id",
+        "processor",
+        "payment_token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 437
+    },
+    {
+      "name": "AuthipayRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "request_type",
+        "transaction_amount",
+        "comments"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 736
+    },
+    {
+      "name": "AuthipayVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "request_type",
+        "comments"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 776
+    }
+  ],
+  "enums": [
+    {
+      "name": "AuthipayRequestType",
+      "visibility": "pub",
+      "variants": [
+        "PaymentCardSaleTransaction",
+        "PaymentCardPreAuthTransaction",
+        "PostAuthTransaction",
+        "ReturnTransaction",
+        "VoidPreAuthTransactions",
+        "VoidTransaction"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 129
+    },
+    {
+      "name": "AuthipayTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Sale",
+        "Preauth",
+        "Credit",
+        "ForcedTicket",
+        "Void",
+        "Return",
+        "Postauth",
+        "PayerAuth",
+        "Disbursement",
+        "Unknown"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 325
+    },
+    {
+      "name": "AuthipayPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Approved",
+        "Waiting",
+        "Partial",
+        "ValidationFailed",
+        "ProcessingFailed",
+        "Declined"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 341
+    },
+    {
+      "name": "AuthipayPaymentResult",
+      "visibility": "pub",
+      "variants": [
+        "Approved",
+        "Declined",
+        "Failed",
+        "Waiting",
+        "Partial",
+        "Fraud"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 352
+    },
+    {
+      "name": "AuthipayTransactionState",
+      "visibility": "pub",
+      "variants": [
+        "Authorized",
+        "Captured",
+        "Declined",
+        "Checked",
+        "CompletedGet",
+        "Initialized",
+        "Pending",
+        "Ready",
+        "Template",
+        "Settled",
+        "Voided",
+        "Waiting"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 363
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "AuthipayAuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_hmac_signature",
+        "generate_client_request_id",
+        "generate_timestamp"
+      ],
+      "line": 36
+    },
+    {
+      "type_name": "AuthipayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 77
+    },
+    {
+      "type_name": "AuthipayErrorResponse",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 115
+    },
+    {
+      "type_name": "AuthipayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 187
+    },
+    {
+      "type_name": "AuthipayCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 288
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 583
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 634
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 685
+    },
+    {
+      "type_name": "AuthipayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 745
+    },
+    {
+      "type_name": "AuthipayVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 784
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 884
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 914
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1013
+    },
+    {
+      "type_name": "AuthipayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1070
+    },
+    {
+      "type_name": "AuthipayVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1100
+    },
+    {
+      "type_name": "AuthipayCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1120
+    },
+    {
+      "type_name": "AuthipayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1140
+    }
+  ],
+  "functions": [
+    {
+      "name": "generate_hmac_signature",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "api_key: &str",
+        "client_request_id: &str",
+        "timestamp: &str",
+        "request_body: &str"
+      ],
+      "return_type": "Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 40
+    },
+    {
+      "name": "generate_client_request_id",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "String",
+      "line": 63
+    },
+    {
+      "name": "generate_timestamp",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "String",
+      "line": 68
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 80
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 116
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 194
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 293
+    },
+    {
+      "name": "extract_connector_metadata",
+      "visibility": "",
+      "parameters": [
+        "payment_token: Option<&PaymentToken>"
+      ],
+      "return_type": "Option<serde_json::Value>",
+      "line": 466
+    },
+    {
+      "name": "extract_network_fields",
+      "visibility": "",
+      "parameters": [
+        "processor: Option<&Processor>"
+      ],
+      "return_type": "(Option<String>, Option<String>, Option<String>)",
+      "line": 485
+    },
+    {
+      "name": "map_status",
+      "visibility": "",
+      "parameters": [
+        "authipay_status: Option<AuthipayPaymentStatus>",
+        "authipay_result: Option<AuthipayPaymentResult>",
+        "authipay_state: Option<AuthipayTransactionState>",
+        "transaction_type: AuthipayTransactionType"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 502
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 588
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 639
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 690
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 750
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 789
+    },
+    {
+      "name": "map_refund_status",
+      "visibility": "",
+      "parameters": [
+        "transaction_type: Option<AuthipayTransactionType>",
+        "transaction_status: Option<AuthipayPaymentStatus>",
+        "transaction_result: Option<AuthipayPaymentResult>",
+        "transaction_state: Option<AuthipayTransactionState>"
+      ],
+      "return_type": "RefundStatus",
+      "line": 812
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 889
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 919
+    },
+    {
+      "name": "map_void_status",
+      "visibility": "",
+      "parameters": [
+        "transaction_type: AuthipayTransactionType",
+        "transaction_status: Option<AuthipayPaymentStatus>",
+        "transaction_result: Option<AuthipayPaymentResult>",
+        "transaction_state: Option<AuthipayTransactionState>"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 952
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<AuthipayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1018
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: AuthipayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1085
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: AuthipayRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1110
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: AuthipayRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1130
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: AuthipayRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1150
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use std::time::{SystemTime, UNIX_EPOCH};",
+    "use crate::types::ResponseRouterData;",
+    "use base64::{engine::general_purpose, Engine};",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{\n    crypto::{self, SignMessage},\n    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},\n};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use uuid::Uuid;",
+    "use common_enums::RefundStatus;",
+    "use crate::connectors::authipay::AuthipayRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 48
+    },
+    {
+      "name": "report",
+      "line": 90
+    },
+    {
+      "name": "report",
+      "line": 231
+    },
+    {
+      "name": "matches",
+      "line": 243
+    },
+    {
+      "name": "matches",
+      "line": 515
+    },
+    {
+      "name": "matches",
+      "line": 521
+    },
+    {
+      "name": "matches",
+      "line": 834
+    },
+    {
+      "name": "matches",
+      "line": 835
+    },
+    {
+      "name": "matches",
+      "line": 969
+    },
+    {
+      "name": "matches",
+      "line": 970
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,289 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/pii.rs",
+  "structs": [
+    {
+      "name": "Email",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "Deserialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default"
+      ],
+      "line": 37
+    }
+  ],
+  "enums": [
+    {
+      "name": "EmailStrategy",
+      "visibility": "pub",
+      "variants": [],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 19
+    },
+    {
+      "name": "IpAddress",
+      "visibility": "pub",
+      "variants": [],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "Deserialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug"
+      ],
+      "line": 88
+    },
+    {
+      "name": "UpiVpaMaskingStrategy",
+      "visibility": "pub",
+      "variants": [],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "Deserialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "Debug"
+      ],
+      "line": 118
+    },
+    {
+      "name": "EncryptionStrategy",
+      "visibility": "pub",
+      "variants": [],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "Deserialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "Debug",
+        "Debug"
+      ],
+      "line": 136
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "EmailStrategy",
+      "trait_name": "Strategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 21
+    },
+    {
+      "type_name": "Email",
+      "trait_name": "ExposeInterface",
+      "methods": [
+        "expose"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "Email",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 45
+    },
+    {
+      "type_name": "Email",
+      "trait_name": "ops::Deref",
+      "methods": [
+        "deref"
+      ],
+      "line": 53
+    },
+    {
+      "type_name": "Email",
+      "trait_name": "ops::DerefMut",
+      "methods": [
+        "deref_mut"
+      ],
+      "line": 61
+    },
+    {
+      "type_name": "Email",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 67
+    },
+    {
+      "type_name": "IpAddress",
+      "trait_name": "Strategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 90
+    },
+    {
+      "type_name": "UpiVpaMaskingStrategy",
+      "trait_name": "Strategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 120
+    },
+    {
+      "type_name": "EncryptionStrategy",
+      "trait_name": "Strategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 138
+    }
+  ],
+  "functions": [
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "val: &T",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 25
+    },
+    {
+      "name": "expose",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Secret<String, EmailStrategy>",
+      "line": 40
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 48
+    },
+    {
+      "name": "deref",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Self::Target",
+      "line": 56
+    },
+    {
+      "name": "deref_mut",
+      "visibility": "",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "&mut Self::Target",
+      "line": 62
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "email: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 69
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "val: &T",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 94
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "val: &T",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 124
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "value: &T",
+        "fmt: &mut core::fmt::Formatter<'_>"
+      ],
+      "return_type": "core::fmt::Result",
+      "line": 142
+    }
+  ],
+  "use_statements": [
+    "use std::{convert::AsRef, fmt, ops, str::FromStr};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Secret, Strategy, WithType};",
+    "use serde::Deserialize;",
+    "use crate::{\n    consts::REDACTED,\n    errors::{self, ValidationError},\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "write",
+      "line": 28
+    },
+    {
+      "name": "write",
+      "line": 109
+    },
+    {
+      "name": "write",
+      "line": 128
+    },
+    {
+      "name": "write",
+      "line": 143
+    }
+  ],
+  "modules": []
+}

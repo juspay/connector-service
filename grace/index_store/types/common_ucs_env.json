@@ -1,0 +1,700 @@
+{
+  "structs": [
+    {
+      "name": "PaymentAuthorizationError",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "error_message",
+        "error_code",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Debug",
+        "Clone"
+      ],
+      "line": 283
+    },
+    {
+      "name": "Config",
+      "visibility": "pub",
+      "fields": [
+        "common",
+        "server",
+        "metrics",
+        "log",
+        "proxy",
+        "connectors",
+        "events",
+        "lineage",
+        "unmasked_headers",
+        "test",
+        "api_tags",
+        "webhook_source_verification_call",
+        "superposition_config"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch"
+      ],
+      "line": 23
+    },
+    {
+      "name": "LineageConfig",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "header_name",
+        "field_prefix"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 50
+    },
+    {
+      "name": "TestConfig",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "mock_server_url"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 71
+    },
+    {
+      "name": "ApiTagConfig",
+      "visibility": "pub",
+      "fields": [
+        "tags"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 116
+    },
+    {
+      "name": "Common",
+      "visibility": "pub",
+      "fields": [
+        "environment"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 166
+    },
+    {
+      "name": "Server",
+      "visibility": "pub",
+      "fields": [
+        "host",
+        "port",
+        "type_"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 188
+    },
+    {
+      "name": "MetricsServer",
+      "visibility": "pub",
+      "fields": [
+        "host",
+        "port"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 196
+    },
+    {
+      "name": "WebhookSourceVerificationCall",
+      "visibility": "pub",
+      "fields": [
+        "connectors_with_webhook_source_verification_call"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 267
+    },
+    {
+      "name": "Log",
+      "visibility": "pub",
+      "fields": [
+        "console",
+        "kafka"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 8
+    },
+    {
+      "name": "LogConsole",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "level",
+        "log_format",
+        "filtering_directive"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 18
+    },
+    {
+      "name": "Level",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 31
+    },
+    {
+      "name": "LogKafka",
+      "visibility": "pub",
+      "fields": [
+        "enabled",
+        "level",
+        "filtering_directive",
+        "brokers",
+        "topic",
+        "batch_size",
+        "flush_interval_ms",
+        "buffer_limit"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Default",
+        "config_patch_derive::Patch"
+      ],
+      "line": 84
+    },
+    {
+      "name": "FormattingLayer",
+      "visibility": "pub",
+      "fields": [
+        "dst_writer",
+        "pid",
+        "hostname",
+        "service",
+        "default_fields"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug"
+      ],
+      "line": 79
+    },
+    {
+      "name": "StorageSubscription",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 16
+    },
+    {
+      "name": "Storage",
+      "visibility": "pub",
+      "fields": [
+        "values"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 21
+    },
+    {
+      "name": "TelemetryGuard",
+      "visibility": "pub",
+      "fields": [
+        "_log_guards"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 13
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConfigurationError",
+      "visibility": "pub",
+      "variants": [
+        "AddressError",
+        "GrpcReflectionServiceError",
+        "MetricsServerError",
+        "ServerError",
+        "IoError"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 78
+    },
+    {
+      "name": "ServiceType",
+      "visibility": "pub",
+      "variants": [
+        "Grpc",
+        "Http"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 203
+    },
+    {
+      "name": "LogFormat",
+      "visibility": "pub",
+      "variants": [
+        "Default",
+        "Json"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Serialize",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 74
+    },
+    {
+      "name": "RecordType",
+      "visibility": "pub",
+      "variants": [
+        "EnterSpan",
+        "ExitSpan",
+        "Event"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 54
+    }
+  ],
+  "traits": [
+    {
+      "name": "ReportSwitchExt",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 9
+    },
+    {
+      "name": "ErrorSwitch",
+      "visibility": "pub",
+      "methods": [
+        "switch"
+      ],
+      "line": 34
+    },
+    {
+      "name": "ErrorSwitchFrom",
+      "visibility": "pub",
+      "methods": [
+        "switch_from"
+      ],
+      "line": 42
+    },
+    {
+      "name": "IntoGrpcStatus",
+      "visibility": "pub",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 56
+    },
+    {
+      "name": "ResultExtGrpc",
+      "visibility": "pub",
+      "methods": [
+        "into_grpc_status"
+      ],
+      "line": 60
+    }
+  ]
+}

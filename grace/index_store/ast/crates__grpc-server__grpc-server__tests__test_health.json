@@ -1,0 +1,35 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/test_health.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_health",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 10
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use grpc_api_types::health_check::{health_client::HealthClient, HealthCheckRequest};",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "grpc_test",
+      "line": 11
+    },
+    {
+      "name": "grpc_test",
+      "line": 11
+    }
+  ],
+  "modules": [
+    "common"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/composite-service/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "payments",
+    "transformers",
+    "utils"
+  ]
+}

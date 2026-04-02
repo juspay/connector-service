@@ -1,0 +1,64 @@
+{
+  "structs": [
+    {
+      "name": "InterfaceRequestData",
+      "visibility": "pub",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata",
+        "extensions"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 10
+    },
+    {
+      "name": "MetadataPayload",
+      "visibility": "pub",
+      "fields": [
+        "tenant_id",
+        "request_id",
+        "merchant_id",
+        "connector",
+        "lineage_ids",
+        "connector_config",
+        "reference_id",
+        "shadow_mode",
+        "resource_id",
+        "environment"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 26
+    }
+  ],
+  "enums": [
+    {
+      "name": "InterfaceError",
+      "visibility": "pub",
+      "variants": [
+        "MissingRequiredHeader",
+        "InvalidHeaderValue"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 4
+    }
+  ],
+  "traits": [
+    {
+      "name": "HeaderSource",
+      "visibility": "pub",
+      "methods": [
+        "get_header"
+      ],
+      "line": 11
+    }
+  ]
+}

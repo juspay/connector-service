@@ -1,0 +1,30 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/metadata.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "add_connector_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "request: &mut Request<T>",
+        "connector: &str",
+        "auth: &ConnectorAuth",
+        "merchant_id: &str",
+        "tenant_id: &str",
+        "request_id: &str",
+        "connector_request_reference_id: &str"
+      ],
+      "return_type": "",
+      "line": 9
+    }
+  ],
+  "use_statements": [
+    "use tonic::Request;",
+    "use crate::harness::credentials::ConnectorAuth;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

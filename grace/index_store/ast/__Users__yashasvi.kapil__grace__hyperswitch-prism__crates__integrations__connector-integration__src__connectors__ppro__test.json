@@ -1,0 +1,1109 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/ppro/test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "make_request",
+      "visibility": "",
+      "parameters": [
+        "body: &[u8]"
+      ],
+      "return_type": "RequestDetails",
+      "line": 15
+    },
+    {
+      "name": "charge_webhook",
+      "visibility": "",
+      "parameters": [
+        "event_type: &str",
+        "status: &str"
+      ],
+      "return_type": "Vec<u8>",
+      "line": 25
+    },
+    {
+      "name": "agreement_webhook",
+      "visibility": "",
+      "parameters": [
+        "event_type: &str",
+        "status: &str"
+      ],
+      "return_type": "Vec<u8>",
+      "line": 44
+    },
+    {
+      "name": "test_ppro_connector_creation",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 98
+    },
+    {
+      "name": "test_ppro_currency_unit",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 104
+    },
+    {
+      "name": "test_ppro_content_type",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 113
+    },
+    {
+      "name": "test_webhook_event_type_capture_succeeded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 121
+    },
+    {
+      "name": "test_webhook_event_type_charge_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 130
+    },
+    {
+      "name": "test_webhook_event_type_authorization_succeeded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 149
+    },
+    {
+      "name": "test_webhook_event_type_refund_succeeded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 167
+    },
+    {
+      "name": "test_webhook_event_type_refund_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 176
+    },
+    {
+      "name": "test_webhook_event_type_void_succeeded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 185
+    },
+    {
+      "name": "test_webhook_event_type_void_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 194
+    },
+    {
+      "name": "test_webhook_event_type_capture_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 203
+    },
+    {
+      "name": "test_webhook_event_type_mandate_active",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 212
+    },
+    {
+      "name": "test_webhook_event_type_mandate_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 221
+    },
+    {
+      "name": "test_webhook_event_type_mandate_revoked",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 230
+    },
+    {
+      "name": "test_webhook_event_type_invalid_body",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 249
+    },
+    {
+      "name": "test_process_payment_webhook_captured",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 258
+    },
+    {
+      "name": "test_process_payment_webhook_failed_with_failure_details",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 279
+    },
+    {
+      "name": "test_process_payment_webhook_agreement_returns_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 316
+    },
+    {
+      "name": "test_process_refund_webhook_success",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 342
+    },
+    {
+      "name": "test_process_refund_webhook_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 359
+    },
+    {
+      "name": "sign_body",
+      "visibility": "",
+      "parameters": [
+        "secret: &[u8]",
+        "body: &[u8]"
+      ],
+      "return_type": "Result<String, Box<dyn std::error::Error>>",
+      "line": 374
+    },
+    {
+      "name": "make_signed_request",
+      "visibility": "",
+      "parameters": [
+        "body: &[u8]",
+        "signature: &str"
+      ],
+      "return_type": "RequestDetails",
+      "line": 382
+    },
+    {
+      "name": "test_verify_webhook_source_valid_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 395
+    },
+    {
+      "name": "test_verify_webhook_source_invalid_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 413
+    },
+    {
+      "name": "test_verify_webhook_source_missing_header",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 432
+    },
+    {
+      "name": "test_verify_webhook_source_no_secret_returns_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 450
+    },
+    {
+      "name": "test_verify_webhook_source_tampered_body",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 463
+    },
+    {
+      "name": "test_get_webhook_resource_object_charge",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 486
+    },
+    {
+      "name": "test_get_webhook_resource_object_agreement",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 498
+    },
+    {
+      "name": "test_get_webhook_resource_object_invalid_body",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 510
+    },
+    {
+      "name": "test_process_payment_webhook_authorization_success",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 522
+    },
+    {
+      "name": "test_process_payment_webhook_voided",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 540
+    },
+    {
+      "name": "test_process_payment_webhook_capture_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 553
+    },
+    {
+      "name": "test_process_payment_webhook_discarded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 585
+    },
+    {
+      "name": "test_process_payment_webhook_void_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 598
+    },
+    {
+      "name": "test_process_payment_webhook_raw_connector_response_present",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 630
+    },
+    {
+      "name": "test_process_payment_webhook_empty_body",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 646
+    },
+    {
+      "name": "test_process_payment_webhook_malformed_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 653
+    },
+    {
+      "name": "test_process_refund_webhook_with_failure_details",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 662
+    },
+    {
+      "name": "test_process_refund_webhook_agreement_returns_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 703
+    },
+    {
+      "name": "test_process_dispute_webhook_not_implemented",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 716
+    },
+    {
+      "name": "test_payment_status_deserialization",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 772
+    },
+    {
+      "name": "test_authorize_response_with_redirect",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 810
+    },
+    {
+      "name": "test_authorize_response_captured_with_instrument_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 844
+    },
+    {
+      "name": "test_authorize_response_failed_with_failure",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 863
+    },
+    {
+      "name": "test_capture_request_serialization",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 885
+    },
+    {
+      "name": "test_void_request_serialization",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 901
+    },
+    {
+      "name": "test_refund_request_serialization_with_reason",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 913
+    },
+    {
+      "name": "test_refund_request_serialization_no_reason",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 928
+    },
+    {
+      "name": "test_rsync_response_refunded_statuses",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 946
+    },
+    {
+      "name": "test_agreement_response_authentication_pending",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 964
+    },
+    {
+      "name": "test_agreement_response_active_with_instrument_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 997
+    },
+    {
+      "name": "test_agreement_response_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 1015
+    },
+    {
+      "name": "test_error_response_deserialization",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 1034
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use domain_types::{\n        connector_types::{EventType, HttpMethod, RequestDetails},\n        payment_method_data::DefaultPCIHolder,\n    };",
+    "use interfaces::{api::ConnectorCommon, connector_types::IncomingWebhook};",
+    "use crate::connectors;",
+    "use common_utils::crypto::SignMessage;",
+    "use super::super::transformers::*;",
+    "use common_utils::MinorUnit;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 26
+    },
+    {
+      "name": "format",
+      "line": 45
+    },
+    {
+      "name": "assert_eq",
+      "line": 100
+    },
+    {
+      "name": "assert_eq",
+      "line": 100
+    },
+    {
+      "name": "assert",
+      "line": 106
+    },
+    {
+      "name": "assert",
+      "line": 106
+    },
+    {
+      "name": "assert_eq",
+      "line": 115
+    },
+    {
+      "name": "assert_eq",
+      "line": 115
+    },
+    {
+      "name": "ensure_eq",
+      "line": 125
+    },
+    {
+      "name": "ensure_eq",
+      "line": 125
+    },
+    {
+      "name": "ensure_eq",
+      "line": 139
+    },
+    {
+      "name": "ensure_eq",
+      "line": 139
+    },
+    {
+      "name": "ensure_eq",
+      "line": 157
+    },
+    {
+      "name": "ensure_eq",
+      "line": 157
+    },
+    {
+      "name": "ensure_eq",
+      "line": 171
+    },
+    {
+      "name": "ensure_eq",
+      "line": 171
+    },
+    {
+      "name": "ensure_eq",
+      "line": 180
+    },
+    {
+      "name": "ensure_eq",
+      "line": 180
+    },
+    {
+      "name": "ensure_eq",
+      "line": 189
+    },
+    {
+      "name": "ensure_eq",
+      "line": 189
+    },
+    {
+      "name": "ensure_eq",
+      "line": 198
+    },
+    {
+      "name": "ensure_eq",
+      "line": 198
+    },
+    {
+      "name": "ensure_eq",
+      "line": 207
+    },
+    {
+      "name": "ensure_eq",
+      "line": 207
+    },
+    {
+      "name": "ensure_eq",
+      "line": 216
+    },
+    {
+      "name": "ensure_eq",
+      "line": 216
+    },
+    {
+      "name": "ensure_eq",
+      "line": 225
+    },
+    {
+      "name": "ensure_eq",
+      "line": 225
+    },
+    {
+      "name": "ensure_eq",
+      "line": 239
+    },
+    {
+      "name": "ensure_eq",
+      "line": 239
+    },
+    {
+      "name": "assert",
+      "line": 252
+    },
+    {
+      "name": "assert",
+      "line": 252
+    },
+    {
+      "name": "ensure_eq",
+      "line": 262
+    },
+    {
+      "name": "ensure_eq",
+      "line": 262
+    },
+    {
+      "name": "ensure",
+      "line": 267
+    },
+    {
+      "name": "ensure",
+      "line": 267
+    },
+    {
+      "name": "ensure",
+      "line": 271
+    },
+    {
+      "name": "ensure",
+      "line": 271
+    },
+    {
+      "name": "ensure_eq",
+      "line": 302
+    },
+    {
+      "name": "ensure_eq",
+      "line": 302
+    },
+    {
+      "name": "ensure_eq",
+      "line": 303
+    },
+    {
+      "name": "ensure_eq",
+      "line": 303
+    },
+    {
+      "name": "ensure",
+      "line": 308
+    },
+    {
+      "name": "ensure",
+      "line": 308
+    },
+    {
+      "name": "assert",
+      "line": 333
+    },
+    {
+      "name": "assert",
+      "line": 333
+    },
+    {
+      "name": "ensure_eq",
+      "line": 346
+    },
+    {
+      "name": "ensure_eq",
+      "line": 346
+    },
+    {
+      "name": "ensure",
+      "line": 351
+    },
+    {
+      "name": "ensure",
+      "line": 351
+    },
+    {
+      "name": "ensure_eq",
+      "line": 363
+    },
+    {
+      "name": "ensure_eq",
+      "line": 363
+    },
+    {
+      "name": "format",
+      "line": 378
+    },
+    {
+      "name": "ensure",
+      "line": 408
+    },
+    {
+      "name": "ensure",
+      "line": 408
+    },
+    {
+      "name": "ensure",
+      "line": 427
+    },
+    {
+      "name": "ensure",
+      "line": 427
+    },
+    {
+      "name": "assert",
+      "line": 443
+    },
+    {
+      "name": "assert",
+      "line": 443
+    },
+    {
+      "name": "assert",
+      "line": 456
+    },
+    {
+      "name": "assert",
+      "line": 456
+    },
+    {
+      "name": "ensure",
+      "line": 479
+    },
+    {
+      "name": "ensure",
+      "line": 479
+    },
+    {
+      "name": "ensure",
+      "line": 490
+    },
+    {
+      "name": "ensure",
+      "line": 490
+    },
+    {
+      "name": "ensure",
+      "line": 502
+    },
+    {
+      "name": "ensure",
+      "line": 502
+    },
+    {
+      "name": "assert",
+      "line": 513
+    },
+    {
+      "name": "assert",
+      "line": 513
+    },
+    {
+      "name": "ensure_eq",
+      "line": 527
+    },
+    {
+      "name": "ensure_eq",
+      "line": 527
+    },
+    {
+      "name": "ensure",
+      "line": 532
+    },
+    {
+      "name": "ensure",
+      "line": 532
+    },
+    {
+      "name": "ensure_eq",
+      "line": 544
+    },
+    {
+      "name": "ensure_eq",
+      "line": 544
+    },
+    {
+      "name": "ensure_eq",
+      "line": 575
+    },
+    {
+      "name": "ensure_eq",
+      "line": 575
+    },
+    {
+      "name": "ensure_eq",
+      "line": 576
+    },
+    {
+      "name": "ensure_eq",
+      "line": 576
+    },
+    {
+      "name": "ensure_eq",
+      "line": 589
+    },
+    {
+      "name": "ensure_eq",
+      "line": 589
+    },
+    {
+      "name": "ensure_eq",
+      "line": 620
+    },
+    {
+      "name": "ensure_eq",
+      "line": 620
+    },
+    {
+      "name": "ensure_eq",
+      "line": 621
+    },
+    {
+      "name": "ensure_eq",
+      "line": 621
+    },
+    {
+      "name": "ensure",
+      "line": 622
+    },
+    {
+      "name": "ensure",
+      "line": 622
+    },
+    {
+      "name": "ensure",
+      "line": 635
+    },
+    {
+      "name": "ensure",
+      "line": 635
+    },
+    {
+      "name": "ensure_eq",
+      "line": 639
+    },
+    {
+      "name": "ensure_eq",
+      "line": 639
+    },
+    {
+      "name": "assert",
+      "line": 649
+    },
+    {
+      "name": "assert",
+      "line": 649
+    },
+    {
+      "name": "assert",
+      "line": 656
+    },
+    {
+      "name": "assert",
+      "line": 656
+    },
+    {
+      "name": "ensure_eq",
+      "line": 685
+    },
+    {
+      "name": "ensure_eq",
+      "line": 685
+    },
+    {
+      "name": "ensure_eq",
+      "line": 686
+    },
+    {
+      "name": "ensure_eq",
+      "line": 686
+    },
+    {
+      "name": "ensure",
+      "line": 691
+    },
+    {
+      "name": "ensure",
+      "line": 691
+    },
+    {
+      "name": "ensure",
+      "line": 695
+    },
+    {
+      "name": "ensure",
+      "line": 695
+    },
+    {
+      "name": "assert",
+      "line": 707
+    },
+    {
+      "name": "assert",
+      "line": 707
+    },
+    {
+      "name": "assert",
+      "line": 720
+    },
+    {
+      "name": "assert",
+      "line": 720
+    },
+    {
+      "name": "ensure_eq",
+      "line": 803
+    },
+    {
+      "name": "ensure_eq",
+      "line": 803
+    },
+    {
+      "name": "ensure_eq",
+      "line": 825
+    },
+    {
+      "name": "ensure_eq",
+      "line": 825
+    },
+    {
+      "name": "ensure_eq",
+      "line": 826
+    },
+    {
+      "name": "ensure_eq",
+      "line": 826
+    },
+    {
+      "name": "ensure_eq",
+      "line": 830
+    },
+    {
+      "name": "ensure_eq",
+      "line": 830
+    },
+    {
+      "name": "ensure_eq",
+      "line": 832
+    },
+    {
+      "name": "ensure_eq",
+      "line": 832
+    },
+    {
+      "name": "ensure_eq",
+      "line": 834
+    },
+    {
+      "name": "ensure_eq",
+      "line": 834
+    },
+    {
+      "name": "ensure_eq",
+      "line": 838
+    },
+    {
+      "name": "ensure_eq",
+      "line": 838
+    },
+    {
+      "name": "ensure_eq",
+      "line": 852
+    },
+    {
+      "name": "ensure_eq",
+      "line": 852
+    },
+    {
+      "name": "ensure_eq",
+      "line": 853
+    },
+    {
+      "name": "ensure_eq",
+      "line": 853
+    },
+    {
+      "name": "ensure_eq",
+      "line": 874
+    },
+    {
+      "name": "ensure_eq",
+      "line": 874
+    },
+    {
+      "name": "ensure_eq",
+      "line": 876
+    },
+    {
+      "name": "ensure_eq",
+      "line": 876
+    },
+    {
+      "name": "ensure_eq",
+      "line": 877
+    },
+    {
+      "name": "ensure_eq",
+      "line": 877
+    },
+    {
+      "name": "ensure_eq",
+      "line": 878
+    },
+    {
+      "name": "ensure_eq",
+      "line": 878
+    },
+    {
+      "name": "ensure_eq",
+      "line": 890
+    },
+    {
+      "name": "ensure_eq",
+      "line": 890
+    },
+    {
+      "name": "ensure_eq",
+      "line": 906
+    },
+    {
+      "name": "ensure_eq",
+      "line": 906
+    },
+    {
+      "name": "ensure_eq",
+      "line": 919
+    },
+    {
+      "name": "ensure_eq",
+      "line": 919
+    },
+    {
+      "name": "ensure",
+      "line": 920
+    },
+    {
+      "name": "ensure",
+      "line": 920
+    },
+    {
+      "name": "ensure_eq",
+      "line": 934
+    },
+    {
+      "name": "ensure_eq",
+      "line": 934
+    },
+    {
+      "name": "ensure",
+      "line": 935
+    },
+    {
+      "name": "ensure",
+      "line": 935
+    },
+    {
+      "name": "format",
+      "line": 948
+    },
+    {
+      "name": "ensure",
+      "line": 950
+    },
+    {
+      "name": "ensure",
+      "line": 950
+    },
+    {
+      "name": "ensure_eq",
+      "line": 979
+    },
+    {
+      "name": "ensure_eq",
+      "line": 979
+    },
+    {
+      "name": "ensure_eq",
+      "line": 980
+    },
+    {
+      "name": "ensure_eq",
+      "line": 980
+    },
+    {
+      "name": "ensure_eq",
+      "line": 985
+    },
+    {
+      "name": "ensure_eq",
+      "line": 985
+    },
+    {
+      "name": "ensure_eq",
+      "line": 986
+    },
+    {
+      "name": "ensure_eq",
+      "line": 986
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1005
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1005
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1006
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1006
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1025
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1025
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1027
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1027
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1037
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1037
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1038
+    },
+    {
+      "name": "ensure_eq",
+      "line": 1038
+    }
+  ],
+  "modules": [
+    "tests",
+    "transformer_tests"
+  ]
+}

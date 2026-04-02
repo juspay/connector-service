@@ -1,0 +1,441 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/nuvei.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 57
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 67
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 72
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 98
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 102
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_session_token"
+      ],
+      "line": 106
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 113
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 117
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 125
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 133
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 137
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 145
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 153
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 157
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 180
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 302
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 534
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 544
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 554
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 559
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 564
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 569
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 578
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 587
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 597
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 607
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 617
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 627
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 637
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 647
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [],
+      "line": 659
+    },
+    {
+      "type_name": "Nuvei",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 664
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_session_token",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 109
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 305
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 309
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 313
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 317
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,\n        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,\n        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::Report;",
+    "use hyperswitch_masking::Maskable;",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use transformers::{\n    NuveiCaptureRequest, NuveiCaptureResponse, NuveiErrorResponse, NuveiPaymentRequest,\n    NuveiPaymentResponse, NuveiRefundRequest, NuveiRefundResponse, NuveiRefundSyncRequest,\n    NuveiRefundSyncResponse, NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest,\n    NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,\n};",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 195
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 195
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 274
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 274
+    },
+    {
+      "name": "json",
+      "line": 349
+    },
+    {
+      "name": "error",
+      "line": 351
+    },
+    {
+      "name": "error",
+      "line": 351
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 359
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 359
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 388
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 388
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 417
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 417
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 446
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 446
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 475
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 475
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 504
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 504
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

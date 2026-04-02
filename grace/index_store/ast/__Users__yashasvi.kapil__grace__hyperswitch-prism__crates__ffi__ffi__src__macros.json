@@ -1,0 +1,16 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/macros.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "pub(crate) use payout_req_transformer;",
+    "pub(crate) use payout_res_transformer;",
+    "pub(crate) use req_transformer;",
+    "pub(crate) use res_transformer;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

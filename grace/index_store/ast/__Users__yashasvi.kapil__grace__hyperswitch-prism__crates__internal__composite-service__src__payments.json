@@ -1,0 +1,564 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/composite-service/src/payments.rs",
+  "structs": [
+    {
+      "name": "Payments",
+      "visibility": "pub",
+      "fields": [
+        "payment_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "refund_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 139
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "CompositeAccessTokenRequest",
+      "visibility": "pub",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 27
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "CompositeAuthorizeRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 36
+    },
+    {
+      "type_name": "CompositeGetRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 53
+    },
+    {
+      "type_name": "CompositeRefundRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 70
+    },
+    {
+      "type_name": "CompositeRefundGetRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 87
+    },
+    {
+      "type_name": "CompositeVoidRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 104
+    },
+    {
+      "type_name": "CompositeCaptureRequest",
+      "trait_name": "CompositeAccessTokenRequest",
+      "methods": [
+        "payment_method",
+        "state",
+        "build_access_token_request"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "Payments",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 146
+    },
+    {
+      "type_name": "Payments",
+      "trait_name": null,
+      "methods": [
+        "create_access_token",
+        "create_connector_customer",
+        "authorize",
+        "process_composite_authorize",
+        "get",
+        "process_composite_get",
+        "refund",
+        "process_composite_refund",
+        "refund_get",
+        "process_composite_refund_get",
+        "void",
+        "process_composite_void",
+        "capture",
+        "process_composite_capture"
+      ],
+      "line": 162
+    },
+    {
+      "type_name": "Payments",
+      "trait_name": "CompositePaymentService",
+      "methods": [
+        "authorize",
+        "get",
+        "refund",
+        "void",
+        "capture"
+      ],
+      "line": 563
+    },
+    {
+      "type_name": "Payments",
+      "trait_name": "CompositeRefundService",
+      "methods": [
+        "get"
+      ],
+      "line": 607
+    }
+  ],
+  "functions": [
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 37
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 41
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 45
+    },
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 54
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 58
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 62
+    },
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 71
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 75
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 79
+    },
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 88
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 92
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 96
+    },
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 105
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 109
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 113
+    },
+    {
+      "name": "payment_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<PaymentMethod>",
+      "line": 122
+    },
+    {
+      "name": "state",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&ConnectorState>",
+      "line": 126
+    },
+    {
+      "name": "build_access_token_request",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 130
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "payment_service: P",
+        "merchant_authentication_service: M",
+        "customer_service: C",
+        "refund_service: R"
+      ],
+      "return_type": "Self",
+      "line": 147
+    },
+    {
+      "name": "create_access_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum",
+        "payload: &Req",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<Option<MerchantAuthenticationServiceCreateAccessTokenResponse>, tonic::Status>",
+      "line": 169
+    },
+    {
+      "name": "create_connector_customer",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum",
+        "payload: &CompositeAuthorizeRequest",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<Option<CustomerServiceCreateResponse>, tonic::Status>",
+      "line": 220
+    },
+    {
+      "name": "authorize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeAuthorizeRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "create_customer_response: Option<&CustomerServiceCreateResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<PaymentServiceAuthorizeResponse, tonic::Status>",
+      "line": 264
+    },
+    {
+      "name": "process_composite_authorize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeAuthorizeRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status>",
+      "line": 291
+    },
+    {
+      "name": "get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeGetRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<PaymentServiceGetResponse, tonic::Status>",
+      "line": 322
+    },
+    {
+      "name": "process_composite_get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeGetResponse>, tonic::Status>",
+      "line": 343
+    },
+    {
+      "name": "refund",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeRefundRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<RefundResponse, tonic::Status>",
+      "line": 369
+    },
+    {
+      "name": "process_composite_refund",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeRefundRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeRefundResponse>, tonic::Status>",
+      "line": 392
+    },
+    {
+      "name": "refund_get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeRefundGetRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<RefundResponse, tonic::Status>",
+      "line": 418
+    },
+    {
+      "name": "process_composite_refund_get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeRefundGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status>",
+      "line": 441
+    },
+    {
+      "name": "void",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeVoidRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<PaymentServiceVoidResponse, tonic::Status>",
+      "line": 467
+    },
+    {
+      "name": "process_composite_void",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeVoidRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeVoidResponse>, tonic::Status>",
+      "line": 486
+    },
+    {
+      "name": "capture",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &CompositeCaptureRequest",
+        "access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>",
+        "metadata: &tonic::metadata::MetadataMap",
+        "extensions: &tonic::Extensions"
+      ],
+      "return_type": "Result<PaymentServiceCaptureResponse, tonic::Status>",
+      "line": 512
+    },
+    {
+      "name": "process_composite_capture",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeCaptureRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeCaptureResponse>, tonic::Status>",
+      "line": 535
+    },
+    {
+      "name": "authorize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeAuthorizeRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status>",
+      "line": 570
+    },
+    {
+      "name": "get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeGetResponse>, tonic::Status>",
+      "line": 577
+    },
+    {
+      "name": "refund",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeRefundRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeRefundResponse>, tonic::Status>",
+      "line": 584
+    },
+    {
+      "name": "void",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeVoidRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeVoidResponse>, tonic::Status>",
+      "line": 591
+    },
+    {
+      "name": "capture",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeCaptureRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeCaptureResponse>, tonic::Status>",
+      "line": 598
+    },
+    {
+      "name": "get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<CompositeRefundGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status>",
+      "line": 614
+    }
+  ],
+  "use_statements": [
+    "use connector_integration::types::ConnectorData;",
+    "use domain_types::{\n    connector_types::{AccessTokenResponseData, ConnectorEnum},\n    utils::ForeignTryFrom as _,\n};",
+    "use grpc_api_types::payments::{\n    composite_payment_service_server::CompositePaymentService,\n    composite_refund_service_server::CompositeRefundService,\n    customer_service_server::CustomerService,\n    merchant_authentication_service_server::MerchantAuthenticationService,\n    payment_service_server::PaymentService, refund_service_server::RefundService,\n    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeCaptureRequest,\n    CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse, CompositeRefundGetRequest,\n    CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse,\n    CompositeVoidRequest, CompositeVoidResponse, ConnectorState, CustomerServiceCreateResponse,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,\n    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,\n    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,\n    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,\n};",
+    "use crate::transformers::ForeignFrom;",
+    "use crate::utils::connector_from_composite_authorize_metadata;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 182
+    }
+  ],
+  "modules": []
+}

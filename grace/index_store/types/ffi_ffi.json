@@ -1,0 +1,34 @@
+{
+  "structs": [
+    {
+      "name": "FfiMetadataPayload",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "connector_config"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 5
+    },
+    {
+      "name": "FfiRequestData",
+      "visibility": "pub",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug"
+      ],
+      "line": 11
+    }
+  ],
+  "enums": [],
+  "traits": []
+}

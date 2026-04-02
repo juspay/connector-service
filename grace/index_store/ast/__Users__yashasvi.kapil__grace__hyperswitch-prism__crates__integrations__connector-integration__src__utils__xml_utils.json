@@ -1,0 +1,103 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/utils/xml_utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "preprocess_xml_response_bytes",
+      "visibility": "pub",
+      "parameters": [
+        "xml_data: Bytes"
+      ],
+      "return_type": "Result<Bytes, errors::ConnectorError>",
+      "line": 14
+    },
+    {
+      "name": "flatten_json_structure",
+      "visibility": "pub",
+      "parameters": [
+        "json_value: Value"
+      ],
+      "return_type": "Value",
+      "line": 82
+    }
+  ],
+  "use_statements": [
+    "use bytes::Bytes;",
+    "use domain_types::errors;",
+    "use serde_json::{Map, Value};"
+  ],
+  "macro_calls": [
+    {
+      "name": "info",
+      "line": 16
+    },
+    {
+      "name": "info",
+      "line": 16
+    },
+    {
+      "name": "info",
+      "line": 30
+    },
+    {
+      "name": "info",
+      "line": 30
+    },
+    {
+      "name": "warn",
+      "line": 34
+    },
+    {
+      "name": "warn",
+      "line": 34
+    },
+    {
+      "name": "info",
+      "line": 39
+    },
+    {
+      "name": "info",
+      "line": 39
+    },
+    {
+      "name": "format",
+      "line": 47
+    },
+    {
+      "name": "info",
+      "line": 55
+    },
+    {
+      "name": "info",
+      "line": 55
+    },
+    {
+      "name": "error",
+      "line": 59
+    },
+    {
+      "name": "error",
+      "line": 59
+    },
+    {
+      "name": "error",
+      "line": 71
+    },
+    {
+      "name": "error",
+      "line": 71
+    },
+    {
+      "name": "info",
+      "line": 75
+    },
+    {
+      "name": "info",
+      "line": 75
+    }
+  ],
+  "modules": []
+}

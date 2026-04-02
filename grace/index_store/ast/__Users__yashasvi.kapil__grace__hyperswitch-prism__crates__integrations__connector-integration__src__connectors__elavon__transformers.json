@@ -1,0 +1,1746 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/elavon/transformers.rs",
+  "structs": [
+    {
+      "name": "ElavonAuthType",
+      "visibility": "pub",
+      "fields": [
+        "ssl_merchant_id",
+        "ssl_user_id",
+        "ssl_pin"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 36
+    },
+    {
+      "name": "CardPaymentRequest",
+      "visibility": "pub",
+      "fields": [
+        "ssl_transaction_type",
+        "ssl_account_id",
+        "ssl_user_id",
+        "ssl_pin",
+        "ssl_amount",
+        "ssl_card_number",
+        "ssl_exp_date",
+        "ssl_cvv2cvc2",
+        "ssl_cvv2cvc2_indicator",
+        "ssl_email",
+        "ssl_add_token",
+        "ssl_token_source",
+        "ssl_get_token",
+        "ssl_transaction_currency",
+        "ssl_avs_address",
+        "ssl_avs_zip",
+        "ssl_customer_code",
+        "ssl_invoice_number"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 88
+    },
+    {
+      "name": "XMLElavonRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 267
+    },
+    {
+      "name": "XMLPSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 271
+    },
+    {
+      "name": "XMLCaptureRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 275
+    },
+    {
+      "name": "XMLRefundRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 278
+    },
+    {
+      "name": "XMLRSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 281
+    },
+    {
+      "name": "PaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "ssl_result",
+        "ssl_txn_id",
+        "ssl_result_message",
+        "ssl_token",
+        "ssl_approval_code",
+        "ssl_transaction_type",
+        "ssl_cvv2_response",
+        "ssl_avs_response",
+        "ssl_token_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 412
+    },
+    {
+      "name": "ElavonErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error_code",
+        "error_message",
+        "error_name",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 426
+    },
+    {
+      "name": "ElavonPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "result"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 440
+    },
+    {
+      "name": "ElavonCaptureResponse",
+      "visibility": "pub",
+      "fields": [
+        "result"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 446
+    },
+    {
+      "name": "ElavonRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "result"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 451
+    },
+    {
+      "name": "XmlIshResponse",
+      "visibility": "",
+      "fields": [
+        "error_code",
+        "error_message",
+        "error_name",
+        "ssl_result",
+        "ssl_txn_id",
+        "ssl_result_message",
+        "ssl_token",
+        "ssl_token_response",
+        "ssl_approval_code",
+        "ssl_transaction_type",
+        "ssl_cvv2_response",
+        "ssl_avs_response"
+      ],
+      "derives": [
+        "Deserialize",
+        "Debug"
+      ],
+      "line": 463
+    },
+    {
+      "name": "XmlIshResponse",
+      "visibility": "",
+      "fields": [
+        "error_code",
+        "error_message",
+        "error_name",
+        "ssl_result",
+        "ssl_txn_id",
+        "ssl_result_message",
+        "ssl_token",
+        "ssl_token_response",
+        "ssl_approval_code",
+        "ssl_transaction_type",
+        "ssl_cvv2_response",
+        "ssl_avs_response"
+      ],
+      "derives": [
+        "Deserialize",
+        "Debug"
+      ],
+      "line": 549
+    },
+    {
+      "name": "XmlIshResponse",
+      "visibility": "",
+      "fields": [
+        "error_code",
+        "error_message",
+        "error_name",
+        "ssl_result",
+        "ssl_txn_id",
+        "ssl_result_message",
+        "ssl_token",
+        "ssl_token_response",
+        "ssl_approval_code",
+        "ssl_transaction_type",
+        "ssl_cvv2_response",
+        "ssl_avs_response"
+      ],
+      "derives": [
+        "Deserialize",
+        "Debug"
+      ],
+      "line": 635
+    },
+    {
+      "name": "SyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "ssl_transaction_type",
+        "ssl_account_id",
+        "ssl_user_id",
+        "ssl_pin",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 834
+    },
+    {
+      "name": "ElavonCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "ssl_transaction_type",
+        "ssl_account_id",
+        "ssl_user_id",
+        "ssl_pin",
+        "ssl_amount",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 895
+    },
+    {
+      "name": "ElavonRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "ssl_transaction_type",
+        "ssl_account_id",
+        "ssl_user_id",
+        "ssl_pin",
+        "ssl_amount",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 1071
+    },
+    {
+      "name": "ElavonRSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "ssl_trans_status",
+        "ssl_transaction_type",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 1297
+    },
+    {
+      "name": "ElavonPSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "ssl_trans_status",
+        "ssl_transaction_type",
+        "ssl_txn_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 1354
+    }
+  ],
+  "enums": [
+    {
+      "name": "TransactionType",
+      "visibility": "pub",
+      "variants": [
+        "CcSale",
+        "CcAuthOnly",
+        "CcComplete",
+        "CcReturn",
+        "TxnQuery"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 62
+    },
+    {
+      "name": "ElavonPaymentsRequest",
+      "visibility": "pub",
+      "variants": [
+        "Card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 119
+    },
+    {
+      "name": "SslResult",
+      "visibility": "pub",
+      "variants": [
+        "Approved",
+        "Declined",
+        "Other"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 392
+    },
+    {
+      "name": "ElavonResult",
+      "visibility": "pub",
+      "variants": [
+        "Success",
+        "Error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 434
+    },
+    {
+      "name": "TransactionSyncStatus",
+      "visibility": "pub",
+      "variants": [
+        "PEN",
+        "OPN",
+        "REV",
+        "STL",
+        "PST",
+        "FPR",
+        "PRE"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq"
+      ],
+      "line": 1361
+    },
+    {
+      "name": "SyncTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Sale",
+        "AuthOnly",
+        "Return"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq"
+      ],
+      "line": 1373
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ElavonAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 42
+    },
+    {
+      "type_name": "TransactionType",
+      "trait_name": "Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 70
+    },
+    {
+      "type_name": "ElavonPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 144
+    },
+    {
+      "type_name": "XMLElavonRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 284
+    },
+    {
+      "type_name": "XMLPSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 343
+    },
+    {
+      "type_name": "SslResult",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 400
+    },
+    {
+      "type_name": "ElavonPaymentsResponse",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 456
+    },
+    {
+      "type_name": "ElavonCaptureResponse",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 542
+    },
+    {
+      "type_name": "ElavonRefundResponse",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 628
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 752
+    },
+    {
+      "type_name": "SyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 842
+    },
+    {
+      "type_name": "SyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 862
+    },
+    {
+      "type_name": "ElavonCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 904
+    },
+    {
+      "type_name": "XMLCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 953
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 990
+    },
+    {
+      "type_name": "ElavonRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1080
+    },
+    {
+      "type_name": "XMLRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1115
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1149
+    },
+    {
+      "type_name": "SyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1217
+    },
+    {
+      "type_name": "SyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1237
+    },
+    {
+      "type_name": "XMLRSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1259
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1322
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1379
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 44
+    },
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: serde::Serializer,",
+      "line": 71
+    },
+    {
+      "name": "get_avs_details_from_payment_address",
+      "visibility": "",
+      "parameters": [
+        "payment_address: Option<&PaymentAddress>"
+      ],
+      "return_type": "(Option<Secret<String>>, Option<Secret<String>>)",
+      "line": 125
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ElavonRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 159
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: ElavonRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 299
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: ElavonRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 353
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 402
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: Deserializer<'de>,",
+      "line": 457
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: Deserializer<'de>,",
+      "line": 543
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: Deserializer<'de>,",
+      "line": 629
+    },
+    {
+      "name": "get_elavon_attempt_status",
+      "visibility": "pub",
+      "parameters": [
+        "elavon_result: &ElavonResult",
+        "http_code: u16"
+      ],
+      "return_type": "(HyperswitchAttemptStatus, Option<ErrorResponse>)",
+      "line": 714
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseRouterData<ElavonPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 759
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ElavonRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 852
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 866
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ElavonRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 914
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: ElavonRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 963
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseRouterData<ElavonCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 995
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ElavonRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1087
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: ElavonRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1122
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseRouterData<ElavonRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1154
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ElavonRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1227
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1242
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: ElavonRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1269
+    },
+    {
+      "name": "get_refund_status_from_elavon_sync_response",
+      "visibility": "pub",
+      "parameters": [
+        "elavon_response: &ElavonRSyncResponse"
+      ],
+      "return_type": "common_enums::RefundStatus",
+      "line": 1304
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseRouterData<ElavonRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1327
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseRouterData<ElavonPSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1383
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use common_enums::{\n    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,\n    FutureUsage,\n};",
+    "use common_utils::{\n    consts::NO_ERROR_CODE,\n    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},\n};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        ResponseId as DomainResponseId,\n    },\n    errors::{self},\n    payment_address::PaymentAddress,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::{report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret, WithoutType};",
+    "use serde::{\n    de::{self, Deserializer},\n    Deserialize, Serialize,\n};",
+    "use serde_with::skip_serializing_none;",
+    "use super::ElavonRouterData;",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 56
+    },
+    {
+      "name": "report",
+      "line": 181
+    },
+    {
+      "name": "format",
+      "line": 189
+    },
+    {
+      "name": "format",
+      "line": 197
+    },
+    {
+      "name": "report",
+      "line": 232
+    },
+    {
+      "name": "format",
+      "line": 233
+    },
+    {
+      "name": "debug",
+      "line": 255
+    },
+    {
+      "name": "debug",
+      "line": 255
+    },
+    {
+      "name": "report",
+      "line": 258
+    },
+    {
+      "name": "info",
+      "line": 316
+    },
+    {
+      "name": "info",
+      "line": 316
+    },
+    {
+      "name": "info",
+      "line": 320
+    },
+    {
+      "name": "info",
+      "line": 320
+    },
+    {
+      "name": "report",
+      "line": 321
+    },
+    {
+      "name": "info",
+      "line": 326
+    },
+    {
+      "name": "info",
+      "line": 326
+    },
+    {
+      "name": "info",
+      "line": 336
+    },
+    {
+      "name": "info",
+      "line": 336
+    },
+    {
+      "name": "info",
+      "line": 365
+    },
+    {
+      "name": "info",
+      "line": 365
+    },
+    {
+      "name": "info",
+      "line": 369
+    },
+    {
+      "name": "info",
+      "line": 369
+    },
+    {
+      "name": "report",
+      "line": 370
+    },
+    {
+      "name": "info",
+      "line": 375
+    },
+    {
+      "name": "info",
+      "line": 375
+    },
+    {
+      "name": "info",
+      "line": 385
+    },
+    {
+      "name": "info",
+      "line": 385
+    },
+    {
+      "name": "info",
+      "line": 769
+    },
+    {
+      "name": "info",
+      "line": 769
+    },
+    {
+      "name": "report",
+      "line": 876
+    },
+    {
+      "name": "report",
+      "line": 926
+    },
+    {
+      "name": "json",
+      "line": 1420
+    }
+  ],
+  "modules": []
+}

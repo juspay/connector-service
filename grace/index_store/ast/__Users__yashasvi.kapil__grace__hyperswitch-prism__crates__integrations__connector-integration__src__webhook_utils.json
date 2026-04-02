@@ -1,0 +1,67 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/webhook_utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "process_webhook_event",
+      "visibility": "pub",
+      "parameters": [
+        "connector_data: ConnectorData<T>",
+        "request_details: domain_types::connector_types::RequestDetails",
+        "webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "connector_config: Option<ConnectorSpecificConfig>",
+        "source_verified: bool"
+      ],
+      "return_type": "error_stack::Result<EventServiceHandleResponse, ApplicationErrorResponse>",
+      "line": 26
+    },
+    {
+      "name": "get_payments_webhook_content",
+      "visibility": "pub",
+      "parameters": [
+        "connector_data: ConnectorData<T>",
+        "request_details: domain_types::connector_types::RequestDetails",
+        "webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "connector_config: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "error_stack::Result<EventContent, ApplicationErrorResponse>",
+      "line": 116
+    },
+    {
+      "name": "get_refunds_webhook_content",
+      "visibility": "pub",
+      "parameters": [
+        "connector_data: ConnectorData<T>",
+        "request_details: domain_types::connector_types::RequestDetails",
+        "webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "connector_config: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "error_stack::Result<EventContent, ApplicationErrorResponse>",
+      "line": 183
+    },
+    {
+      "name": "get_disputes_webhook_content",
+      "visibility": "pub",
+      "parameters": [
+        "connector_data: ConnectorData<T>",
+        "request_details: domain_types::connector_types::RequestDetails",
+        "webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>",
+        "connector_config: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "error_stack::Result<EventContent, ApplicationErrorResponse>",
+      "line": 225
+    }
+  ],
+  "use_statements": [
+    "use common_enums::WebhookTransformationStatus;",
+    "use domain_types::{\n    errors::{ApiError, ApplicationErrorResponse},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ConnectorSpecificConfig,\n    types::CardConversionHelper,\n    utils::ForeignTryFrom,\n};",
+    "use error_stack::ResultExt;",
+    "use grpc_api_types::payments::{\n    DisputeResponse, EventContent, EventServiceHandleResponse, EventStatus,\n    PaymentServiceGetResponse, RefundResponse, WebhookEventType,\n};",
+    "use crate::types::ConnectorData;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

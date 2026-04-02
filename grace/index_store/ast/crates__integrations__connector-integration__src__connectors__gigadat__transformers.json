@@ -1,0 +1,725 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/gigadat/transformers.rs",
+  "structs": [
+    {
+      "name": "GigadatConnectorMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "site"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 25
+    },
+    {
+      "name": "GigadatAuthType",
+      "visibility": "pub",
+      "fields": [
+        "campaign_id",
+        "access_token",
+        "security_token",
+        "site"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 52
+    },
+    {
+      "name": "GigadatErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "err"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 83
+    },
+    {
+      "name": "GigadatRefundErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 88
+    },
+    {
+      "name": "GigadatRefundError",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "detail"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 94
+    },
+    {
+      "name": "GigadatPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "user_id",
+        "site",
+        "user_ip",
+        "currency",
+        "amount",
+        "transaction_id",
+        "transaction_type",
+        "sandbox",
+        "name",
+        "email",
+        "mobile"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 157
+    },
+    {
+      "name": "GigadatPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "token",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 174
+    },
+    {
+      "name": "GigadatPaymentData",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 181
+    },
+    {
+      "name": "GigadatSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "interac_bank_name",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 187
+    },
+    {
+      "name": "GigadatSyncData",
+      "visibility": "pub",
+      "fields": [
+        "name",
+        "email",
+        "mobile"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 194
+    },
+    {
+      "name": "GigadatRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "transaction_id",
+        "campaign_id"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 202
+    },
+    {
+      "name": "GigadatRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 210
+    }
+  ],
+  "enums": [
+    {
+      "name": "GigadatTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Cpi",
+        "Eto"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 102
+    },
+    {
+      "name": "GigadatTransactionStatus",
+      "visibility": "pub",
+      "variants": [
+        "StatusInited",
+        "StatusSuccess",
+        "StatusRejected",
+        "StatusRejected1",
+        "StatusExpired",
+        "StatusAborted1",
+        "StatusPending",
+        "StatusFailed"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 110
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GigadatConnectorMetadataObject",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 29
+    },
+    {
+      "type_name": "GigadatAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 59
+    },
+    {
+      "type_name": "GigadatTransactionStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 138
+    },
+    {
+      "type_name": "GigadatPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 216
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 376
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 426
+    },
+    {
+      "type_name": "GigadatRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 470
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 506
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "meta_data: &Option<common_utils::pii::SecretSerdeValue>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 32
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 62
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 123
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: GigadatTransactionStatus"
+      ],
+      "return_type": "Self",
+      "line": 139
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: GigadatRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 231
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<GigadatPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 381
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<GigadatSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 431
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: GigadatRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 480
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<GigadatRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 511
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{AttemptStatus, Currency, RefundStatus};",
+    "use common_utils::{id_type, request::Method, types::FloatMajorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync, Refund},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{connectors::gigadat::GigadatRouterData, types::ResponseRouterData};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 388
+    },
+    {
+      "name": "json",
+      "line": 439
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,1244 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/payme/transformers.rs",
+  "structs": [
+    {
+      "name": "PaymeAuthType",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "payme_client_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 27
+    },
+    {
+      "name": "PaymeErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "status_code",
+        "status_error_details",
+        "status_additional_info",
+        "status_error_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 54
+    },
+    {
+      "name": "PaymePaymentRequest",
+      "visibility": "pub",
+      "fields": [
+        "buyer_name",
+        "buyer_email",
+        "payme_sale_id",
+        "card",
+        "language"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 110
+    },
+    {
+      "name": "PaymeCardDetails",
+      "visibility": "pub",
+      "fields": [
+        "credit_card_number",
+        "credit_card_exp",
+        "credit_card_cvv"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 120
+    },
+    {
+      "name": "PaymePaymentResponse",
+      "visibility": "pub",
+      "fields": [
+        "status_code",
+        "payme_status",
+        "payme_sale_id",
+        "payme_sale_code",
+        "sale_created",
+        "payme_sale_status",
+        "sale_status",
+        "currency",
+        "transaction_id",
+        "is_token_sale",
+        "price",
+        "payme_signature",
+        "payme_transaction_id",
+        "payme_transaction_total",
+        "payme_transaction_card_brand",
+        "payme_transaction_auth_number",
+        "status_error_code",
+        "status_error_details"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 128
+    },
+    {
+      "name": "PaymeSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "sale_payme_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 365
+    },
+    {
+      "name": "PaymeSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "items_count",
+        "items",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 372
+    },
+    {
+      "name": "PaymeSyncItem",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "seller_id",
+        "sale_payme_id",
+        "sale_payme_code",
+        "transaction_id",
+        "sale_created",
+        "sale_status",
+        "sale_currency",
+        "sale_price",
+        "sale_price_after_fees",
+        "sale_description",
+        "sale_installments",
+        "sale_paid_date",
+        "sale_auth_number"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 379
+    },
+    {
+      "name": "PaymeCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "payme_sale_id",
+        "sale_price"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 527
+    },
+    {
+      "name": "PaymeRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "payme_sale_id",
+        "sale_refund_amount",
+        "language"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 659
+    },
+    {
+      "name": "PaymeRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "status_code",
+        "payme_status",
+        "payme_refund_id",
+        "payme_sale_id",
+        "refund_status",
+        "status_error_code",
+        "status_error_details"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 669
+    },
+    {
+      "name": "PaymeRSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "payme_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 794
+    },
+    {
+      "name": "PaymeRSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "items"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 802
+    },
+    {
+      "name": "PaymeTransactionItem",
+      "visibility": "pub",
+      "fields": [
+        "sale_status",
+        "payme_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 807
+    },
+    {
+      "name": "PaymeVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "payme_sale_id",
+        "sale_currency",
+        "language"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 895
+    },
+    {
+      "name": "PaymeGenerateSaleRequest",
+      "visibility": "pub",
+      "fields": [
+        "seller_payme_id",
+        "sale_type",
+        "sale_price",
+        "currency",
+        "sale_payment_method",
+        "product_name",
+        "transaction_id",
+        "sale_callback_url",
+        "sale_return_url",
+        "language"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 1035
+    },
+    {
+      "name": "PaymeGenerateSaleResponse",
+      "visibility": "pub",
+      "fields": [
+        "status_code",
+        "sale_url",
+        "payme_sale_id",
+        "payme_sale_code",
+        "price",
+        "transaction_id",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 1049
+    }
+  ],
+  "enums": [
+    {
+      "name": "SaleStatus",
+      "visibility": "pub",
+      "variants": [
+        "Initial",
+        "Completed",
+        "Refunded",
+        "PartialRefund",
+        "Authorized",
+        "Voided",
+        "PartialVoid",
+        "Failed",
+        "Chargeback"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "strum::Display"
+      ],
+      "line": 64
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PaymeAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 32
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 76
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 90
+    },
+    {
+      "type_name": "PaymePaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 225
+    },
+    {
+      "type_name": "PaymePaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 246
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 291
+    },
+    {
+      "type_name": "PaymeSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 409
+    },
+    {
+      "type_name": "PaymeSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 434
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 455
+    },
+    {
+      "type_name": "PaymeCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 538
+    },
+    {
+      "type_name": "PaymeCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 565
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 586
+    },
+    {
+      "type_name": "PaymeRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 685
+    },
+    {
+      "type_name": "PaymeRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 709
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 727
+    },
+    {
+      "type_name": "PaymeRSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 813
+    },
+    {
+      "type_name": "PaymeRSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 835
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 856
+    },
+    {
+      "type_name": "PaymeVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 907
+    },
+    {
+      "type_name": "PaymeVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 939
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 960
+    },
+    {
+      "type_name": "PaymeGenerateSaleRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1060
+    },
+    {
+      "type_name": "PaymeGenerateSaleRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1111
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1142
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 35
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: SaleStatus"
+      ],
+      "return_type": "Self",
+      "line": 77
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "sale_status: SaleStatus"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 93
+    },
+    {
+      "name": "create_payment_request_from_router_data",
+      "visibility": "",
+      "parameters": [
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<PaymePaymentRequest<T>, error_stack::Report<errors::ConnectorError>>",
+      "line": 167
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 232
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 261
+    },
+    {
+      "name": "build_card_details",
+      "visibility": "",
+      "parameters": [
+        "card: &Card<T>"
+      ],
+      "return_type": "Result<PaymeCardDetails<T>, error_stack::Report<errors::ConnectorError>>",
+      "line": 277
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymePaymentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 296
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 414
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 444
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 460
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 543
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 575
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 591
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 690
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 716
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 732
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 818
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 845
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 861
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 912
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 949
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 965
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<\n            CreateOrder,\n            PaymentFlowData,\n            PaymentCreateOrderData,\n            PaymentCreateOrderResponse,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1072
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PaymeRouterData<\n            RouterDataV2<\n                CreateOrder,\n                PaymentFlowData,\n                PaymentCreateOrderData,\n                PaymentCreateOrderResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1126
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaymeGenerateSaleResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1152
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, Currency, RefundStatus};",
+    "use common_utils::{pii, types::MinorUnit};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 45
+    },
+    {
+      "name": "format",
+      "line": 1159
+    }
+  ],
+  "modules": []
+}

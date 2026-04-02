@@ -1,0 +1,2523 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+  "structs": [
+    {
+      "name": "GrpcurlRequest",
+      "visibility": "pub",
+      "fields": [
+        "endpoint",
+        "method",
+        "payload",
+        "headers",
+        "plaintext"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 101
+    },
+    {
+      "name": "GrpcExecutionResult",
+      "visibility": "pub",
+      "fields": [
+        "response_body",
+        "request_command",
+        "response_output",
+        "success"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 110
+    },
+    {
+      "name": "SuiteScenarioResult",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "scenario",
+        "is_dependency",
+        "passed",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1626
+    },
+    {
+      "name": "ExecutedScenario",
+      "visibility": "",
+      "fields": [
+        "effective_req",
+        "response_json",
+        "assertions",
+        "grpc_request",
+        "grpc_response",
+        "execution_error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1640
+    },
+    {
+      "name": "SuiteRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "suite",
+        "connector",
+        "passed",
+        "failed",
+        "results"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1654
+    },
+    {
+      "name": "AllSuitesRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "passed",
+        "failed",
+        "suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1663
+    },
+    {
+      "name": "AllConnectorsRunSummary",
+      "visibility": "pub",
+      "fields": [
+        "passed",
+        "failed",
+        "connectors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 1671
+    },
+    {
+      "name": "SuiteRunOptions",
+      "visibility": "pub",
+      "fields": [
+        "endpoint",
+        "merchant_id",
+        "tenant_id",
+        "plaintext",
+        "backend",
+        "report"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Copy"
+      ],
+      "line": 1684
+    }
+  ],
+  "enums": [
+    {
+      "name": "ExecutionBackend",
+      "visibility": "pub",
+      "variants": [
+        "Grpcurl",
+        "SdkFfi"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 1678
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GrpcurlRequest",
+      "trait_name": null,
+      "methods": [
+        "to_command_string"
+      ],
+      "line": 125
+    },
+    {
+      "type_name": "SuiteRunOptions",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 1693
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_the_grpc_req",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<Value, ScenarioError>",
+      "line": 36
+    },
+    {
+      "name": "get_the_assertion",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<BTreeMap<String, FieldAssert>, ScenarioError>",
+      "line": 41
+    },
+    {
+      "name": "load_effective_scenario_for_connector",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str"
+      ],
+      "return_type": "Result<(Value, BTreeMap<String, FieldAssert>), ScenarioError>",
+      "line": 49
+    },
+    {
+      "name": "get_the_grpc_req_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str"
+      ],
+      "return_type": "Result<Value, ScenarioError>",
+      "line": 62
+    },
+    {
+      "name": "get_the_assertion_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str"
+      ],
+      "return_type": "Result<BTreeMap<String, FieldAssert>, ScenarioError>",
+      "line": 73
+    },
+    {
+      "name": "do_assertion",
+      "visibility": "pub",
+      "parameters": [
+        "assertions_for_that_req: &BTreeMap<String, FieldAssert>",
+        "response_json: &Value",
+        "grpc_req: &Value"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 84
+    },
+    {
+      "name": "to_command_string",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 127
+    },
+    {
+      "name": "run_test",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "connector: Option<&str>"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 150
+    },
+    {
+      "name": "add_context",
+      "visibility": "pub",
+      "parameters": [
+        "prev_grpc_reqs: &[Value]",
+        "prev_grpc_res: &[Value]",
+        "current_grpc_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 165
+    },
+    {
+      "name": "prepare_context_placeholders",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "connector: &str",
+        "current_grpc_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 201
+    },
+    {
+      "name": "prune_unresolved_context_fields",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "current_grpc_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 227
+    },
+    {
+      "name": "context_deferred_paths",
+      "visibility": "",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "Vec<String>",
+      "line": 252
+    },
+    {
+      "name": "is_empty_context_placeholder",
+      "visibility": "",
+      "parameters": [
+        "path: &str",
+        "value: &Value"
+      ],
+      "return_type": "bool",
+      "line": 269
+    },
+    {
+      "name": "is_unresolved_context_value",
+      "visibility": "",
+      "parameters": [
+        "path: &str",
+        "value: &Value"
+      ],
+      "return_type": "bool",
+      "line": 286
+    },
+    {
+      "name": "is_unresolved_connector_feature_data",
+      "visibility": "",
+      "parameters": [
+        "value: &Value"
+      ],
+      "return_type": "bool",
+      "line": 303
+    },
+    {
+      "name": "apply_context_map",
+      "visibility": "pub",
+      "parameters": [
+        "collected_context: &[(ContextMap, Value, Value)]",
+        "current_grpc_req: &mut Value"
+      ],
+      "return_type": "",
+      "line": 332
+    },
+    {
+      "name": "deep_set_json_path",
+      "visibility": "",
+      "parameters": [
+        "root: &mut Value",
+        "path: &str",
+        "value: Value"
+      ],
+      "return_type": "bool",
+      "line": 381
+    },
+    {
+      "name": "lookup_first_non_null_path",
+      "visibility": "",
+      "parameters": [
+        "value: &'a Value",
+        "paths: &[String]"
+      ],
+      "return_type": "Option<&'a Value>",
+      "line": 416
+    },
+    {
+      "name": "source_path_candidates",
+      "visibility": "",
+      "parameters": [
+        "path: &str"
+      ],
+      "return_type": "Vec<String>",
+      "line": 427
+    },
+    {
+      "name": "collect_leaf_paths",
+      "visibility": "",
+      "parameters": [
+        "value: &Value",
+        "current: String",
+        "paths: &mut Vec<String>"
+      ],
+      "return_type": "",
+      "line": 477
+    },
+    {
+      "name": "lookup_json_path_with_case_fallback",
+      "visibility": "",
+      "parameters": [
+        "value: &'a Value",
+        "path: &str"
+      ],
+      "return_type": "Option<&'a Value>",
+      "line": 503
+    },
+    {
+      "name": "set_json_path_value",
+      "visibility": "",
+      "parameters": [
+        "root: &mut Value",
+        "path: &str",
+        "value: Value"
+      ],
+      "return_type": "bool",
+      "line": 528
+    },
+    {
+      "name": "remove_json_path",
+      "visibility": "",
+      "parameters": [
+        "root: &mut Value",
+        "path: &str"
+      ],
+      "return_type": "bool",
+      "line": 597
+    },
+    {
+      "name": "remove_json_path_if_empty_object",
+      "visibility": "",
+      "parameters": [
+        "root: &mut Value",
+        "path: &str"
+      ],
+      "return_type": "bool",
+      "line": 644
+    },
+    {
+      "name": "snake_to_camel_case",
+      "visibility": "",
+      "parameters": [
+        "input: &str"
+      ],
+      "return_type": "String",
+      "line": 655
+    },
+    {
+      "name": "camel_to_snake_case",
+      "visibility": "",
+      "parameters": [
+        "input: &str"
+      ],
+      "return_type": "String",
+      "line": 674
+    },
+    {
+      "name": "build_grpcurl_request",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool",
+        "require_auth: bool"
+      ],
+      "return_type": "Result<GrpcurlRequest, ScenarioError>",
+      "line": 686
+    },
+    {
+      "name": "build_grpcurl_request_from_payload",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool",
+        "require_auth: bool"
+      ],
+      "return_type": "Result<GrpcurlRequest, ScenarioError>",
+      "line": 715
+    },
+    {
+      "name": "build_grpcurl_command",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 777
+    },
+    {
+      "name": "execute_grpcurl_request",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 800
+    },
+    {
+      "name": "execute_grpcurl_request_with_trace",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<GrpcExecutionResult, ScenarioError>",
+      "line": 828
+    },
+    {
+      "name": "execute_grpcurl_request_from_payload",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 855
+    },
+    {
+      "name": "execute_grpcurl_request_from_payload_with_trace",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<GrpcExecutionResult, ScenarioError>",
+      "line": 885
+    },
+    {
+      "name": "execute_grpcurl_from_request",
+      "visibility": "",
+      "parameters": [
+        "request: GrpcurlRequest"
+      ],
+      "return_type": "Result<GrpcExecutionResult, ScenarioError>",
+      "line": 909
+    },
+    {
+      "name": "build_grpc_response_output",
+      "visibility": "",
+      "parameters": [
+        "stdout_output: &str",
+        "stderr_output: &str"
+      ],
+      "return_type": "String",
+      "line": 951
+    },
+    {
+      "name": "extract_json_body_from_grpc_output",
+      "visibility": "",
+      "parameters": [
+        "stdout_output: &str",
+        "stderr_output: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 961
+    },
+    {
+      "name": "extract_first_json_value",
+      "visibility": "",
+      "parameters": [
+        "text: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 987
+    },
+    {
+      "name": "extract_best_json_value",
+      "visibility": "",
+      "parameters": [
+        "text: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 1006
+    },
+    {
+      "name": "find_json_value_end",
+      "visibility": "",
+      "parameters": [
+        "text: &str",
+        "start_index: usize"
+      ],
+      "return_type": "Option<usize>",
+      "line": 1030
+    },
+    {
+      "name": "execute_tonic_request",
+      "visibility": "pub",
+      "parameters": [
+        "suite: Option<&str>",
+        "scenario: Option<&str>",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 1082
+    },
+    {
+      "name": "execute_tonic_request_from_payload",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value",
+        "endpoint: Option<&str>",
+        "connector: Option<&str>",
+        "merchant_id: Option<&str>",
+        "tenant_id: Option<&str>",
+        "plaintext: bool"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 1109
+    },
+    {
+      "name": "parse_tonic_payload",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "grpc_req: &Value"
+      ],
+      "return_type": "Result<T, ScenarioError>",
+      "line": 1388
+    },
+    {
+      "name": "normalize_tonic_request_json",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "mut value: Value"
+      ],
+      "return_type": "Value",
+      "line": 1402
+    },
+    {
+      "name": "normalize_proto_oneof_shapes",
+      "visibility": "",
+      "parameters": [
+        "value: &mut Value"
+      ],
+      "return_type": "",
+      "line": 1450
+    },
+    {
+      "name": "normalize_payment_method_oneof",
+      "visibility": "",
+      "parameters": [
+        "map: &mut serde_json::Map<String, Value>"
+      ],
+      "return_type": "",
+      "line": 1469
+    },
+    {
+      "name": "normalize_mandate_reference_oneofs",
+      "visibility": "",
+      "parameters": [
+        "map: &mut serde_json::Map<String, Value>"
+      ],
+      "return_type": "",
+      "line": 1493
+    },
+    {
+      "name": "to_pascal_case",
+      "visibility": "",
+      "parameters": [
+        "value: &str"
+      ],
+      "return_type": "String",
+      "line": 1521
+    },
+    {
+      "name": "normalize_oneof_variant_key",
+      "visibility": "",
+      "parameters": [
+        "value: &str"
+      ],
+      "return_type": "String",
+      "line": 1542
+    },
+    {
+      "name": "normalize_value_wrappers",
+      "visibility": "",
+      "parameters": [
+        "value: &mut Value"
+      ],
+      "return_type": "",
+      "line": 1586
+    },
+    {
+      "name": "serialize_tonic_response",
+      "visibility": "",
+      "parameters": [
+        "response: &T"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 1609
+    },
+    {
+      "name": "to_tonic_endpoint",
+      "visibility": "",
+      "parameters": [
+        "endpoint: &str",
+        "plaintext: bool"
+      ],
+      "return_type": "String",
+      "line": 1613
+    },
+    {
+      "name": "dependency_label",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "String",
+      "line": 1649
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 1694
+    },
+    {
+      "name": "run_suite_test",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "connector: Option<&str>"
+      ],
+      "return_type": "Result<SuiteRunSummary, ScenarioError>",
+      "line": 1707
+    },
+    {
+      "name": "run_scenario_test_with_options",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: Option<&str>",
+        "options: SuiteRunOptions<'_>"
+      ],
+      "return_type": "Result<SuiteRunSummary, ScenarioError>",
+      "line": 1715
+    },
+    {
+      "name": "run_all_suites",
+      "visibility": "pub",
+      "parameters": [
+        "connector: Option<&str>"
+      ],
+      "return_type": "Result<AllSuitesRunSummary, ScenarioError>",
+      "line": 1842
+    },
+    {
+      "name": "run_all_suites_with_options",
+      "visibility": "pub",
+      "parameters": [
+        "connector: Option<&str>",
+        "options: SuiteRunOptions<'_>"
+      ],
+      "return_type": "Result<AllSuitesRunSummary, ScenarioError>",
+      "line": 1847
+    },
+    {
+      "name": "run_all_connectors",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<AllConnectorsRunSummary, ScenarioError>",
+      "line": 1874
+    },
+    {
+      "name": "run_all_connectors_with_options",
+      "visibility": "pub",
+      "parameters": [
+        "options: SuiteRunOptions<'_>"
+      ],
+      "return_type": "Result<AllConnectorsRunSummary, ScenarioError>",
+      "line": 1879
+    },
+    {
+      "name": "run_suite_test_with_options",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "connector: Option<&str>",
+        "options: SuiteRunOptions<'_>"
+      ],
+      "return_type": "Result<SuiteRunSummary, ScenarioError>",
+      "line": 1916
+    },
+    {
+      "name": "execute_dependency_chain",
+      "visibility": "",
+      "parameters": [
+        "dependencies: &[SuiteDependency]",
+        "connector: &str",
+        "options: SuiteRunOptions<'_>",
+        "strict_dependencies: bool",
+        "passed: &mut usize",
+        "failed: &mut usize",
+        "results: &mut Vec<SuiteScenarioResult>"
+      ],
+      "return_type": "Result<Option<DependencyContext>, ScenarioError>",
+      "line": 2165
+    },
+    {
+      "name": "execute_single_scenario_with_context",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "options: SuiteRunOptions<'_>",
+        "dependency_reqs: &[Value]",
+        "dependency_res: &[Value]",
+        "explicit_context_entries: &[ExplicitContextEntry]"
+      ],
+      "return_type": "Result<ExecutedScenario, ScenarioError>",
+      "line": 2317
+    },
+    {
+      "name": "grpc_method_for_suite",
+      "visibility": "",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "Result<&'static str, ScenarioError>",
+      "line": 2420
+    },
+    {
+      "name": "auth_headers",
+      "visibility": "",
+      "parameters": [
+        "auth: &ConnectorAuth"
+      ],
+      "return_type": "Vec<String>",
+      "line": 2438
+    },
+    {
+      "name": "validate_tonic_payload_shape",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 2486
+    },
+    {
+      "name": "validate_suite_scenario_schema",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 2520
+    },
+    {
+      "name": "run_test_accepts_explicit_suite_and_scenario",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2566
+    },
+    {
+      "name": "run_test_uses_default_suite_and_scenario",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2576
+    },
+    {
+      "name": "connector_override_is_applied_to_assertions",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2583
+    },
+    {
+      "name": "builds_grpcurl_command",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2612
+    },
+    {
+      "name": "builds_grpcurl_request_struct",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2631
+    },
+    {
+      "name": "extracts_json_body_from_verbose_grpc_output",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2651
+    },
+    {
+      "name": "extracts_plain_json_body_without_verbose_sections",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2684
+    },
+    {
+      "name": "build_grpcurl_request_resolves_auto_generate_placeholders",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2692
+    },
+    {
+      "name": "add_context_overrides_with_latest_index_preference",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2738
+    },
+    {
+      "name": "add_context_keeps_target_scenario_specific_values_when_context_is_dependency_only",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2759
+    },
+    {
+      "name": "add_context_maps_refund_id_from_connector_refund_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2785
+    },
+    {
+      "name": "add_context_maps_identifier_pascal_case_oneof_variant",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2798
+    },
+    {
+      "name": "add_context_maps_mandate_reference_into_mandate_reference_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2822
+    },
+    {
+      "name": "add_context_does_not_map_mandate_reference_into_connector_recurring_payment_id",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2848
+    },
+    {
+      "name": "add_context_maps_access_token_fields_into_state_access_token",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2875
+    },
+    {
+      "name": "add_context_maps_connector_customer_id_to_nested_targets",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2911
+    },
+    {
+      "name": "add_context_maps_connector_feature_data_value",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2941
+    },
+    {
+      "name": "prepare_context_placeholders_converts_empty_values_to_auto_generate",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2963
+    },
+    {
+      "name": "prune_unresolved_context_fields_drops_unresolved_values",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3005
+    },
+    {
+      "name": "prune_unresolved_context_fields_keeps_resolved_values",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3032
+    },
+    {
+      "name": "normalizer_unwraps_value_wrappers",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3064
+    },
+    {
+      "name": "normalizer_drops_legacy_get_handle_response_bool",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3096
+    },
+    {
+      "name": "normalizer_adds_authorize_order_details_default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3113
+    },
+    {
+      "name": "normalizer_adds_customer_acceptance_accepted_at_default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3129
+    },
+    {
+      "name": "normalizer_wraps_connector_recurring_mandate_oneof",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3149
+    },
+    {
+      "name": "deep_set_creates_intermediate_objects",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3175
+    },
+    {
+      "name": "deep_set_overwrites_existing_leaf",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3190
+    },
+    {
+      "name": "deep_set_single_segment",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3201
+    },
+    {
+      "name": "deep_set_partial_existing_path",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3211
+    },
+    {
+      "name": "apply_context_map_maps_response_field_to_deep_target",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3230
+    },
+    {
+      "name": "apply_context_map_maps_request_field_with_req_prefix",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3253
+    },
+    {
+      "name": "apply_context_map_defaults_to_response_when_no_prefix",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3268
+    },
+    {
+      "name": "apply_context_map_skips_null_source_values",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3287
+    },
+    {
+      "name": "apply_context_map_multiple_dependencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3303
+    },
+    {
+      "name": "apply_context_map_camel_case_response_lookup",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3330
+    },
+    {
+      "name": "apply_context_map_empty_map_is_noop",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3349
+    },
+    {
+      "name": "apply_context_map_id_type_id_unwrapping",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3360
+    },
+    {
+      "name": "explicit_context_map_overrides_implicit_context_value",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3385
+    },
+    {
+      "name": "all_supported_scenarios_match_proto_schema_for_all_connectors",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3406
+    },
+    {
+      "name": "all_override_entries_match_existing_scenarios_and_proto_schema",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 3471
+    }
+  ],
+  "use_statements": [
+    "use std::collections::BTreeMap;",
+    "use serde::{de::DeserializeOwned, Serialize};",
+    "use serde_json::Value;",
+    "use tonic::transport::Channel;",
+    "use crate::harness::{\n    auto_gen::resolve_auto_generate,\n    connector_override::{\n        apply_connector_overrides, context_deferred_paths_for_connector,\n        normalize_tonic_request_for_connector, should_skip_scenario_for_connector,\n        transform_response_for_connector,\n    },\n    credentials::{load_connector_auth, ConnectorAuth},\n    metadata::add_connector_metadata,\n    scenario_assert::do_assertion as do_assertion_impl,\n    scenario_loader::{\n        configured_all_connectors, get_the_assertion as get_the_assertion_impl,\n        get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,\n        load_default_scenario_name, load_scenario, load_suite_scenarios, load_suite_spec,\n        load_supported_suites_for_connector,\n    },\n    scenario_types::{ContextMap, DependencyScope, FieldAssert, ScenarioError, SuiteDependency},\n    sdk_executor::execute_sdk_request_from_payload,\n};",
+    "use std::{collections::BTreeSet, fs};",
+    "use grpc_api_types::payments;",
+    "use serde::de::DeserializeOwned;",
+    "use serde_json::{json, Value};",
+    "use std::collections::HashMap;",
+    "use super::{\n        add_context, apply_context_map, build_grpcurl_command, build_grpcurl_request,\n        deep_set_json_path, extract_json_body_from_grpc_output, get_the_assertion,\n        get_the_assertion_for_connector, get_the_grpc_req_for_connector,\n        normalize_tonic_request_json, prepare_context_placeholders,\n        prune_unresolved_context_fields, run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,\n    };",
+    "use crate::harness::scenario_loader::{\n        connector_spec_dir, discover_all_connectors, load_suite_scenarios,\n        load_supported_suites_for_connector,\n    };",
+    "use crate::harness::scenario_types::ContextMap;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 136
+    },
+    {
+      "name": "format",
+      "line": 139
+    },
+    {
+      "name": "matches",
+      "line": 203
+    },
+    {
+      "name": "vec",
+      "line": 253
+    },
+    {
+      "name": "format",
+      "line": 352
+    },
+    {
+      "name": "vec",
+      "line": 428
+    },
+    {
+      "name": "format",
+      "line": 460
+    },
+    {
+      "name": "format",
+      "line": 464
+    },
+    {
+      "name": "format",
+      "line": 465
+    },
+    {
+      "name": "format",
+      "line": 484
+    },
+    {
+      "name": "format",
+      "line": 494
+    },
+    {
+      "name": "format",
+      "line": 748
+    },
+    {
+      "name": "format",
+      "line": 749
+    },
+    {
+      "name": "vec",
+      "line": 752
+    },
+    {
+      "name": "format",
+      "line": 933
+    },
+    {
+      "name": "format",
+      "line": 953
+    },
+    {
+      "name": "format",
+      "line": 1128
+    },
+    {
+      "name": "format",
+      "line": 1129
+    },
+    {
+      "name": "format",
+      "line": 1136
+    },
+    {
+      "name": "format",
+      "line": 1142
+    },
+    {
+      "name": "format",
+      "line": 1147
+    },
+    {
+      "name": "format",
+      "line": 1167
+    },
+    {
+      "name": "format",
+      "line": 1190
+    },
+    {
+      "name": "format",
+      "line": 1213
+    },
+    {
+      "name": "format",
+      "line": 1236
+    },
+    {
+      "name": "format",
+      "line": 1259
+    },
+    {
+      "name": "format",
+      "line": 1282
+    },
+    {
+      "name": "format",
+      "line": 1305
+    },
+    {
+      "name": "format",
+      "line": 1328
+    },
+    {
+      "name": "format",
+      "line": 1351
+    },
+    {
+      "name": "format",
+      "line": 1374
+    },
+    {
+      "name": "format",
+      "line": 1396
+    },
+    {
+      "name": "matches",
+      "line": 1420
+    },
+    {
+      "name": "format",
+      "line": 1619
+    },
+    {
+      "name": "format",
+      "line": 1621
+    },
+    {
+      "name": "format",
+      "line": 1650
+    },
+    {
+      "name": "eprintln",
+      "line": 1889
+    },
+    {
+      "name": "eprintln",
+      "line": 1889
+    },
+    {
+      "name": "println",
+      "line": 2348
+    },
+    {
+      "name": "println",
+      "line": 2348
+    },
+    {
+      "name": "json",
+      "line": 2371
+    },
+    {
+      "name": "format",
+      "line": 2400
+    },
+    {
+      "name": "vec",
+      "line": 2440
+    },
+    {
+      "name": "vec",
+      "line": 2444
+    },
+    {
+      "name": "vec",
+      "line": 2453
+    },
+    {
+      "name": "format",
+      "line": 2494
+    },
+    {
+      "name": "format",
+      "line": 2505
+    },
+    {
+      "name": "format",
+      "line": 2511
+    },
+    {
+      "name": "format",
+      "line": 2559
+    },
+    {
+      "name": "assert_eq",
+      "line": 2577
+    },
+    {
+      "name": "assert_eq",
+      "line": 2577
+    },
+    {
+      "name": "assert_eq",
+      "line": 2578
+    },
+    {
+      "name": "assert_eq",
+      "line": 2578
+    },
+    {
+      "name": "assert",
+      "line": 2597
+    },
+    {
+      "name": "assert",
+      "line": 2597
+    },
+    {
+      "name": "assert",
+      "line": 2602
+    },
+    {
+      "name": "assert",
+      "line": 2602
+    },
+    {
+      "name": "assert",
+      "line": 2607
+    },
+    {
+      "name": "assert",
+      "line": 2607
+    },
+    {
+      "name": "assert",
+      "line": 2608
+    },
+    {
+      "name": "assert",
+      "line": 2608
+    },
+    {
+      "name": "assert",
+      "line": 2624
+    },
+    {
+      "name": "assert",
+      "line": 2624
+    },
+    {
+      "name": "assert",
+      "line": 2625
+    },
+    {
+      "name": "assert",
+      "line": 2625
+    },
+    {
+      "name": "assert",
+      "line": 2626
+    },
+    {
+      "name": "assert",
+      "line": 2626
+    },
+    {
+      "name": "assert",
+      "line": 2627
+    },
+    {
+      "name": "assert",
+      "line": 2627
+    },
+    {
+      "name": "assert_eq",
+      "line": 2644
+    },
+    {
+      "name": "assert_eq",
+      "line": 2644
+    },
+    {
+      "name": "assert_eq",
+      "line": 2645
+    },
+    {
+      "name": "assert_eq",
+      "line": 2645
+    },
+    {
+      "name": "assert",
+      "line": 2646
+    },
+    {
+      "name": "assert",
+      "line": 2646
+    },
+    {
+      "name": "assert",
+      "line": 2647
+    },
+    {
+      "name": "assert",
+      "line": 2647
+    },
+    {
+      "name": "assert_eq",
+      "line": 2679
+    },
+    {
+      "name": "assert_eq",
+      "line": 2679
+    },
+    {
+      "name": "assert_eq",
+      "line": 2680
+    },
+    {
+      "name": "assert_eq",
+      "line": 2680
+    },
+    {
+      "name": "assert_eq",
+      "line": 2688
+    },
+    {
+      "name": "assert_eq",
+      "line": 2688
+    },
+    {
+      "name": "assert",
+      "line": 2705
+    },
+    {
+      "name": "assert",
+      "line": 2705
+    },
+    {
+      "name": "assert",
+      "line": 2709
+    },
+    {
+      "name": "assert",
+      "line": 2709
+    },
+    {
+      "name": "assert",
+      "line": 2713
+    },
+    {
+      "name": "assert",
+      "line": 2713
+    },
+    {
+      "name": "assert",
+      "line": 2723
+    },
+    {
+      "name": "assert",
+      "line": 2723
+    },
+    {
+      "name": "assert",
+      "line": 2731
+    },
+    {
+      "name": "assert",
+      "line": 2731
+    },
+    {
+      "name": "vec",
+      "line": 2739
+    },
+    {
+      "name": "vec",
+      "line": 2743
+    },
+    {
+      "name": "json",
+      "line": 2747
+    },
+    {
+      "name": "assert_eq",
+      "line": 2754
+    },
+    {
+      "name": "assert_eq",
+      "line": 2754
+    },
+    {
+      "name": "assert_eq",
+      "line": 2755
+    },
+    {
+      "name": "assert_eq",
+      "line": 2755
+    },
+    {
+      "name": "vec",
+      "line": 2760
+    },
+    {
+      "name": "vec",
+      "line": 2761
+    },
+    {
+      "name": "json",
+      "line": 2763
+    },
+    {
+      "name": "assert_eq",
+      "line": 2769
+    },
+    {
+      "name": "assert_eq",
+      "line": 2769
+    },
+    {
+      "name": "assert_eq",
+      "line": 2770
+    },
+    {
+      "name": "assert_eq",
+      "line": 2770
+    },
+    {
+      "name": "assert_eq",
+      "line": 2771
+    },
+    {
+      "name": "assert_eq",
+      "line": 2771
+    },
+    {
+      "name": "json",
+      "line": 2773
+    },
+    {
+      "name": "assert_eq",
+      "line": 2779
+    },
+    {
+      "name": "assert_eq",
+      "line": 2779
+    },
+    {
+      "name": "assert_eq",
+      "line": 2780
+    },
+    {
+      "name": "assert_eq",
+      "line": 2780
+    },
+    {
+      "name": "assert_eq",
+      "line": 2781
+    },
+    {
+      "name": "assert_eq",
+      "line": 2781
+    },
+    {
+      "name": "vec",
+      "line": 2786
+    },
+    {
+      "name": "vec",
+      "line": 2787
+    },
+    {
+      "name": "json",
+      "line": 2788
+    },
+    {
+      "name": "assert_eq",
+      "line": 2794
+    },
+    {
+      "name": "assert_eq",
+      "line": 2794
+    },
+    {
+      "name": "vec",
+      "line": 2799
+    },
+    {
+      "name": "vec",
+      "line": 2800
+    },
+    {
+      "name": "json",
+      "line": 2807
+    },
+    {
+      "name": "assert_eq",
+      "line": 2815
+    },
+    {
+      "name": "assert_eq",
+      "line": 2815
+    },
+    {
+      "name": "vec",
+      "line": 2823
+    },
+    {
+      "name": "vec",
+      "line": 2824
+    },
+    {
+      "name": "json",
+      "line": 2831
+    },
+    {
+      "name": "assert_eq",
+      "line": 2841
+    },
+    {
+      "name": "assert_eq",
+      "line": 2841
+    },
+    {
+      "name": "vec",
+      "line": 2849
+    },
+    {
+      "name": "vec",
+      "line": 2850
+    },
+    {
+      "name": "json",
+      "line": 2857
+    },
+    {
+      "name": "assert_eq",
+      "line": 2867
+    },
+    {
+      "name": "assert_eq",
+      "line": 2867
+    },
+    {
+      "name": "vec",
+      "line": 2876
+    },
+    {
+      "name": "vec",
+      "line": 2877
+    },
+    {
+      "name": "json",
+      "line": 2882
+    },
+    {
+      "name": "assert_eq",
+      "line": 2896
+    },
+    {
+      "name": "assert_eq",
+      "line": 2896
+    },
+    {
+      "name": "assert_eq",
+      "line": 2900
+    },
+    {
+      "name": "assert_eq",
+      "line": 2900
+    },
+    {
+      "name": "assert_eq",
+      "line": 2904
+    },
+    {
+      "name": "assert_eq",
+      "line": 2904
+    },
+    {
+      "name": "vec",
+      "line": 2912
+    },
+    {
+      "name": "vec",
+      "line": 2913
+    },
+    {
+      "name": "json",
+      "line": 2917
+    },
+    {
+      "name": "assert_eq",
+      "line": 2923
+    },
+    {
+      "name": "assert_eq",
+      "line": 2923
+    },
+    {
+      "name": "json",
+      "line": 2928
+    },
+    {
+      "name": "assert_eq",
+      "line": 2934
+    },
+    {
+      "name": "assert_eq",
+      "line": 2934
+    },
+    {
+      "name": "vec",
+      "line": 2942
+    },
+    {
+      "name": "vec",
+      "line": 2943
+    },
+    {
+      "name": "json",
+      "line": 2948
+    },
+    {
+      "name": "assert_eq",
+      "line": 2956
+    },
+    {
+      "name": "assert_eq",
+      "line": 2956
+    },
+    {
+      "name": "json",
+      "line": 2964
+    },
+    {
+      "name": "assert_eq",
+      "line": 2978
+    },
+    {
+      "name": "assert_eq",
+      "line": 2978
+    },
+    {
+      "name": "assert_eq",
+      "line": 2982
+    },
+    {
+      "name": "assert_eq",
+      "line": 2982
+    },
+    {
+      "name": "assert_eq",
+      "line": 2986
+    },
+    {
+      "name": "assert_eq",
+      "line": 2986
+    },
+    {
+      "name": "assert_eq",
+      "line": 2990
+    },
+    {
+      "name": "assert_eq",
+      "line": 2990
+    },
+    {
+      "name": "assert_eq",
+      "line": 2994
+    },
+    {
+      "name": "assert_eq",
+      "line": 2994
+    },
+    {
+      "name": "assert_eq",
+      "line": 2998
+    },
+    {
+      "name": "assert_eq",
+      "line": 2998
+    },
+    {
+      "name": "json",
+      "line": 3006
+    },
+    {
+      "name": "assert",
+      "line": 3024
+    },
+    {
+      "name": "assert",
+      "line": 3024
+    },
+    {
+      "name": "assert",
+      "line": 3025
+    },
+    {
+      "name": "assert",
+      "line": 3025
+    },
+    {
+      "name": "assert",
+      "line": 3026
+    },
+    {
+      "name": "assert",
+      "line": 3026
+    },
+    {
+      "name": "assert",
+      "line": 3027
+    },
+    {
+      "name": "assert",
+      "line": 3027
+    },
+    {
+      "name": "assert_eq",
+      "line": 3028
+    },
+    {
+      "name": "assert_eq",
+      "line": 3028
+    },
+    {
+      "name": "json",
+      "line": 3033
+    },
+    {
+      "name": "assert_eq",
+      "line": 3050
+    },
+    {
+      "name": "assert_eq",
+      "line": 3050
+    },
+    {
+      "name": "assert_eq",
+      "line": 3051
+    },
+    {
+      "name": "assert_eq",
+      "line": 3051
+    },
+    {
+      "name": "assert_eq",
+      "line": 3055
+    },
+    {
+      "name": "assert_eq",
+      "line": 3055
+    },
+    {
+      "name": "assert_eq",
+      "line": 3059
+    },
+    {
+      "name": "assert_eq",
+      "line": 3059
+    },
+    {
+      "name": "assert_eq",
+      "line": 3060
+    },
+    {
+      "name": "assert_eq",
+      "line": 3060
+    },
+    {
+      "name": "json",
+      "line": 3065
+    },
+    {
+      "name": "assert_eq",
+      "line": 3084
+    },
+    {
+      "name": "assert_eq",
+      "line": 3084
+    },
+    {
+      "name": "assert_eq",
+      "line": 3088
+    },
+    {
+      "name": "assert_eq",
+      "line": 3088
+    },
+    {
+      "name": "assert_eq",
+      "line": 3092
+    },
+    {
+      "name": "assert_eq",
+      "line": 3092
+    },
+    {
+      "name": "json",
+      "line": 3097
+    },
+    {
+      "name": "assert",
+      "line": 3108
+    },
+    {
+      "name": "assert",
+      "line": 3108
+    },
+    {
+      "name": "assert_eq",
+      "line": 3109
+    },
+    {
+      "name": "assert_eq",
+      "line": 3109
+    },
+    {
+      "name": "json",
+      "line": 3114
+    },
+    {
+      "name": "assert_eq",
+      "line": 3125
+    },
+    {
+      "name": "assert_eq",
+      "line": 3125
+    },
+    {
+      "name": "json",
+      "line": 3130
+    },
+    {
+      "name": "assert",
+      "line": 3145
+    },
+    {
+      "name": "assert",
+      "line": 3145
+    },
+    {
+      "name": "json",
+      "line": 3150
+    },
+    {
+      "name": "assert_eq",
+      "line": 3165
+    },
+    {
+      "name": "assert_eq",
+      "line": 3165
+    },
+    {
+      "name": "json",
+      "line": 3176
+    },
+    {
+      "name": "json",
+      "line": 3180
+    },
+    {
+      "name": "assert",
+      "line": 3182
+    },
+    {
+      "name": "assert",
+      "line": 3182
+    },
+    {
+      "name": "assert_eq",
+      "line": 3183
+    },
+    {
+      "name": "assert_eq",
+      "line": 3183
+    },
+    {
+      "name": "json",
+      "line": 3191
+    },
+    {
+      "name": "json",
+      "line": 3192
+    },
+    {
+      "name": "assert",
+      "line": 3193
+    },
+    {
+      "name": "assert",
+      "line": 3193
+    },
+    {
+      "name": "assert_eq",
+      "line": 3194
+    },
+    {
+      "name": "assert_eq",
+      "line": 3194
+    },
+    {
+      "name": "json",
+      "line": 3202
+    },
+    {
+      "name": "json",
+      "line": 3203
+    },
+    {
+      "name": "assert",
+      "line": 3204
+    },
+    {
+      "name": "assert",
+      "line": 3204
+    },
+    {
+      "name": "assert_eq",
+      "line": 3205
+    },
+    {
+      "name": "assert_eq",
+      "line": 3205
+    },
+    {
+      "name": "assert_eq",
+      "line": 3207
+    },
+    {
+      "name": "assert_eq",
+      "line": 3207
+    },
+    {
+      "name": "json",
+      "line": 3212
+    },
+    {
+      "name": "json",
+      "line": 3216
+    },
+    {
+      "name": "assert",
+      "line": 3218
+    },
+    {
+      "name": "assert",
+      "line": 3218
+    },
+    {
+      "name": "assert_eq",
+      "line": 3219
+    },
+    {
+      "name": "assert_eq",
+      "line": 3219
+    },
+    {
+      "name": "assert_eq",
+      "line": 3224
+    },
+    {
+      "name": "assert_eq",
+      "line": 3224
+    },
+    {
+      "name": "json",
+      "line": 3237
+    },
+    {
+      "name": "json",
+      "line": 3238
+    },
+    {
+      "name": "vec",
+      "line": 3239
+    },
+    {
+      "name": "json",
+      "line": 3241
+    },
+    {
+      "name": "assert_eq",
+      "line": 3244
+    },
+    {
+      "name": "assert_eq",
+      "line": 3244
+    },
+    {
+      "name": "assert_eq",
+      "line": 3249
+    },
+    {
+      "name": "assert_eq",
+      "line": 3249
+    },
+    {
+      "name": "json",
+      "line": 3257
+    },
+    {
+      "name": "json",
+      "line": 3258
+    },
+    {
+      "name": "vec",
+      "line": 3259
+    },
+    {
+      "name": "json",
+      "line": 3261
+    },
+    {
+      "name": "assert_eq",
+      "line": 3264
+    },
+    {
+      "name": "assert_eq",
+      "line": 3264
+    },
+    {
+      "name": "json",
+      "line": 3276
+    },
+    {
+      "name": "json",
+      "line": 3277
+    },
+    {
+      "name": "vec",
+      "line": 3278
+    },
+    {
+      "name": "json",
+      "line": 3280
+    },
+    {
+      "name": "assert_eq",
+      "line": 3283
+    },
+    {
+      "name": "assert_eq",
+      "line": 3283
+    },
+    {
+      "name": "json",
+      "line": 3291
+    },
+    {
+      "name": "json",
+      "line": 3292
+    },
+    {
+      "name": "vec",
+      "line": 3293
+    },
+    {
+      "name": "json",
+      "line": 3295
+    },
+    {
+      "name": "assert_eq",
+      "line": 3299
+    },
+    {
+      "name": "assert_eq",
+      "line": 3299
+    },
+    {
+      "name": "vec",
+      "line": 3313
+    },
+    {
+      "name": "json",
+      "line": 3318
+    },
+    {
+      "name": "assert_eq",
+      "line": 3321
+    },
+    {
+      "name": "assert_eq",
+      "line": 3321
+    },
+    {
+      "name": "assert_eq",
+      "line": 3325
+    },
+    {
+      "name": "assert_eq",
+      "line": 3325
+    },
+    {
+      "name": "assert_eq",
+      "line": 3326
+    },
+    {
+      "name": "assert_eq",
+      "line": 3326
+    },
+    {
+      "name": "json",
+      "line": 3337
+    },
+    {
+      "name": "json",
+      "line": 3339
+    },
+    {
+      "name": "vec",
+      "line": 3340
+    },
+    {
+      "name": "json",
+      "line": 3342
+    },
+    {
+      "name": "assert_eq",
+      "line": 3345
+    },
+    {
+      "name": "assert_eq",
+      "line": 3345
+    },
+    {
+      "name": "vec",
+      "line": 3351
+    },
+    {
+      "name": "json",
+      "line": 3353
+    },
+    {
+      "name": "assert_eq",
+      "line": 3356
+    },
+    {
+      "name": "assert_eq",
+      "line": 3356
+    },
+    {
+      "name": "json",
+      "line": 3367
+    },
+    {
+      "name": "json",
+      "line": 3369
+    },
+    {
+      "name": "vec",
+      "line": 3376
+    },
+    {
+      "name": "json",
+      "line": 3378
+    },
+    {
+      "name": "assert_eq",
+      "line": 3381
+    },
+    {
+      "name": "assert_eq",
+      "line": 3381
+    },
+    {
+      "name": "json",
+      "line": 3386
+    },
+    {
+      "name": "vec",
+      "line": 3388
+    },
+    {
+      "name": "json",
+      "line": 3396
+    },
+    {
+      "name": "json",
+      "line": 3397
+    },
+    {
+      "name": "assert_eq",
+      "line": 3399
+    },
+    {
+      "name": "assert_eq",
+      "line": 3399
+    },
+    {
+      "name": "assert",
+      "line": 3409
+    },
+    {
+      "name": "assert",
+      "line": 3409
+    },
+    {
+      "name": "format",
+      "line": 3420
+    },
+    {
+      "name": "format",
+      "line": 3431
+    },
+    {
+      "name": "format",
+      "line": 3447
+    },
+    {
+      "name": "assert",
+      "line": 3463
+    },
+    {
+      "name": "assert",
+      "line": 3463
+    },
+    {
+      "name": "format",
+      "line": 3485
+    },
+    {
+      "name": "format",
+      "line": 3496
+    },
+    {
+      "name": "format",
+      "line": 3505
+    },
+    {
+      "name": "format",
+      "line": 3516
+    },
+    {
+      "name": "format",
+      "line": 3524
+    },
+    {
+      "name": "format",
+      "line": 3532
+    },
+    {
+      "name": "format",
+      "line": 3542
+    },
+    {
+      "name": "assert",
+      "line": 3558
+    },
+    {
+      "name": "assert",
+      "line": 3558
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

@@ -1,0 +1,250 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/payload_payment_flows_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_timestamp",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "u64",
+      "line": 49
+    },
+    {
+      "name": "generate_unique_id",
+      "visibility": "",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 56
+    },
+    {
+      "name": "add_payload_metadata",
+      "visibility": "",
+      "parameters": [
+        "request: &mut Request<T>"
+      ],
+      "return_type": "",
+      "line": 60
+    },
+    {
+      "name": "create_authorize_request",
+      "visibility": "",
+      "parameters": [
+        "capture_method: CaptureMethod"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 98
+    },
+    {
+      "name": "create_payment_sync_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str",
+        "amount: i64"
+      ],
+      "return_type": "PaymentServiceGetRequest",
+      "line": 165
+    },
+    {
+      "name": "create_payment_capture_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str",
+        "amount: i64"
+      ],
+      "return_type": "PaymentServiceCaptureRequest",
+      "line": 187
+    },
+    {
+      "name": "create_payment_void_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str",
+        "amount: i64"
+      ],
+      "return_type": "PaymentServiceVoidRequest",
+      "line": 203
+    },
+    {
+      "name": "create_refund_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str",
+        "amount: i64"
+      ],
+      "return_type": "PaymentServiceRefundRequest",
+      "line": 218
+    },
+    {
+      "name": "extract_transaction_id",
+      "visibility": "",
+      "parameters": [
+        "response: &PaymentServiceAuthorizeResponse"
+      ],
+      "return_type": "String",
+      "line": 231
+    },
+    {
+      "name": "create_repeat_payment_request",
+      "visibility": "",
+      "parameters": [
+        "mandate_id: &str"
+      ],
+      "return_type": "RecurringPaymentServiceChargeRequest",
+      "line": 240
+    },
+    {
+      "name": "create_register_request",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "PaymentServiceSetupRecurringRequest",
+      "line": 284
+    },
+    {
+      "name": "create_register_request_with_prefix",
+      "visibility": "",
+      "parameters": [
+        "_prefix: &str"
+      ],
+      "return_type": "PaymentServiceSetupRecurringRequest",
+      "line": 288
+    },
+    {
+      "name": "test_health",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 372
+    },
+    {
+      "name": "test_authorize_psync_void",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 391
+    },
+    {
+      "name": "test_authorize_capture_refund_rsync",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 454
+    },
+    {
+      "name": "test_setup_mandate",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 550
+    },
+    {
+      "name": "test_repeat_payment",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 602
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use hyperswitch_masking::Secret;",
+    "use ucs_env::configs;",
+    "use std::{\n    str::FromStr,\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use cards::CardNumber;",
+    "use grpc_api_types::{\n    health_check::{health_client::HealthClient, HealthCheckRequest},\n    payments::{\n        mandate_reference::MandateIdType, mandate_type::MandateType as MandateTypeInner,\n        payment_method, payment_service_client::PaymentServiceClient,\n        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,\n        AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,\n        Currency, CustomerAcceptance, FutureUsage, MandateAmountData, MandateReference,\n        MandateType, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,\n        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,\n        PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest,\n        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest,\n        RefundStatus, SetupMandateDetails,\n    },\n};",
+    "use rand::Rng;",
+    "use std::collections::HashMap;",
+    "use tonic::{transport::Channel, Request};",
+    "use uuid::Uuid;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 57
+    },
+    {
+      "name": "panic",
+      "line": 70
+    },
+    {
+      "name": "format",
+      "line": 92
+    },
+    {
+      "name": "format",
+      "line": 123
+    },
+    {
+      "name": "format",
+      "line": 126
+    },
+    {
+      "name": "format",
+      "line": 306
+    },
+    {
+      "name": "format",
+      "line": 308
+    },
+    {
+      "name": "format",
+      "line": 309
+    },
+    {
+      "name": "format",
+      "line": 321
+    },
+    {
+      "name": "format",
+      "line": 336
+    },
+    {
+      "name": "grpc_test",
+      "line": 373
+    },
+    {
+      "name": "grpc_test",
+      "line": 373
+    },
+    {
+      "name": "grpc_test",
+      "line": 392
+    },
+    {
+      "name": "grpc_test",
+      "line": 392
+    },
+    {
+      "name": "grpc_test",
+      "line": 455
+    },
+    {
+      "name": "grpc_test",
+      "line": 455
+    },
+    {
+      "name": "grpc_test",
+      "line": 551
+    },
+    {
+      "name": "grpc_test",
+      "line": 551
+    },
+    {
+      "name": "grpc_test",
+      "line": 603
+    },
+    {
+      "name": "grpc_test",
+      "line": 603
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

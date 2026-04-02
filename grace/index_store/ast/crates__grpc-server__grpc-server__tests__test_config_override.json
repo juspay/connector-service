@@ -1,0 +1,1240 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+  "structs": [
+    {
+      "name": "GenericInner",
+      "visibility": "",
+      "fields": [
+        "flag"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 673
+    },
+    {
+      "name": "GenericWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 678
+    },
+    {
+      "name": "OptionalGenericWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "line": 683
+    },
+    {
+      "name": "JsonInner",
+      "visibility": "",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 714
+    },
+    {
+      "name": "JsonAssoc",
+      "visibility": "",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 719
+    },
+    {
+      "name": "Concrete",
+      "visibility": "",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq"
+      ],
+      "line": 729
+    },
+    {
+      "name": "JsonWrapper",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 737
+    },
+    {
+      "name": "JsonWrapperOpt",
+      "visibility": "",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "line": 742
+    },
+    {
+      "name": "JsonHolder",
+      "visibility": "",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "PatchDerive"
+      ],
+      "line": 747
+    },
+    {
+      "name": "JsonHolderOpt",
+      "visibility": "",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive",
+        "PatchDerive",
+        "PatchDerive"
+      ],
+      "line": 753
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "AssocTrait",
+      "visibility": "",
+      "methods": [],
+      "line": 723
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Concrete",
+      "trait_name": "AssocTrait",
+      "methods": [],
+      "line": 731
+    }
+  ],
+  "functions": [
+    {
+      "name": "test_config_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 24
+    },
+    {
+      "name": "base_config",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Config",
+      "line": 155
+    },
+    {
+      "name": "apply_override",
+      "visibility": "",
+      "parameters": [
+        "override_json: serde_json::Value"
+      ],
+      "return_type": "Arc<Config>",
+      "line": 159
+    },
+    {
+      "name": "apply_override_with_base",
+      "visibility": "",
+      "parameters": [
+        "override_json: serde_json::Value",
+        "base_config: Config"
+      ],
+      "return_type": "Arc<Config>",
+      "line": 164
+    },
+    {
+      "name": "test_proxy_idle_pool_timeout_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 173
+    },
+    {
+      "name": "test_common_environment_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 182
+    },
+    {
+      "name": "test_server_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 193
+    },
+    {
+      "name": "test_metrics_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 208
+    },
+    {
+      "name": "test_log_console_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 221
+    },
+    {
+      "name": "test_empty_override_is_noop",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 249
+    },
+    {
+      "name": "test_log_kafka_partial_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 264
+    },
+    {
+      "name": "test_proxy_mitm_cert_override_base64",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 296
+    },
+    {
+      "name": "test_proxy_mitm_cert_override_rejects_pem",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 309
+    },
+    {
+      "name": "test_proxy_basic_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 324
+    },
+    {
+      "name": "test_connectors_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 353
+    },
+    {
+      "name": "test_events_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 453
+    },
+    {
+      "name": "test_events_transformations_replace",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 503
+    },
+    {
+      "name": "test_lineage_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 529
+    },
+    {
+      "name": "test_unmasked_headers_override_keeps_masking",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 544
+    },
+    {
+      "name": "test_test_config_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 570
+    },
+    {
+      "name": "test_api_tags_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 586
+    },
+    {
+      "name": "test_optional_field_null_clears",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 600
+    },
+    {
+      "name": "test_optional_nested_null_clears",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 629
+    },
+    {
+      "name": "test_null_on_non_optional_is_noop",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 647
+    },
+    {
+      "name": "test_unknown_keys_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 661
+    },
+    {
+      "name": "test_generic_nested_patch_applies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 688
+    },
+    {
+      "name": "test_generic_optional_nested_patch_applies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 702
+    },
+    {
+      "name": "test_generic_nested_patch_from_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 759
+    },
+    {
+      "name": "test_generic_optional_nested_patch_from_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 772
+    },
+    {
+      "name": "test_generic_optional_nested_clear_from_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 783
+    },
+    {
+      "name": "test_qself_patch_type_apply",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 796
+    },
+    {
+      "name": "test_qself_patch_type_optional_insert",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 810
+    },
+    {
+      "name": "test_qself_patch_type_optional_clear",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 822
+    }
+  ],
+  "use_statements": [
+    "use cards::CardNumber;",
+    "use grpc_api_types::payments::{\n    payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,\n    BrowserInformation, CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,\n    PaymentServiceAuthorizeRequest, PaymentStatus,\n};",
+    "use grpc_server::app;",
+    "use hyperswitch_masking::Secret;",
+    "use serde_json::json;",
+    "use std::str::FromStr;",
+    "use tonic::{transport::Channel, Request};",
+    "use ucs_env::configs;",
+    "use base64::{engine::general_purpose, Engine as _};",
+    "use common_utils::{config_patch::Patch, consts, metadata::MaskedMetadata};",
+    "use config_patch_derive::Patch as PatchDerive;",
+    "use grpc_server::utils::merge_config_with_override;",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json::json;",
+    "use std::fmt::Debug;",
+    "use std::sync::Arc;",
+    "use tonic::metadata::MetadataMap;",
+    "use ucs_env::configs;",
+    "use ucs_env::configs::Config;",
+    "use ucs_env::logger::config::{LogFormat, LogKafka};"
+  ],
+  "macro_calls": [
+    {
+      "name": "grpc_test",
+      "line": 25
+    },
+    {
+      "name": "grpc_test",
+      "line": 25
+    },
+    {
+      "name": "json",
+      "line": 174
+    },
+    {
+      "name": "assert_eq",
+      "line": 178
+    },
+    {
+      "name": "assert_eq",
+      "line": 178
+    },
+    {
+      "name": "json",
+      "line": 183
+    },
+    {
+      "name": "assert_eq",
+      "line": 189
+    },
+    {
+      "name": "assert_eq",
+      "line": 189
+    },
+    {
+      "name": "json",
+      "line": 194
+    },
+    {
+      "name": "assert_eq",
+      "line": 202
+    },
+    {
+      "name": "assert_eq",
+      "line": 202
+    },
+    {
+      "name": "assert_eq",
+      "line": 203
+    },
+    {
+      "name": "assert_eq",
+      "line": 203
+    },
+    {
+      "name": "assert_eq",
+      "line": 204
+    },
+    {
+      "name": "assert_eq",
+      "line": 204
+    },
+    {
+      "name": "json",
+      "line": 209
+    },
+    {
+      "name": "assert_eq",
+      "line": 216
+    },
+    {
+      "name": "assert_eq",
+      "line": 216
+    },
+    {
+      "name": "assert_eq",
+      "line": 217
+    },
+    {
+      "name": "assert_eq",
+      "line": 217
+    },
+    {
+      "name": "json",
+      "line": 222
+    },
+    {
+      "name": "assert",
+      "line": 233
+    },
+    {
+      "name": "assert",
+      "line": 233
+    },
+    {
+      "name": "assert_eq",
+      "line": 234
+    },
+    {
+      "name": "assert_eq",
+      "line": 234
+    },
+    {
+      "name": "assert",
+      "line": 238
+    },
+    {
+      "name": "assert",
+      "line": 238
+    },
+    {
+      "name": "assert_eq",
+      "line": 242
+    },
+    {
+      "name": "assert_eq",
+      "line": 242
+    },
+    {
+      "name": "assert",
+      "line": 254
+    },
+    {
+      "name": "assert",
+      "line": 254
+    },
+    {
+      "name": "assert_eq",
+      "line": 260
+    },
+    {
+      "name": "assert_eq",
+      "line": 260
+    },
+    {
+      "name": "json",
+      "line": 268
+    },
+    {
+      "name": "vec",
+      "line": 270
+    },
+    {
+      "name": "json",
+      "line": 275
+    },
+    {
+      "name": "assert_eq",
+      "line": 288
+    },
+    {
+      "name": "assert_eq",
+      "line": 288
+    },
+    {
+      "name": "assert",
+      "line": 289
+    },
+    {
+      "name": "assert",
+      "line": 289
+    },
+    {
+      "name": "assert_eq",
+      "line": 290
+    },
+    {
+      "name": "assert_eq",
+      "line": 290
+    },
+    {
+      "name": "assert_eq",
+      "line": 291
+    },
+    {
+      "name": "assert_eq",
+      "line": 291
+    },
+    {
+      "name": "assert_eq",
+      "line": 292
+    },
+    {
+      "name": "assert_eq",
+      "line": 292
+    },
+    {
+      "name": "json",
+      "line": 299
+    },
+    {
+      "name": "assert_eq",
+      "line": 305
+    },
+    {
+      "name": "assert_eq",
+      "line": 305
+    },
+    {
+      "name": "json",
+      "line": 311
+    },
+    {
+      "name": "assert",
+      "line": 317
+    },
+    {
+      "name": "assert",
+      "line": 317
+    },
+    {
+      "name": "json",
+      "line": 327
+    },
+    {
+      "name": "assert_eq",
+      "line": 338
+    },
+    {
+      "name": "assert_eq",
+      "line": 338
+    },
+    {
+      "name": "assert_eq",
+      "line": 342
+    },
+    {
+      "name": "assert_eq",
+      "line": 342
+    },
+    {
+      "name": "assert_eq",
+      "line": 343
+    },
+    {
+      "name": "assert_eq",
+      "line": 343
+    },
+    {
+      "name": "assert_eq",
+      "line": 344
+    },
+    {
+      "name": "assert_eq",
+      "line": 344
+    },
+    {
+      "name": "assert",
+      "line": 348
+    },
+    {
+      "name": "assert",
+      "line": 348
+    },
+    {
+      "name": "assert_eq",
+      "line": 349
+    },
+    {
+      "name": "assert_eq",
+      "line": 349
+    },
+    {
+      "name": "json",
+      "line": 354
+    },
+    {
+      "name": "assert_eq",
+      "line": 390
+    },
+    {
+      "name": "assert_eq",
+      "line": 390
+    },
+    {
+      "name": "assert_eq",
+      "line": 394
+    },
+    {
+      "name": "assert_eq",
+      "line": 394
+    },
+    {
+      "name": "assert_eq",
+      "line": 398
+    },
+    {
+      "name": "assert_eq",
+      "line": 398
+    },
+    {
+      "name": "assert_eq",
+      "line": 402
+    },
+    {
+      "name": "assert_eq",
+      "line": 402
+    },
+    {
+      "name": "assert_eq",
+      "line": 406
+    },
+    {
+      "name": "assert_eq",
+      "line": 406
+    },
+    {
+      "name": "assert_eq",
+      "line": 410
+    },
+    {
+      "name": "assert_eq",
+      "line": 410
+    },
+    {
+      "name": "assert_eq",
+      "line": 414
+    },
+    {
+      "name": "assert_eq",
+      "line": 414
+    },
+    {
+      "name": "assert_eq",
+      "line": 418
+    },
+    {
+      "name": "assert_eq",
+      "line": 418
+    },
+    {
+      "name": "assert_eq",
+      "line": 422
+    },
+    {
+      "name": "assert_eq",
+      "line": 422
+    },
+    {
+      "name": "assert_eq",
+      "line": 426
+    },
+    {
+      "name": "assert_eq",
+      "line": 426
+    },
+    {
+      "name": "assert_eq",
+      "line": 430
+    },
+    {
+      "name": "assert_eq",
+      "line": 430
+    },
+    {
+      "name": "assert_eq",
+      "line": 438
+    },
+    {
+      "name": "assert_eq",
+      "line": 438
+    },
+    {
+      "name": "assert_eq",
+      "line": 442
+    },
+    {
+      "name": "assert_eq",
+      "line": 442
+    },
+    {
+      "name": "json",
+      "line": 454
+    },
+    {
+      "name": "assert",
+      "line": 466
+    },
+    {
+      "name": "assert",
+      "line": 466
+    },
+    {
+      "name": "assert_eq",
+      "line": 467
+    },
+    {
+      "name": "assert_eq",
+      "line": 467
+    },
+    {
+      "name": "assert_eq",
+      "line": 468
+    },
+    {
+      "name": "assert_eq",
+      "line": 468
+    },
+    {
+      "name": "assert_eq",
+      "line": 472
+    },
+    {
+      "name": "assert_eq",
+      "line": 472
+    },
+    {
+      "name": "assert_eq",
+      "line": 476
+    },
+    {
+      "name": "assert_eq",
+      "line": 476
+    },
+    {
+      "name": "assert_eq",
+      "line": 484
+    },
+    {
+      "name": "assert_eq",
+      "line": 484
+    },
+    {
+      "name": "assert_eq",
+      "line": 492
+    },
+    {
+      "name": "assert_eq",
+      "line": 492
+    },
+    {
+      "name": "json",
+      "line": 510
+    },
+    {
+      "name": "assert_eq",
+      "line": 517
+    },
+    {
+      "name": "assert_eq",
+      "line": 517
+    },
+    {
+      "name": "assert",
+      "line": 525
+    },
+    {
+      "name": "assert",
+      "line": 525
+    },
+    {
+      "name": "json",
+      "line": 530
+    },
+    {
+      "name": "assert",
+      "line": 538
+    },
+    {
+      "name": "assert",
+      "line": 538
+    },
+    {
+      "name": "assert_eq",
+      "line": 539
+    },
+    {
+      "name": "assert_eq",
+      "line": 539
+    },
+    {
+      "name": "assert_eq",
+      "line": 540
+    },
+    {
+      "name": "assert_eq",
+      "line": 540
+    },
+    {
+      "name": "json",
+      "line": 546
+    },
+    {
+      "name": "assert",
+      "line": 565
+    },
+    {
+      "name": "assert",
+      "line": 565
+    },
+    {
+      "name": "assert",
+      "line": 566
+    },
+    {
+      "name": "assert",
+      "line": 566
+    },
+    {
+      "name": "json",
+      "line": 571
+    },
+    {
+      "name": "assert",
+      "line": 578
+    },
+    {
+      "name": "assert",
+      "line": 578
+    },
+    {
+      "name": "assert_eq",
+      "line": 579
+    },
+    {
+      "name": "assert_eq",
+      "line": 579
+    },
+    {
+      "name": "json",
+      "line": 587
+    },
+    {
+      "name": "assert_eq",
+      "line": 593
+    },
+    {
+      "name": "assert_eq",
+      "line": 593
+    },
+    {
+      "name": "json",
+      "line": 604
+    },
+    {
+      "name": "vec",
+      "line": 606
+    },
+    {
+      "name": "json",
+      "line": 611
+    },
+    {
+      "name": "assert_eq",
+      "line": 625
+    },
+    {
+      "name": "assert_eq",
+      "line": 625
+    },
+    {
+      "name": "json",
+      "line": 636
+    },
+    {
+      "name": "assert",
+      "line": 643
+    },
+    {
+      "name": "assert",
+      "line": 643
+    },
+    {
+      "name": "json",
+      "line": 651
+    },
+    {
+      "name": "assert_eq",
+      "line": 657
+    },
+    {
+      "name": "assert_eq",
+      "line": 657
+    },
+    {
+      "name": "json",
+      "line": 663
+    },
+    {
+      "name": "assert",
+      "line": 669
+    },
+    {
+      "name": "assert",
+      "line": 669
+    },
+    {
+      "name": "assert",
+      "line": 698
+    },
+    {
+      "name": "assert",
+      "line": 698
+    },
+    {
+      "name": "assert_eq",
+      "line": 710
+    },
+    {
+      "name": "assert_eq",
+      "line": 710
+    },
+    {
+      "name": "assert_eq",
+      "line": 768
+    },
+    {
+      "name": "assert_eq",
+      "line": 768
+    },
+    {
+      "name": "assert_eq",
+      "line": 779
+    },
+    {
+      "name": "assert_eq",
+      "line": 779
+    },
+    {
+      "name": "assert_eq",
+      "line": 792
+    },
+    {
+      "name": "assert_eq",
+      "line": 792
+    },
+    {
+      "name": "assert_eq",
+      "line": 806
+    },
+    {
+      "name": "assert_eq",
+      "line": 806
+    },
+    {
+      "name": "assert_eq",
+      "line": 818
+    },
+    {
+      "name": "assert_eq",
+      "line": 818
+    },
+    {
+      "name": "assert_eq",
+      "line": 830
+    },
+    {
+      "name": "assert_eq",
+      "line": 830
+    }
+  ],
+  "modules": [
+    "common",
+    "unit"
+  ]
+}

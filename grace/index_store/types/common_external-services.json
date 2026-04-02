@@ -1,0 +1,159 @@
+{
+  "structs": [
+    {
+      "name": "GrpcMetricsLayer",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 65
+    },
+    {
+      "name": "GrpcMetricsService",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Clone",
+        "Clone"
+      ],
+      "line": 84
+    },
+    {
+      "name": "TestContext",
+      "visibility": "pub",
+      "fields": [
+        "session_id",
+        "mock_server_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 27
+    },
+    {
+      "name": "EventProcessingParams",
+      "visibility": "pub",
+      "fields": [
+        "connector_name",
+        "service_name",
+        "service_type",
+        "flow_name",
+        "event_config",
+        "request_id",
+        "lineage_ids",
+        "reference_id",
+        "resource_id",
+        "shadow_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 256
+    }
+  ],
+  "enums": [
+    {
+      "name": "MetricsError",
+      "visibility": "pub",
+      "variants": [
+        "EncodingError",
+        "Utf8Error"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 230
+    },
+    {
+      "name": "ApplicationResponse",
+      "visibility": "pub",
+      "variants": [
+        "Json"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 665
+    },
+    {
+      "name": "Tag",
+      "visibility": "pub",
+      "variants": [
+        "General",
+        "RedisGet",
+        "RedisSet",
+        "ApiIncomingRequest",
+        "ApiOutgoingRequestBody",
+        "ApiOutgoingRequestHeaders",
+        "EndRequest",
+        "InitiatedToConnector",
+        "IncomingApi",
+        "OutgoingApi"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Debug",
+        "Default",
+        "serde::Deserialize",
+        "Clone",
+        "strum::EnumString"
+      ],
+      "line": 1259
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorRequestReference",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 32
+    },
+    {
+      "name": "AdditionalHeaders",
+      "visibility": "pub",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 36
+    },
+    {
+      "name": "ToHttpMethod",
+      "visibility": "",
+      "methods": [
+        "to_http_method"
+      ],
+      "line": 238
+    },
+    {
+      "name": "HeaderExt",
+      "visibility": "pub(super)",
+      "methods": [
+        "construct_header_map"
+      ],
+      "line": 1224
+    },
+    {
+      "name": "RequestBuilderExt",
+      "visibility": "pub(super)",
+      "methods": [
+        "add_headers"
+      ],
+      "line": 1247
+    }
+  ]
+}

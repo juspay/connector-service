@@ -1,0 +1,97 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/ucs_env/src/logger/setup.rs",
+  "structs": [
+    {
+      "name": "TelemetryGuard",
+      "visibility": "pub",
+      "fields": [
+        "_log_guards"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 13
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "setup",
+      "visibility": "pub",
+      "parameters": [
+        "config: &config::Log",
+        "service_name: &str",
+        "crates_to_filter: impl AsRef<[&'static str]>"
+      ],
+      "return_type": "Result<TelemetryGuard, log_utils::LoggerError>",
+      "line": 20
+    },
+    {
+      "name": "get_envfilter_directive",
+      "visibility": "",
+      "parameters": [
+        "default_log_level: tracing::Level",
+        "filter_log_level: tracing::Level",
+        "crates_to_filter: impl AsRef<[&'static str]>"
+      ],
+      "return_type": "String",
+      "line": 171
+    }
+  ],
+  "use_statements": [
+    "use std::collections::{HashMap, HashSet};",
+    "use tracing_appender::non_blocking::WorkerGuard;",
+    "use tracing_kafka::KafkaLayer;",
+    "use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};",
+    "use super::config;"
+  ],
+  "macro_calls": [
+    {
+      "name": "json",
+      "line": 26
+    },
+    {
+      "name": "json",
+      "line": 29
+    },
+    {
+      "name": "format",
+      "line": 129
+    },
+    {
+      "name": "warn",
+      "line": 139
+    },
+    {
+      "name": "warn",
+      "line": 139
+    },
+    {
+      "name": "info",
+      "line": 148
+    },
+    {
+      "name": "info",
+      "line": 148
+    },
+    {
+      "name": "info",
+      "line": 157
+    },
+    {
+      "name": "info",
+      "line": 157
+    },
+    {
+      "name": "cargo_workspace_members",
+      "line": 176
+    },
+    {
+      "name": "format",
+      "line": 194
+    }
+  ],
+  "modules": []
+}

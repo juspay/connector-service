@@ -1,0 +1,384 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/cryptopay/transformers.rs",
+  "structs": [
+    {
+      "name": "CryptopayPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "price_amount",
+        "price_currency",
+        "pay_currency",
+        "network",
+        "success_redirect_url",
+        "unsuccess_redirect_url",
+        "metadata",
+        "custom_id"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 33
+    },
+    {
+      "name": "CryptopayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "api_secret"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 124
+    },
+    {
+      "name": "CryptopayPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "data"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 172
+    },
+    {
+      "name": "CryptopayErrorData",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "message",
+        "reason"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 262
+    },
+    {
+      "name": "CryptopayErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 269
+    },
+    {
+      "name": "CryptopayPaymentResponseData",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "custom_id",
+        "customer_id",
+        "status",
+        "status_context",
+        "address",
+        "network",
+        "uri",
+        "price_amount",
+        "price_currency",
+        "pay_amount",
+        "pay_currency",
+        "fee",
+        "fee_currency",
+        "paid_amount",
+        "name",
+        "description",
+        "success_redirect_url",
+        "unsuccess_redirect_url",
+        "hosted_page_url",
+        "created_at",
+        "expires_at"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 274
+    },
+    {
+      "name": "CryptopayWebhookDetails",
+      "visibility": "pub",
+      "fields": [
+        "service_type",
+        "event",
+        "data"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 300
+    }
+  ],
+  "enums": [
+    {
+      "name": "CryptopayPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "New",
+        "Completed",
+        "Unresolved",
+        "Refunded",
+        "Cancelled"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 150
+    },
+    {
+      "name": "WebhookEvent",
+      "visibility": "pub",
+      "variants": [
+        "TransactionCreated",
+        "TransactionConfirmed",
+        "StatusChanged"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 309
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "CryptopayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 46
+    },
+    {
+      "type_name": "CryptopayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 129
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 158
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 176
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 315
+    },
+    {
+      "type_name": "WebhookDetailsResponse",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 399
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: CryptopayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 60
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 131
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: CryptopayPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 159
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<CryptopayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 181
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<CryptopayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 319
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "notif: CryptopayWebhookDetails"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 402
+    }
+  ],
+  "use_statements": [
+    "use domain_types::{\n    connector_flow::Authorize,\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n        WebhookDetailsResponse,\n    },\n    payment_method_data::PaymentMethodDataTypes,\n};",
+    "use crate::connectors::cryptopay::{CryptopayAmountConvertor, CryptopayRouterData};",
+    "use crate::types::ResponseRouterData;",
+    "use common_utils::{pii, types::StringMajorUnit};",
+    "use url::Url;",
+    "use domain_types::{\n    payment_method_data::PaymentMethodData,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n    utils::{get_unimplemented_payment_method_error_message, is_payment_failure},\n};",
+    "use domain_types::errors::ConnectorError;",
+    "use common_utils::consts;",
+    "use serde::{Deserialize, Serialize};",
+    "use hyperswitch_masking::Secret;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

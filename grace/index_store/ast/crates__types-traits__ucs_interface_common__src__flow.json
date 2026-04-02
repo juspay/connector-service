@@ -1,0 +1,41 @@
+{
+  "file_path": "crates/types-traits/ucs_interface_common/src/flow.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "service_type_str",
+      "visibility": "pub",
+      "parameters": [
+        "service_type: &configs::ServiceType"
+      ],
+      "return_type": "&'static str",
+      "line": 10
+    },
+    {
+      "name": "flow_marker_to_flow_name",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "FlowName\nwhere\n    F: 'static,",
+      "line": 18
+    }
+  ],
+  "use_statements": [
+    "use common_utils::events::FlowName;",
+    "use domain_types::connector_flow::{\n    Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,\n    IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,\n    PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence,\n    Void, VoidPC,\n};",
+    "use ucs_env::configs;"
+  ],
+  "macro_calls": [
+    {
+      "name": "warn",
+      "line": 67
+    },
+    {
+      "name": "warn",
+      "line": 67
+    }
+  ],
+  "modules": []
+}

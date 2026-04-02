@@ -1,0 +1,232 @@
+{
+  "file_path": "crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use grpc_api_types::payments::{\n    CustomerServiceCreateRequest,\n    DisputeServiceAcceptRequest,\n    DisputeServiceDefendRequest,\n    DisputeServiceSubmitEvidenceRequest,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateSessionTokenRequest,\n    PaymentMethodAuthenticationServiceAuthenticateRequest,\n    PaymentMethodAuthenticationServicePostAuthenticateRequest,\n    PaymentMethodAuthenticationServicePreAuthenticateRequest,\n    PaymentMethodServiceTokenizeRequest,\n    PaymentServiceAuthorizeRequest,\n    PaymentServiceCaptureRequest,\n    PaymentServiceCreateOrderRequest,\n    PaymentServiceGetRequest,\n    PaymentServiceRefundRequest,\n    PaymentServiceReverseRequest,\n    PaymentServiceSetupRecurringRequest,\n    PaymentServiceVoidRequest,\n    RecurringPaymentServiceChargeRequest,\n};",
+    "use grpc_api_types::payouts::{\n    PayoutServiceCreateLinkRequest,\n    PayoutServiceCreateRecipientRequest,\n    PayoutServiceCreateRequest,\n    PayoutServiceEnrollDisburseAccountRequest,\n    PayoutServiceGetRequest,\n    PayoutServiceStageRequest,\n    PayoutServiceTransferRequest,\n    PayoutServiceVoidRequest,\n};",
+    "use crate::handlers::payments::{\n    accept_req_handler, accept_res_handler,\n    authenticate_req_handler, authenticate_res_handler,\n    authorize_req_handler, authorize_res_handler,\n    capture_req_handler, capture_res_handler,\n    charge_req_handler, charge_res_handler,\n    create_req_handler, create_res_handler,\n    create_access_token_req_handler, create_access_token_res_handler,\n    create_order_req_handler, create_order_res_handler,\n    create_session_token_req_handler, create_session_token_res_handler,\n    defend_req_handler, defend_res_handler,\n    get_req_handler, get_res_handler,\n    payout_create_req_handler, payout_create_res_handler,\n    payout_create_link_req_handler, payout_create_link_res_handler,\n    payout_create_recipient_req_handler, payout_create_recipient_res_handler,\n    payout_enroll_disburse_account_req_handler, payout_enroll_disburse_account_res_handler,\n    payout_get_req_handler, payout_get_res_handler,\n    payout_stage_req_handler, payout_stage_res_handler,\n    payout_transfer_req_handler, payout_transfer_res_handler,\n    payout_void_req_handler, payout_void_res_handler,\n    post_authenticate_req_handler, post_authenticate_res_handler,\n    pre_authenticate_req_handler, pre_authenticate_res_handler,\n    refund_req_handler, refund_res_handler,\n    reverse_req_handler, reverse_res_handler,\n    setup_recurring_req_handler, setup_recurring_res_handler,\n    submit_evidence_req_handler, submit_evidence_res_handler,\n    tokenize_req_handler, tokenize_res_handler,\n    void_req_handler, void_res_handler,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "define_ffi_flow",
+      "line": 67
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 67
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 69
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 69
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 71
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 71
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 73
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 73
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 75
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 75
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 77
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 77
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 79
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 79
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 81
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 81
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 83
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 83
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 85
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 85
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 87
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 87
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 89
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 89
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 91
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 91
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 93
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 93
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 95
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 95
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 97
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 97
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 99
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 99
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 101
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 101
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 103
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 103
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 105
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 105
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 107
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 107
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 109
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 109
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 111
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 111
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 113
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 113
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 115
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 115
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 117
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 117
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 119
+    },
+    {
+      "name": "define_ffi_flow",
+      "line": 119
+    }
+  ],
+  "modules": []
+}

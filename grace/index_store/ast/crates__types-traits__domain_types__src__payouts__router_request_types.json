@@ -1,0 +1,248 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+  "structs": [
+    {
+      "name": "PayoutCreateIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 6
+    },
+    {
+      "name": "PayoutTransferIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 13
+    },
+    {
+      "name": "PayoutStageIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 19
+    },
+    {
+      "name": "PayoutCreateLinkIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 25
+    },
+    {
+      "name": "PayoutCreateRecipientIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 31
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 37
+    },
+    {
+      "name": "PayoutGetIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 43
+    },
+    {
+      "name": "PayoutVoidIntegrityObject",
+      "visibility": "pub",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "line": 49
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use common_enums::Currency;",
+    "use common_utils::MinorUnit;",
+    "use serde::Serialize;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

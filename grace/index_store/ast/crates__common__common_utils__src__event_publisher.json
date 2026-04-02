@@ -1,0 +1,284 @@
+{
+  "file_path": "crates/common/common_utils/src/event_publisher.rs",
+  "structs": [
+    {
+      "name": "EventPublisher",
+      "visibility": "pub",
+      "fields": [
+        "writer",
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 21
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "EventPublisher",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "publish_event_with_metadata",
+        "build_kafka_metadata"
+      ],
+      "line": 26
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "config: &EventConfig"
+      ],
+      "return_type": "CustomResult<Self, EventPublisherError>",
+      "line": 28
+    },
+    {
+      "name": "publish_event_with_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "event: serde_json::Value",
+        "topic: &str",
+        "partition_key_field: &str",
+        "metadata: OwnedHeaders"
+      ],
+      "return_type": "CustomResult<(), EventPublisherError>",
+      "line": 74
+    },
+    {
+      "name": "build_kafka_metadata",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "event: &Event"
+      ],
+      "return_type": "OwnedHeaders",
+      "line": 127
+    },
+    {
+      "name": "process_event_with_config",
+      "visibility": "",
+      "parameters": [
+        "event: &Event",
+        "config: &EventConfig"
+      ],
+      "return_type": "CustomResult<serde_json::Value, EventPublisherError>",
+      "line": 168
+    },
+    {
+      "name": "extract_from_request",
+      "visibility": "",
+      "parameters": [
+        "event_value: &serde_json::Value",
+        "extraction_path: &str"
+      ],
+      "return_type": "Option<serde_json::Value>",
+      "line": 231
+    },
+    {
+      "name": "set_nested_value",
+      "visibility": "",
+      "parameters": [
+        "target: &mut serde_json::Value",
+        "path: &str",
+        "value: serde_json::Value"
+      ],
+      "return_type": "CustomResult<(), EventPublisherError>",
+      "line": 252
+    },
+    {
+      "name": "init_event_publisher",
+      "visibility": "pub",
+      "parameters": [
+        "config: &EventConfig"
+      ],
+      "return_type": "CustomResult<(), EventPublisherError>",
+      "line": 298
+    },
+    {
+      "name": "get_event_publisher",
+      "visibility": "",
+      "parameters": [
+        "config: &EventConfig"
+      ],
+      "return_type": "CustomResult<&'static EventPublisher, EventPublisherError>",
+      "line": 324
+    },
+    {
+      "name": "emit_event_with_config",
+      "visibility": "pub",
+      "parameters": [
+        "event: Event",
+        "config: &EventConfig"
+      ],
+      "return_type": "",
+      "line": 332
+    }
+  ],
+  "use_statements": [
+    "use std::sync::Arc;",
+    "use hyperswitch_masking::ErasedMaskSerialize;",
+    "use once_cell::sync::OnceCell;",
+    "use rdkafka::message::{Header, OwnedHeaders};",
+    "use serde_json;",
+    "use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};",
+    "use crate::{\n    events::{Event, EventConfig},\n    CustomResult, EventPublisherError,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "debug",
+      "line": 46
+    },
+    {
+      "name": "debug",
+      "line": 46
+    },
+    {
+      "name": "format",
+      "line": 58
+    },
+    {
+      "name": "format",
+      "line": 59
+    },
+    {
+      "name": "info",
+      "line": 65
+    },
+    {
+      "name": "info",
+      "line": 65
+    },
+    {
+      "name": "debug",
+      "line": 81
+    },
+    {
+      "name": "debug",
+      "line": 81
+    },
+    {
+      "name": "warn",
+      "line": 98
+    },
+    {
+      "name": "warn",
+      "line": 98
+    },
+    {
+      "name": "format",
+      "line": 107
+    },
+    {
+      "name": "format",
+      "line": 115
+    },
+    {
+      "name": "format",
+      "line": 116
+    },
+    {
+      "name": "format",
+      "line": 121
+    },
+    {
+      "name": "format",
+      "line": 174
+    },
+    {
+      "name": "warn",
+      "line": 186
+    },
+    {
+      "name": "warn",
+      "line": 186
+    },
+    {
+      "name": "json",
+      "line": 200
+    },
+    {
+      "name": "warn",
+      "line": 202
+    },
+    {
+      "name": "warn",
+      "line": 202
+    },
+    {
+      "name": "warn",
+      "line": 217
+    },
+    {
+      "name": "warn",
+      "line": 217
+    },
+    {
+      "name": "json",
+      "line": 283
+    },
+    {
+      "name": "format",
+      "line": 287
+    },
+    {
+      "name": "info",
+      "line": 299
+    },
+    {
+      "name": "info",
+      "line": 299
+    },
+    {
+      "name": "format",
+      "line": 309
+    },
+    {
+      "name": "format",
+      "line": 313
+    },
+    {
+      "name": "info",
+      "line": 319
+    },
+    {
+      "name": "info",
+      "line": 319
+    },
+    {
+      "name": "error",
+      "line": 337
+    },
+    {
+      "name": "error",
+      "line": 337
+    },
+    {
+      "name": "format",
+      "line": 347
+    },
+    {
+      "name": "info",
+      "line": 348
+    },
+    {
+      "name": "info",
+      "line": 348
+    },
+    {
+      "name": "error",
+      "line": 372
+    },
+    {
+      "name": "error",
+      "line": 372
+    }
+  ],
+  "modules": []
+}

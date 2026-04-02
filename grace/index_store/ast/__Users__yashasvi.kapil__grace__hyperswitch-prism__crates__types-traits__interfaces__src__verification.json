@@ -1,0 +1,96 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/verification.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "ConnectorSourceVerificationSecrets",
+      "visibility": "pub",
+      "variants": [
+        "AuthHeaders",
+        "WebhookSecret",
+        "RedirectResponseSecret",
+        "AuthWithWebHookSecret"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 9
+    }
+  ],
+  "traits": [
+    {
+      "name": "SourceVerification",
+      "visibility": "pub",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_signature",
+        "get_message",
+        "verify"
+      ],
+      "line": 20
+    }
+  ],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_secrets",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secrets: ConnectorSourceVerificationSecrets"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 21
+    },
+    {
+      "name": "get_algorithm",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CustomResult<Box<dyn crypto::VerifySignature + Send>, domain_types::errors::ConnectorError>",
+      "line": 29
+    },
+    {
+      "name": "get_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_payload: &[u8]",
+        "_secrets: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 37
+    },
+    {
+      "name": "get_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payload: &[u8]",
+        "_secrets: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 46
+    },
+    {
+      "name": "verify",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secrets: ConnectorSourceVerificationSecrets",
+        "payload: &[u8]"
+      ],
+      "return_type": "CustomResult<bool, domain_types::errors::ConnectorError>",
+      "line": 55
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{crypto, CustomResult};",
+    "use domain_types::{\n    connector_types::{ConnectorRedirectResponseSecrets, ConnectorWebhookSecrets},\n    router_data::ConnectorSpecificConfig,\n};",
+    "use error_stack::ResultExt;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,1032 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/nmi/transformers.rs",
+  "structs": [
+    {
+      "name": "NmiAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "public_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 28
+    },
+    {
+      "name": "CardData",
+      "visibility": "pub",
+      "fields": [
+        "ccnumber",
+        "ccexp",
+        "cvv"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 134
+    },
+    {
+      "name": "AchData",
+      "visibility": "pub",
+      "fields": [
+        "payment_type",
+        "checkname",
+        "checkaba",
+        "checkaccount",
+        "account_holder_type",
+        "account_type",
+        "sec_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 145
+    },
+    {
+      "name": "NmiMerchantDefinedField",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 169
+    },
+    {
+      "name": "NmiPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "transaction_type",
+        "amount",
+        "currency",
+        "orderid",
+        "payment_method",
+        "merchant_defined_field"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 201
+    },
+    {
+      "name": "StandardResponse",
+      "visibility": "pub",
+      "fields": [
+        "response",
+        "responsetext",
+        "authcode",
+        "transactionid",
+        "avsresponse",
+        "cvvresponse",
+        "orderid",
+        "response_code",
+        "customer_vault_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 388
+    },
+    {
+      "name": "NmiSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 458
+    },
+    {
+      "name": "SyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 501
+    },
+    {
+      "name": "SyncTransactionData",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "condition"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 507
+    },
+    {
+      "name": "NmiCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "transaction_type",
+        "transactionid",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 581
+    },
+    {
+      "name": "NmiRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "transaction_type",
+        "transactionid",
+        "orderid",
+        "amount",
+        "payment"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 677
+    },
+    {
+      "name": "NmiRefundSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 788
+    },
+    {
+      "name": "NmiVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "security_key",
+        "transaction_type",
+        "transactionid",
+        "void_reason",
+        "payment"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 872
+    }
+  ],
+  "enums": [
+    {
+      "name": "TransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Auth",
+        "Sale",
+        "Capture",
+        "Refund",
+        "Void",
+        "Validate",
+        "Credit"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "NmiStatus",
+      "visibility": "pub",
+      "variants": [
+        "Abandoned",
+        "Cancelled",
+        "Pendingsettlement",
+        "Pending",
+        "Failed",
+        "Complete",
+        "InProgress",
+        "Unknown"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 71
+    },
+    {
+      "name": "NmiPaymentMethod",
+      "visibility": "pub",
+      "variants": [
+        "Card",
+        "Ach"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 128
+    },
+    {
+      "name": "PaymentType",
+      "visibility": "pub",
+      "variants": [
+        "Creditcard",
+        "Check"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 690
+    },
+    {
+      "name": "VoidReason",
+      "visibility": "pub",
+      "variants": [
+        "Fraud",
+        "UserCancel",
+        "IccRejected"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 884
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "NmiAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 33
+    },
+    {
+      "type_name": "NmiStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 82
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 98
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 111
+    },
+    {
+      "type_name": "NmiMerchantDefinedField",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 174
+    },
+    {
+      "type_name": "NmiPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 215
+    },
+    {
+      "type_name": "NmiPaymentMethod",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 299
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 404
+    },
+    {
+      "type_name": "NmiSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 464
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 512
+    },
+    {
+      "type_name": "NmiCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 590
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 638
+    },
+    {
+      "type_name": "NmiRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 696
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 754
+    },
+    {
+      "type_name": "NmiRefundSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 794
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 826
+    },
+    {
+      "type_name": "NmiVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 891
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 937
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 36
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "Self",
+      "line": 83
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: NmiStatus"
+      ],
+      "return_type": "Self",
+      "line": 99
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: NmiStatus"
+      ],
+      "return_type": "Self",
+      "line": 112
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &serde_json::Value"
+      ],
+      "return_type": "Self",
+      "line": 175
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 230
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "pm_data: &PaymentMethodData<T>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 302
+    },
+    {
+      "name": "create_ach_data",
+      "visibility": "",
+      "parameters": [
+        "bank_debit_data: &BankDebitData",
+        "router_data: &RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<AchData, error_stack::Report<errors::ConnectorError>>",
+      "line": 333
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StandardResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 409
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 474
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<SyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 517
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 600
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StandardResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 643
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 706
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StandardResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 759
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 804
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<SyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 831
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::NmiRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 901
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<StandardResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 942
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,\n        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,\n        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{\n        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,\n    },\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 46
+    },
+    {
+      "name": "format",
+      "line": 187
+    },
+    {
+      "name": "format",
+      "line": 188
+    },
+    {
+      "name": "report",
+      "line": 320
+    },
+    {
+      "name": "report",
+      "line": 325
+    },
+    {
+      "name": "report",
+      "line": 361
+    },
+    {
+      "name": "report",
+      "line": 377
+    },
+    {
+      "name": "warn",
+      "line": 537
+    },
+    {
+      "name": "warn",
+      "line": 537
+    },
+    {
+      "name": "debug",
+      "line": 725
+    },
+    {
+      "name": "debug",
+      "line": 725
+    },
+    {
+      "name": "report",
+      "line": 847
+    }
+  ],
+  "modules": []
+}

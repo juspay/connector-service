@@ -1,0 +1,495 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/calida/transformers.rs",
+  "structs": [
+    {
+      "name": "CalidaAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key"
+      ],
+      "derives": [],
+      "line": 26
+    },
+    {
+      "name": "CalidaPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "payment_provider",
+        "shop_name",
+        "reference",
+        "ip_address",
+        "first_name",
+        "last_name",
+        "billing_address_country_code_iso",
+        "billing_address_city",
+        "billing_address_line1",
+        "billing_address_postal_code",
+        "webhook_url",
+        "success_url",
+        "failure_url"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 44
+    },
+    {
+      "name": "CalidaWebhookResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "order_id",
+        "user_id",
+        "customer_id",
+        "customer_email",
+        "customer_phone",
+        "status",
+        "payment_provider",
+        "payment_connector",
+        "payment_method",
+        "payment_method_type",
+        "shop_name",
+        "sender_name",
+        "sender_email",
+        "description",
+        "amount",
+        "currency",
+        "charged_amount",
+        "charged_amount_currency",
+        "charged_fx_amount",
+        "charged_fx_amount_currency",
+        "is_underpaid",
+        "billing_amount",
+        "billing_currency",
+        "language",
+        "ip_address",
+        "first_name",
+        "last_name",
+        "billing_address_line1",
+        "billing_address_city",
+        "billing_address_postal_code",
+        "billing_address_country",
+        "billing_address_country_code_iso",
+        "shipping_address_country_code_iso",
+        "success_url",
+        "failure_url",
+        "source",
+        "bonus_code",
+        "dob",
+        "fees_amount",
+        "fx_margin_amount",
+        "fx_margin_percent",
+        "fees_percent",
+        "reseller_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 63
+    },
+    {
+      "name": "CalidaCaptureRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 111
+    },
+    {
+      "name": "CalidaVoidRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 114
+    },
+    {
+      "name": "CalidaRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 117
+    },
+    {
+      "name": "CalidaPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "order_id",
+        "amount",
+        "currency",
+        "charged_amount",
+        "charged_currency",
+        "status",
+        "payment_link",
+        "etoken",
+        "payment_request_id"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 237
+    },
+    {
+      "name": "CalidaSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "order_id",
+        "status",
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 251
+    },
+    {
+      "name": "CalidaErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "message",
+        "context_data"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 367
+    },
+    {
+      "name": "CalidaMetadataObject",
+      "visibility": "pub",
+      "fields": [
+        "shop_name"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 374
+    }
+  ],
+  "enums": [
+    {
+      "name": "CalidaPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Pending",
+        "PaymentInitiated",
+        "ManualProcessing",
+        "Failed",
+        "Completed"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 261
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "CalidaAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 30
+    },
+    {
+      "type_name": "CalidaMetadataObject",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "CalidaPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 141
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 269
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 283
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 319
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 32
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "secret_value: &pii::SecretSerdeValue"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 124
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::CalidaRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 155
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: CalidaPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 270
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<CalidaPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 289
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<CalidaSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 323
+    },
+    {
+      "name": "sort_and_minify_json",
+      "visibility": "pub",
+      "parameters": [
+        "value: &Value"
+      ],
+      "return_type": "Result<String, errors::ConnectorError>",
+      "line": 378
+    },
+    {
+      "name": "sort_value",
+      "visibility": "",
+      "parameters": [
+        "val: &Value"
+      ],
+      "return_type": "Value",
+      "line": 379
+    }
+  ],
+  "use_statements": [
+    "use common_enums::{self, enums, AttemptStatus};",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    pii,\n    request::Method,\n    types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::Authorize,\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n    },\n    errors::{self},\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json::{Map, Value};",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

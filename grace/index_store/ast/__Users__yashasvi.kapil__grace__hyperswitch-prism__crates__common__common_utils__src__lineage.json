@@ -1,0 +1,132 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/lineage.rs",
+  "structs": [
+    {
+      "name": "LineageIds",
+      "visibility": "pub",
+      "fields": [
+        "prefix",
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default"
+      ],
+      "line": 9
+    }
+  ],
+  "enums": [
+    {
+      "name": "LineageParseError",
+      "visibility": "pub",
+      "variants": [
+        "InvalidFormat",
+        "UrlDecoding"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Default",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 65
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "LineageIds",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "empty",
+        "inner",
+        "inner_raw",
+        "to_owned"
+      ],
+      "line": 14
+    },
+    {
+      "type_name": "LineageIds",
+      "trait_name": "serde::Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 54
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &'a str",
+        "url_encoded_string: &str"
+      ],
+      "return_type": "Result<Self, LineageParseError>",
+      "line": 16
+    },
+    {
+      "name": "empty",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &'a str"
+      ],
+      "return_type": "Self",
+      "line": 25
+    },
+    {
+      "name": "inner",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "HashMap<String, String>",
+      "line": 33
+    },
+    {
+      "name": "inner_raw",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&HashMap<String, String>",
+      "line": 41
+    },
+    {
+      "name": "to_owned",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "LineageIds<'static>",
+      "line": 46
+    },
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: serde::Serializer,",
+      "line": 55
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 36
+    }
+  ],
+  "modules": []
+}

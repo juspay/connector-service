@@ -1,0 +1,27 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "api",
+    "connector_flow",
+    "connector_types",
+    "errors",
+    "mandates",
+    "payment_address",
+    "payment_method_data",
+    "payouts",
+    "router_data",
+    "router_data_v2",
+    "router_flow_types",
+    "router_request_types",
+    "router_response_types",
+    "types",
+    "utils"
+  ]
+}

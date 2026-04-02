@@ -1,0 +1,514 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/wellsfargo.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "FlowDataBase",
+      "visibility": "pub",
+      "methods": [
+        "get_connectors"
+      ],
+      "line": 67
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "FlowDataBase",
+      "methods": [
+        "get_connectors"
+      ],
+      "line": 71
+    },
+    {
+      "type_name": "RefundFlowData",
+      "trait_name": "FlowDataBase",
+      "methods": [
+        "get_connectors"
+      ],
+      "line": 77
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 98
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 102
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 110
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 118
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 128
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 138
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 148
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 160
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 170
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 180
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 190
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 195
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 205
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 215
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 219
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 227
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 231
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 235
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 239
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 243
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 247
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 251
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 255
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 259
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 263
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 267
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 271
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 275
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 279
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 283
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 287
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 291
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 295
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "get_currency_unit",
+        "build_error_response"
+      ],
+      "line": 492
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 884
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 894
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 900
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 906
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 912
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 922
+    },
+    {
+      "type_name": "Wellsfargo",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 932
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_connectors",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Connectors",
+      "line": 72
+    },
+    {
+      "name": "get_connectors",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Connectors",
+      "line": 78
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 495
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 499
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 503
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 507
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 511
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    request::Method,\n    types::StringMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use ring::digest;",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use time::OffsetDateTime;",
+    "use transformers::{\n    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoPaymentsRequest,\n    WellsfargoPaymentsResponse, WellsfargoPaymentsResponse as WellsfargoCaptureResponse,\n    WellsfargoPaymentsResponse as WellsfargoVoidResponse,\n    WellsfargoPaymentsResponse as WellsfargoPSyncResponse,\n    WellsfargoPaymentsResponse as WellsfargoRefundResponse,\n    WellsfargoPaymentsResponse as WellsfargoSetupMandateResponse,\n    WellsfargoRSyncResponse as WellsfargoRefundSyncResponse, WellsfargoRefundRequest,\n    WellsfargoVoidRequest, WellsfargoZeroMandateRequest,\n};",
+    "use url::Url;",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};",
+    "use error_stack::{Report, ResultExt};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 305
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 305
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 528
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 528
+    },
+    {
+      "name": "format",
+      "line": 536
+    },
+    {
+      "name": "format",
+      "line": 562
+    },
+    {
+      "name": "info",
+      "line": 593
+    },
+    {
+      "name": "info",
+      "line": 593
+    },
+    {
+      "name": "info",
+      "line": 608
+    },
+    {
+      "name": "info",
+      "line": 608
+    },
+    {
+      "name": "json",
+      "line": 628
+    },
+    {
+      "name": "error",
+      "line": 629
+    },
+    {
+      "name": "error",
+      "line": 629
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 636
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 636
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 668
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 668
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 709
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 744
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 744
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 779
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 779
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 817
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 817
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 851
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 851
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/executor.rs",
+  "structs": [
+    {
+      "name": "ConnectorExecutor",
+      "visibility": "pub",
+      "fields": [
+        "server",
+        "auth",
+        "connector",
+        "merchant_id",
+        "tenant_id"
+      ],
+      "derives": [],
+      "line": 13
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ConnectorExecutor",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "payment_client",
+        "request_with_ids"
+      ],
+      "line": 21
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "Self",
+      "line": 24
+    },
+    {
+      "name": "payment_client",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "grpc_api_types::payments::payment_service_client::PaymentServiceClient<\n        tonic::transport::Channel,\n    >",
+      "line": 39
+    },
+    {
+      "name": "request_with_ids",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "payload: T",
+        "request_id: &str",
+        "connector_request_reference_id: &str"
+      ],
+      "return_type": "Request<T>",
+      "line": 49
+    }
+  ],
+  "use_statements": [
+    "use tonic::Request;",
+    "use crate::harness::{\n    credentials::{load_connector_auth, ConnectorAuth},\n    metadata::add_connector_metadata,\n    server::{spawn, UcsServer},\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "panic",
+      "line": 27
+    }
+  ],
+  "modules": []
+}

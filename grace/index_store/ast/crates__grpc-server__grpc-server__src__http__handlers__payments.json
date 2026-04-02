@@ -1,0 +1,163 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/http/handlers/payments.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use axum::{\n    extract::{Extension, State},\n    http::{HeaderMap, StatusCode},\n    Json,\n};",
+    "use grpc_api_types::payments::{\n    customer_service_server::CustomerService, event_service_server::EventService,\n    merchant_authentication_service_server::MerchantAuthenticationService,\n    payment_method_authentication_service_server::PaymentMethodAuthenticationService,\n    payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,\n    recurring_payment_service_server::RecurringPaymentService, CustomerServiceCreateRequest,\n    CustomerServiceCreateResponse, EventServiceHandleRequest, EventServiceHandleResponse,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateAccessTokenResponse,\n    MerchantAuthenticationServiceCreateSessionTokenRequest,\n    MerchantAuthenticationServiceCreateSessionTokenResponse,\n    PaymentMethodAuthenticationServiceAuthenticateRequest,\n    PaymentMethodAuthenticationServiceAuthenticateResponse,\n    PaymentMethodAuthenticationServicePostAuthenticateRequest,\n    PaymentMethodAuthenticationServicePostAuthenticateResponse,\n    PaymentMethodAuthenticationServicePreAuthenticateRequest,\n    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,\n    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,\n    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,\n    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,\n    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,\n    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,\n    PaymentServiceSetupRecurringResponse, PaymentServiceVerifyRedirectResponseRequest,\n    PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,\n    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,\n    RecurringPaymentServiceChargeResponse, RefundResponse,\n};",
+    "use std::sync::Arc;",
+    "use crate::http::handlers::macros::http_handler;",
+    "use crate::http::{\n    error::HttpError, http_headers_to_grpc_metadata, state::AppState,\n    transfer_config_to_grpc_request, utils::ValidatedJson,\n};",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [
+    {
+      "name": "http_handler",
+      "line": 42
+    },
+    {
+      "name": "http_handler",
+      "line": 42
+    },
+    {
+      "name": "http_handler",
+      "line": 56
+    },
+    {
+      "name": "http_handler",
+      "line": 56
+    },
+    {
+      "name": "http_handler",
+      "line": 63
+    },
+    {
+      "name": "http_handler",
+      "line": 63
+    },
+    {
+      "name": "http_handler",
+      "line": 70
+    },
+    {
+      "name": "http_handler",
+      "line": 70
+    },
+    {
+      "name": "http_handler",
+      "line": 77
+    },
+    {
+      "name": "http_handler",
+      "line": 77
+    },
+    {
+      "name": "http_handler",
+      "line": 84
+    },
+    {
+      "name": "http_handler",
+      "line": 84
+    },
+    {
+      "name": "http_handler",
+      "line": 91
+    },
+    {
+      "name": "http_handler",
+      "line": 91
+    },
+    {
+      "name": "http_handler",
+      "line": 98
+    },
+    {
+      "name": "http_handler",
+      "line": 98
+    },
+    {
+      "name": "http_handler",
+      "line": 105
+    },
+    {
+      "name": "http_handler",
+      "line": 105
+    },
+    {
+      "name": "http_handler",
+      "line": 112
+    },
+    {
+      "name": "http_handler",
+      "line": 112
+    },
+    {
+      "name": "http_handler",
+      "line": 126
+    },
+    {
+      "name": "http_handler",
+      "line": 126
+    },
+    {
+      "name": "http_handler",
+      "line": 133
+    },
+    {
+      "name": "http_handler",
+      "line": 133
+    },
+    {
+      "name": "http_handler",
+      "line": 140
+    },
+    {
+      "name": "http_handler",
+      "line": 140
+    },
+    {
+      "name": "http_handler",
+      "line": 147
+    },
+    {
+      "name": "http_handler",
+      "line": 147
+    },
+    {
+      "name": "http_handler",
+      "line": 154
+    },
+    {
+      "name": "http_handler",
+      "line": 154
+    },
+    {
+      "name": "http_handler",
+      "line": 161
+    },
+    {
+      "name": "http_handler",
+      "line": 161
+    },
+    {
+      "name": "http_handler",
+      "line": 168
+    },
+    {
+      "name": "http_handler",
+      "line": 168
+    },
+    {
+      "name": "http_handler",
+      "line": 175
+    },
+    {
+      "name": "http_handler",
+      "line": 175
+    }
+  ],
+  "modules": []
+}

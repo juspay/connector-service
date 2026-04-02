@@ -1,0 +1,24 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/http/router.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "create_router",
+      "visibility": "pub",
+      "parameters": [
+        "state: AppState"
+      ],
+      "return_type": "Router",
+      "line": 8
+    }
+  ],
+  "use_statements": [
+    "use axum::{\n    routing::{get, post},\n    Router,\n};",
+    "use super::{handlers, state::AppState};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

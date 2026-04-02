@@ -1,0 +1,57 @@
+{
+  "file_path": "crates/internal/field-probe/src/json_utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "pascal_to_snake",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "name: &str"
+      ],
+      "return_type": "String",
+      "line": 2
+    },
+    {
+      "name": "convert_rust_to_proto_json",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "value: &serde_json::Value"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 18
+    },
+    {
+      "name": "is_default_enum",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "value: &str"
+      ],
+      "return_type": "bool",
+      "line": 65
+    },
+    {
+      "name": "flatten_oneof_wrappers",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "value: &serde_json::Value"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 76
+    },
+    {
+      "name": "clean_proto_request",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "value: &serde_json::Value"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 114
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

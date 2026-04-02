@@ -1,0 +1,345 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/bluesnap/transformers.rs",
+  "structs": [
+    {
+      "name": "BluesnapAuthType",
+      "visibility": "pub",
+      "fields": [
+        "username",
+        "password"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 116
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "BluesnapAuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_basic_auth"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "BluesnapAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 129
+    },
+    {
+      "type_name": "common_enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 172
+    },
+    {
+      "type_name": "BluesnapAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 183
+    },
+    {
+      "type_name": "BluesnapCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 440
+    },
+    {
+      "type_name": "BluesnapVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 476
+    },
+    {
+      "type_name": "BluesnapRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 511
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 543
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 578
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 613
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 651
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 686
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 745
+    }
+  ],
+  "functions": [
+    {
+      "name": "convert_metadata_to_request_metadata",
+      "visibility": "",
+      "parameters": [
+        "metadata: serde_json::Value"
+      ],
+      "return_type": "Vec<RequestMetadata>",
+      "line": 50
+    },
+    {
+      "name": "get_card_holder_info",
+      "visibility": "",
+      "parameters": [
+        "address: &domain_types::payment_address::AddressDetails",
+        "email: common_utils::pii::Email"
+      ],
+      "return_type": "CustomResult<Option<BluesnapCardHolderInfo>, errors::ConnectorError>",
+      "line": 64
+    },
+    {
+      "name": "get_payer_info",
+      "visibility": "",
+      "parameters": [
+        "address: &domain_types::payment_address::AddressDetails"
+      ],
+      "return_type": "CustomResult<BluesnapPayerInfo, errors::ConnectorError>",
+      "line": 79
+    },
+    {
+      "name": "map_ecp_account_type",
+      "visibility": "",
+      "parameters": [
+        "bank_type: Option<common_enums::BankType>",
+        "bank_holder_type: Option<common_enums::BankHolderType>"
+      ],
+      "return_type": "String",
+      "line": 94
+    },
+    {
+      "name": "generate_basic_auth",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 122
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 132
+    },
+    {
+      "name": "get_attempt_status_from_bluesnap_status",
+      "visibility": "",
+      "parameters": [
+        "txn_type: Option<BluesnapTxnType>",
+        "processing_status: BluesnapProcessingStatus"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 149
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: BluesnapRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 173
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::BluesnapRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 198
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::BluesnapRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 450
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::BluesnapRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Void,\n                PaymentFlowData,\n                domain_types::connector_types::PaymentVoidData,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 491
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::BluesnapRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 521
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 548
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 583
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 623
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapPSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 656
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 691
+    },
+    {
+      "name": "map_chargeback_status_to_event_type",
+      "visibility": "pub",
+      "parameters": [
+        "cb_status: &str"
+      ],
+      "return_type": "CustomResult<domain_types::connector_types::EventType, errors::ConnectorError>",
+      "line": 707
+    },
+    {
+      "name": "map_webhook_event_to_incoming_webhook_event",
+      "visibility": "pub",
+      "parameters": [
+        "webhook_event: &BluesnapWebhookEvent"
+      ],
+      "return_type": "domain_types::connector_types::EventType",
+      "line": 727
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BluesnapRefundSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 750
+    }
+  ],
+  "use_statements": [
+    "use base64::{engine::general_purpose::STANDARD, Engine};",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::errors::CustomResult;",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        ResponseId,\n    },\n    errors,\n    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::Serialize;",
+    "use super::{requests, responses};",
+    "use crate::types::ResponseRouterData;",
+    "pub use requests::{\n    BluesnapAchAuthorizeRequest, BluesnapAchData, BluesnapAuthorizeRequest, BluesnapCaptureRequest,\n    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,\n    BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,\n    BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,\n    BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,\n    RequestMetadata, TransactionFraudInfo,\n};",
+    "pub use responses::{\n    BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapChargebackStatus,\n    BluesnapCreditCardResponse, BluesnapDisputeWebhookBody, BluesnapErrorResponse,\n    BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,\n    BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,\n    BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference,\n    BluesnapThreeDsResult, BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent,\n    BluesnapWebhookObjectResource, RedirectErrorMessage,\n};",
+    "use domain_types::connector_types::EventType;",
+    "use domain_types::connector_types::EventType;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 123
+    },
+    {
+      "name": "format",
+      "line": 125
+    },
+    {
+      "name": "report",
+      "line": 140
+    },
+    {
+      "name": "report",
+      "line": 389
+    }
+  ],
+  "modules": []
+}

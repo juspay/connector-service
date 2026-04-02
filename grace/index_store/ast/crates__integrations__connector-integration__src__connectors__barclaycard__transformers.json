@@ -1,0 +1,346 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/barclaycard/transformers.rs",
+  "structs": [
+    {
+      "name": "BarclaycardAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "merchant_account",
+        "api_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 33
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "BarclaycardAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "requests::BarclaycardPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 389
+    },
+    {
+      "type_name": "requests::BarclaycardCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 504
+    },
+    {
+      "type_name": "requests::BarclaycardVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 551
+    },
+    {
+      "type_name": "requests::BarclaycardRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 615
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 651
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 668
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 680
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 692
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 769
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 810
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 42
+    },
+    {
+      "name": "get_barclaycard_card_type",
+      "visibility": "",
+      "parameters": [
+        "card_network: common_enums::CardNetwork"
+      ],
+      "return_type": "Option<&'static str>",
+      "line": 59
+    },
+    {
+      "name": "truncate_string",
+      "visibility": "",
+      "parameters": [
+        "state: &Secret<String>",
+        "max_len: usize"
+      ],
+      "return_type": "Secret<String>",
+      "line": 84
+    },
+    {
+      "name": "build_bill_to",
+      "visibility": "",
+      "parameters": [
+        "billing: &domain_types::payment_address::Address",
+        "email: common_utils::pii::Email"
+      ],
+      "return_type": "Result<requests::BillTo, error_stack::Report<errors::ConnectorError>>",
+      "line": 90
+    },
+    {
+      "name": "map_barclaycard_attempt_status",
+      "visibility": "",
+      "parameters": [
+        "(status, auto_capture): (responses::BarclaycardPaymentStatus, bool)"
+      ],
+      "return_type": "common_enums::AttemptStatus",
+      "line": 125
+    },
+    {
+      "name": "map_barclaycard_refund_status",
+      "visibility": "",
+      "parameters": [
+        "status: responses::BarclaycardRefundStatus",
+        "error_reason: Option<String>"
+      ],
+      "return_type": "common_enums::RefundStatus",
+      "line": 163
+    },
+    {
+      "name": "get_error_reason",
+      "visibility": "",
+      "parameters": [
+        "error_info: Option<String>",
+        "detailed_error_info: Option<String>",
+        "avs_error_info: Option<String>"
+      ],
+      "return_type": "Option<String>",
+      "line": 184
+    },
+    {
+      "name": "transform_payment_response",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<\n        responses::BarclaycardPaymentsResponse,\n        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,\n    >",
+        "auto_capture: bool"
+      ],
+      "return_type": "Result<\n    RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,\n    error_stack::Report<errors::ConnectorError>,\n>",
+      "line": 214
+    },
+    {
+      "name": "get_error_response",
+      "visibility": "",
+      "parameters": [
+        "error_data: &Option<responses::BarclaycardErrorInformation>",
+        "processor_information: &Option<responses::ClientProcessorInformation>",
+        "risk_information: &Option<responses::ClientRiskInformation>",
+        "attempt_status: Option<common_enums::AttemptStatus>",
+        "status_code: u16",
+        "transaction_id: String"
+      ],
+      "return_type": "ErrorResponse",
+      "line": 319
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BarclaycardRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 404
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: BarclaycardRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 514
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: BarclaycardRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 561
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: BarclaycardRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 625
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 657
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 673
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 685
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardTransactionResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 697
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 774
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::BarclaycardRsyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 815
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n};",
+    "use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};",
+    "use serde::Serialize;",
+    "use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};",
+    "use crate::{types::ResponseRouterData, utils};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 190
+    },
+    {
+      "name": "format",
+      "line": 194
+    },
+    {
+      "name": "format",
+      "line": 197
+    },
+    {
+      "name": "format",
+      "line": 200
+    },
+    {
+      "name": "format",
+      "line": 279
+    },
+    {
+      "name": "format",
+      "line": 335
+    },
+    {
+      "name": "format",
+      "line": 347
+    },
+    {
+      "name": "matches",
+      "line": 470
+    },
+    {
+      "name": "matches",
+      "line": 660
+    },
+    {
+      "name": "matches",
+      "line": 704
+    }
+  ],
+  "modules": []
+}

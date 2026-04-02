@@ -1,0 +1,75 @@
+{
+  "file_path": "crates/common/common_utils/src/new_types.rs",
+  "structs": [
+    {
+      "name": "MaskedBankAccount",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 34
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "MaskedBankAccount",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 35
+    },
+    {
+      "type_name": "MaskedBankAccount",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 41
+    }
+  ],
+  "functions": [
+    {
+      "name": "apply_mask",
+      "visibility": "",
+      "parameters": [
+        "val: &str",
+        "unmasked_char_count: usize",
+        "min_masked_char_count: usize"
+      ],
+      "return_type": "String",
+      "line": 3
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "src: String"
+      ],
+      "return_type": "Self",
+      "line": 36
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "secret: Secret<String>"
+      ],
+      "return_type": "Self",
+      "line": 42
+    }
+  ],
+  "use_statements": [
+    "use hyperswitch_masking::{ExposeInterface, Secret};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

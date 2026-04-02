@@ -1,0 +1,46 @@
+{
+  "file_path": "crates/ffi/ffi/src/utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "ffi_headers_to_masked_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "headers: &HashMap<String, String>"
+      ],
+      "return_type": "Result<MaskedMetadata, IntegrationError>",
+      "line": 10
+    },
+    {
+      "name": "load_config",
+      "visibility": "pub",
+      "parameters": [
+        "embedded_config: &str"
+      ],
+      "return_type": "Result<Arc<Config>, ConnectorError>",
+      "line": 39
+    }
+  ],
+  "use_statements": [
+    "use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};",
+    "use domain_types::errors::ConnectorError;",
+    "use grpc_api_types::payments::IntegrationError;",
+    "use std::collections::HashMap;",
+    "use std::sync::Arc;",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 20
+    },
+    {
+      "name": "format",
+      "line": 28
+    }
+  ],
+  "modules": []
+}

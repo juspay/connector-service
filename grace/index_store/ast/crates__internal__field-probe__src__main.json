@@ -1,0 +1,145 @@
+{
+  "file_path": "crates/internal/field-probe/src/main.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 60
+    }
+  ],
+  "use_statements": [
+    "use std::collections::{BTreeMap, HashSet};",
+    "use std::path::Path;",
+    "use rayon::prelude::*;",
+    "use config::get_config;",
+    "use flow_metadata::{parse_message_schemas, parse_services_proto};",
+    "use orchestrator::probe_connector;",
+    "use registry::all_connectors;",
+    "use types::{CompactConnectorResult, CompactFlowResult, ErrorStats, ProbeManifest};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 72
+    },
+    {
+      "name": "eprintln",
+      "line": 77
+    },
+    {
+      "name": "eprintln",
+      "line": 77
+    },
+    {
+      "name": "eprintln",
+      "line": 84
+    },
+    {
+      "name": "eprintln",
+      "line": 84
+    },
+    {
+      "name": "eprintln",
+      "line": 86
+    },
+    {
+      "name": "eprintln",
+      "line": 86
+    },
+    {
+      "name": "format",
+      "line": 91
+    },
+    {
+      "name": "eprintln",
+      "line": 92
+    },
+    {
+      "name": "eprintln",
+      "line": 92
+    },
+    {
+      "name": "eprintln",
+      "line": 111
+    },
+    {
+      "name": "eprintln",
+      "line": 111
+    },
+    {
+      "name": "format",
+      "line": 195
+    },
+    {
+      "name": "eprintln",
+      "line": 197
+    },
+    {
+      "name": "eprintln",
+      "line": 201
+    },
+    {
+      "name": "eprintln",
+      "line": 219
+    },
+    {
+      "name": "eprintln",
+      "line": 220
+    },
+    {
+      "name": "eprintln",
+      "line": 223
+    },
+    {
+      "name": "eprintln",
+      "line": 223
+    },
+    {
+      "name": "eprintln",
+      "line": 231
+    },
+    {
+      "name": "eprintln",
+      "line": 231
+    },
+    {
+      "name": "eprintln",
+      "line": 234
+    },
+    {
+      "name": "eprintln",
+      "line": 234
+    },
+    {
+      "name": "eprintln",
+      "line": 236
+    },
+    {
+      "name": "eprintln",
+      "line": 236
+    }
+  ],
+  "modules": [
+    "auth",
+    "config",
+    "error_parsing",
+    "flow_metadata",
+    "flow_registry",
+    "json_utils",
+    "normalizer",
+    "orchestrator",
+    "patcher",
+    "probe_engine",
+    "registry",
+    "requests",
+    "sample_data",
+    "status",
+    "types"
+  ]
+}

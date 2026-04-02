@@ -1,0 +1,19 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "app",
+    "config_overrides",
+    "http",
+    "metrics",
+    "request",
+    "server",
+    "utils"
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/paytm/transformers.rs",
+  "structs": [
+    {
+      "name": "PaytmAuthType",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_key",
+        "website",
+        "client_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 109
+    }
+  ],
+  "enums": [
+    {
+      "name": "NextActionData",
+      "visibility": "pub",
+      "variants": [
+        "WaitScreenInstructions"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 104
+    },
+    {
+      "name": "UpiFlowType",
+      "visibility": "pub",
+      "variants": [
+        "Intent",
+        "Collect"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 139
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PaytmAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 116
+    },
+    {
+      "type_name": "PaytmInitiateTxnRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 150
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 341
+    },
+    {
+      "type_name": "PaytmAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 403
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 520
+    },
+    {
+      "type_name": "PaytmTransactionStatusRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 657
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 703
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 119
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: MacroPaytmRouterData<\n            RouterDataV2<\n                CreateSessionToken,\n                PaymentFlowData,\n                SessionTokenRequestData,\n                SessionTokenResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 172
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaytmInitiateTxnResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 351
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: MacroPaytmRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 425
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaytmProcessTxnResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 532
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: MacroPaytmRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 674
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PaytmTransactionStatusResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 708
+    },
+    {
+      "name": "determine_upi_flow",
+      "visibility": "pub",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>"
+      ],
+      "return_type": "CustomResult<UpiFlowType, ConnectorError>",
+      "line": 793
+    },
+    {
+      "name": "extract_upi_vpa",
+      "visibility": "pub",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>"
+      ],
+      "return_type": "CustomResult<Option<String>, ConnectorError>",
+      "line": 822
+    },
+    {
+      "name": "generate_paytm_signature",
+      "visibility": "pub",
+      "parameters": [
+        "payload: &str",
+        "merchant_key: &str"
+      ],
+      "return_type": "CustomResult<String, ConnectorError>",
+      "line": 850
+    },
+    {
+      "name": "aes_encrypt",
+      "visibility": "",
+      "parameters": [
+        "data: &str",
+        "key: &str"
+      ],
+      "return_type": "CustomResult<String, ConnectorError>",
+      "line": 888
+    },
+    {
+      "name": "get_paytm_iv",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "[u8; 16]",
+      "line": 981
+    },
+    {
+      "name": "get_channel_id_from_browser_info",
+      "visibility": "",
+      "parameters": [
+        "browser_info: Option<&BrowserInformation>"
+      ],
+      "return_type": "Option<String>",
+      "line": 987
+    },
+    {
+      "name": "create_paytm_header",
+      "visibility": "pub",
+      "parameters": [
+        "request_body: &impl Serialize",
+        "auth: &PaytmAuthType",
+        "channel_id: Option<&str>"
+      ],
+      "return_type": "CustomResult<PaytmRequestHeader, ConnectorError>",
+      "line": 1004
+    },
+    {
+      "name": "map_paytm_authorize_status_to_attempt_status",
+      "visibility": "pub",
+      "parameters": [
+        "status_code: &str"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 1029
+    },
+    {
+      "name": "map_paytm_sync_status_to_attempt_status",
+      "visibility": "pub",
+      "parameters": [
+        "result_code: &str"
+      ],
+      "return_type": "AttemptStatus",
+      "line": 1059
+    },
+    {
+      "name": "is_failure_status",
+      "visibility": "",
+      "parameters": [
+        "status: AttemptStatus"
+      ],
+      "return_type": "bool",
+      "line": 1091
+    },
+    {
+      "name": "get_wait_screen_metadata",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Option<serde_json::Value>",
+      "line": 1100
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    cmp,\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use aes::{Aes128, Aes192, Aes256};",
+    "use base64::{engine::general_purpose, Engine};",
+    "use cbc::{\n    cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},\n    Encryptor,\n};",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{errors::CustomResult, request::Method};",
+    "use domain_types::{\n    connector_flow::{Authorize, CreateSessionToken, PSync},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n        SessionTokenRequestData, SessionTokenResponseData,\n    },\n    errors::ConnectorError,\n    payment_method_data::{PaymentMethodData, UpiData},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_request_types::BrowserInformation,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use ring::{\n    digest,\n    rand::{SecureRandom, SystemRandom},\n};",
+    "use serde_json;",
+    "use url::Url;",
+    "use crate::{\n    connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,\n};",
+    "use serde::{Deserialize, Serialize};",
+    "pub use super::request::{\n    PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,\n    PaytmInitiateReqBody, PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody,\n    PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes, PaytmProcessHeadTypes,\n    PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo, PaytmTransactionStatusReqBody,\n    PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,\n};",
+    "pub use super::response::{\n    PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,\n    PaytmCallbackErrorResponse, PaytmDeepLinkInfo, PaytmErrorBody, PaytmErrorResponse,\n    PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp, PaytmNativeProcessRespBodyTypes,\n    PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse, PaytmProcessFailureResp,\n    PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp, PaytmProcessTxnResponse,\n    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo, PaytmSessionTokenErrorBody,\n    PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody, PaytmSuccessTransactionResponse,\n    PaytmTransactionStatusRespBody, PaytmTransactionStatusRespBodyTypes,\n    PaytmTransactionStatusResponse, PaytmTxnInfo,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 318
+    },
+    {
+      "name": "vec",
+      "line": 327
+    },
+    {
+      "name": "format",
+      "line": 473
+    },
+    {
+      "name": "format",
+      "line": 867
+    },
+    {
+      "name": "format",
+      "line": 874
+    },
+    {
+      "name": "matches",
+      "line": 1092
+    },
+    {
+      "name": "json",
+      "line": 1101
+    },
+    {
+      "name": "error",
+      "line": 1105
+    },
+    {
+      "name": "error",
+      "line": 1105
+    }
+  ],
+  "modules": [
+    "constants"
+  ]
+}

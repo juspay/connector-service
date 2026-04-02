@@ -1,0 +1,3664 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/types.rs",
+  "structs": [
+    {
+      "name": "Connectors",
+      "visibility": "pub",
+      "fields": [
+        "adyen",
+        "forte",
+        "razorpay",
+        "razorpayv2",
+        "fiserv",
+        "elavon",
+        "xendit",
+        "ppro",
+        "checkout",
+        "authorizedotnet",
+        "mifinity",
+        "phonepe",
+        "cashfree",
+        "paytm",
+        "fiuu",
+        "payu",
+        "cashtocode",
+        "novalnet",
+        "nexinets",
+        "noon",
+        "braintree",
+        "volt",
+        "calida",
+        "cryptopay",
+        "helcim",
+        "dlocal",
+        "placetopay",
+        "rapyd",
+        "aci",
+        "trustpay",
+        "stripe",
+        "cybersource",
+        "worldpay",
+        "worldpayvantiv",
+        "multisafepay",
+        "payload",
+        "fiservemea",
+        "paysafe",
+        "datatrans",
+        "bluesnap",
+        "authipay",
+        "bamboraapac",
+        "silverflow",
+        "celero",
+        "paypal",
+        "stax",
+        "billwerk",
+        "hipay",
+        "trustpayments",
+        "globalpay",
+        "nuvei",
+        "iatapay",
+        "jpmorgan",
+        "nmi",
+        "shift4",
+        "paybox",
+        "barclaycard",
+        "redsys",
+        "nexixpay",
+        "mollie",
+        "airwallex",
+        "worldpayxml",
+        "tsys",
+        "bankofamerica",
+        "powertranz",
+        "getnet",
+        "bambora",
+        "payme",
+        "revolut",
+        "gigadat",
+        "loonio",
+        "wellsfargo",
+        "hyperpg",
+        "zift",
+        "revolv3",
+        "fiservcommercehub",
+        "truelayer",
+        "peachpayments",
+        "finix"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 290
+    },
+    {
+      "name": "ConnectorParams",
+      "visibility": "pub",
+      "fields": [
+        "base_url",
+        "dispute_base_url",
+        "secondary_base_url",
+        "third_base_url"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 374
+    },
+    {
+      "name": "ConnectorParamsWithMoreUrls",
+      "visibility": "pub",
+      "fields": [
+        "base_url",
+        "base_url_bank_redirects"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "line": 418
+    },
+    {
+      "name": "Proxy",
+      "visibility": "pub",
+      "fields": [
+        "http_url",
+        "https_url",
+        "idle_pool_connection_timeout",
+        "bypass_proxy_urls",
+        "mitm_proxy_enabled",
+        "mitm_ca_cert"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch"
+      ],
+      "line": 543
+    },
+    {
+      "name": "CardSpecificFeatures",
+      "visibility": "pub",
+      "fields": [
+        "three_ds",
+        "no_three_ds",
+        "supported_card_networks"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize"
+      ],
+      "line": 8495
+    },
+    {
+      "name": "PaymentMethodDetails",
+      "visibility": "pub",
+      "fields": [
+        "mandates",
+        "refunds",
+        "supported_capture_methods",
+        "specific_features"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 8515
+    },
+    {
+      "name": "ConnectorInfo",
+      "visibility": "pub",
+      "fields": [
+        "display_name",
+        "description",
+        "connector_type"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema",
+        "Debug",
+        "Clone"
+      ],
+      "line": 8547
+    }
+  ],
+  "enums": [
+    {
+      "name": "PaymentMethodSpecificFeatures",
+      "visibility": "pub",
+      "variants": [
+        "Card"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize"
+      ],
+      "line": 8509
+    },
+    {
+      "name": "FeatureStatus",
+      "visibility": "pub",
+      "variants": [
+        "NotSupported",
+        "Supported"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema"
+      ],
+      "line": 8539
+    },
+    {
+      "name": "PaymentConnectorCategory",
+      "visibility": "pub",
+      "variants": [
+        "PaymentGateway",
+        "AlternativePaymentMethod",
+        "BankAcquirer"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "Hash",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema"
+      ],
+      "line": 8571
+    },
+    {
+      "name": "PaymentMethodDataType",
+      "visibility": "pub",
+      "variants": [
+        "Card",
+        "Bluecode",
+        "Knet",
+        "Benefit",
+        "MomoAtm",
+        "CardRedirect",
+        "AliPayQr",
+        "AliPayRedirect",
+        "AliPayHkRedirect",
+        "AmazonPayRedirect",
+        "MomoRedirect",
+        "KakaoPayRedirect",
+        "GoPayRedirect",
+        "GcashRedirect",
+        "ApplePay",
+        "ApplePayRedirect",
+        "ApplePayThirdPartySdk",
+        "DanaRedirect",
+        "DuitNow",
+        "GooglePay",
+        "GooglePayRedirect",
+        "GooglePayThirdPartySdk",
+        "MbWayRedirect",
+        "MobilePayRedirect",
+        "PaypalRedirect",
+        "PaypalSdk",
+        "Paze",
+        "SamsungPay",
+        "TwintRedirect",
+        "VippsRedirect",
+        "TouchNGoRedirect",
+        "WeChatPayRedirect",
+        "WeChatPayQr",
+        "CashappQr",
+        "SwishQr",
+        "KlarnaRedirect",
+        "KlarnaSdk",
+        "AffirmRedirect",
+        "AfterpayClearpayRedirect",
+        "PayBrightRedirect",
+        "WalleyRedirect",
+        "AlmaRedirect",
+        "AtomeRedirect",
+        "BancontactCard",
+        "Bizum",
+        "Blik",
+        "Eft",
+        "Eps",
+        "Giropay",
+        "Ideal",
+        "Interac",
+        "LocalBankRedirect",
+        "OnlineBankingCzechRepublic",
+        "OnlineBankingFinland",
+        "OnlineBankingPoland",
+        "OnlineBankingSlovakia",
+        "OpenBankingUk",
+        "Przelewy24",
+        "Sofort",
+        "Trustly",
+        "OnlineBankingFpx",
+        "OnlineBankingThailand",
+        "AchBankDebit",
+        "SepaBankDebit",
+        "BecsBankDebit",
+        "BacsBankDebit",
+        "AchBankTransfer",
+        "SepaBankTransfer",
+        "BacsBankTransfer",
+        "MultibancoBankTransfer",
+        "PermataBankTransfer",
+        "BcaBankTransfer",
+        "BniVaBankTransfer",
+        "BriVaBankTransfer",
+        "CimbVaBankTransfer",
+        "DanamonVaBankTransfer",
+        "MandiriVaBankTransfer",
+        "Pix",
+        "Pse",
+        "Crypto",
+        "MandatePayment",
+        "Reward",
+        "Upi",
+        "Boleto",
+        "Efecty",
+        "PagoEfectivo",
+        "RedCompra",
+        "RedPagos",
+        "Alfamart",
+        "Indomaret",
+        "Oxxo",
+        "SevenEleven",
+        "Lawson",
+        "MiniStop",
+        "FamilyMart",
+        "Seicomart",
+        "PayEasy",
+        "Givex",
+        "PaySafeCar",
+        "CardToken",
+        "LocalBankTransfer",
+        "Mifinity",
+        "Fps",
+        "PromptPay",
+        "VietQr",
+        "OpenBanking",
+        "NetworkToken",
+        "NetworkTransactionIdAndCardDetails",
+        "DirectCarrierBilling",
+        "InstantBankTransfer",
+        "InstantBankTransferPoland",
+        "InstantBankTransferFinland",
+        "CardDetailsForNetworkTransactionId",
+        "RevolutPay",
+        "MbWay",
+        "Satispay",
+        "Wero",
+        "SepaGuaranteedBankDebit",
+        "IndonesianBankTransfer"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema",
+        "Debug",
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "Hash",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema",
+        "Debug",
+        "strum::Display",
+        "Eq",
+        "PartialEq",
+        "Hash"
+      ],
+      "line": 8578
+    }
+  ],
+  "traits": [
+    {
+      "name": "HasConnectors",
+      "visibility": "pub",
+      "methods": [
+        "connectors"
+      ],
+      "line": 426
+    },
+    {
+      "name": "CardConversionHelper",
+      "visibility": "pub",
+      "methods": [
+        "convert_card_details"
+      ],
+      "line": 2346
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "router_data::PazeDecryptedData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 71
+    },
+    {
+      "type_name": "SecretSerdeValue",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 215
+    },
+    {
+      "type_name": "ConnectorParams",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "patch_with_resolved_urls"
+      ],
+      "line": 386
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "HasConnectors",
+      "methods": [
+        "connectors"
+      ],
+      "line": 430
+    },
+    {
+      "type_name": "RefundFlowData",
+      "trait_name": "HasConnectors",
+      "methods": [
+        "connectors"
+      ],
+      "line": 436
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "HasConnectors",
+      "methods": [
+        "connectors"
+      ],
+      "line": 442
+    },
+    {
+      "type_name": "Connectors",
+      "trait_name": null,
+      "methods": [
+        "patch_connector_urls"
+      ],
+      "line": 448
+    },
+    {
+      "type_name": "Proxy",
+      "trait_name": null,
+      "methods": [
+        "cache_key",
+        "is_proxy_configured"
+      ],
+      "line": 552
+    },
+    {
+      "type_name": "CaptureMethod",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 568
+    },
+    {
+      "type_name": "connector_types::ThreeDsCompletionIndicator",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 584
+    },
+    {
+      "type_name": "CardNetwork",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 600
+    },
+    {
+      "type_name": "common_enums::Tokenization",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 635
+    },
+    {
+      "type_name": "SamsungPayWalletCredentials",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 695
+    },
+    {
+      "type_name": "SamsungPayCardBrand",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 758
+    },
+    {
+      "type_name": "common_enums::PaymentExperience",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 776
+    },
+    {
+      "type_name": "payment_method_data::UpiSource",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 832
+    },
+    {
+      "type_name": "grpc_api_types::payments::UpiSource",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 849
+    },
+    {
+      "type_name": "PaymentMethodData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 862
+    },
+    {
+      "type_name": "payment_method_data::TokenSource",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 1954
+    },
+    {
+      "type_name": "common_enums::BankType",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 1975
+    },
+    {
+      "type_name": "common_enums::BankHolderType",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 1996
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2021
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2106
+    },
+    {
+      "type_name": "DefaultPCIHolder",
+      "trait_name": "CardConversionHelper",
+      "methods": [
+        "convert_card_details"
+      ],
+      "line": 2353
+    },
+    {
+      "type_name": "VaultTokenHolder",
+      "trait_name": "CardConversionHelper",
+      "methods": [
+        "convert_card_details"
+      ],
+      "line": 2408
+    },
+    {
+      "type_name": "payment_method_data::Card",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2461
+    },
+    {
+      "type_name": "common_enums::Currency",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2482
+    },
+    {
+      "type_name": "PaymentsAuthorizeData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2643
+    },
+    {
+      "type_name": "PaymentAddress",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2860
+    },
+    {
+      "type_name": "Address",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2889
+    },
+    {
+      "type_name": "grpc_api_types::payments::Currency",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2916
+    },
+    {
+      "type_name": "grpc_api_types::payments::CountryAlpha2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2934
+    },
+    {
+      "type_name": "CountryAlpha2",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 2950
+    },
+    {
+      "type_name": "AddressDetails",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3211
+    },
+    {
+      "type_name": "OrderDetailsWithAmount",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3241
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3286
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3362
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3488
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3585
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3662
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3733
+    },
+    {
+      "type_name": "grpc_api_types::payments::AuthenticationData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3746
+    },
+    {
+      "type_name": "grpc_api_types::payments::TransactionStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3778
+    },
+    {
+      "type_name": "common_enums::TransactionStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3797
+    },
+    {
+      "type_name": "grpc_api_types::payments::ExemptionIndicator",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3812
+    },
+    {
+      "type_name": "common_enums::ExemptionIndicator",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3835
+    },
+    {
+      "type_name": "grpc_api_types::payments::CavvAlgorithm",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3861
+    },
+    {
+      "type_name": "common_enums::CavvAlgorithm",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 3874
+    },
+    {
+      "type_name": "grpc_api_types::payments::ConnectorResponseData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 3888
+    },
+    {
+      "type_name": "PaymentMethod",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 4251
+    },
+    {
+      "type_name": "common_enums::AuthenticationType",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 4605
+    },
+    {
+      "type_name": "PaymentsSyncData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 4620
+    },
+    {
+      "type_name": "grpc_api_types::payments::PaymentStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 4686
+    },
+    {
+      "type_name": "grpc_api_types::payments::AuthorizationStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 4728
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 4741
+    },
+    {
+      "type_name": "grpc_api_types::payments::RefundStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 4800
+    },
+    {
+      "type_name": "grpc_api_types::payments::DisputeStage",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 5043
+    },
+    {
+      "type_name": "common_enums::ProductType",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 5053
+    },
+    {
+      "type_name": "RefundSyncData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5326
+    },
+    {
+      "type_name": "RefundFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5359
+    },
+    {
+      "type_name": "RefundFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5422
+    },
+    {
+      "type_name": "PaymentMethod",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5482
+    },
+    {
+      "type_name": "grpc_api_types::payments::DisputeStatus",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 5556
+    },
+    {
+      "type_name": "grpc_api_types::payments::HttpMethod",
+      "trait_name": "ForeignFrom",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 5570
+    },
+    {
+      "type_name": "grpc_api_types::payments::RedirectForm",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5583
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5714
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5743
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5837
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5864
+    },
+    {
+      "type_name": "PaymentServiceGetResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 5986
+    },
+    {
+      "type_name": "PaymentVoidData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6093
+    },
+    {
+      "type_name": "crate::connector_types::PaymentsCancelPostCaptureData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6136
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6157
+    },
+    {
+      "type_name": "PaymentsIncrementalAuthorizationData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6227
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6268
+    },
+    {
+      "type_name": "RefundResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6338
+    },
+    {
+      "type_name": "DisputeResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6395
+    },
+    {
+      "type_name": "RefundsData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6440
+    },
+    {
+      "type_name": "AcceptDisputeData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6503
+    },
+    {
+      "type_name": "SubmitEvidenceData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6516
+    },
+    {
+      "type_name": "PaymentsSdkSessionTokenData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6741
+    },
+    {
+      "type_name": "PaymentsCaptureData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6802
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6862
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 6930
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7223
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7344
+    },
+    {
+      "type_name": "SetupMandateRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7450
+    },
+    {
+      "type_name": "common_enums::PaymentChannel",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7612
+    },
+    {
+      "type_name": "mandates::CustomerAcceptance",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7640
+    },
+    {
+      "type_name": "BillingDescriptor",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 7658
+    },
+    {
+      "type_name": "L2L3Data",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7689
+    },
+    {
+      "type_name": "OrderInfo",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7735
+    },
+    {
+      "type_name": "TaxInfo",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7770
+    },
+    {
+      "type_name": "common_enums::TaxStatus",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7796
+    },
+    {
+      "type_name": "CustomerInfo",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7817
+    },
+    {
+      "type_name": "mandates::OnlineMandate",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7859
+    },
+    {
+      "type_name": "mandates::AcceptanceType",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7871
+    },
+    {
+      "type_name": "MandateData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7892
+    },
+    {
+      "type_name": "common_enums::FutureUsage",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 7979
+    },
+    {
+      "type_name": "common_enums::MitCategory",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8000
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8224
+    },
+    {
+      "type_name": "DisputeFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8245
+    },
+    {
+      "type_name": "DisputeDefendData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8267
+    },
+    {
+      "type_name": "PaymentCreateOrderData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8373
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8412
+    },
+    {
+      "type_name": "Secret",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8700
+    },
+    {
+      "type_name": "BrowserInformation",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8721
+    },
+    {
+      "type_name": "SessionTokenRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8747
+    },
+    {
+      "type_name": "AccessTokenRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8776
+    },
+    {
+      "type_name": "AccessTokenRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8788
+    },
+    {
+      "type_name": "AccessTokenRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8803
+    },
+    {
+      "type_name": "ConnectorCustomerData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8817
+    },
+    {
+      "type_name": "PaymentMethodTokenizationData",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 8867
+    },
+    {
+      "type_name": "SessionTokenRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8888
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8921
+    },
+    {
+      "type_name": "ConnectorCustomerData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 8995
+    },
+    {
+      "type_name": "PaymentMethodTokenizationData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9029
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9091
+    },
+    {
+      "type_name": "ConnectorCustomerData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9227
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9251
+    },
+    {
+      "type_name": "RepeatPaymentData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9366
+    },
+    {
+      "type_name": "AccessTokenResponseData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9710
+    },
+    {
+      "type_name": "grpc_api_types::payments::SdkNextAction",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 9848
+    },
+    {
+      "type_name": "grpc_api_types::payments::GpaySessionTokenResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9857
+    },
+    {
+      "type_name": "grpc_api_types::payments::GpayAllowedPaymentMethods",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 9915
+    },
+    {
+      "type_name": "grpc_api_types::payments::GpayBillingAddressFormat",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 9955
+    },
+    {
+      "type_name": "grpc_api_types::payments::ApplePaySessionResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9964
+    },
+    {
+      "type_name": "grpc_api_types::payments::ApplePayPaymentRequest",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 9986
+    },
+    {
+      "type_name": "grpc_api_types::payments::PaypalTransactionInfo",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10012
+    },
+    {
+      "type_name": "grpc_api_types::payments::SessionToken",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10033
+    },
+    {
+      "type_name": "common_enums::BankNames",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10104
+    },
+    {
+      "type_name": "PaymentsPreAuthenticateData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10319
+    },
+    {
+      "type_name": "PaymentsAuthenticateData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10427
+    },
+    {
+      "type_name": "PaymentsPostAuthenticateData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10550
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10663
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10742
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10832
+    },
+    {
+      "type_name": "MandateRevokeRequestData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10930
+    },
+    {
+      "type_name": "PaymentFlowData",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 10944
+    },
+    {
+      "type_name": "grpc_api_types::payments::PaymentServiceVerifyRedirectResponseResponse",
+      "trait_name": "ForeignTryFrom",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 11005
+    }
+  ],
+  "functions": [
+    {
+      "name": "extract_headers_from_metadata",
+      "visibility": "",
+      "parameters": [
+        "metadata: &MaskedMetadata"
+      ],
+      "return_type": "Option<HashMap<String, Secret<String>>>",
+      "line": 45
+    },
+    {
+      "name": "convert_optional_country_alpha2",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CountryAlpha2"
+      ],
+      "return_type": "Result<Option<CountryAlpha2>, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 61
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PazeDecryptedData"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 76
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(secret, field_name): (Secret<String>, &'static str)"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 218
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "base_url: String",
+        "dispute_base_url: Option<String>"
+      ],
+      "return_type": "Self",
+      "line": 387
+    },
+    {
+      "name": "patch_with_resolved_urls",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "base_url: Option<String>",
+        "dispute_base_url: Option<String>",
+        "secondary_base_url: Option<String>",
+        "third_base_url: Option<String>"
+      ],
+      "return_type": "Self",
+      "line": 401
+    },
+    {
+      "name": "connectors",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Connectors",
+      "line": 431
+    },
+    {
+      "name": "connectors",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Connectors",
+      "line": 437
+    },
+    {
+      "name": "connectors",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&Connectors",
+      "line": 443
+    },
+    {
+      "name": "patch_connector_urls",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "connector: &ConnectorEnum",
+        "urls: &common_utils::superposition_config::ConnectorUrls"
+      ],
+      "return_type": "Result<Self, ApplicationErrorResponse>",
+      "line": 473
+    },
+    {
+      "name": "cache_key",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "should_bypass_proxy: bool"
+      ],
+      "return_type": "Option<Self>",
+      "line": 553
+    },
+    {
+      "name": "is_proxy_configured",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "should_bypass_proxy: bool"
+      ],
+      "return_type": "bool",
+      "line": 563
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CaptureMethod"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 571
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::ThreeDsCompletionIndicator"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 589
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "network: grpc_api_types::payments::CardNetwork"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 603
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::Tokenization"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 638
+    },
+    {
+      "name": "trim_and_check_empty",
+      "visibility": "",
+      "parameters": [
+        "value: &str"
+      ],
+      "return_type": "Option<&str>",
+      "line": 659
+    },
+    {
+      "name": "validate_last_four_digits",
+      "visibility": "",
+      "parameters": [
+        "value: &str",
+        "field_name: &str"
+      ],
+      "return_type": "Result<String, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 669
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "credential: grpc_api_types::payments::samsung_wallet::PaymentCredential"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 700
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CardNetwork"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 761
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentExperience"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 781
+    },
+    {
+      "name": "convert_upi_source",
+      "visibility": "",
+      "parameters": [
+        "source_option: Option<i32>"
+      ],
+      "return_type": "Result<Option<payment_method_data::UpiSource>, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 813
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::UpiSource"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 835
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: payment_method_data::UpiSource"
+      ],
+      "return_type": "Self",
+      "line": 850
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethod"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 877
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::TokenSource"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 1957
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::BankType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 1978
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::BankHolderType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 1999
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2024
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethod"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2109
+    },
+    {
+      "name": "convert_card_details",
+      "visibility": "",
+      "parameters": [
+        "card: grpc_api_types::payments::CardDetails"
+      ],
+      "return_type": "Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 2354
+    },
+    {
+      "name": "convert_card_details",
+      "visibility": "",
+      "parameters": [
+        "card: grpc_api_types::payments::CardDetails"
+      ],
+      "return_type": "Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 2409
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "card: grpc_api_types::payments::CardDetails"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2475
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::Currency"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2484
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceAuthorizeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2658
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentAddress"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2862
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::Address"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2891
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2919
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "country: CountryAlpha2"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2937
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CountryAlpha2"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 2953
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::Address"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3213
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: grpc_api_types::payments::OrderDetailsWithAmount"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3244
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_payment_types::MerchantAuthenticationServiceCreateAccessTokenRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3295
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            PaymentServiceAuthorizeRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3367
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::RecurringPaymentServiceChargeRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3497
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentServiceGetRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3594
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (PaymentServiceVoidRequest, Connectors, &MaskedMetadata)"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3665
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ResponseId"
+      ],
+      "return_type": "Result<Option<String>, error_stack::Report<Self::Error>>",
+      "line": 3735
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: router_request_types::AuthenticationData"
+      ],
+      "return_type": "error_stack::Result<Self, Self::Error>",
+      "line": 3750
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "from: common_enums::TransactionStatus"
+      ],
+      "return_type": "Self",
+      "line": 3779
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::TransactionStatus"
+      ],
+      "return_type": "Self",
+      "line": 3798
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: common_enums::ExemptionIndicator"
+      ],
+      "return_type": "Self",
+      "line": 3815
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::ExemptionIndicator"
+      ],
+      "return_type": "Self",
+      "line": 3838
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: common_enums::CavvAlgorithm"
+      ],
+      "return_type": "Self",
+      "line": 3862
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CavvAlgorithm"
+      ],
+      "return_type": "Self",
+      "line": 3875
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ConnectorResponseData"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 3890
+    },
+    {
+      "name": "generate_create_order_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        CreateOrder,\n        PaymentFlowData,\n        PaymentCreateOrderData,\n        PaymentCreateOrderResponse,\n    >"
+      ],
+      "return_type": "Result<PaymentServiceCreateOrderResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 4001
+    },
+    {
+      "name": "convert_connector_metadata_to_secret_string",
+      "visibility": "",
+      "parameters": [
+        "connector_metadata: Option<serde_json::Value>"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 4072
+    },
+    {
+      "name": "generate_payment_authorize_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        Authorize,\n        PaymentFlowData,\n        PaymentsAuthorizeData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 4078
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: grpc_api_types::payments::PaymentMethod"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 4253
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "item: grpc_api_types::payments::AuthenticationType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 4609
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentServiceGetRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 4623
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "status: common_enums::AttemptStatus"
+      ],
+      "return_type": "Self",
+      "line": 4687
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "status: common_enums::AuthorizationStatus"
+      ],
+      "return_type": "Self",
+      "line": 4731
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "status: grpc_api_types::payments::PaymentStatus"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 4744
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "status: common_enums::RefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 4801
+    },
+    {
+      "name": "generate_payment_void_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<PaymentServiceVoidResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 4812
+    },
+    {
+      "name": "generate_payment_void_post_capture_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        VoidPC,\n        PaymentFlowData,\n        crate::connector_types::PaymentsCancelPostCaptureData,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<PaymentServiceReverseResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 4943
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "status: common_enums::DisputeStage"
+      ],
+      "return_type": "Self",
+      "line": 5044
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::ProductType"
+      ],
+      "return_type": "Self",
+      "line": 5054
+    },
+    {
+      "name": "generate_access_token_response_data",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        CreateAccessToken,\n        PaymentFlowData,\n        AccessTokenRequestData,\n        AccessTokenResponseData,\n    >"
+      ],
+      "return_type": "Result<AccessTokenResponseData, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 5067
+    },
+    {
+      "name": "create_access_token_data",
+      "visibility": "pub",
+      "parameters": [
+        "access_token_data: AccessTokenResponseData"
+      ],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenResponse",
+      "line": 5094
+    },
+    {
+      "name": "generate_access_token_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        CreateAccessToken,\n        PaymentFlowData,\n        AccessTokenRequestData,\n        AccessTokenResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    MerchantAuthenticationServiceCreateAccessTokenResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 5108
+    },
+    {
+      "name": "generate_payment_sync_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<PaymentServiceGetResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 5123
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::RefundServiceGetRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5329
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::RefundServiceGetRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5368
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentServiceRefundRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5431
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5485
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "status: common_enums::DisputeStatus"
+      ],
+      "return_type": "Self",
+      "line": 5557
+    },
+    {
+      "name": "foreign_from",
+      "visibility": "",
+      "parameters": [
+        "method: Method"
+      ],
+      "return_type": "Self",
+      "line": 5571
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "form: router_response_types::RedirectForm"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5588
+    },
+    {
+      "name": "generate_accept_dispute_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>"
+      ],
+      "return_type": "Result<DisputeServiceAcceptResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 5661
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors): (\n            grpc_api_types::payments::DisputeServiceAcceptRequest,\n            Connectors,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5722
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, _metadata): (\n            grpc_api_types::payments::DisputeServiceAcceptRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5752
+    },
+    {
+      "name": "generate_submit_evidence_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        SubmitEvidence,\n        DisputeFlowData,\n        SubmitEvidenceData,\n        DisputeResponseData,\n    >"
+      ],
+      "return_type": "Result<DisputeServiceSubmitEvidenceResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 5774
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors): (\n            grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,\n            Connectors,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5845
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, _metadata): (\n            grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5873
+    },
+    {
+      "name": "generate_refund_sync_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>"
+      ],
+      "return_type": "Result<RefundResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 5896
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: WebhookDetailsResponse"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 5989
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceVoidRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6096
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentServiceReverseRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6141
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentServiceReverseRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6166
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceIncrementalAuthorizationRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6232
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            PaymentServiceIncrementalAuthorizationRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6277
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: RefundWebhookDetailsResponse"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6341
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: DisputeWebhookDetailsResponse"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6398
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentServiceRefundRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6443
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::DisputeServiceAcceptRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6506
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6521
+    },
+    {
+      "name": "generate_refund_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "Result<RefundResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 6648
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: MerchantAuthenticationServiceCreateSdkSessionTokenRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6746
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentServiceCaptureRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6807
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentServiceCaptureRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6871
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            MerchantAuthenticationServiceCreateSdkSessionTokenRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 6939
+    },
+    {
+      "name": "generate_payment_incremental_authorization_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        IncrementalAuthorization,\n        PaymentFlowData,\n        PaymentsIncrementalAuthorizationData,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    PaymentServiceIncrementalAuthorizationResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 6998
+    },
+    {
+      "name": "generate_payment_capture_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        Capture,\n        PaymentFlowData,\n        PaymentsCaptureData,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<PaymentServiceCaptureResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 7086
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, environment, metadata): (\n            PaymentServiceSetupRecurringRequest,\n            Connectors,\n            consts::Env,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7233
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            PaymentServiceSetupRecurringRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7353
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceSetupRecurringRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7465
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentChannel"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7614
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CustomerAcceptance"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7642
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "(descriptor, statement_descriptor_name, statement_descriptor_suffix): (\n            &grpc_api_types::payments::BillingDescriptor,\n            Option<String>,\n            Option<String>,\n        )"
+      ],
+      "return_type": "Self",
+      "line": 7665
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(l2l3_data, payment_address, customer): (\n            &grpc_api_types::payments::L2l3Data,\n            &PaymentAddress,\n            Option<&grpc_api_types::payments::Customer>,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7697
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: &grpc_api_types::payments::OrderInfo"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7737
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: &grpc_api_types::payments::TaxInfo"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7772
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: &grpc_api_types::payments::TaxStatus"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7798
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: &grpc_api_types::payments::Customer"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7819
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::OnlineMandate"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7861
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::AcceptanceType"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7873
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::SetupMandateDetails"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7894
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::FutureUsage"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 7981
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::MitCategory"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8002
+    },
+    {
+      "name": "generate_setup_mandate_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        SetupMandate,\n        PaymentFlowData,\n        SetupMandateRequestData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<PaymentServiceSetupRecurringResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 8031
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors): (DisputeServiceDefendRequest, Connectors)"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8227
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, _metadata): (DisputeServiceDefendRequest, Connectors, &MaskedMetadata)"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8250
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: DisputeServiceDefendRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8269
+    },
+    {
+      "name": "generate_defend_dispute_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        DefendDispute,\n        DisputeFlowData,\n        DisputeDefendData,\n        DisputeResponseData,\n    >"
+      ],
+      "return_type": "Result<DisputeServiceDefendResponse, error_stack::Report<ApplicationErrorResponse>>",
+      "line": 8282
+    },
+    {
+      "name": "generate_session_token_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        CreateSessionToken,\n        PaymentFlowData,\n        SessionTokenRequestData,\n        SessionTokenResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    MerchantAuthenticationServiceCreateSessionTokenResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 8334
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentServiceCreateOrderRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8378
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentServiceCreateOrderRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8421
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "date_string: String"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8703
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::BrowserInformation"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8724
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceAuthorizeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8750
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "_value: PaymentServiceAuthorizeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8779
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "_value: grpc_api_types::payments::MerchantAuthenticationServiceCreateAccessTokenRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8793
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8806
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceAuthorizeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8820
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "data: &PaymentsAuthorizeData<T>"
+      ],
+      "return_type": "Self",
+      "line": 8870
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8894
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8930
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaymentServiceSetupRecurringRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 8998
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodServiceTokenizeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9045
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentMethodServiceTokenizeRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9100
+    },
+    {
+      "name": "generate_create_payment_method_token_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        PaymentMethodToken,\n        PaymentFlowData,\n        PaymentMethodTokenizationData<T>,\n        PaymentMethodTokenResponse,\n    >"
+      ],
+      "return_type": "Result<\n    grpc_api_types::payments::PaymentMethodServiceTokenizeResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 9175
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::CustomerServiceCreateRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9232
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::CustomerServiceCreateRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9260
+    },
+    {
+      "name": "generate_create_connector_customer_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        CreateConnectorCustomer,\n        PaymentFlowData,\n        ConnectorCustomerData,\n        crate::connector_types::ConnectorCustomerResponse,\n    >"
+      ],
+      "return_type": "Result<\n    grpc_payment_types::CustomerServiceCreateResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 9323
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::RecurringPaymentServiceChargeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9382
+    },
+    {
+      "name": "generate_repeat_payment_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        RepeatPayment,\n        PaymentFlowData,\n        RepeatPaymentData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    grpc_api_types::payments::RecurringPaymentServiceChargeResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 9547
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "token: &grpc_api_types::payments::AccessToken"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9712
+    },
+    {
+      "name": "generate_payment_sdk_session_token_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        SdkSessionToken,\n        PaymentFlowData,\n        PaymentsSdkSessionTokenData,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    MerchantAuthenticationServiceCreateSdkSessionTokenResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 9732
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: NextActionCall"
+      ],
+      "return_type": "Self",
+      "line": 9849
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: GpaySessionTokenResponse"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9862
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: GpayAllowedPaymentMethods"
+      ],
+      "return_type": "Self",
+      "line": 9916
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: GpayBillingAddressFormat"
+      ],
+      "return_type": "Self",
+      "line": 9956
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ApplePaySessionResponse"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9967
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: ApplePayPaymentRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 9989
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: PaypalTransactionInfo"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10015
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: SessionToken"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10036
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::BankNames"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10107
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodAuthenticationServicePreAuthenticateRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10337
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodAuthenticationServiceAuthenticateRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10444
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: grpc_api_types::payments::PaymentMethodAuthenticationServicePostAuthenticateRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10568
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentMethodAuthenticationServicePreAuthenticateRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10672
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentMethodAuthenticationServiceAuthenticateRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10751
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            grpc_api_types::payments::PaymentMethodAuthenticationServicePostAuthenticateRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10841
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "value: RecurringPaymentServiceRevokeRequest"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10933
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(value, connectors, metadata): (\n            RecurringPaymentServiceRevokeRequest,\n            Connectors,\n            &MaskedMetadata,\n        )"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 10953
+    },
+    {
+      "name": "foreign_try_from",
+      "visibility": "",
+      "parameters": [
+        "(source_verified, redirect_details_response): (bool, RedirectDetailsResponse)"
+      ],
+      "return_type": "Result<Self, error_stack::Report<Self::Error>>",
+      "line": 11010
+    },
+    {
+      "name": "generate_payment_pre_authenticate_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        PreAuthenticate,\n        PaymentFlowData,\n        PaymentsPreAuthenticateData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    PaymentMethodAuthenticationServicePreAuthenticateResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 11049
+    },
+    {
+      "name": "generate_payment_authenticate_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        Authenticate,\n        PaymentFlowData,\n        PaymentsAuthenticateData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    PaymentMethodAuthenticationServiceAuthenticateResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 11223
+    },
+    {
+      "name": "generate_payment_post_authenticate_response",
+      "visibility": "pub",
+      "parameters": [
+        "router_data_v2: RouterDataV2<\n        PostAuthenticate,\n        PaymentFlowData,\n        PaymentsPostAuthenticateData<T>,\n        PaymentsResponseData,\n    >"
+      ],
+      "return_type": "Result<\n    PaymentMethodAuthenticationServicePostAuthenticateResponse,\n    error_stack::Report<ApplicationErrorResponse>,\n>",
+      "line": 11399
+    }
+  ],
+  "use_statements": [
+    "use core::result::Result;",
+    "use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};",
+    "use crate::{\n    connector_types::{self, ConnectorEnum},\n    payment_method_data::SamsungPayWalletCredentials,\n    utils::extract_connector_request_reference_id,\n};",
+    "use common_enums::{\n    CaptureMethod, CardNetwork, CountryAlpha2, FutureUsage, PaymentMethod, PaymentMethodType,\n    SamsungPayCardBrand,\n};",
+    "use common_utils::config_patch::Patch;",
+    "use common_utils::{\n    consts::{self, NO_ERROR_CODE, X_EXTERNAL_VAULT_METADATA},\n    id_type::CustomerId,\n    metadata::MaskedMetadata,\n    pii::Email,\n    Method, SecretSerdeValue,\n};",
+    "use error_stack::{report, ResultExt};",
+    "use grpc_api_types::payments::{\n    self as grpc_payment_types, ConnectorState, DisputeResponse, DisputeServiceAcceptResponse,\n    DisputeServiceDefendRequest, DisputeServiceDefendResponse,\n    DisputeServiceSubmitEvidenceResponse, MerchantAuthenticationServiceCreateAccessTokenResponse,\n    MerchantAuthenticationServiceCreateSdkSessionTokenRequest,\n    MerchantAuthenticationServiceCreateSdkSessionTokenResponse,\n    MerchantAuthenticationServiceCreateSessionTokenResponse,\n    PaymentMethodAuthenticationServiceAuthenticateResponse,\n    PaymentMethodAuthenticationServicePostAuthenticateResponse,\n    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,\n    PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse,\n    PaymentServiceCreateOrderResponse, PaymentServiceGetResponse,\n    PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,\n    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,\n    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,\n    RecurringPaymentServiceRevokeRequest, RefundResponse,\n};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use tracing::info;",
+    "use utoipa::ToSchema;",
+    "use crate::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,\n        ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,\n        ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,\n        CustomerInfo, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods, GpayBillingAddressFormat,\n        GpaySessionTokenResponse, L2L3Data, MandateReferenceId, MandateRevokeRequestData,\n        MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall, OrderInfo,\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,\n        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,\n        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,\n        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,\n    },\n    errors::{ApiError, ApplicationErrorResponse},\n    mandates::{self, MandateData},\n    payment_address::{\n        Address, AddressDetails, OrderDetailsWithAmount, PaymentAddress, PhoneDetails,\n    },\n    payment_method_data,\n    payment_method_data::{\n        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,\n        VaultTokenHolder,\n    },\n    router_data::{\n        self, AdditionalPaymentMethodConnectorResponse, ConnectorResponseData,\n        ConnectorSpecificConfig, RecurringMandatePaymentData,\n    },\n    router_data_v2::RouterDataV2,\n    router_request_types,\n    router_request_types::BrowserInformation,\n    router_response_types,\n    utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},\n};",
+    "use hyperswitch_masking::ExposeInterface;"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 64
+    },
+    {
+      "name": "format",
+      "line": 224
+    },
+    {
+      "name": "format",
+      "line": 226
+    },
+    {
+      "name": "format",
+      "line": 528
+    },
+    {
+      "name": "format",
+      "line": 676
+    },
+    {
+      "name": "format",
+      "line": 678
+    },
+    {
+      "name": "format",
+      "line": 685
+    },
+    {
+      "name": "format",
+      "line": 687
+    },
+    {
+      "name": "report",
+      "line": 820
+    },
+    {
+      "name": "info",
+      "line": 880
+    },
+    {
+      "name": "info",
+      "line": 880
+    },
+    {
+      "name": "report",
+      "line": 914
+    },
+    {
+      "name": "report",
+      "line": 1071
+    },
+    {
+      "name": "report",
+      "line": 1149
+    },
+    {
+      "name": "report",
+      "line": 1245
+    },
+    {
+      "name": "report",
+      "line": 1936
+    },
+    {
+      "name": "report",
+      "line": 1964
+    },
+    {
+      "name": "report",
+      "line": 2138
+    },
+    {
+      "name": "report",
+      "line": 2633
+    },
+    {
+      "name": "report",
+      "line": 2664
+    },
+    {
+      "name": "matches",
+      "line": 3217
+    },
+    {
+      "name": "info",
+      "line": 4088
+    },
+    {
+      "name": "info",
+      "line": 4088
+    },
+    {
+      "name": "report",
+      "line": 4594
+    },
+    {
+      "name": "report",
+      "line": 4895
+    },
+    {
+      "name": "report",
+      "line": 5000
+    },
+    {
+      "name": "info",
+      "line": 5077
+    },
+    {
+      "name": "info",
+      "line": 5077
+    },
+    {
+      "name": "report",
+      "line": 5083
+    },
+    {
+      "name": "report",
+      "line": 5252
+    },
+    {
+      "name": "vec",
+      "line": 5799
+    },
+    {
+      "name": "vec",
+      "line": 5817
+    },
+    {
+      "name": "vec",
+      "line": 6429
+    },
+    {
+      "name": "report",
+      "line": 6754
+    },
+    {
+      "name": "report",
+      "line": 6829
+    },
+    {
+      "name": "report",
+      "line": 7056
+    },
+    {
+      "name": "report",
+      "line": 7174
+    },
+    {
+      "name": "report",
+      "line": 7497
+    },
+    {
+      "name": "report",
+      "line": 8386
+    },
+    {
+      "name": "error",
+      "line": 8709
+    },
+    {
+      "name": "error",
+      "line": 8709
+    },
+    {
+      "name": "report",
+      "line": 8758
+    },
+    {
+      "name": "report",
+      "line": 8902
+    },
+    {
+      "name": "report",
+      "line": 9053
+    },
+    {
+      "name": "report",
+      "line": 9484
+    },
+    {
+      "name": "error",
+      "line": 9603
+    },
+    {
+      "name": "error",
+      "line": 9603
+    },
+    {
+      "name": "report",
+      "line": 9820
+    },
+    {
+      "name": "report",
+      "line": 10112
+    },
+    {
+      "name": "report",
+      "line": 10359
+    },
+    {
+      "name": "report",
+      "line": 10466
+    },
+    {
+      "name": "report",
+      "line": 10590
+    }
+  ],
+  "modules": []
+}

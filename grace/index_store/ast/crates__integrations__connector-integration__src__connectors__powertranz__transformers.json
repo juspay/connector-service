@@ -1,0 +1,556 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/powertranz/transformers.rs",
+  "structs": [
+    {
+      "name": "PowertranzAuthType",
+      "visibility": "pub",
+      "fields": [
+        "power_tranz_id",
+        "power_tranz_password"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 28
+    },
+    {
+      "name": "PowertranzPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "transaction_identifier",
+        "total_amount",
+        "currency_code",
+        "three_d_secure",
+        "source",
+        "order_identifier",
+        "extended_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "PowertranzSource",
+      "visibility": "pub",
+      "fields": [
+        "cardholder_name",
+        "card_pan",
+        "card_cvv",
+        "card_expiration"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 70
+    },
+    {
+      "name": "PowertranzBaseRequest",
+      "visibility": "pub",
+      "fields": [
+        "transaction_identifier",
+        "total_amount",
+        "refund"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 80
+    },
+    {
+      "name": "PowertranzCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "base"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 88
+    },
+    {
+      "name": "PowertranzVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "base"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 95
+    },
+    {
+      "name": "PowertranzRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "base"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 102
+    },
+    {
+      "name": "PowertranzPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_type",
+        "approved",
+        "transaction_identifier",
+        "iso_response_code",
+        "response_message",
+        "authorization_code",
+        "rrn",
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 113
+    },
+    {
+      "name": "PowertranzRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_type",
+        "approved",
+        "transaction_identifier",
+        "iso_response_code",
+        "response_message",
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 137
+    },
+    {
+      "name": "PowertranzError",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 153
+    },
+    {
+      "name": "PowertranzErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Default",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 176
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PowertranzAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 33
+    },
+    {
+      "type_name": "PowertranzPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 305
+    },
+    {
+      "type_name": "PowertranzCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 375
+    },
+    {
+      "type_name": "PowertranzVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 420
+    },
+    {
+      "type_name": "PowertranzRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 456
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 502
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 543
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 584
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 625
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 666
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 700
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 36
+    },
+    {
+      "name": "get_payment_status",
+      "visibility": "",
+      "parameters": [
+        "transaction_type: u8",
+        "approved: Option<bool>",
+        "iso_response_code: &str"
+      ],
+      "return_type": "enums::AttemptStatus",
+      "line": 185
+    },
+    {
+      "name": "build_powertranz_error_response",
+      "visibility": "pub",
+      "parameters": [
+        "errors: &Option<Vec<PowertranzError>>",
+        "iso_response_code: &str",
+        "response_message: &str",
+        "status_code: u16"
+      ],
+      "return_type": "domain_types::router_data::ErrorResponse",
+      "line": 238
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PowertranzRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 320
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PowertranzRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Capture,\n                PaymentFlowData,\n                PaymentsCaptureData,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 390
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PowertranzRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Void,\n                PaymentFlowData,\n                PaymentVoidData,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 435
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PowertranzRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Refund,\n                RefundFlowData,\n                RefundsData,\n                RefundsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 471
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 507
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzPaymentsSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 548
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 589
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 630
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 671
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PowertranzRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 705
+    }
+  ],
+  "use_statements": [
+    "use common_enums::enums;",
+    "use common_utils::types::FloatMajorUnit;",
+    "use domain_types::{\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Secret;",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{\n    connectors::powertranz::{PowertranzAmountConvertor, PowertranzRouterData},\n    types::ResponseRouterData,\n};",
+    "use enums::AttemptStatus;",
+    "use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 260
+    }
+  ],
+  "modules": []
+}

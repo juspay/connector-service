@@ -1,0 +1,416 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/razorpay/test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_build_request_valid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 55
+    },
+    {
+      "name": "test_build_request_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 261
+    },
+    {
+      "name": "test_build_request_invalid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 400
+    },
+    {
+      "name": "test_handle_response_v2_valid_authorize_response",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 543
+    },
+    {
+      "name": "test_handle_authorize_error_response",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 748
+    },
+    {
+      "name": "test_handle_authorize_missing_required_fields",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 800
+    },
+    {
+      "name": "test_handle_authorize_invalid_error_fields",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 838
+    },
+    {
+      "name": "test_handle_response_v2_missing_fields_authorize_response",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 878
+    },
+    {
+      "name": "test_handle_response_v2_invalid_json_authorize_response",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1077
+    },
+    {
+      "name": "test_build_request_valid_order",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1281
+    },
+    {
+      "name": "test_build_request_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1413
+    },
+    {
+      "name": "test_build_request_invalid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1531
+    },
+    {
+      "name": "test_handle_response_v2_valid_order_response",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1686
+    },
+    {
+      "name": "test_handle_response_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1816
+    },
+    {
+      "name": "test_handle_response_invalid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 1936
+    },
+    {
+      "name": "test_handle_error_response_valid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2056
+    },
+    {
+      "name": "test_handle_error_response_invalid_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2102
+    },
+    {
+      "name": "test_handle_error_response_missing_error_field",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 2122
+    }
+  ],
+  "use_statements": [
+    "use cards::CardNumber;",
+    "use common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};",
+    "use domain_types::{\n        connector_types::{PaymentFlowData, PaymentsAuthorizeData},\n        payment_address::{Address, PhoneDetails},\n        payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},\n        router_request_types::BrowserInformation,\n        router_response_types::Response,\n    };",
+    "use interfaces::{\n        connector_integration_v2::ConnectorIntegrationV2,\n        connector_types::{BoxedConnector, ConnectorServiceTrait},\n    };",
+    "use serde_json::{json, to_value};",
+    "use crate::connectors::Razorpay;",
+    "use std::str::FromStr;",
+    "use cards::CardNumber;",
+    "use common_enums::{\n            AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,\n        };",
+    "use common_utils::{\n            id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,\n        };",
+    "use domain_types::{\n            connector_types::{PaymentFlowData, PaymentsAuthorizeData},\n            payment_address::{Address, PaymentAddress, PhoneDetails},\n            payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            router_request_types::BrowserInformation,\n            router_response_types::Response,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use interfaces::{\n            connector_integration_v2::ConnectorIntegrationV2,\n            connector_types::{BoxedConnector, ConnectorServiceTrait},\n        };",
+    "use serde_json::{json, to_value, Value};",
+    "use crate::connectors::Razorpay;",
+    "use common_utils::pii::Email;",
+    "use std::str::FromStr;",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n                connector_types::PaymentFlowData,\n                payment_address::PaymentAddress,\n                router_data::{ConnectorSpecificConfig, ErrorResponse},\n                router_data_v2::RouterDataV2,\n                types::{ConnectorParams, Connectors},\n            };",
+    "use domain_types::{\n                connector_flow::Authorize,\n                connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},\n            };",
+    "use domain_types::{\n                connector_flow::Authorize,\n                connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},\n            };",
+    "use domain_types::{\n            connector_flow::Authorize,\n            connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},\n        };",
+    "use std::str::FromStr;",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n            connector_types::PaymentFlowData,\n            payment_address::PaymentAddress,\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use std::str::FromStr;",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n            connector_types::PaymentFlowData,\n            payment_address::PaymentAddress,\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use common_utils::{pii::Email, request::RequestContent};",
+    "use domain_types::{\n            payment_address::{Address, PhoneDetails},\n            payment_method_data::DefaultPCIHolder,\n            router_data::ConnectorSpecificConfig,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use interfaces::connector_types::BoxedConnector;",
+    "use serde_json::{to_value, Value};",
+    "use crate::connectors::Razorpay;",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, request::RequestContent, types::MinorUnit};",
+    "use domain_types::{\n                connector_types::PaymentCreateOrderData,\n                payment_address::PaymentAddress,\n                router_data::{ConnectorSpecificConfig, ErrorResponse},\n                router_data_v2::RouterDataV2,\n            };",
+    "use serde_json::{to_value, Value};",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, types::MinorUnit};",
+    "use domain_types::{\n                connector_types::PaymentCreateOrderData,\n                payment_address::PaymentAddress,\n                router_data::{ConnectorSpecificConfig, ErrorResponse},\n                router_data_v2::RouterDataV2,\n            };",
+    "use crate::connectors::Razorpay;",
+    "use common_enums::{\n                AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,\n            };",
+    "use common_utils::{id_type::MerchantId, types::MinorUnit};",
+    "use domain_types::{\n                connector_types::{PaymentFlowData, PaymentsAuthorizeData},\n                payment_address::PaymentAddress,\n                payment_method_data::{Card, PaymentMethodData},\n                router_data::ErrorResponse,\n                router_data_v2::RouterDataV2,\n                types::{ConnectorParams, Connectors},\n            };",
+    "use crate::connectors::Razorpay;",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n            connector_types::{PaymentCreateOrderData, PaymentFlowData},\n            payment_address::PaymentAddress,\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n            connector_types::PaymentCreateOrderData,\n            payment_address::PaymentAddress,\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            types::{ConnectorParams, Connectors},\n        };",
+    "use common_enums::Currency;",
+    "use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};",
+    "use domain_types::{\n            connector_types::PaymentCreateOrderData,\n            payment_address::PaymentAddress,\n            router_data::{ConnectorSpecificConfig, ErrorResponse},\n            router_data_v2::RouterDataV2,\n            types::{ConnectorParams, Connectors},\n        };"
+  ],
+  "macro_calls": [
+    {
+      "name": "panic",
+      "line": 229
+    },
+    {
+      "name": "json",
+      "line": 231
+    },
+    {
+      "name": "assert_eq",
+      "line": 257
+    },
+    {
+      "name": "assert_eq",
+      "line": 257
+    },
+    {
+      "name": "assert",
+      "line": 393
+    },
+    {
+      "name": "assert",
+      "line": 393
+    },
+    {
+      "name": "assert",
+      "line": 536
+    },
+    {
+      "name": "assert",
+      "line": 536
+    },
+    {
+      "name": "assert",
+      "line": 741
+    },
+    {
+      "name": "assert",
+      "line": 741
+    },
+    {
+      "name": "json",
+      "line": 784
+    },
+    {
+      "name": "assert_eq",
+      "line": 796
+    },
+    {
+      "name": "assert_eq",
+      "line": 796
+    },
+    {
+      "name": "assert",
+      "line": 830
+    },
+    {
+      "name": "assert",
+      "line": 830
+    },
+    {
+      "name": "assert",
+      "line": 871
+    },
+    {
+      "name": "assert",
+      "line": 871
+    },
+    {
+      "name": "assert",
+      "line": 1070
+    },
+    {
+      "name": "assert",
+      "line": 1070
+    },
+    {
+      "name": "assert",
+      "line": 1260
+    },
+    {
+      "name": "assert",
+      "line": 1260
+    },
+    {
+      "name": "panic",
+      "line": 1396
+    },
+    {
+      "name": "panic",
+      "line": 1397
+    },
+    {
+      "name": "assert_eq",
+      "line": 1400
+    },
+    {
+      "name": "assert_eq",
+      "line": 1400
+    },
+    {
+      "name": "assert_eq",
+      "line": 1401
+    },
+    {
+      "name": "assert_eq",
+      "line": 1401
+    },
+    {
+      "name": "assert",
+      "line": 1404
+    },
+    {
+      "name": "assert",
+      "line": 1404
+    },
+    {
+      "name": "assert",
+      "line": 1409
+    },
+    {
+      "name": "assert",
+      "line": 1409
+    },
+    {
+      "name": "panic",
+      "line": 1517
+    },
+    {
+      "name": "assert_eq",
+      "line": 1520
+    },
+    {
+      "name": "assert_eq",
+      "line": 1520
+    },
+    {
+      "name": "assert_eq",
+      "line": 1521
+    },
+    {
+      "name": "assert_eq",
+      "line": 1521
+    },
+    {
+      "name": "assert",
+      "line": 1524
+    },
+    {
+      "name": "assert",
+      "line": 1524
+    },
+    {
+      "name": "assert",
+      "line": 1678
+    },
+    {
+      "name": "assert",
+      "line": 1678
+    },
+    {
+      "name": "assert_eq",
+      "line": 1809
+    },
+    {
+      "name": "assert_eq",
+      "line": 1809
+    },
+    {
+      "name": "assert",
+      "line": 1929
+    },
+    {
+      "name": "assert",
+      "line": 1929
+    },
+    {
+      "name": "assert",
+      "line": 2049
+    },
+    {
+      "name": "assert",
+      "line": 2049
+    },
+    {
+      "name": "json",
+      "line": 2087
+    },
+    {
+      "name": "assert_eq",
+      "line": 2098
+    },
+    {
+      "name": "assert_eq",
+      "line": 2098
+    },
+    {
+      "name": "assert",
+      "line": 2119
+    },
+    {
+      "name": "assert",
+      "line": 2119
+    },
+    {
+      "name": "json",
+      "line": 2146
+    },
+    {
+      "name": "assert_eq",
+      "line": 2157
+    },
+    {
+      "name": "assert_eq",
+      "line": 2157
+    }
+  ],
+  "modules": [
+    "tests",
+    "authorize",
+    "order"
+  ]
+}

@@ -1,0 +1,562 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/auto_gen.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "resolve_auto_generate",
+      "visibility": "pub",
+      "parameters": [
+        "current_grpc_req: &mut Value"
+      ],
+      "return_type": "Result<(), ScenarioError>",
+      "line": 16
+    },
+    {
+      "name": "generate_value_for_path",
+      "visibility": "",
+      "parameters": [
+        "path: &str",
+        "runner: &mut TestRunner"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 45
+    },
+    {
+      "name": "id_prefix_for_path",
+      "visibility": "",
+      "parameters": [
+        "path: &str"
+      ],
+      "return_type": "&'static str",
+      "line": 111
+    },
+    {
+      "name": "id_prefix_for_leaf_path",
+      "visibility": "",
+      "parameters": [
+        "path: &str"
+      ],
+      "return_type": "Option<&'static str>",
+      "line": 131
+    },
+    {
+      "name": "sample_string",
+      "visibility": "",
+      "parameters": [
+        "path: &str",
+        "strategy: S",
+        "runner: &mut TestRunner"
+      ],
+      "return_type": "Result<String, ScenarioError>\nwhere\n    S: Strategy<Value = String>,",
+      "line": 150
+    },
+    {
+      "name": "prefixed_uuid",
+      "visibility": "",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 167
+    },
+    {
+      "name": "email_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 171
+    },
+    {
+      "name": "international_phone_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 181
+    },
+    {
+      "name": "local_phone_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 190
+    },
+    {
+      "name": "first_name_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 196
+    },
+    {
+      "name": "last_name_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 202
+    },
+    {
+      "name": "full_name_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 210
+    },
+    {
+      "name": "address_line_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 216
+    },
+    {
+      "name": "city_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 226
+    },
+    {
+      "name": "zip_code_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 239
+    },
+    {
+      "name": "generic_string_strategy",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "BoxedStrategy<String>",
+      "line": 245
+    },
+    {
+      "name": "is_auto_generate_sentinel",
+      "visibility": "",
+      "parameters": [
+        "value: &Value"
+      ],
+      "return_type": "bool",
+      "line": 251
+    },
+    {
+      "name": "is_context_deferred_path",
+      "visibility": "",
+      "parameters": [
+        "path: &str"
+      ],
+      "return_type": "bool",
+      "line": 258
+    },
+    {
+      "name": "collect_leaf_paths",
+      "visibility": "",
+      "parameters": [
+        "value: &Value",
+        "current: String",
+        "paths: &mut Vec<String>"
+      ],
+      "return_type": "",
+      "line": 274
+    },
+    {
+      "name": "lookup_json_path",
+      "visibility": "",
+      "parameters": [
+        "value: &'a Value",
+        "path: &str"
+      ],
+      "return_type": "Option<&'a Value>",
+      "line": 300
+    },
+    {
+      "name": "set_json_path_value",
+      "visibility": "",
+      "parameters": [
+        "root: &mut Value",
+        "path: &str",
+        "value: Value"
+      ],
+      "return_type": "bool",
+      "line": 321
+    },
+    {
+      "name": "sentinel_detection_supports_auto_generate_variants",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 375
+    },
+    {
+      "name": "id_prefix_mapping_uses_expected_prefixes",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 382
+    },
+    {
+      "name": "resolves_auto_generate_placeholders_in_request_payload",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 396
+    },
+    {
+      "name": "keeps_context_deferred_fields_unresolved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 451
+    },
+    {
+      "name": "context_deferred_path_matching",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 497
+    }
+  ],
+  "use_statements": [
+    "use proptest::{\n    prelude::*,\n    sample,\n    strategy::{Strategy, ValueTree},\n    test_runner::TestRunner,\n};",
+    "use serde_json::Value;",
+    "use uuid::Uuid;",
+    "use crate::harness::scenario_types::ScenarioError;",
+    "use serde_json::json;",
+    "use super::{\n        id_prefix_for_leaf_path, id_prefix_for_path, is_auto_generate_sentinel,\n        is_context_deferred_path, resolve_auto_generate,\n    };"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 161
+    },
+    {
+      "name": "format",
+      "line": 168
+    },
+    {
+      "name": "vec",
+      "line": 173
+    },
+    {
+      "name": "vec",
+      "line": 175
+    },
+    {
+      "name": "format",
+      "line": 177
+    },
+    {
+      "name": "vec",
+      "line": 183
+    },
+    {
+      "name": "format",
+      "line": 186
+    },
+    {
+      "name": "vec",
+      "line": 197
+    },
+    {
+      "name": "vec",
+      "line": 203
+    },
+    {
+      "name": "format",
+      "line": 212
+    },
+    {
+      "name": "vec",
+      "line": 219
+    },
+    {
+      "name": "vec",
+      "line": 220
+    },
+    {
+      "name": "format",
+      "line": 222
+    },
+    {
+      "name": "vec",
+      "line": 227
+    },
+    {
+      "name": "format",
+      "line": 247
+    },
+    {
+      "name": "matches",
+      "line": 259
+    },
+    {
+      "name": "format",
+      "line": 281
+    },
+    {
+      "name": "format",
+      "line": 291
+    },
+    {
+      "name": "assert",
+      "line": 376
+    },
+    {
+      "name": "assert",
+      "line": 376
+    },
+    {
+      "name": "assert",
+      "line": 377
+    },
+    {
+      "name": "assert",
+      "line": 377
+    },
+    {
+      "name": "assert",
+      "line": 378
+    },
+    {
+      "name": "assert",
+      "line": 378
+    },
+    {
+      "name": "assert_eq",
+      "line": 383
+    },
+    {
+      "name": "assert_eq",
+      "line": 383
+    },
+    {
+      "name": "assert_eq",
+      "line": 384
+    },
+    {
+      "name": "assert_eq",
+      "line": 384
+    },
+    {
+      "name": "assert_eq",
+      "line": 385
+    },
+    {
+      "name": "assert_eq",
+      "line": 385
+    },
+    {
+      "name": "assert_eq",
+      "line": 386
+    },
+    {
+      "name": "assert_eq",
+      "line": 386
+    },
+    {
+      "name": "assert_eq",
+      "line": 387
+    },
+    {
+      "name": "assert_eq",
+      "line": 387
+    },
+    {
+      "name": "assert_eq",
+      "line": 391
+    },
+    {
+      "name": "assert_eq",
+      "line": 391
+    },
+    {
+      "name": "assert_eq",
+      "line": 392
+    },
+    {
+      "name": "assert_eq",
+      "line": 392
+    },
+    {
+      "name": "json",
+      "line": 397
+    },
+    {
+      "name": "assert",
+      "line": 427
+    },
+    {
+      "name": "assert",
+      "line": 427
+    },
+    {
+      "name": "assert_ne",
+      "line": 429
+    },
+    {
+      "name": "assert_ne",
+      "line": 429
+    },
+    {
+      "name": "assert_ne",
+      "line": 430
+    },
+    {
+      "name": "assert_ne",
+      "line": 430
+    },
+    {
+      "name": "assert_ne",
+      "line": 431
+    },
+    {
+      "name": "assert_ne",
+      "line": 431
+    },
+    {
+      "name": "assert_ne",
+      "line": 432
+    },
+    {
+      "name": "assert_ne",
+      "line": 432
+    },
+    {
+      "name": "assert_ne",
+      "line": 436
+    },
+    {
+      "name": "assert_ne",
+      "line": 436
+    },
+    {
+      "name": "assert_ne",
+      "line": 440
+    },
+    {
+      "name": "assert_ne",
+      "line": 440
+    },
+    {
+      "name": "assert_eq",
+      "line": 444
+    },
+    {
+      "name": "assert_eq",
+      "line": 444
+    },
+    {
+      "name": "json",
+      "line": 452
+    },
+    {
+      "name": "assert_eq",
+      "line": 470
+    },
+    {
+      "name": "assert_eq",
+      "line": 470
+    },
+    {
+      "name": "assert_eq",
+      "line": 474
+    },
+    {
+      "name": "assert_eq",
+      "line": 474
+    },
+    {
+      "name": "assert_eq",
+      "line": 478
+    },
+    {
+      "name": "assert_eq",
+      "line": 478
+    },
+    {
+      "name": "assert_eq",
+      "line": 482
+    },
+    {
+      "name": "assert_eq",
+      "line": 482
+    },
+    {
+      "name": "assert_eq",
+      "line": 486
+    },
+    {
+      "name": "assert_eq",
+      "line": 486
+    },
+    {
+      "name": "assert_eq",
+      "line": 487
+    },
+    {
+      "name": "assert_eq",
+      "line": 487
+    },
+    {
+      "name": "assert",
+      "line": 493
+    },
+    {
+      "name": "assert",
+      "line": 493
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 499
+    },
+    {
+      "name": "assert",
+      "line": 499
+    },
+    {
+      "name": "assert",
+      "line": 500
+    },
+    {
+      "name": "assert",
+      "line": 500
+    },
+    {
+      "name": "assert",
+      "line": 501
+    },
+    {
+      "name": "assert",
+      "line": 501
+    },
+    {
+      "name": "assert",
+      "line": 502
+    },
+    {
+      "name": "assert",
+      "line": 502
+    },
+    {
+      "name": "assert",
+      "line": 503
+    },
+    {
+      "name": "assert",
+      "line": 503
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

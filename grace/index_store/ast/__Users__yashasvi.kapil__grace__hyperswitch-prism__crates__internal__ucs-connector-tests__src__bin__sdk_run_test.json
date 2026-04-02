@@ -1,0 +1,325 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/bin/sdk_run_test.rs",
+  "structs": [
+    {
+      "name": "CliArgs",
+      "visibility": "",
+      "fields": [
+        "suite",
+        "all",
+        "all_connectors",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "line": 312
+    },
+    {
+      "name": "StoredDefaults",
+      "visibility": "",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 403
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 24
+    },
+    {
+      "name": "print_suite_results",
+      "visibility": "",
+      "parameters": [
+        "summary: &SuiteRunSummary",
+        "endpoint: &str",
+        "report: bool"
+      ],
+      "return_type": "",
+      "line": 170
+    },
+    {
+      "name": "compact_error_for_console",
+      "visibility": "",
+      "parameters": [
+        "error: Option<&str>"
+      ],
+      "return_type": "String",
+      "line": 230
+    },
+    {
+      "name": "truncate_for_console",
+      "visibility": "",
+      "parameters": [
+        "text: &str",
+        "max_chars: usize"
+      ],
+      "return_type": "String",
+      "line": 263
+    },
+    {
+      "name": "write_report_entry",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "endpoint: &str",
+        "pm: Option<&str>",
+        "pmt: Option<&str>",
+        "is_dependency: bool",
+        "assertion_result: &str",
+        "response_status: Option<String>",
+        "error: Option<String>",
+        "dependency: Vec<String>",
+        "req_body: Option<Value>",
+        "res_body: Option<Value>",
+        "grpc_request: Option<String>",
+        "grpc_response: Option<String>"
+      ],
+      "return_type": "",
+      "line": 274
+    },
+    {
+      "name": "parse_args",
+      "visibility": "",
+      "parameters": [
+        "args: impl Iterator<Item = String>"
+      ],
+      "return_type": "Result<CliArgs, String>",
+      "line": 327
+    },
+    {
+      "name": "defaults_path",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 409
+    },
+    {
+      "name": "load_defaults",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "StoredDefaults",
+      "line": 425
+    },
+    {
+      "name": "print_usage",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 435
+    },
+    {
+      "name": "parses_suite_and_connector",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 447
+    },
+    {
+      "name": "parses_report_flag",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 458
+    }
+  ],
+  "use_statements": [
+    "use std::{fs, path::PathBuf};",
+    "use serde::Deserialize;",
+    "use serde_json::Value;",
+    "use ucs_connector_tests::harness::{\n    report::{\n        append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,\n    },\n    scenario_api::{\n        get_the_grpc_req_for_connector, run_all_connectors_with_options,\n        run_all_suites_with_options, run_suite_test_with_options, ExecutionBackend,\n        SuiteRunOptions, SuiteRunSummary, DEFAULT_CONNECTOR, DEFAULT_ENDPOINT,\n    },\n};",
+    "use super::parse_args;"
+  ],
+  "macro_calls": [
+    {
+      "name": "eprintln",
+      "line": 28
+    },
+    {
+      "name": "eprintln",
+      "line": 28
+    },
+    {
+      "name": "eprintln",
+      "line": 40
+    },
+    {
+      "name": "eprintln",
+      "line": 40
+    },
+    {
+      "name": "eprintln",
+      "line": 46
+    },
+    {
+      "name": "eprintln",
+      "line": 46
+    },
+    {
+      "name": "eprintln",
+      "line": 96
+    },
+    {
+      "name": "eprintln",
+      "line": 96
+    },
+    {
+      "name": "println",
+      "line": 102
+    },
+    {
+      "name": "println",
+      "line": 102
+    },
+    {
+      "name": "println",
+      "line": 108
+    },
+    {
+      "name": "println",
+      "line": 108
+    },
+    {
+      "name": "eprintln",
+      "line": 125
+    },
+    {
+      "name": "eprintln",
+      "line": 125
+    },
+    {
+      "name": "println",
+      "line": 134
+    },
+    {
+      "name": "println",
+      "line": 134
+    },
+    {
+      "name": "eprintln",
+      "line": 149
+    },
+    {
+      "name": "eprintln",
+      "line": 149
+    },
+    {
+      "name": "eprintln",
+      "line": 157
+    },
+    {
+      "name": "eprintln",
+      "line": 157
+    },
+    {
+      "name": "println",
+      "line": 198
+    },
+    {
+      "name": "println",
+      "line": 198
+    },
+    {
+      "name": "println",
+      "line": 203
+    },
+    {
+      "name": "println",
+      "line": 203
+    },
+    {
+      "name": "println",
+      "line": 211
+    },
+    {
+      "name": "println",
+      "line": 211
+    },
+    {
+      "name": "println",
+      "line": 223
+    },
+    {
+      "name": "println",
+      "line": 223
+    },
+    {
+      "name": "format",
+      "line": 267
+    },
+    {
+      "name": "format",
+      "line": 378
+    },
+    {
+      "name": "eprintln",
+      "line": 436
+    },
+    {
+      "name": "eprintln",
+      "line": 436
+    },
+    {
+      "name": "vec",
+      "line": 448
+    },
+    {
+      "name": "assert_eq",
+      "line": 453
+    },
+    {
+      "name": "assert_eq",
+      "line": 453
+    },
+    {
+      "name": "assert_eq",
+      "line": 454
+    },
+    {
+      "name": "assert_eq",
+      "line": 454
+    },
+    {
+      "name": "vec",
+      "line": 459
+    },
+    {
+      "name": "assert",
+      "line": 464
+    },
+    {
+      "name": "assert",
+      "line": 464
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

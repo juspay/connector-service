@@ -1,0 +1,79 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/tracing-kafka/src/metrics.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "initialize_all_metrics",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "",
+      "line": 153
+    }
+  ],
+  "use_statements": [
+    "use std::sync::LazyLock;",
+    "use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge};"
+  ],
+  "macro_calls": [
+    {
+      "name": "register_int_counter",
+      "line": 10
+    },
+    {
+      "name": "register_int_counter",
+      "line": 20
+    },
+    {
+      "name": "register_int_gauge",
+      "line": 30
+    },
+    {
+      "name": "register_int_counter",
+      "line": 40
+    },
+    {
+      "name": "register_int_counter",
+      "line": 50
+    },
+    {
+      "name": "register_int_counter",
+      "line": 60
+    },
+    {
+      "name": "register_int_counter",
+      "line": 70
+    },
+    {
+      "name": "register_int_counter",
+      "line": 80
+    },
+    {
+      "name": "register_int_counter",
+      "line": 90
+    },
+    {
+      "name": "register_int_gauge",
+      "line": 100
+    },
+    {
+      "name": "register_int_counter",
+      "line": 110
+    },
+    {
+      "name": "register_int_counter",
+      "line": 120
+    },
+    {
+      "name": "register_int_counter",
+      "line": 130
+    },
+    {
+      "name": "register_int_counter",
+      "line": 140
+    }
+  ],
+  "modules": []
+}

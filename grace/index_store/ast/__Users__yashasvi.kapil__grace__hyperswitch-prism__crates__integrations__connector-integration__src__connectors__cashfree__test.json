@@ -1,0 +1,34 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/cashfree/test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "test_cashfree_connector_creation",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 12
+    }
+  ],
+  "use_statements": [
+    "use domain_types::payment_method_data::DefaultPCIHolder;",
+    "use interfaces::api::ConnectorCommon;",
+    "use crate::connectors;"
+  ],
+  "macro_calls": [
+    {
+      "name": "assert_eq",
+      "line": 16
+    },
+    {
+      "name": "assert_eq",
+      "line": 16
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

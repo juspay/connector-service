@@ -1,0 +1,608 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/request.rs",
+  "structs": [
+    {
+      "name": "Request",
+      "visibility": "pub",
+      "fields": [
+        "url",
+        "headers",
+        "method",
+        "certificate",
+        "certificate_key",
+        "body",
+        "ca_certificate"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Debug"
+      ],
+      "line": 52
+    },
+    {
+      "name": "MultipartData",
+      "visibility": "pub",
+      "fields": [
+        "parts"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 83
+    },
+    {
+      "name": "RequestBuilder",
+      "visibility": "pub",
+      "fields": [
+        "url",
+        "headers",
+        "method",
+        "certificate",
+        "certificate_key",
+        "body",
+        "ca_certificate"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug"
+      ],
+      "line": 249
+    }
+  ],
+  "enums": [
+    {
+      "name": "RequestError",
+      "visibility": "pub",
+      "variants": [
+        "MultipartRenderingFailed",
+        "MultipartReadFailed"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 8
+    },
+    {
+      "name": "Method",
+      "visibility": "pub",
+      "variants": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema"
+      ],
+      "line": 29
+    },
+    {
+      "name": "ContentType",
+      "visibility": "pub",
+      "variants": [
+        "Json",
+        "FormUrlEncoded",
+        "FormData",
+        "Xml"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug"
+      ],
+      "line": 38
+    },
+    {
+      "name": "RequestContent",
+      "visibility": "pub",
+      "variants": [
+        "Json",
+        "FormUrlEncoded",
+        "FormData",
+        "Xml",
+        "RawBytes"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 74
+    },
+    {
+      "name": "FormDataPart",
+      "visibility": "pub",
+      "variants": [
+        "Text",
+        "File"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Deserialize",
+        "Serialize",
+        "strum::Display",
+        "strum::EnumString",
+        "ToSchema",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 88
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "RequestContent",
+      "trait_name": "std::fmt::Debug",
+      "methods": [
+        "fmt"
+      ],
+      "line": 62
+    },
+    {
+      "type_name": "MultipartData",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "add_text",
+        "add_file",
+        "render_as_bytes"
+      ],
+      "line": 101
+    },
+    {
+      "type_name": "MultipartData",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 165
+    },
+    {
+      "type_name": "RequestContent",
+      "trait_name": null,
+      "methods": [
+        "get_inner_value",
+        "get_body_bytes"
+      ],
+      "line": 171
+    },
+    {
+      "type_name": "Request",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "get_headers_map",
+        "set_body",
+        "add_default_headers",
+        "add_header",
+        "add_certificate",
+        "add_certificate_key"
+      ],
+      "line": 198
+    },
+    {
+      "type_name": "RequestBuilder",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "url",
+        "method",
+        "attach_default_headers",
+        "header",
+        "headers",
+        "set_optional_body",
+        "set_body",
+        "add_certificate",
+        "add_certificate_key",
+        "add_ca_certificate_pem",
+        "build"
+      ],
+      "line": 259
+    },
+    {
+      "type_name": "RequestBuilder",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 335
+    }
+  ],
+  "functions": [
+    {
+      "name": "default_request_headers",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "[(String, Maskable<String>); 1]",
+      "line": 45
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 63
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 102
+    },
+    {
+      "name": "add_text",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "name: impl Into<String>",
+        "value: impl Into<String>"
+      ],
+      "return_type": "",
+      "line": 106
+    },
+    {
+      "name": "add_file",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "name: impl Into<String>",
+        "filename: impl Into<String>",
+        "bytes: Vec<u8>",
+        "mime_type: impl Into<String>"
+      ],
+      "return_type": "",
+      "line": 113
+    },
+    {
+      "name": "render_as_bytes",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<(Vec<u8>, String), RequestError>",
+      "line": 128
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 166
+    },
+    {
+      "name": "get_inner_value",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Secret<String>",
+      "line": 172
+    },
+    {
+      "name": "get_body_bytes",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<(Option<Vec<u8>>, Option<String>), RequestError>",
+      "line": 183
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "method: Method",
+        "url: &str"
+      ],
+      "return_type": "Self",
+      "line": 199
+    },
+    {
+      "name": "get_headers_map",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "std::collections::HashMap<String, String>",
+      "line": 213
+    },
+    {
+      "name": "set_body",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "body: T"
+      ],
+      "return_type": "",
+      "line": 227
+    },
+    {
+      "name": "add_default_headers",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "",
+      "line": 231
+    },
+    {
+      "name": "add_header",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "header: &str",
+        "value: Maskable<String>"
+      ],
+      "return_type": "",
+      "line": 235
+    },
+    {
+      "name": "add_certificate",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "certificate: Option<Secret<String>>"
+      ],
+      "return_type": "",
+      "line": 239
+    },
+    {
+      "name": "add_certificate_key",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "certificate_key: Option<Secret<String>>"
+      ],
+      "return_type": "",
+      "line": 243
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 260
+    },
+    {
+      "name": "url",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "url: &str"
+      ],
+      "return_type": "Self",
+      "line": 272
+    },
+    {
+      "name": "method",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "method: Method"
+      ],
+      "return_type": "Self",
+      "line": 277
+    },
+    {
+      "name": "attach_default_headers",
+      "visibility": "pub",
+      "parameters": [
+        "mut self"
+      ],
+      "return_type": "Self",
+      "line": 282
+    },
+    {
+      "name": "header",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "header: &str",
+        "value: &str"
+      ],
+      "return_type": "Self",
+      "line": 287
+    },
+    {
+      "name": "headers",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "headers: Vec<(String, Maskable<String>)>"
+      ],
+      "return_type": "Self",
+      "line": 292
+    },
+    {
+      "name": "set_optional_body",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "body: Option<T>"
+      ],
+      "return_type": "Self",
+      "line": 297
+    },
+    {
+      "name": "set_body",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "body: T"
+      ],
+      "return_type": "Self",
+      "line": 302
+    },
+    {
+      "name": "add_certificate",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "certificate: Option<Secret<String>>"
+      ],
+      "return_type": "Self",
+      "line": 307
+    },
+    {
+      "name": "add_certificate_key",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "certificate_key: Option<Secret<String>>"
+      ],
+      "return_type": "Self",
+      "line": 312
+    },
+    {
+      "name": "add_ca_certificate_pem",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "ca_certificate: Option<Secret<String>>"
+      ],
+      "return_type": "Self",
+      "line": 317
+    },
+    {
+      "name": "build",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Request",
+      "line": 322
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 336
+    }
+  ],
+  "use_statements": [
+    "use hyperswitch_masking::{Maskable, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use utoipa::ToSchema;",
+    "use http::header;",
+    "use std::io::Read;",
+    "use hyperswitch_masking::ExposeInterface;",
+    "use hyperswitch_masking::ExposeInterface;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

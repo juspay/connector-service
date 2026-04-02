@@ -1,0 +1,63 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/handlers/payments.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_config_for_req",
+      "visibility": "",
+      "parameters": [
+        "environment: Option<Environment>"
+      ],
+      "return_type": "Result<std::sync::Arc<ucs_env::configs::Config>, IntegrationError>",
+      "line": 13
+    },
+    {
+      "name": "get_config_for_res",
+      "visibility": "",
+      "parameters": [
+        "environment: Option<Environment>"
+      ],
+      "return_type": "Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorResponseTransformationError>",
+      "line": 27
+    },
+    {
+      "name": "handle_event_handler",
+      "visibility": "pub",
+      "parameters": [
+        "request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>",
+        "environment: Option<Environment>"
+      ],
+      "return_type": "Result<\n    grpc_api_types::payments::EventServiceHandleResponse,\n    ConnectorResponseTransformationError,\n>",
+      "line": 101
+    }
+  ],
+  "use_statements": [
+    "use crate::types::FfiRequestData;",
+    "use domain_types::errors::{ApplicationErrorResponse, ConnectorError};",
+    "use domain_types::payment_method_data::DefaultPCIHolder;",
+    "use ucs_env::error::ErrorSwitch;",
+    "use grpc_api_types::payments::{\n    ConnectorResponseTransformationError, Environment, IntegrationError,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "include_str",
+      "line": 2
+    },
+    {
+      "name": "include_str",
+      "line": 3
+    },
+    {
+      "name": "include",
+      "line": 92
+    },
+    {
+      "name": "include",
+      "line": 92
+    }
+  ],
+  "modules": []
+}

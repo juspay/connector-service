@@ -1,0 +1,6940 @@
+{
+  "crate": "types_traits_domain_types",
+  "structs": [
+    {
+      "name": "RedirectionFormData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "redirect_form",
+        "payment_method_data",
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentLinkFormData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "js_script",
+        "css_script",
+        "sdk_url",
+        "html_meta_tags"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentLinkStatusData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "js_script",
+        "css_script"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GenericLinks",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "allowed_domains",
+        "data",
+        "locale"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GenericExpiredLinkData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "title",
+        "message",
+        "theme"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GenericLinkFormData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "js_data",
+        "css_data",
+        "sdk_url",
+        "html_meta_tags"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GenericLinkStatusData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "fields": [
+        "js_data",
+        "css_data"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateOrder",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Authorize",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PSync",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Void",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RSync",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Refund",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Capture",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SetupMandate",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RepeatPayment",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Accept",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SubmitEvidence",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DefendDispute",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateSessionToken",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateAccessToken",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateConnectorCustomer",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodToken",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PreAuthenticate",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Authenticate",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PostAuthenticate",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VoidPC",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SdkSessionToken",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncrementalAuthorization",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateRevoke",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSource",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreate",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutTransfer",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutGet",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutVoid",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutStage",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateLink",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRecipient",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutEnrollDisburseAccount",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentId",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [],
+      "derives": [
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpdateHistory",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_mandate_id",
+        "payment_method_id",
+        "original_payment_id"
+      ],
+      "derives": [
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorMandateReferenceId",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_mandate_id",
+        "payment_method_id",
+        "update_history",
+        "mandate_metadata",
+        "connector_mandate_request_reference_id"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NetworkTokenWithNTIRef",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "network_transaction_id",
+        "token_exp_month",
+        "token_exp_year"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateIds",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "mandate_id",
+        "mandate_reference_id"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsSyncData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_transaction_id",
+        "encoded_data",
+        "capture_method",
+        "connector_feature_data",
+        "sync_type",
+        "mandate_id",
+        "payment_method_type",
+        "currency",
+        "payment_experience",
+        "amount",
+        "all_keys_required",
+        "integrity_object",
+        "split_payments",
+        "setup_future_usage"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentFlowData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "merchant_id",
+        "customer_id",
+        "connector_customer",
+        "payment_id",
+        "attempt_id",
+        "status",
+        "payment_method",
+        "description",
+        "return_url",
+        "address",
+        "auth_type",
+        "connector_feature_data",
+        "amount_captured",
+        "minor_amount_captured",
+        "minor_amount_capturable",
+        "amount",
+        "access_token",
+        "session_token",
+        "reference_id",
+        "payment_method_token",
+        "preprocessing_id",
+        "connector_api_version",
+        "connector_request_reference_id",
+        "test_mode",
+        "connector_http_status_code",
+        "connector_response_headers",
+        "external_latency",
+        "connectors",
+        "raw_connector_response",
+        "raw_connector_request",
+        "vault_headers",
+        "connector_response",
+        "recurring_mandate_payment_data",
+        "order_details",
+        "minor_amount_authorized",
+        "l2_l3_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentVoidData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_transaction_id",
+        "cancellation_reason",
+        "integrity_object",
+        "raw_connector_response",
+        "browser_info",
+        "amount",
+        "currency",
+        "connector_feature_data",
+        "metadata",
+        "merchant_order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsCancelPostCaptureData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_transaction_id",
+        "cancellation_reason",
+        "integrity_object",
+        "raw_connector_response",
+        "browser_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsAuthorizeData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_data",
+        "amount",
+        "order_tax_amount",
+        "email",
+        "customer_name",
+        "currency",
+        "confirm",
+        "billing_descriptor",
+        "capture_method",
+        "router_return_url",
+        "webhook_url",
+        "complete_authorize_url",
+        "mandate_id",
+        "setup_future_usage",
+        "off_session",
+        "browser_info",
+        "order_category",
+        "session_token",
+        "access_token",
+        "customer_acceptance",
+        "enrolled_for_3ds",
+        "related_transaction_id",
+        "payment_experience",
+        "payment_method_type",
+        "customer_id",
+        "request_incremental_authorization",
+        "metadata",
+        "authentication_data",
+        "split_payments",
+        "minor_amount",
+        "merchant_order_id",
+        "shipping_cost",
+        "merchant_account_id",
+        "integrity_object",
+        "merchant_config_currency",
+        "all_keys_required",
+        "request_extended_authorization",
+        "enable_overcapture",
+        "setup_mandate_details",
+        "connector_feature_data",
+        "connector_testing_data",
+        "payment_channel",
+        "enable_partial_authorization",
+        "locale",
+        "redirect_response",
+        "threeds_method_comp_ind",
+        "continue_redirection_url",
+        "tokenization"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateReference",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_mandate_id",
+        "payment_method_id",
+        "connector_mandate_request_reference_id"
+      ],
+      "derives": [
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardDetailUpdate",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "card_exp_month",
+        "card_exp_year",
+        "last4_digits",
+        "issuer_country",
+        "card_issuer",
+        "card_network",
+        "card_holder_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentCreateOrderData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "integrity_object",
+        "metadata",
+        "webhook_url",
+        "payment_method_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentCreateOrderResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "order_id",
+        "session_token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodTokenizationData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_data",
+        "browser_info",
+        "currency",
+        "amount",
+        "capture_method",
+        "customer_acceptance",
+        "setup_future_usage",
+        "setup_mandate_details",
+        "mandate_id",
+        "integrity_object",
+        "split_payments",
+        "connector_feature_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodTokenResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsPreAuthenticateData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_data",
+        "amount",
+        "email",
+        "currency",
+        "payment_method_type",
+        "router_return_url",
+        "continue_redirection_url",
+        "browser_info",
+        "enrolled_for_3ds",
+        "redirect_response",
+        "capture_method",
+        "mandate_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsAuthenticateData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_data",
+        "amount",
+        "email",
+        "currency",
+        "payment_method_type",
+        "router_return_url",
+        "continue_redirection_url",
+        "browser_info",
+        "enrolled_for_3ds",
+        "redirect_response",
+        "capture_method",
+        "authentication_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsIncrementalAuthorizationData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "minor_amount",
+        "currency",
+        "reason",
+        "connector_transaction_id",
+        "connector_feature_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsSdkSessionTokenData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "country",
+        "order_details",
+        "email",
+        "customer_name",
+        "order_tax_amount",
+        "shipping_cost",
+        "payment_method_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsPostAuthenticateData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_data",
+        "amount",
+        "email",
+        "currency",
+        "payment_method_type",
+        "router_return_url",
+        "continue_redirection_url",
+        "browser_info",
+        "enrolled_for_3ds",
+        "redirect_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ContinueRedirectionResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "params",
+        "payload"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SessionTokenRequestData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "browser_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SessionTokenResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "session_token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AccessTokenRequestData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "grant_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AccessTokenResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "access_token",
+        "token_type",
+        "expires_in"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorCustomerData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "customer_id",
+        "email",
+        "name",
+        "description",
+        "phone",
+        "preprocessing_id",
+        "split_payments"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorCustomerResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_customer_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateRevokeRequestData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "mandate_id",
+        "connector_mandate_id",
+        "payment_method_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateRevokeResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "mandate_status",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundSyncData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_transaction_id",
+        "connector_refund_id",
+        "reason",
+        "refund_connector_metadata",
+        "refund_status",
+        "all_keys_required",
+        "integrity_object",
+        "browser_info",
+        "split_refunds",
+        "connector_feature_data"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundsResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_refund_id",
+        "refund_status",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundFlowData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "merchant_id",
+        "status",
+        "refund_id",
+        "connectors",
+        "connector_request_reference_id",
+        "raw_connector_response",
+        "connector_response_headers",
+        "raw_connector_request",
+        "access_token",
+        "connector_feature_data",
+        "test_mode",
+        "payment_method"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RedirectDetailsResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "resource_id",
+        "status",
+        "response_amount",
+        "connector_response_reference_id",
+        "error_code",
+        "error_message",
+        "error_reason",
+        "raw_connector_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "WebhookDetailsResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "resource_id",
+        "status",
+        "connector_response_reference_id",
+        "mandate_reference",
+        "error_code",
+        "error_message",
+        "error_reason",
+        "raw_connector_response",
+        "status_code",
+        "response_headers",
+        "transformation_status",
+        "amount_captured",
+        "minor_amount_captured",
+        "network_txn_id",
+        "payment_method_update"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundWebhookDetailsResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_refund_id",
+        "status",
+        "connector_response_reference_id",
+        "error_code",
+        "error_message",
+        "raw_connector_response",
+        "status_code",
+        "response_headers"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputeWebhookDetailsResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "dispute_id",
+        "status",
+        "stage",
+        "connector_response_reference_id",
+        "dispute_message",
+        "raw_connector_response",
+        "status_code",
+        "response_headers",
+        "connector_reason_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RequestDetails",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "method",
+        "uri",
+        "headers",
+        "body",
+        "query_params"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorWebhookSecrets",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "secret",
+        "additional_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorRedirectResponseSecrets",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "secret",
+        "additional_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundsData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "refund_id",
+        "connector_transaction_id",
+        "connector_refund_id",
+        "customer_id",
+        "currency",
+        "payment_amount",
+        "reason",
+        "webhook_url",
+        "refund_amount",
+        "connector_feature_data",
+        "refund_connector_metadata",
+        "minor_payment_amount",
+        "minor_refund_amount",
+        "refund_status",
+        "merchant_account_id",
+        "capture_method",
+        "integrity_object",
+        "browser_info",
+        "split_refunds"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MultipleCaptureRequestData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "capture_sequence",
+        "capture_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsCaptureData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount_to_capture",
+        "minor_amount_to_capture",
+        "currency",
+        "connector_transaction_id",
+        "multiple_capture_data",
+        "connector_feature_data",
+        "integrity_object",
+        "browser_info",
+        "capture_method",
+        "metadata",
+        "merchant_order_id"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SetupMandateRequestData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "currency",
+        "payment_method_data",
+        "amount",
+        "confirm",
+        "billing_descriptor",
+        "customer_acceptance",
+        "mandate_id",
+        "setup_future_usage",
+        "off_session",
+        "setup_mandate_details",
+        "router_return_url",
+        "webhook_url",
+        "browser_info",
+        "email",
+        "customer_name",
+        "return_url",
+        "payment_method_type",
+        "request_incremental_authorization",
+        "metadata",
+        "complete_authorize_url",
+        "capture_method",
+        "merchant_order_id",
+        "minor_amount",
+        "shipping_cost",
+        "customer_id",
+        "integrity_object",
+        "payment_channel",
+        "enable_partial_authorization",
+        "locale",
+        "connector_testing_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RepeatPaymentData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "mandate_reference",
+        "amount",
+        "minor_amount",
+        "currency",
+        "merchant_order_id",
+        "metadata",
+        "webhook_url",
+        "integrity_object",
+        "capture_method",
+        "browser_info",
+        "email",
+        "payment_method_type",
+        "connector_feature_data",
+        "off_session",
+        "router_return_url",
+        "split_payments",
+        "recurring_mandate_payment_data",
+        "shipping_cost",
+        "mit_category",
+        "enable_partial_authorization",
+        "billing_descriptor",
+        "payment_method_data",
+        "authentication_data",
+        "locale",
+        "connector_testing_data",
+        "merchant_account_id",
+        "merchant_configured_currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AcceptDisputeData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_dispute_id",
+        "integrity_object"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputeFlowData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "dispute_id",
+        "connector_dispute_id",
+        "connectors",
+        "defense_reason_code",
+        "connector_request_reference_id",
+        "raw_connector_response",
+        "raw_connector_request",
+        "connector_response_headers"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSourceFlowData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connectors",
+        "connector_request_reference_id",
+        "raw_connector_response",
+        "raw_connector_request",
+        "connector_response_headers"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputeResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector_dispute_id",
+        "dispute_status",
+        "connector_dispute_status",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SubmitEvidenceData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "dispute_id",
+        "connector_dispute_id",
+        "integrity_object",
+        "access_activity_log",
+        "billing_address",
+        "cancellation_policy",
+        "cancellation_policy_file_type",
+        "cancellation_policy_provider_file_id",
+        "cancellation_policy_disclosure",
+        "cancellation_rebuttal",
+        "customer_communication",
+        "customer_communication_file_type",
+        "customer_communication_provider_file_id",
+        "customer_email_address",
+        "customer_name",
+        "customer_purchase_ip",
+        "customer_signature",
+        "customer_signature_file_type",
+        "customer_signature_provider_file_id",
+        "product_description",
+        "receipt",
+        "receipt_file_type",
+        "receipt_provider_file_id",
+        "refund_policy",
+        "refund_policy_file_type",
+        "refund_policy_provider_file_id",
+        "refund_policy_disclosure",
+        "refund_refusal_explanation",
+        "service_date",
+        "service_documentation",
+        "service_documentation_file_type",
+        "service_documentation_provider_file_id",
+        "shipping_address",
+        "shipping_carrier",
+        "shipping_date",
+        "shipping_documentation",
+        "shipping_documentation_file_type",
+        "shipping_documentation_provider_file_id",
+        "shipping_tracking_number",
+        "invoice_showing_distinct_transactions",
+        "invoice_showing_distinct_transactions_file_type",
+        "invoice_showing_distinct_transactions_provider_file_id",
+        "recurring_transaction_agreement",
+        "recurring_transaction_agreement_file_type",
+        "recurring_transaction_agreement_provider_file_id",
+        "uncategorized_file",
+        "uncategorized_file_type",
+        "uncategorized_file_provider_file_id",
+        "uncategorized_text"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputeDefendData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "dispute_id",
+        "connector_dispute_id",
+        "defense_reason_code",
+        "integrity_object"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "StripeSplitPaymentRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "charge_type",
+        "application_fees",
+        "transfer_account_id"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "StripeChargeResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "charge_id",
+        "charge_type",
+        "application_fees",
+        "transfer_account_id"
+      ],
+      "derives": [
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "StripeSplitRefund",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "charge_id",
+        "transfer_account_id",
+        "charge_type",
+        "options"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DirectChargeRefund",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "revert_platform_fee"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DestinationChargeRefund",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "revert_platform_fee",
+        "revert_transfer"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RecurringMandatePaymentData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_type",
+        "original_payment_authorized_amount",
+        "original_payment_authorized_currency",
+        "mandate_metadata"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "L2L3Data",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "order_info",
+        "tax_info",
+        "customer_info",
+        "shipping_details",
+        "billing_details"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OrderInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "order_date",
+        "order_details",
+        "merchant_order_reference_id",
+        "discount_amount",
+        "shipping_cost",
+        "duty_amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "TaxInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "tax_status",
+        "customer_tax_registration_id",
+        "merchant_tax_registration_id",
+        "shipping_amount_tax",
+        "order_tax_amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CustomerInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "customer_id",
+        "customer_email",
+        "customer_name",
+        "customer_phone_number",
+        "customer_phone_country_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentRequestMetadata",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "supported_networks",
+        "merchant_capabilities",
+        "label"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SdkNextAction",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "next_action"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ThirdPartySdkSessionResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "secrets"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SecretInfoToInitiateSdk",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "display",
+        "payment"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePaySessionResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "merchant_info",
+        "shipping_address_required",
+        "email_required",
+        "shipping_address_parameters",
+        "allowed_payment_methods",
+        "transaction_info",
+        "delayed_session_token",
+        "connector",
+        "sdk_next_action",
+        "secrets"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayTransactionInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "country_code",
+        "currency_code",
+        "total_price_status",
+        "total_price"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayShippingAddressParameters",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "phone_number_required"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayAllowedPaymentMethods",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_method_type",
+        "parameters",
+        "tokenization_specification"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayTokenizationSpecification",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "token_specification_type",
+        "parameters"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayTokenParameters",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "gateway",
+        "gateway_merchant_id",
+        "protocol_version",
+        "public_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayAllowedMethodsParameters",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "allowed_auth_methods",
+        "allowed_card_networks",
+        "billing_address_required",
+        "billing_address_parameters",
+        "assurance_details_required"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayBillingAddressParameters",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "phone_number_required",
+        "format"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayMerchantInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "merchant_id",
+        "merchant_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayMetaData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "merchant_info",
+        "allowed_payment_methods"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpaySessionTokenData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplepaySessionTokenResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "session_token_data",
+        "payment_request_data",
+        "connector",
+        "delayed_session_token",
+        "sdk_next_action",
+        "connector_reference_id",
+        "connector_sdk_public_key",
+        "connector_merchant_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayPaymentRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "country_code",
+        "currency_code",
+        "total",
+        "merchant_capabilities",
+        "supported_networks",
+        "merchant_identifier",
+        "required_billing_contact_fields",
+        "required_shipping_contact_fields",
+        "recurring_payment_request"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayRecurringPaymentRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "payment_description",
+        "regular_billing",
+        "billing_agreement",
+        "management_u_r_l"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayRegularBillingRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "amount",
+        "label",
+        "payment_timing",
+        "recurring_payment_start_date",
+        "recurring_payment_end_date",
+        "recurring_payment_interval_unit",
+        "recurring_payment_interval_count"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayBillingContactFields",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayShippingContactFields",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AmountInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "label",
+        "total_type",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalSessionTokenResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "connector",
+        "session_token",
+        "sdk_next_action",
+        "client_token",
+        "transaction_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalTransactionInfo",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "flow",
+        "currency_code",
+        "total_price"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalSdkMetaData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "client_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalSdkSessionTokenData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BillingDescriptor",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "fields": [
+        "name",
+        "city",
+        "phone",
+        "statement_descriptor",
+        "statement_descriptor_suffix",
+        "reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApiError",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "fields": [
+        "sub_code",
+        "error_identifier",
+        "error_message",
+        "error_object"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CustomerAcceptance",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "fields": [
+        "acceptance_type",
+        "accepted_at",
+        "online"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OnlineMandate",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "fields": [
+        "ip_address",
+        "user_agent"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateData",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "fields": [
+        "update_mandate_id",
+        "customer_acceptance",
+        "mandate_type"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateAmountData",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "start_date",
+        "end_date",
+        "metadata",
+        "amount_type",
+        "frequency"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentAddress",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "shipping",
+        "billing",
+        "unified_payment_method_billing",
+        "payment_method_billing"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Address",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "address",
+        "phone",
+        "email"
+      ],
+      "derives": [
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AddressDetails",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "city",
+        "country",
+        "line1",
+        "line2",
+        "line3",
+        "zip",
+        "state",
+        "first_name",
+        "last_name",
+        "origin_zip"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Eq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PhoneDetails",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "number",
+        "country_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RedirectionResponse",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "return_url_with_query_params"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OrderDetailsWithAmount",
+      "file": "crates/types-traits/domain_types/src/payment_address.rs",
+      "fields": [
+        "product_name",
+        "quantity",
+        "amount",
+        "tax_rate",
+        "total_tax_amount",
+        "requires_shipping",
+        "product_img_link",
+        "product_id",
+        "category",
+        "sub_category",
+        "brand",
+        "description",
+        "unit_of_measure",
+        "product_type",
+        "product_tax_code",
+        "sku",
+        "upc",
+        "commodity_code",
+        "total_amount",
+        "unit_discount_amount"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Card",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_number",
+        "card_exp_month",
+        "card_exp_year",
+        "card_cvc",
+        "card_issuer",
+        "card_network",
+        "card_type",
+        "card_issuing_country",
+        "bank_code",
+        "nick_name",
+        "card_holder_name",
+        "co_badged_card_data"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DefaultPCIHolder",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VaultTokenHolder",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Default",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RawCardNumber",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NetworkTokenData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "token_number",
+        "token_exp_month",
+        "token_exp_year",
+        "token_cryptogram",
+        "card_issuer",
+        "card_network",
+        "card_type",
+        "card_issuing_country",
+        "bank_code",
+        "nick_name",
+        "eci"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GiftCardDetails",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "number",
+        "cvc"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardToken",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_holder_name",
+        "card_cvc"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BoletoVoucherData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "social_security_number"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AlfamartVoucherData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IndomaretVoucherData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "JCSVoucherData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VoucherNextStepData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "entry_date",
+        "expires_at",
+        "expiry_date",
+        "reference",
+        "download_url",
+        "instructions_url",
+        "digitable_line",
+        "barcode",
+        "qr_code_url"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpiCollectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "vpa_id",
+        "upi_source"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpiIntentData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "upi_source",
+        "app_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpiQrData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "upi_source"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CryptoData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "pay_currency",
+        "network"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RevolutPayData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MbWayData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SatispayData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "WeroData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MifinityData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "date_of_birth",
+        "language_preference"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SwishQrData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CashappQr",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "WeChatPayQr",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "WeChatPayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "TouchNGoRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SamsungPayWalletCredentials",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "method",
+        "recurring_payment",
+        "card_brand",
+        "dpan_last_four_digits",
+        "card_last_four_digits",
+        "token_data"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SamsungPayTokenData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "three_ds_type",
+        "version",
+        "data"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SamsungPayWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "payment_credential"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayPalWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "token"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "email"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayThirdPartySdkData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "token"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "pm_type",
+        "description",
+        "info",
+        "tokenization_data"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayEncryptedTokenizationData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "token_type",
+        "token"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayDecryptedData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_exp_month",
+        "card_exp_year",
+        "application_primary_account_number",
+        "cryptogram",
+        "eci_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayPaymentMethodInfo",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_network",
+        "card_details",
+        "assurance_details"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayAssuranceDetails",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_holder_authenticated",
+        "account_verified"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GooglePayRedirectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayThirdPartySdkData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "token"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayRedirectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplepayPaymentMethod",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "display_name",
+        "network",
+        "pm_type"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayDecryptedData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "application_primary_account_number",
+        "application_expiration_month",
+        "application_expiration_year",
+        "payment_data"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayCryptogramData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "online_payment_cryptogram",
+        "eci_indicator"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "payment_data",
+        "payment_method",
+        "transaction_identifier"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GoPayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GcashRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MobilePayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MbWayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "KakaoPayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MomoRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AliPayHkRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AliPayRedirection",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AliPayQr",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DecryptedWalletTokenDetailsForNetworkTransactionId",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "decrypted_token",
+        "token_exp_month",
+        "token_exp_year",
+        "card_holder_name",
+        "eci",
+        "token_source"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardDetailsForNetworkTransactionId",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "card_number",
+        "card_exp_month",
+        "card_exp_year",
+        "card_issuer",
+        "card_network",
+        "card_type",
+        "card_issuing_country",
+        "bank_code",
+        "nick_name",
+        "card_holder_name"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SamsungPayWebWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "method",
+        "recurring_payment",
+        "card_brand",
+        "card_last_four_digits",
+        "token_data"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AmazonPayRedirectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CoBadgedCardData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "co_badged_card_networks",
+        "issuer_country_code",
+        "is_regulated",
+        "regulated_name"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankTransferNextStepsData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "bank_transfer_instructions",
+        "receiver"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AchTransfer",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "account_number",
+        "bank_name",
+        "routing_number",
+        "swift_code"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MultibancoTransferInstructions",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "reference",
+        "entity"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ReceiverDetails",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "amount_received",
+        "amount_charged",
+        "amount_remaining"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CustomerInfoDetails",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "fields": [
+        "customer_name",
+        "customer_email",
+        "customer_phone_number",
+        "customer_bank_id",
+        "customer_bank_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardPayout",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "card_number",
+        "expiry_month",
+        "expiry_year",
+        "card_holder_name",
+        "card_network"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AchBankTransfer",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "bank_name",
+        "bank_country_code",
+        "bank_city",
+        "bank_account_number",
+        "bank_routing_number"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BacsBankTransfer",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "bank_name",
+        "bank_country_code",
+        "bank_city",
+        "bank_account_number",
+        "bank_sort_code"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SepaBankTransfer",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "bank_name",
+        "bank_country_code",
+        "bank_city",
+        "iban",
+        "bic"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PixBankTransfer",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "bank_name",
+        "bank_branch",
+        "bank_account_number",
+        "pix_key",
+        "tax_id"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Interac",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "email"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OpenBankingUk",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "account_holder_name",
+        "iban"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Passthrough",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "psp_token",
+        "token_type"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Paypal",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "email",
+        "telephone_number",
+        "paypal_id"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Venmo",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "telephone_number"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayDecrypt",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "fields": [
+        "dpan",
+        "expiry_month",
+        "expiry_year",
+        "card_holder_name",
+        "card_network"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutFlowData",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_id",
+        "payout_id",
+        "connectors",
+        "connector_request_reference_id",
+        "raw_connector_response",
+        "connector_response_headers",
+        "raw_connector_request",
+        "access_token",
+        "test_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutTransferRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutTransferResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutGetRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutGetResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutStageRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_quote_id",
+        "amount",
+        "source_currency",
+        "destination_currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutStageResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutVoidRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutVoidResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateLinkRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_quote_id",
+        "connector_payout_id",
+        "amount",
+        "source_currency",
+        "destination_currency",
+        "priority",
+        "connector_payout_method_id",
+        "webhook_url",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateLinkResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRecipientRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "amount",
+        "source_currency",
+        "payout_method_data",
+        "recipient_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRecipientResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountRequest",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "amount",
+        "source_currency",
+        "payout_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountResponse",
+      "file": "crates/types-traits/domain_types/src/payouts/payouts_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "payout_status",
+        "connector_payout_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutTransferIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutStageIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateLinkIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRecipientIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutGetIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutVoidIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/payouts/router_request_types.rs",
+      "fields": [
+        "merchant_payout_id",
+        "connector_payout_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaysafePaymentMethodDetails",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "card",
+        "ach"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaysafeCardAccountId",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "no_three_ds",
+        "three_ds"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaysafeAchAccountId",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "account_id"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ErrorResponse",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "code",
+        "message",
+        "reason",
+        "status_code",
+        "attempt_status",
+        "connector_transaction_id",
+        "network_decline_code",
+        "network_advice_code",
+        "network_error_message"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayCryptogramData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "online_payment_cryptogram",
+        "eci_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeDecryptedData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "client_id",
+        "profile_id",
+        "token",
+        "payment_card_network",
+        "dynamic_data",
+        "billing_address",
+        "consumer",
+        "eci"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeToken",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "payment_token",
+        "token_expiration_month",
+        "token_expiration_year",
+        "payment_account_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeConsumer",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "first_name",
+        "last_name",
+        "full_name",
+        "email_address",
+        "mobile_number",
+        "country_code",
+        "language_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazePhoneNumber",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "country_code",
+        "phone_number"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeAddress",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "name",
+        "line1",
+        "line2",
+        "line3",
+        "city",
+        "state",
+        "zip",
+        "country_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeDynamicData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "dynamic_data_value",
+        "dynamic_data_type",
+        "dynamic_data_expiration"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RecurringMandatePaymentData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "payment_method_type",
+        "original_payment_authorized_amount",
+        "mandate_metadata"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorResponseData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "additional_payment_method_data",
+        "extended_authorization_response_data",
+        "is_overcapture_enabled"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ExtendedAuthorizationResponseData",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "extended_authentication_applied",
+        "extended_authorization_last_applied_at",
+        "capture_before"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "InteracCustomerInfo",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "fields": [
+        "customer_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RouterDataV2",
+      "file": "crates/types-traits/domain_types/src/router_data_v2.rs",
+      "fields": [
+        "flow",
+        "resource_common_data",
+        "connector_config",
+        "request",
+        "response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSource",
+      "file": "crates/types-traits/domain_types/src/router_flow_types.rs",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorMandateDetails",
+      "file": "crates/types-traits/domain_types/src/router_flow_types.rs",
+      "fields": [
+        "connector_mandate_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorNetworkTxnId",
+      "file": "crates/types-traits/domain_types/src/router_flow_types.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BrowserInformation",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "color_depth",
+        "java_enabled",
+        "java_script_enabled",
+        "language",
+        "screen_height",
+        "screen_width",
+        "time_zone",
+        "ip_address",
+        "accept_header",
+        "user_agent",
+        "os_type",
+        "os_version",
+        "device_model",
+        "accept_language",
+        "referer"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Default",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsCancelData",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "connector_transaction_id",
+        "cancellation_reason",
+        "connector_meta",
+        "browser_info",
+        "metadata",
+        "minor_amount",
+        "webhook_url",
+        "capture_method"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NetworkParams",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "cartes_bancaires"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CartesBancairesParams",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "cavv_algorithm",
+        "cb_exemption",
+        "cb_score"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AuthenticationData",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "trans_status",
+        "eci",
+        "cavv",
+        "ucaf_collection_indicator",
+        "threeds_server_transaction_id",
+        "message_version",
+        "ds_trans_id",
+        "acs_transaction_id",
+        "transaction_id",
+        "network_params",
+        "exemption_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorCustomerData",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "description",
+        "email",
+        "phone",
+        "name",
+        "preprocessing_id",
+        "payment_method_data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AuthoriseIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateOrderIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SetupMandateIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RepeatPaymentIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "mandate_reference"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentSynIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentVoidIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentVoidPostCaptureIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "refund_amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CaptureIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount_to_capture",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AcceptDisputeIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_dispute_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DefendDisputeIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_dispute_id",
+        "defense_reason_code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundSyncIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_transaction_id",
+        "connector_refund_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SubmitEvidenceIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "connector_dispute_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SessionTokenIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AccessTokenIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "grant_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateConnectorCustomerIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "customer_id",
+        "email"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodTokenIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PreAuthenticateIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AuthenticateIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PostAuthenticateIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SdkSessionTokenIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncrementalAuthorizationIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateRevokeIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "mandate_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSourceRequestData",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "webhook_headers",
+        "webhook_body",
+        "merchant_secret",
+        "webhook_uri"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSourceIntegrityObject",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "fields": [
+        "webhook_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Response",
+      "file": "crates/types-traits/domain_types/src/router_response_types.rs",
+      "fields": [
+        "headers",
+        "response",
+        "status_code"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSourceResponseData",
+      "file": "crates/types-traits/domain_types/src/router_response_types.rs",
+      "fields": [
+        "verify_webhook_status"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Connectors",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "adyen",
+        "forte",
+        "razorpay",
+        "razorpayv2",
+        "fiserv",
+        "elavon",
+        "xendit",
+        "ppro",
+        "checkout",
+        "authorizedotnet",
+        "mifinity",
+        "phonepe",
+        "cashfree",
+        "paytm",
+        "fiuu",
+        "payu",
+        "cashtocode",
+        "novalnet",
+        "nexinets",
+        "noon",
+        "braintree",
+        "volt",
+        "calida",
+        "cryptopay",
+        "helcim",
+        "dlocal",
+        "placetopay",
+        "rapyd",
+        "aci",
+        "trustpay",
+        "stripe",
+        "cybersource",
+        "worldpay",
+        "worldpayvantiv",
+        "multisafepay",
+        "payload",
+        "fiservemea",
+        "paysafe",
+        "datatrans",
+        "bluesnap",
+        "authipay",
+        "bamboraapac",
+        "silverflow",
+        "celero",
+        "paypal",
+        "stax",
+        "billwerk",
+        "hipay",
+        "trustpayments",
+        "globalpay",
+        "nuvei",
+        "iatapay",
+        "jpmorgan",
+        "nmi",
+        "shift4",
+        "paybox",
+        "barclaycard",
+        "redsys",
+        "nexixpay",
+        "mollie",
+        "airwallex",
+        "worldpayxml",
+        "tsys",
+        "bankofamerica",
+        "powertranz",
+        "getnet",
+        "bambora",
+        "payme",
+        "revolut",
+        "gigadat",
+        "loonio",
+        "wellsfargo",
+        "hyperpg",
+        "zift",
+        "revolv3",
+        "fiservcommercehub",
+        "truelayer",
+        "peachpayments",
+        "finix"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorParams",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "base_url",
+        "dispute_base_url",
+        "secondary_base_url",
+        "third_base_url"
+      ],
+      "derives": [
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorParamsWithMoreUrls",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "base_url",
+        "base_url_bank_redirects"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "Default",
+        "PartialEq",
+        "config_patch_derive::Patch"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Proxy",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "http_url",
+        "https_url",
+        "idle_pool_connection_timeout",
+        "bypass_proxy_urls",
+        "mitm_proxy_enabled",
+        "mitm_ca_cert"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "config_patch_derive::Patch"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardSpecificFeatures",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "three_ds",
+        "no_three_ds",
+        "supported_card_networks"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodDetails",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "mandates",
+        "refunds",
+        "supported_capture_methods",
+        "specific_features"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorInfo",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "fields": [
+        "display_name",
+        "description",
+        "connector_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "PaymentLinkAction",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "variants": [
+        "PaymentLinkFormData",
+        "PaymentLinkStatus"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GenericLinksData",
+      "file": "crates/types-traits/domain_types/src/api.rs",
+      "variants": [
+        "ExpiredLink",
+        "PaymentMethodCollect",
+        "PayoutLink",
+        "PayoutLinkStatus",
+        "PaymentMethodCollectStatus",
+        "SecurePaymentLink"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "FlowName",
+      "file": "crates/types-traits/domain_types/src/connector_flow.rs",
+      "variants": [
+        "Authorize",
+        "Refund",
+        "Rsync",
+        "Psync",
+        "Void",
+        "VoidPc",
+        "SetupMandate",
+        "RepeatPayment",
+        "Capture",
+        "AcceptDispute",
+        "SubmitEvidence",
+        "DefendDispute",
+        "CreateOrder",
+        "IncomingWebhook",
+        "Dsync",
+        "CreateSessionToken",
+        "CreateAccessToken",
+        "CreateConnectorCustomer",
+        "PaymentMethodToken",
+        "PreAuthenticate",
+        "Authenticate",
+        "PostAuthenticate",
+        "SdkSessionToken",
+        "IncrementalAuthorization",
+        "MandateRevoke",
+        "PayoutCreate",
+        "PayoutTransfer",
+        "PayoutGet",
+        "PayoutVoid",
+        "PayoutStage",
+        "PayoutCreateLink",
+        "PayoutCreateRecipient",
+        "PayoutEnrollDisburseAccount"
+      ],
+      "derives": [
+        "strum::Display"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorEnum",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Adyen",
+        "Forte",
+        "Razorpay",
+        "RazorpayV2",
+        "Fiserv",
+        "Elavon",
+        "Xendit",
+        "Checkout",
+        "Authorizedotnet",
+        "Bamboraapac",
+        "Mifinity",
+        "Phonepe",
+        "Cashfree",
+        "Paytm",
+        "Fiuu",
+        "Payu",
+        "Cashtocode",
+        "Novalnet",
+        "Nexinets",
+        "Noon",
+        "Braintree",
+        "Volt",
+        "Calida",
+        "Cryptopay",
+        "Helcim",
+        "Dlocal",
+        "Placetopay",
+        "Rapyd",
+        "Aci",
+        "Trustpay",
+        "Stripe",
+        "Cybersource",
+        "Worldpay",
+        "Worldpayvantiv",
+        "Worldpayxml",
+        "Multisafepay",
+        "Payload",
+        "Fiservemea",
+        "Paysafe",
+        "Datatrans",
+        "Bluesnap",
+        "Authipay",
+        "Silverflow",
+        "Celero",
+        "Paypal",
+        "Stax",
+        "Billwerk",
+        "Hipay",
+        "Trustpayments",
+        "Redsys",
+        "Globalpay",
+        "Nuvei",
+        "Iatapay",
+        "Nmi",
+        "Shift4",
+        "Paybox",
+        "Barclaycard",
+        "Nexixpay",
+        "Mollie",
+        "Airwallex",
+        "Tsys",
+        "Bankofamerica",
+        "Powertranz",
+        "Getnet",
+        "Jpmorgan",
+        "Bambora",
+        "Payme",
+        "Revolut",
+        "Gigadat",
+        "Loonio",
+        "Wellsfargo",
+        "Hyperpg",
+        "Zift",
+        "Revolv3",
+        "Ppro",
+        "Fiservcommercehub",
+        "Truelayer",
+        "Peachpayments",
+        "Finix"
+      ],
+      "derives": [
+        "Clone",
+        "Copy",
+        "Debug",
+        "Display",
+        "EnumString",
+        "serde::Deserialize",
+        "Eq",
+        "Hash",
+        "PartialEq",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateReferenceId",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "ConnectorMandateId",
+        "NetworkMandateId",
+        "NetworkTokenWithNTI"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ResponseId",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "ConnectorTransactionId",
+        "EncodedData",
+        "NoResponseId"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentsResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "TransactionResponse",
+        "SdkSessionTokenResponse",
+        "PreAuthenticateResponse",
+        "AuthenticateResponse",
+        "PostAuthenticateResponse",
+        "MultipleCaptureResponse",
+        "IncrementalAuthorizationResponse"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodUpdate",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CaptureSyncResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Success",
+        "Error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ThreeDsCompletionIndicator",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Success",
+        "Failure",
+        "NotAvailable"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "HttpMethod",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Options",
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Head",
+        "Trace",
+        "Connect",
+        "Patch"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "EventType",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "PaymentIntentFailure",
+        "PaymentIntentSuccess",
+        "PaymentIntentProcessing",
+        "PaymentIntentPartiallyFunded",
+        "PaymentIntentCancelled",
+        "PaymentIntentCancelFailure",
+        "PaymentIntentAuthorizationSuccess",
+        "PaymentIntentAuthorizationFailure",
+        "PaymentIntentCaptureSuccess",
+        "PaymentIntentCaptureFailure",
+        "PaymentIntentExpired",
+        "PaymentActionRequired",
+        "SourceChargeable",
+        "SourceTransactionCreated",
+        "RefundFailure",
+        "RefundSuccess",
+        "DisputeOpened",
+        "DisputeExpired",
+        "DisputeAccepted",
+        "DisputeCancelled",
+        "DisputeChallenged",
+        "DisputeWon",
+        "DisputeLost",
+        "MandateActive",
+        "MandateFailed",
+        "MandateRevoked",
+        "EndpointVerification",
+        "ExternalAuthenticationAres",
+        "FrmApproved",
+        "FrmRejected",
+        "PayoutSuccess",
+        "PayoutFailure",
+        "PayoutProcessing",
+        "PayoutCancelled",
+        "PayoutCreated",
+        "PayoutExpired",
+        "PayoutReversed",
+        "RecoveryPaymentFailure",
+        "RecoveryPaymentSuccess",
+        "RecoveryPaymentPending",
+        "RecoveryInvoiceCancel",
+        "IncomingWebhookEventUnspecified",
+        "Payment",
+        "Refund",
+        "Dispute"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SplitPaymentsRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "StripeSplitPayment"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorChargeResponseData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "StripeSplitPayment"
+      ],
+      "derives": [
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SplitRefundsRequest",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "StripeSplitRefund"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ChargeRefundsOptions",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Destination",
+        "Direct"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NextActionCall",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "PostSessionTokens",
+        "Confirm"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePaySessionResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "ThirdPartySdk"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SessionToken",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "GooglePay",
+        "Paypal",
+        "ApplePay"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpaySessionTokenResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "GooglePaySession"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayBillingAddressFormat",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "FULL",
+        "MIN"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RecurringPaymentIntervalUnit",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Year",
+        "Month",
+        "Day",
+        "Hour",
+        "Minute"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayPaymentTiming",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Immediate",
+        "Recurring"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayAddressParameters",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "PostalAddress",
+        "Phone",
+        "Email"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaypalFlow",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "variants": [
+        "Checkout"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApiClientError",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "HeaderMapConstructionFailed",
+        "InvalidProxyConfiguration",
+        "ClientConstructionFailed",
+        "CertificateDecodeFailed",
+        "BodySerializationFailed",
+        "UnexpectedState",
+        "UrlParsingFailed",
+        "UrlEncodingFailed",
+        "RequestNotSent",
+        "ResponseDecodingFailed",
+        "RequestTimeoutReceived",
+        "ConnectionClosedIncompleteMessage",
+        "InternalServerErrorReceived",
+        "BadGatewayReceived",
+        "ServiceUnavailableReceived",
+        "GatewayTimeoutReceived",
+        "UnexpectedServerResponse"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplicationErrorResponse",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "Unauthorized",
+        "ForbiddenCommonResource",
+        "ForbiddenPrivateResource",
+        "Conflict",
+        "Gone",
+        "Unprocessable",
+        "InternalServerError",
+        "NotImplemented",
+        "NotFound",
+        "MethodNotAllowed",
+        "BadRequest",
+        "DomainError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "Display"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ParsingError",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "StructParseFailure",
+        "EncodeError"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ErrorType",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "InvalidRequestError",
+        "ObjectNotFound",
+        "RouterError",
+        "ProcessingError",
+        "BadGateway",
+        "ServerNotAvailable",
+        "DuplicateRequest",
+        "ValidationError",
+        "ConnectorError",
+        "LockTimeout"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApiErrorResponse",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "ExternalConnectorError",
+        "PaymentAuthorizationFailed",
+        "PaymentAuthenticationFailed",
+        "PaymentCaptureFailed",
+        "InvalidCardData",
+        "CardExpired",
+        "RefundFailed",
+        "VerificationFailed",
+        "DisputeFailed",
+        "ResourceBusy",
+        "InternalServerError",
+        "HealthCheckError",
+        "CurrencyConversionFailed",
+        "DuplicateRefundRequest",
+        "DuplicateMandate",
+        "DuplicateMerchantAccount",
+        "DuplicateMerchantConnectorAccount",
+        "DuplicatePaymentMethod",
+        "DuplicatePayment",
+        "DuplicatePayout",
+        "DuplicateConfig",
+        "RefundNotFound",
+        "PaymentLinkNotFound",
+        "CustomerNotFound",
+        "ConfigNotFound",
+        "PaymentNotFound",
+        "PaymentMethodNotFound",
+        "MerchantAccountNotFound",
+        "MerchantConnectorAccountNotFound",
+        "ProfileNotFound",
+        "ProfileAcquirerNotFound",
+        "PollNotFound",
+        "ResourceIdNotFound",
+        "MandateNotFound",
+        "AuthenticationNotFound",
+        "MandateUpdateFailed",
+        "ApiKeyNotFound",
+        "PayoutNotFound",
+        "EventNotFound",
+        "MandateSerializationFailed",
+        "MandateDeserializationFailed",
+        "ReturnUrlUnavailable",
+        "RefundNotPossible",
+        "MandateValidationFailed",
+        "PaymentNotSucceeded",
+        "MerchantConnectorAccountDisabled",
+        "PaymentBlockedError",
+        "FileValidationFailed",
+        "DisputeStatusValidationFailed",
+        "SuccessfulPaymentNotFound",
+        "IncorrectConnectorNameGiven",
+        "AddressNotFound",
+        "DisputeNotFound",
+        "FileNotFound",
+        "FileNotAvailable",
+        "MissingTenantId",
+        "InvalidTenant",
+        "AmountConversionFailed",
+        "NotImplemented",
+        "Unauthorized",
+        "InvalidRequestUrl",
+        "InvalidHttpMethod",
+        "MissingRequiredField",
+        "InvalidDataFormat",
+        "InvalidRequestData",
+        "InvalidDataValue",
+        "ClientSecretNotGiven",
+        "ClientSecretExpired",
+        "ClientSecretInvalid",
+        "MandateActive",
+        "CustomerRedacted",
+        "MaximumRefundCount",
+        "RefundAmountExceedsPaymentAmount",
+        "PaymentUnexpectedState",
+        "InvalidEphemeralKey",
+        "PreconditionFailed",
+        "InvalidJwtToken",
+        "GenericUnauthorized",
+        "NotSupported",
+        "FlowNotSupported",
+        "MissingRequiredFields",
+        "AccessForbidden",
+        "FileProviderNotSupported",
+        "InvalidWalletToken",
+        "PaymentMethodDeleteFailed",
+        "InvalidCookie",
+        "ExtendedCardInfoNotFound",
+        "CurrencyNotSupported",
+        "UnprocessableEntity",
+        "InvalidConnectorConfiguration",
+        "InvalidCardIin",
+        "InvalidCardIinLength",
+        "MissingFile",
+        "MissingDisputeId",
+        "MissingFilePurpose",
+        "MissingFileContentType",
+        "GenericNotFoundError",
+        "GenericDuplicateError",
+        "IncorrectPaymentMethodConfiguration",
+        "LinkConfigurationError",
+        "PayoutFailed",
+        "CookieNotFound",
+        "PlatformAccountAuthNotSupported",
+        "InvalidPlatformOperation",
+        "ExternalVaultFailed",
+        "WebhookAuthenticationFailed",
+        "WebhookBadRequest",
+        "WebhookProcessingFailure",
+        "WebhookResourceNotFound",
+        "WebhookUnprocessableEntity",
+        "WebhookInvalidMerchantSecret",
+        "IntegrityCheckFailed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "router_derive::ApiError"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "NotImplementedMessage",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "Reason",
+        "Default"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorError",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "FailedToObtainIntegrationUrl",
+        "RequestEncodingFailed",
+        "RequestEncodingFailedWithReason",
+        "ParsingFailed",
+        "IntegrityCheckFailed",
+        "ResponseDeserializationFailed",
+        "ProcessingStepFailed",
+        "UnexpectedResponseError",
+        "RoutingRulesParsingError",
+        "FailedToObtainPreferredConnector",
+        "InvalidConnectorName",
+        "InvalidWallet",
+        "ResponseHandlingFailed",
+        "MissingRequiredField",
+        "MissingRequiredFields",
+        "FailedToObtainAuthType",
+        "FailedToObtainCertificate",
+        "NoConnectorMetaData",
+        "NoConnectorWalletDetails",
+        "FailedToObtainCertificateKey",
+        "SourceVerificationFailed",
+        "DecodingFailed",
+        "NotImplemented",
+        "NotSupported",
+        "FlowNotSupported",
+        "CaptureMethodNotSupported",
+        "MissingConnectorMandateID",
+        "MissingConnectorMandateMetadata",
+        "MissingConnectorTransactionID",
+        "MissingConnectorRefundID",
+        "MissingApplePayTokenData",
+        "WebhooksNotImplemented",
+        "WebhookBodyDecodingFailed",
+        "WebhookDecodingFailed",
+        "WebhookSignatureNotFound",
+        "WebhookSourceVerificationFailed",
+        "WebhookVerificationSecretNotFound",
+        "WebhookVerificationSecretInvalid",
+        "WebhookReferenceIdNotFound",
+        "WebhookEventTypeNotFound",
+        "WebhookResourceObjectNotFound",
+        "WebhookResponseEncodingFailed",
+        "InvalidDateFormat",
+        "DateFormattingFailed",
+        "InvalidDataFormat",
+        "MismatchedPaymentData",
+        "InvalidWalletToken",
+        "MissingConnectorRelatedTransactionID",
+        "FileValidationFailed",
+        "MissingConnectorRedirectionPayload",
+        "FailedAtConnector",
+        "MissingPaymentMethodType",
+        "InSufficientBalanceInPaymentMethod",
+        "RequestTimeoutReceived",
+        "CurrencyNotSupported",
+        "InvalidConnectorConfig",
+        "AmountConversionFailed",
+        "GenericError",
+        "MandatePaymentDataMismatch",
+        "MaxFieldLengthViolated",
+        "ConfigResolutionFailed"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "HttpClientError",
+      "file": "crates/types-traits/domain_types/src/errors.rs",
+      "variants": [
+        "HeaderMapConstructionFailed",
+        "InvalidProxyConfiguration",
+        "ClientConstructionFailed",
+        "CertificateDecodeFailed",
+        "BodySerializationFailed",
+        "UnexpectedState",
+        "UrlParsingFailed",
+        "UrlEncodingFailed",
+        "RequestNotSent",
+        "ResponseDecodingFailed",
+        "RequestTimeoutReceived",
+        "ConnectionClosedIncompleteMessage",
+        "InternalServerErrorReceived",
+        "BadGatewayReceived",
+        "ServiceUnavailableReceived",
+        "GatewayTimeoutReceived",
+        "UnexpectedServerResponse"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "thiserror::Error",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AcceptanceType",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "variants": [
+        "Online",
+        "Offline"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateDataType",
+      "file": "crates/types-traits/domain_types/src/mandates.rs",
+      "variants": [
+        "SingleUse",
+        "MultiUse"
+      ],
+      "derives": [
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Card",
+        "CardDetailsForNetworkTransactionId",
+        "DecryptedWalletTokenDetailsForNetworkTransactionId",
+        "CardRedirect",
+        "Wallet",
+        "PayLater",
+        "BankRedirect",
+        "BankDebit",
+        "BankTransfer",
+        "Crypto",
+        "MandatePayment",
+        "Reward",
+        "RealTimePayment",
+        "Upi",
+        "Voucher",
+        "GiftCard",
+        "CardToken",
+        "OpenBanking",
+        "NetworkToken",
+        "MobilePayment"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OpenBankingData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "OpenBankingPIS"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MobilePaymentData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "DirectCarrierBilling"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GiftCardData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Givex",
+        "PaySafeCard"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VoucherData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Boleto",
+        "Efecty",
+        "PagoEfectivo",
+        "RedCompra",
+        "RedPagos",
+        "Alfamart",
+        "Indomaret",
+        "Oxxo",
+        "SevenEleven",
+        "Lawson",
+        "MiniStop",
+        "FamilyMart",
+        "Seicomart",
+        "PayEasy"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpiData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "UpiCollect",
+        "UpiIntent",
+        "UpiQr"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "UpiSource",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "UpiCc",
+        "UpiCl",
+        "UpiAccount",
+        "UpiCcCl",
+        "UpiPpi",
+        "UpiVoucher"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RealTimePaymentData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "DuitNow",
+        "Fps",
+        "PromptPay",
+        "VietQr"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankTransferData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "AchBankTransfer",
+        "SepaBankTransfer",
+        "BacsBankTransfer",
+        "MultibancoBankTransfer",
+        "PermataBankTransfer",
+        "BcaBankTransfer",
+        "BniVaBankTransfer",
+        "BriVaBankTransfer",
+        "CimbVaBankTransfer",
+        "DanamonVaBankTransfer",
+        "MandiriVaBankTransfer",
+        "Pix",
+        "Pse",
+        "LocalBankTransfer",
+        "InstantBankTransfer",
+        "InstantBankTransferFinland",
+        "InstantBankTransferPoland",
+        "IndonesianBankTransfer"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankDebitData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "AchBankDebit",
+        "SepaBankDebit",
+        "SepaGuaranteedBankDebit",
+        "BecsBankDebit",
+        "BacsBankDebit"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankRedirectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "BancontactCard",
+        "Bizum",
+        "Blik",
+        "Eps",
+        "Giropay",
+        "Ideal",
+        "Interac",
+        "OnlineBankingCzechRepublic",
+        "OnlineBankingFinland",
+        "OnlineBankingPoland",
+        "OnlineBankingSlovakia",
+        "OpenBankingUk",
+        "Przelewy24",
+        "Sofort",
+        "Trustly",
+        "OnlineBankingFpx",
+        "OnlineBankingThailand",
+        "LocalBankRedirect",
+        "Eft",
+        "OpenBanking"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayLaterData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "KlarnaRedirect",
+        "KlarnaSdk",
+        "AffirmRedirect",
+        "AfterpayClearpayRedirect",
+        "PayBrightRedirect",
+        "WalleyRedirect",
+        "AlmaRedirect",
+        "AtomeRedirect"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "WalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "AliPayQr",
+        "AliPayRedirect",
+        "AliPayHkRedirect",
+        "BluecodeRedirect",
+        "AmazonPayRedirect",
+        "MomoRedirect",
+        "KakaoPayRedirect",
+        "GoPayRedirect",
+        "GcashRedirect",
+        "ApplePay",
+        "ApplePayRedirect",
+        "ApplePayThirdPartySdk",
+        "DanaRedirect",
+        "GooglePay",
+        "GooglePayRedirect",
+        "GooglePayThirdPartySdk",
+        "MbWayRedirect",
+        "MobilePayRedirect",
+        "PaypalRedirect",
+        "PaypalSdk",
+        "Paze",
+        "SamsungPay",
+        "TwintRedirect",
+        "VippsRedirect",
+        "TouchNGoRedirect",
+        "WeChatPayRedirect",
+        "WeChatPayQr",
+        "CashappQr",
+        "SwishQr",
+        "Mifinity",
+        "RevolutPay",
+        "MbWay",
+        "Satispay",
+        "Wero"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PazeWalletData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "CompleteResponse",
+        "Decrypted"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GpayTokenizationData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Decrypted",
+        "Encrypted"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApplePayPaymentData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Decrypted",
+        "Encrypted"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardRedirectData",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Knet",
+        "Benefit",
+        "MomoAtm",
+        "CardRedirect"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "TokenSource",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "GooglePay",
+        "ApplePay"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardType",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "Credit",
+        "Debit"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "ToSchema",
+        "strum::EnumString",
+        "strum::Display",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankTransferInstructions",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "variants": [
+        "AchCreditTransfer",
+        "Multibanco"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutMethodData",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "variants": [
+        "Card",
+        "Bank",
+        "Wallet",
+        "BankRedirect",
+        "Passthrough"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Bank",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "variants": [
+        "Ach",
+        "Bacs",
+        "Sepa",
+        "Pix"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Wallet",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "variants": [
+        "ApplePayDecrypt",
+        "Paypal",
+        "Venmo"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "BankRedirect",
+      "file": "crates/types-traits/domain_types/src/payouts/payout_method_data.rs",
+      "variants": [
+        "Interac",
+        "OpenBankingUk"
+      ],
+      "derives": [
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorAuthType",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "variants": [
+        "TemporaryAuth",
+        "HeaderKey",
+        "BodyKey",
+        "SignatureKey",
+        "MultiAuthKey",
+        "CurrencyAuthKey",
+        "CertificateAuth",
+        "NoKey"
+      ],
+      "derives": [
+        "Default",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorSpecificConfig",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "variants": [
+        "Stripe",
+        "Calida",
+        "Celero",
+        "Helcim",
+        "Mifinity",
+        "Multisafepay",
+        "Nexixpay",
+        "Revolut",
+        "Shift4",
+        "Stax",
+        "Xendit",
+        "Bambora",
+        "Nexinets",
+        "Ppro",
+        "Razorpay",
+        "RazorpayV2",
+        "Aci",
+        "Airwallex",
+        "Authorizedotnet",
+        "Billwerk",
+        "Bluesnap",
+        "Cashfree",
+        "Cryptopay",
+        "Datatrans",
+        "Globalpay",
+        "Hipay",
+        "Jpmorgan",
+        "Loonio",
+        "Paysafe",
+        "Payu",
+        "Placetopay",
+        "Powertranz",
+        "Rapyd",
+        "Authipay",
+        "Fiservemea",
+        "Mollie",
+        "Nmi",
+        "Payme",
+        "Peachpayments",
+        "Braintree",
+        "Truelayer",
+        "Worldpay",
+        "Adyen",
+        "BankOfAmerica",
+        "Bamboraapac",
+        "Barclaycard",
+        "Checkout",
+        "Cybersource",
+        "Dlocal",
+        "Elavon",
+        "Fiserv",
+        "Fiuu",
+        "Getnet",
+        "Gigadat",
+        "Hyperpg",
+        "Iatapay",
+        "Noon",
+        "Novalnet",
+        "Nuvei",
+        "Phonepe",
+        "Redsys",
+        "Silverflow",
+        "Trustpay",
+        "Trustpayments",
+        "Tsys",
+        "Wellsfargo",
+        "Worldpayvantiv",
+        "Worldpayxml",
+        "Zift",
+        "Paypal",
+        "Forte",
+        "Paybox",
+        "Paytm",
+        "Volt",
+        "Cashtocode",
+        "Payload",
+        "Screenstream",
+        "Ebanx",
+        "Globepay",
+        "Coinbase",
+        "Coingate",
+        "Revolv3",
+        "Finix",
+        "Fiservcommercehub"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodToken",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "variants": [
+        "Token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AdditionalPaymentMethodConnectorResponse",
+      "file": "crates/types-traits/domain_types/src/router_data.rs",
+      "variants": [
+        "Card",
+        "Upi",
+        "GooglePay",
+        "ApplePay",
+        "BankRedirect"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SyncRequestType",
+      "file": "crates/types-traits/domain_types/src/router_request_types.rs",
+      "variants": [
+        "MultipleCaptureSync",
+        "SinglePaymentSync"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RedirectForm",
+      "file": "crates/types-traits/domain_types/src/router_response_types.rs",
+      "variants": [
+        "Form",
+        "Html",
+        "BlueSnap",
+        "CybersourceAuthSetup",
+        "CybersourceConsumerAuth",
+        "DeutschebankThreeDSChallengeFlow",
+        "Payme",
+        "Braintree",
+        "Nmi",
+        "Mifinity",
+        "WorldpayDDCForm",
+        "Uri"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookStatus",
+      "file": "crates/types-traits/domain_types/src/router_response_types.rs",
+      "variants": [
+        "SourceVerified",
+        "SourceNotVerified"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodSpecificFeatures",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "variants": [
+        "Card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "ToSchema",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "FeatureStatus",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "variants": [
+        "NotSupported",
+        "Supported"
+      ],
+      "derives": [
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentConnectorCategory",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "variants": [
+        "PaymentGateway",
+        "AlternativePaymentMethod",
+        "BankAcquirer"
+      ],
+      "derives": [
+        "Clone",
+        "Copy",
+        "Debug",
+        "Eq",
+        "Hash",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "strum::Display",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodDataType",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "variants": [
+        "Card",
+        "Bluecode",
+        "Knet",
+        "Benefit",
+        "MomoAtm",
+        "CardRedirect",
+        "AliPayQr",
+        "AliPayRedirect",
+        "AliPayHkRedirect",
+        "AmazonPayRedirect",
+        "MomoRedirect",
+        "KakaoPayRedirect",
+        "GoPayRedirect",
+        "GcashRedirect",
+        "ApplePay",
+        "ApplePayRedirect",
+        "ApplePayThirdPartySdk",
+        "DanaRedirect",
+        "DuitNow",
+        "GooglePay",
+        "GooglePayRedirect",
+        "GooglePayThirdPartySdk",
+        "MbWayRedirect",
+        "MobilePayRedirect",
+        "PaypalRedirect",
+        "PaypalSdk",
+        "Paze",
+        "SamsungPay",
+        "TwintRedirect",
+        "VippsRedirect",
+        "TouchNGoRedirect",
+        "WeChatPayRedirect",
+        "WeChatPayQr",
+        "CashappQr",
+        "SwishQr",
+        "KlarnaRedirect",
+        "KlarnaSdk",
+        "AffirmRedirect",
+        "AfterpayClearpayRedirect",
+        "PayBrightRedirect",
+        "WalleyRedirect",
+        "AlmaRedirect",
+        "AtomeRedirect",
+        "BancontactCard",
+        "Bizum",
+        "Blik",
+        "Eft",
+        "Eps",
+        "Giropay",
+        "Ideal",
+        "Interac",
+        "LocalBankRedirect",
+        "OnlineBankingCzechRepublic",
+        "OnlineBankingFinland",
+        "OnlineBankingPoland",
+        "OnlineBankingSlovakia",
+        "OpenBankingUk",
+        "Przelewy24",
+        "Sofort",
+        "Trustly",
+        "OnlineBankingFpx",
+        "OnlineBankingThailand",
+        "AchBankDebit",
+        "SepaBankDebit",
+        "BecsBankDebit",
+        "BacsBankDebit",
+        "AchBankTransfer",
+        "SepaBankTransfer",
+        "BacsBankTransfer",
+        "MultibancoBankTransfer",
+        "PermataBankTransfer",
+        "BcaBankTransfer",
+        "BniVaBankTransfer",
+        "BriVaBankTransfer",
+        "CimbVaBankTransfer",
+        "DanamonVaBankTransfer",
+        "MandiriVaBankTransfer",
+        "Pix",
+        "Pse",
+        "Crypto",
+        "MandatePayment",
+        "Reward",
+        "Upi",
+        "Boleto",
+        "Efecty",
+        "PagoEfectivo",
+        "RedCompra",
+        "RedPagos",
+        "Alfamart",
+        "Indomaret",
+        "Oxxo",
+        "SevenEleven",
+        "Lawson",
+        "MiniStop",
+        "FamilyMart",
+        "Seicomart",
+        "PayEasy",
+        "Givex",
+        "PaySafeCar",
+        "CardToken",
+        "LocalBankTransfer",
+        "Mifinity",
+        "Fps",
+        "PromptPay",
+        "VietQr",
+        "OpenBanking",
+        "NetworkToken",
+        "NetworkTransactionIdAndCardDetails",
+        "DirectCarrierBilling",
+        "InstantBankTransfer",
+        "InstantBankTransferPoland",
+        "InstantBankTransferFinland",
+        "CardDetailsForNetworkTransactionId",
+        "RevolutPay",
+        "MbWay",
+        "Satispay",
+        "Wero",
+        "SepaGuaranteedBankDebit",
+        "IndonesianBankTransfer"
+      ],
+      "derives": [
+        "Debug",
+        "strum::Display",
+        "Eq",
+        "PartialEq",
+        "Hash"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardIssuer",
+      "file": "crates/types-traits/domain_types/src/utils.rs",
+      "variants": [
+        "AmericanExpress",
+        "Master",
+        "Maestro",
+        "Visa",
+        "Discover",
+        "DinersClub",
+        "JCB",
+        "CarteBlanche",
+        "CartesBancaires",
+        "UnionPay"
+      ],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "strum::Display",
+        "Eq",
+        "Hash",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "RawConnectorRequestResponse",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "methods": [
+        "set_raw_connector_response",
+        "get_raw_connector_response",
+        "set_raw_connector_request",
+        "get_raw_connector_request"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorResponseHeaders",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "methods": [
+        "set_connector_response_headers",
+        "get_connector_response_headers",
+        "get_connector_response_headers_as_map"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorSpecifications",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "methods": [
+        "get_supported_payment_methods",
+        "get_supported_webhook_flows",
+        "get_connector_about"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "SupportedPaymentMethodsExt",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "methods": [
+        "add"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RecurringMandateData",
+      "file": "crates/types-traits/domain_types/src/connector_types.rs",
+      "methods": [
+        "get_original_payment_amount",
+        "get_original_payment_currency"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodDataTypes",
+      "file": "crates/types-traits/domain_types/src/payment_method_data.rs",
+      "methods": [
+        "peek_inner",
+        "is_cobadged_inner"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "HasConnectors",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "methods": [
+        "connectors"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "CardConversionHelper",
+      "file": "crates/types-traits/domain_types/src/types.rs",
+      "methods": [
+        "convert_card_details"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ForeignTryFrom",
+      "file": "crates/types-traits/domain_types/src/utils.rs",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ForeignFrom",
+      "file": "crates/types-traits/domain_types/src/utils.rs",
+      "methods": [
+        "foreign_from"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ValueExt",
+      "file": "crates/types-traits/domain_types/src/utils.rs",
+      "methods": [
+        "parse_value"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "Encode",
+      "file": "crates/types-traits/domain_types/src/utils.rs",
+      "methods": [
+        "encode_to_value"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    }
+  ]
+}

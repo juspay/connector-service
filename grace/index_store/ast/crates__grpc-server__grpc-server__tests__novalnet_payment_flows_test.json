@@ -1,0 +1,101 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/novalnet_payment_flows_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_timestamp",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "u64",
+      "line": 29
+    },
+    {
+      "name": "generate_unique_id",
+      "visibility": "",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 37
+    },
+    {
+      "name": "add_novalnet_metadata",
+      "visibility": "",
+      "parameters": [
+        "request: &mut Request<T>"
+      ],
+      "return_type": "",
+      "line": 55
+    },
+    {
+      "name": "create_authorize_request",
+      "visibility": "",
+      "parameters": [
+        "capture_method: CaptureMethod"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 99
+    },
+    {
+      "name": "test_health",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 153
+    },
+    {
+      "name": "test_payment_authorization_auto_capture",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 172
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use std::{\n    str::FromStr,\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use cards::CardNumber;",
+    "use grpc_api_types::{\n    health_check::{health_client::HealthClient, HealthCheckRequest},\n    payments::{\n        payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,\n        CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,\n        PaymentServiceAuthorizeRequest, PaymentStatus,\n    },\n};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use tonic::{transport::Channel, Request};",
+    "use uuid::Uuid;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 38
+    },
+    {
+      "name": "panic",
+      "line": 65
+    },
+    {
+      "name": "format",
+      "line": 92
+    },
+    {
+      "name": "grpc_test",
+      "line": 154
+    },
+    {
+      "name": "grpc_test",
+      "line": 154
+    },
+    {
+      "name": "grpc_test",
+      "line": 173
+    },
+    {
+      "name": "grpc_test",
+      "line": 173
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

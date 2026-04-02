@@ -1,0 +1,214 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/global_id/payment_methods.rs",
+  "structs": [
+    {
+      "name": "GlobalPaymentMethodId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 11
+    },
+    {
+      "name": "GlobalPaymentMethodSessionId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 16
+    }
+  ],
+  "enums": [
+    {
+      "name": "GlobalPaymentMethodIdError",
+      "visibility": "pub",
+      "variants": [
+        "ConstructionError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 19
+    },
+    {
+      "name": "GlobalPaymentMethodSessionIdError",
+      "visibility": "pub",
+      "variants": [
+        "ConstructionError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "thiserror::Error",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 25
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalPaymentMethodSessionId",
+      "trait_name": null,
+      "methods": [
+        "generate",
+        "get_string_repr",
+        "get_redis_key"
+      ],
+      "line": 30
+    },
+    {
+      "type_name": "GlobalPaymentMethodSessionId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 50
+    },
+    {
+      "type_name": "GlobalPaymentMethodId",
+      "trait_name": null,
+      "methods": [
+        "generate",
+        "get_string_repr",
+        "generate_from_string"
+      ],
+      "line": 58
+    }
+  ],
+  "functions": [
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "error_stack::Result<Self, GlobalPaymentMethodSessionIdError>",
+      "line": 32
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 40
+    },
+    {
+      "name": "get_redis_key",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 45
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 51
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "error_stack::Result<Self, GlobalPaymentMethodIdError>",
+      "line": 60
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 66
+    },
+    {
+      "name": "generate_from_string",
+      "visibility": "pub",
+      "parameters": [
+        "value: String"
+      ],
+      "return_type": "CustomResult<Self, GlobalPaymentMethodIdError>",
+      "line": 71
+    }
+  ],
+  "use_statements": [
+    "use error_stack::ResultExt;",
+    "use crate::{\n    errors::CustomResult,\n    global_id::{CellId, GlobalEntity, GlobalId},\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 46
+    }
+  ],
+  "modules": []
+}

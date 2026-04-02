@@ -1,0 +1,1463 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/finix/transformers.rs",
+  "structs": [
+    {
+      "name": "FinixAuthType",
+      "visibility": "pub",
+      "fields": [
+        "finix_user_name",
+        "finix_password",
+        "merchant_id",
+        "merchant_identity_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 24
+    },
+    {
+      "name": "FinixErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "total",
+        "embedded"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 90
+    },
+    {
+      "name": "FinixErrorEmbedded",
+      "visibility": "pub",
+      "fields": [
+        "errors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 126
+    },
+    {
+      "name": "FinixError",
+      "visibility": "pub",
+      "fields": [
+        "logref",
+        "message",
+        "code"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 131
+    },
+    {
+      "name": "FinixCreateIdentityRequest",
+      "visibility": "pub",
+      "fields": [
+        "entity",
+        "tags",
+        "identity_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 160
+    },
+    {
+      "name": "FinixIdentityEntity",
+      "visibility": "pub",
+      "fields": [
+        "phone",
+        "first_name",
+        "last_name",
+        "email",
+        "personal_address"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 168
+    },
+    {
+      "name": "FinixAddress",
+      "visibility": "pub",
+      "fields": [
+        "line1",
+        "line2",
+        "city",
+        "region",
+        "postal_code",
+        "country"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 177
+    },
+    {
+      "name": "FinixIdentityResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "created_at",
+        "updated_at",
+        "application",
+        "entity",
+        "tags"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 192
+    },
+    {
+      "name": "FinixCreatePaymentInstrumentRequest",
+      "visibility": "pub",
+      "fields": [
+        "instrument_type",
+        "name",
+        "number",
+        "security_code",
+        "expiration_month",
+        "expiration_year",
+        "identity",
+        "tags",
+        "address",
+        "merchant_identity",
+        "third_party_token",
+        "account_number",
+        "bank_code",
+        "account_type"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 204
+    },
+    {
+      "name": "FinixInstrumentResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "created_at",
+        "updated_at",
+        "application",
+        "identity",
+        "instrument_type",
+        "tags",
+        "card_type",
+        "card_brand",
+        "fingerprint",
+        "name",
+        "currency",
+        "enabled"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 248
+    },
+    {
+      "name": "FinixAuthorizeRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "source",
+        "merchant",
+        "idempotency_id",
+        "tags"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 268
+    },
+    {
+      "name": "FinixAuthorizeResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "amount",
+        "currency",
+        "state",
+        "links",
+        "failure_code",
+        "failure_message",
+        "transfer"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 280
+    },
+    {
+      "name": "FinixLinks",
+      "visibility": "pub",
+      "fields": [
+        "self_",
+        "application",
+        "merchant_identity"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 293
+    },
+    {
+      "name": "FinixLink",
+      "visibility": "pub",
+      "fields": [
+        "href"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 301
+    },
+    {
+      "name": "FinixPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "amount",
+        "currency",
+        "state",
+        "links",
+        "failure_code",
+        "failure_message",
+        "transfer"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 478
+    },
+    {
+      "name": "FinixCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "capture_amount",
+        "idempotency_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 545
+    },
+    {
+      "name": "FinixVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "void_me"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 613
+    },
+    {
+      "name": "FinixRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "refund_amount",
+        "idempotency_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 623
+    }
+  ],
+  "enums": [
+    {
+      "name": "FinixId",
+      "visibility": "pub",
+      "variants": [
+        "Auth",
+        "Transfer"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone"
+      ],
+      "line": 97
+    },
+    {
+      "name": "FinixIdentityType",
+      "visibility": "pub",
+      "variants": [
+        "PERSONAL"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 187
+    },
+    {
+      "name": "FinixPaymentInstrumentType",
+      "visibility": "pub",
+      "variants": [
+        "PaymentCard",
+        "GooglePay",
+        "ApplePay",
+        "BankAccount",
+        "Unknown"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 234
+    },
+    {
+      "name": "FinixPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Succeeded",
+        "Failed",
+        "Pending",
+        "Canceled",
+        "Unknown"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 307
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "FinixAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 31
+    },
+    {
+      "type_name": "FinixAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 54
+    },
+    {
+      "type_name": "FinixAuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_basic_auth"
+      ],
+      "line": 78
+    },
+    {
+      "type_name": "FinixId",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 102
+    },
+    {
+      "type_name": "FinixId",
+      "trait_name": "std::fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 116
+    },
+    {
+      "type_name": "FinixErrorResponse",
+      "trait_name": null,
+      "methods": [
+        "get_code",
+        "get_message"
+      ],
+      "line": 137
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 315
+    },
+    {
+      "type_name": "FinixAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 329
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 396
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 494
+    },
+    {
+      "type_name": "FinixCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 556
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 581
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 639
+    },
+    {
+      "type_name": "FinixVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 666
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 688
+    },
+    {
+      "type_name": "FinixRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 726
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 751
+    },
+    {
+      "type_name": "FinixCreateIdentityRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 779
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 839
+    },
+    {
+      "type_name": "FinixCreatePaymentInstrumentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 864
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 989
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorAuthType"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 34
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 57
+    },
+    {
+      "name": "generate_basic_auth",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 79
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "id: String"
+      ],
+      "return_type": "Self",
+      "line": 103
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 117
+    },
+    {
+      "name": "get_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 139
+    },
+    {
+      "name": "get_message",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 149
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: &FinixPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 316
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::FinixRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 344
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 402
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixPSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 499
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::FinixRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 566
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixCaptureResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 586
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixRSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 644
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: super::FinixRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 676
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixVoidResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 693
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::FinixRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 736
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 756
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::FinixRouterData<\n            RouterDataV2<\n                CreateConnectorCustomer,\n                PaymentFlowData,\n                ConnectorCustomerData,\n                ConnectorCustomerResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 794
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixIdentityResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 849
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: super::FinixRouterData<\n            RouterDataV2<\n                PaymentMethodToken,\n                PaymentFlowData,\n                PaymentMethodTokenizationData<T>,\n                PaymentMethodTokenResponse,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 879
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<FinixInstrumentResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1000
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, Currency, RefundStatus};",
+    "use common_utils::{pii::Email, types::MinorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,\n    },\n    connector_types::{\n        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{self, ConnectorAuthType, ConnectorSpecificConfig},\n    router_data_v2::RouterDataV2,\n};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use std::collections::HashMap;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 47
+    },
+    {
+      "name": "report",
+      "line": 71
+    },
+    {
+      "name": "format",
+      "line": 80
+    },
+    {
+      "name": "warn",
+      "line": 110
+    },
+    {
+      "name": "warn",
+      "line": 110
+    },
+    {
+      "name": "write",
+      "line": 119
+    },
+    {
+      "name": "write",
+      "line": 120
+    }
+  ],
+  "modules": []
+}

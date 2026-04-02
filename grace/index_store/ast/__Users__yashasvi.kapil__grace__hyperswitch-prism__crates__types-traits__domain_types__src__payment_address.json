@@ -1,0 +1,672 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/domain_types/src/payment_address.rs",
+  "structs": [
+    {
+      "name": "PaymentAddress",
+      "visibility": "pub",
+      "fields": [
+        "shipping",
+        "billing",
+        "unified_payment_method_billing",
+        "payment_method_billing"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug"
+      ],
+      "line": 10
+    },
+    {
+      "name": "Address",
+      "visibility": "pub",
+      "fields": [
+        "address",
+        "phone",
+        "email"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 92
+    },
+    {
+      "name": "AddressDetails",
+      "visibility": "pub",
+      "fields": [
+        "city",
+        "country",
+        "line1",
+        "line2",
+        "line3",
+        "zip",
+        "state",
+        "first_name",
+        "last_name",
+        "origin_zip"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Eq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "PartialEq"
+      ],
+      "line": 162
+    },
+    {
+      "name": "PhoneDetails",
+      "visibility": "pub",
+      "fields": [
+        "number",
+        "country_code"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Eq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 349
+    },
+    {
+      "name": "RedirectionResponse",
+      "visibility": "pub",
+      "fields": [
+        "return_url_with_query_params"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Eq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq",
+        "serde::Deserialize"
+      ],
+      "line": 389
+    },
+    {
+      "name": "OrderDetailsWithAmount",
+      "visibility": "pub",
+      "fields": [
+        "product_name",
+        "quantity",
+        "amount",
+        "tax_rate",
+        "total_tax_amount",
+        "requires_shipping",
+        "product_img_link",
+        "product_id",
+        "category",
+        "sub_category",
+        "brand",
+        "description",
+        "unit_of_measure",
+        "product_type",
+        "product_tax_code",
+        "sku",
+        "upc",
+        "commodity_code",
+        "total_amount",
+        "unit_discount_amount"
+      ],
+      "derives": [
+        "Clone",
+        "Default",
+        "Debug",
+        "Default",
+        "Clone",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Eq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq",
+        "serde::Deserialize",
+        "Debug",
+        "Default",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Clone"
+      ],
+      "line": 394
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PaymentAddress",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "get_shipping",
+        "get_payment_method_billing",
+        "unify_with_payment_method_data_billing",
+        "get_request_payment_method_billing",
+        "get_payment_billing"
+      ],
+      "line": 17
+    },
+    {
+      "type_name": "Address",
+      "trait_name": "SerializableSecret",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Address",
+      "trait_name": null,
+      "methods": [
+        "unify_address"
+      ],
+      "line": 103
+    },
+    {
+      "type_name": "Address",
+      "trait_name": null,
+      "methods": [
+        "get_email",
+        "get_phone_with_country_code",
+        "get_optional_country",
+        "get_optional_full_name",
+        "get_optional_first_name",
+        "get_optional_last_name"
+      ],
+      "line": 118
+    },
+    {
+      "type_name": "AddressDetails",
+      "trait_name": null,
+      "methods": [
+        "get_optional_full_name",
+        "get_optional_first_name",
+        "get_optional_last_name",
+        "unify_address_details"
+      ],
+      "line": 193
+    },
+    {
+      "type_name": "AddressDetails",
+      "trait_name": null,
+      "methods": [
+        "get_first_name",
+        "get_last_name",
+        "get_full_name",
+        "get_line1",
+        "get_city",
+        "get_state",
+        "get_line2",
+        "get_zip",
+        "get_country",
+        "get_combined_address_line",
+        "get_optional_line2",
+        "get_optional_country",
+        "to_state_code",
+        "to_state_code_as_optional"
+      ],
+      "line": 244
+    },
+    {
+      "type_name": "PhoneDetails",
+      "trait_name": null,
+      "methods": [
+        "get_country_code",
+        "extract_country_code",
+        "get_number",
+        "get_number_with_country_code",
+        "get_number_with_hash_country_code"
+      ],
+      "line": 356
+    },
+    {
+      "type_name": "OrderDetailsWithAmount",
+      "trait_name": "SerializableSecret",
+      "methods": [],
+      "line": 437
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "shipping: Option<Address>",
+        "billing: Option<Address>",
+        "payment_method_billing: Option<Address>",
+        "should_unify_address: Option<bool>"
+      ],
+      "return_type": "Self",
+      "line": 18
+    },
+    {
+      "name": "get_shipping",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&Address>",
+      "line": 53
+    },
+    {
+      "name": "get_payment_method_billing",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&Address>",
+      "line": 57
+    },
+    {
+      "name": "unify_with_payment_method_data_billing",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "payment_method_data_billing: Option<Address>"
+      ],
+      "return_type": "Self",
+      "line": 62
+    },
+    {
+      "name": "get_request_payment_method_billing",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&Address>",
+      "line": 81
+    },
+    {
+      "name": "get_payment_billing",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&Address>",
+      "line": 85
+    },
+    {
+      "name": "unify_address",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "other: Option<&Self>"
+      ],
+      "return_type": "Self",
+      "line": 105
+    },
+    {
+      "name": "get_email",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Email, Error>",
+      "line": 119
+    },
+    {
+      "name": "get_phone_with_country_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, error_stack::Report<crate::errors::ConnectorError>>",
+      "line": 123
+    },
+    {
+      "name": "get_optional_country",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<common_enums::CountryAlpha2>",
+      "line": 133
+    },
+    {
+      "name": "get_optional_full_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 139
+    },
+    {
+      "name": "get_optional_first_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 145
+    },
+    {
+      "name": "get_optional_last_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 151
+    },
+    {
+      "name": "get_optional_full_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 194
+    },
+    {
+      "name": "get_optional_first_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 206
+    },
+    {
+      "name": "get_optional_last_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 210
+    },
+    {
+      "name": "unify_address_details",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "other: Option<&Self>"
+      ],
+      "return_type": "Self",
+      "line": 214
+    },
+    {
+      "name": "get_first_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 245
+    },
+    {
+      "name": "get_last_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 251
+    },
+    {
+      "name": "get_full_name",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 257
+    },
+    {
+      "name": "get_line1",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 269
+    },
+    {
+      "name": "get_city",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 275
+    },
+    {
+      "name": "get_state",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 281
+    },
+    {
+      "name": "get_line2",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 287
+    },
+    {
+      "name": "get_zip",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&Secret<String>, Error>",
+      "line": 293
+    },
+    {
+      "name": "get_country",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<&common_enums::CountryAlpha2, Error>",
+      "line": 299
+    },
+    {
+      "name": "get_combined_address_line",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 305
+    },
+    {
+      "name": "get_optional_line2",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 313
+    },
+    {
+      "name": "get_optional_country",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<common_enums::CountryAlpha2>",
+      "line": 316
+    },
+    {
+      "name": "to_state_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 320
+    },
+    {
+      "name": "to_state_code_as_optional",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Option<Secret<String>>, Error>",
+      "line": 334
+    },
+    {
+      "name": "get_country_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 357
+    },
+    {
+      "name": "extract_country_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 362
+    },
+    {
+      "name": "get_number",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 366
+    },
+    {
+      "name": "get_number_with_country_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 371
+    },
+    {
+      "name": "get_number_with_hash_country_code",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<Secret<String>, Error>",
+      "line": 376
+    }
+  ],
+  "use_statements": [
+    "use common_enums::ProductType;",
+    "use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};",
+    "use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};",
+    "use crate::utils::{\n    convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 196
+    },
+    {
+      "name": "format",
+      "line": 265
+    },
+    {
+      "name": "format",
+      "line": 306
+    },
+    {
+      "name": "format",
+      "line": 374
+    },
+    {
+      "name": "format",
+      "line": 380
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,409 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/beta_tests/authorizedotnet_webhook_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "build_authorizedotnet_payment_profile_webhook_json_body",
+      "visibility": "",
+      "parameters": [
+        "event_type: &str",
+        "customer_profile_id: u64",
+        "payment_profile_id: &str",
+        "customer_type: &str"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 18
+    },
+    {
+      "name": "build_authorizedotnet_customer_webhook_json_body",
+      "visibility": "",
+      "parameters": [
+        "event_type: &str",
+        "customer_profile_id: &str",
+        "payment_profile_id: &str",
+        "merchant_customer_id: Option<&str>",
+        "description: Option<&str>"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 45
+    },
+    {
+      "name": "build_authorizedotnet_webhook_json_body",
+      "visibility": "",
+      "parameters": [
+        "event_type: &str",
+        "response_code: u8",
+        "transaction_id: &str",
+        "amount: Option<f64>",
+        "merchant_reference_id: Option<&str>",
+        "auth_code: Option<&str>",
+        "message_text: Option<&str>"
+      ],
+      "return_type": "serde_json::Value",
+      "line": 77
+    },
+    {
+      "name": "generate_webhook_signature",
+      "visibility": "",
+      "parameters": [
+        "webhook_body: &[u8]",
+        "secret: &str"
+      ],
+      "return_type": "String",
+      "line": 129
+    },
+    {
+      "name": "process_webhook_request",
+      "visibility": "",
+      "parameters": [
+        "client: &mut PaymentServiceClient<Channel>",
+        "json_body: serde_json::Value",
+        "include_signature: bool"
+      ],
+      "return_type": "Result<(), String>",
+      "line": 145
+    },
+    {
+      "name": "test_payment_authorization_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 249
+    },
+    {
+      "name": "test_payment_authorization_declined",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 279
+    },
+    {
+      "name": "test_payment_authorization_held",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 306
+    },
+    {
+      "name": "test_payment_authcapture_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 335
+    },
+    {
+      "name": "test_payment_authcapture_declined",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 362
+    },
+    {
+      "name": "test_payment_authcapture_held",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 388
+    },
+    {
+      "name": "test_payment_capture_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 416
+    },
+    {
+      "name": "test_payment_capture_declined",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 443
+    },
+    {
+      "name": "test_payment_void_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 471
+    },
+    {
+      "name": "test_payment_void_failed",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 497
+    },
+    {
+      "name": "test_payment_prior_auth_capture_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 525
+    },
+    {
+      "name": "test_payment_prior_auth_capture_declined",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 552
+    },
+    {
+      "name": "test_payment_refund_approved",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 580
+    },
+    {
+      "name": "test_payment_refund_declined",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 607
+    },
+    {
+      "name": "test_payment_refund_held",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 633
+    },
+    {
+      "name": "test_webhook_signature_verification_valid",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 662
+    },
+    {
+      "name": "test_webhook_missing_signature",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 685
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use hyperswitch_masking::ExposeInterface;",
+    "use std::fmt::Write;",
+    "use common_utils::crypto::{HmacSha512, SignMessage};",
+    "use grpc_api_types::payments::{\n    payment_service_client::PaymentServiceClient, PaymentServiceTransformRequest, RequestDetails,\n};",
+    "use serde_json::json;",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "json",
+      "line": 28
+    },
+    {
+      "name": "json",
+      "line": 35
+    },
+    {
+      "name": "json",
+      "line": 56
+    },
+    {
+      "name": "json",
+      "line": 67
+    },
+    {
+      "name": "json",
+      "line": 91
+    },
+    {
+      "name": "json",
+      "line": 99
+    },
+    {
+      "name": "json",
+      "line": 102
+    },
+    {
+      "name": "json",
+      "line": 106
+    },
+    {
+      "name": "json",
+      "line": 108
+    },
+    {
+      "name": "json",
+      "line": 112
+    },
+    {
+      "name": "json",
+      "line": 116
+    },
+    {
+      "name": "json",
+      "line": 117
+    },
+    {
+      "name": "json",
+      "line": 119
+    },
+    {
+      "name": "write",
+      "line": 138
+    },
+    {
+      "name": "format",
+      "line": 141
+    },
+    {
+      "name": "panic",
+      "line": 198
+    },
+    {
+      "name": "format",
+      "line": 238
+    },
+    {
+      "name": "grpc_test",
+      "line": 250
+    },
+    {
+      "name": "grpc_test",
+      "line": 250
+    },
+    {
+      "name": "grpc_test",
+      "line": 280
+    },
+    {
+      "name": "grpc_test",
+      "line": 280
+    },
+    {
+      "name": "grpc_test",
+      "line": 307
+    },
+    {
+      "name": "grpc_test",
+      "line": 307
+    },
+    {
+      "name": "grpc_test",
+      "line": 336
+    },
+    {
+      "name": "grpc_test",
+      "line": 336
+    },
+    {
+      "name": "grpc_test",
+      "line": 363
+    },
+    {
+      "name": "grpc_test",
+      "line": 363
+    },
+    {
+      "name": "grpc_test",
+      "line": 389
+    },
+    {
+      "name": "grpc_test",
+      "line": 389
+    },
+    {
+      "name": "grpc_test",
+      "line": 417
+    },
+    {
+      "name": "grpc_test",
+      "line": 417
+    },
+    {
+      "name": "grpc_test",
+      "line": 444
+    },
+    {
+      "name": "grpc_test",
+      "line": 444
+    },
+    {
+      "name": "grpc_test",
+      "line": 472
+    },
+    {
+      "name": "grpc_test",
+      "line": 472
+    },
+    {
+      "name": "grpc_test",
+      "line": 498
+    },
+    {
+      "name": "grpc_test",
+      "line": 498
+    },
+    {
+      "name": "grpc_test",
+      "line": 526
+    },
+    {
+      "name": "grpc_test",
+      "line": 526
+    },
+    {
+      "name": "grpc_test",
+      "line": 553
+    },
+    {
+      "name": "grpc_test",
+      "line": 553
+    },
+    {
+      "name": "grpc_test",
+      "line": 581
+    },
+    {
+      "name": "grpc_test",
+      "line": 581
+    },
+    {
+      "name": "grpc_test",
+      "line": 608
+    },
+    {
+      "name": "grpc_test",
+      "line": 608
+    },
+    {
+      "name": "grpc_test",
+      "line": 634
+    },
+    {
+      "name": "grpc_test",
+      "line": 634
+    },
+    {
+      "name": "grpc_test",
+      "line": 663
+    },
+    {
+      "name": "grpc_test",
+      "line": 663
+    },
+    {
+      "name": "grpc_test",
+      "line": 686
+    },
+    {
+      "name": "grpc_test",
+      "line": 686
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

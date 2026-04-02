@@ -1,0 +1,1008 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/multisafepay/transformers.rs",
+  "structs": [
+    {
+      "name": "MultisafepayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone"
+      ],
+      "line": 399
+    },
+    {
+      "name": "MultisafepayErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 419
+    },
+    {
+      "name": "MultisafepayErrorData",
+      "visibility": "pub",
+      "fields": [
+        "error_code",
+        "error_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 425
+    },
+    {
+      "name": "PaymentOptions",
+      "visibility": "pub",
+      "fields": [
+        "redirect_url",
+        "cancel_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 433
+    },
+    {
+      "name": "CustomerInfo",
+      "visibility": "pub",
+      "fields": [
+        "locale",
+        "ip_address",
+        "reference",
+        "email"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 439
+    },
+    {
+      "name": "GatewayInfo",
+      "visibility": "pub",
+      "fields": [
+        "card_number",
+        "card_expiry_date",
+        "card_cvc",
+        "card_holder_name",
+        "flexible_3d",
+        "moto",
+        "term_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 450
+    },
+    {
+      "name": "DeliveryObject",
+      "visibility": "pub",
+      "fields": [
+        "first_name",
+        "last_name",
+        "address1",
+        "house_number",
+        "zip_code",
+        "city",
+        "country"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 461
+    },
+    {
+      "name": "MultisafepayPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "order_type",
+        "order_id",
+        "gateway",
+        "currency",
+        "amount",
+        "description",
+        "payment_options",
+        "customer",
+        "gateway_info",
+        "delivery",
+        "days_active",
+        "seconds_active"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 481
+    },
+    {
+      "name": "MultisafepayPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 785
+    },
+    {
+      "name": "MultisafepayResponseData",
+      "visibility": "pub",
+      "fields": [
+        "order_id",
+        "payment_url",
+        "transaction_id",
+        "status",
+        "amount",
+        "currency",
+        "extra"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 795
+    },
+    {
+      "name": "MultisafepayRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "currency",
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 913
+    },
+    {
+      "name": "MultisafepayRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 970
+    },
+    {
+      "name": "MultisafepayRefundData",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "refund_id",
+        "order_id",
+        "error_code",
+        "error_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Default",
+        "Clone"
+      ],
+      "line": 976
+    }
+  ],
+  "enums": [
+    {
+      "name": "Type",
+      "visibility": "pub",
+      "variants": [
+        "Direct",
+        "Redirect"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 23
+    },
+    {
+      "name": "Gateway",
+      "visibility": "pub",
+      "variants": [
+        "Visa",
+        "Mastercard",
+        "Amex",
+        "Maestro",
+        "DinersClub",
+        "Discover",
+        "CreditCard",
+        "Ideal",
+        "PayPal",
+        "GooglePay",
+        "AliPay",
+        "WeChatPay",
+        "Trustly",
+        "Giropay",
+        "Sofort",
+        "Eps",
+        "DirectBank",
+        "MbWay"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 31
+    },
+    {
+      "name": "MultisafepayPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Completed",
+        "Declined",
+        "Initialized",
+        "Void",
+        "Uncleared"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 358
+    },
+    {
+      "name": "MultisafepayRefundStatus",
+      "visibility": "pub",
+      "variants": [
+        "Succeeded",
+        "Failed",
+        "Processing"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 381
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 367
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 388
+    },
+    {
+      "type_name": "MultisafepayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 403
+    },
+    {
+      "type_name": "MultisafepayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 503
+    },
+    {
+      "type_name": "MultisafepayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 650
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 825
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 868
+    },
+    {
+      "type_name": "MultisafepayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 919
+    },
+    {
+      "type_name": "MultisafepayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 954
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 984
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1010
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_order_type_from_payment_method",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>"
+      ],
+      "return_type": "Result<Type, error_stack::Report<errors::ConnectorError>>",
+      "line": 69
+    },
+    {
+      "name": "card_network_to_gateway",
+      "visibility": "",
+      "parameters": [
+        "network: &common_enums::CardNetwork"
+      ],
+      "return_type": "Option<Gateway>",
+      "line": 170
+    },
+    {
+      "name": "card_issuer_to_gateway",
+      "visibility": "",
+      "parameters": [
+        "issuer: domain_types::utils::CardIssuer"
+      ],
+      "return_type": "Option<Gateway>",
+      "line": 193
+    },
+    {
+      "name": "get_gateway_from_payment_method",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>"
+      ],
+      "return_type": "Result<Gateway, error_stack::Report<errors::ConnectorError>>",
+      "line": 211
+    },
+    {
+      "name": "get_card_number_string",
+      "visibility": "",
+      "parameters": [
+        "card_number: &RawCardNumber<T>"
+      ],
+      "return_type": "Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 334
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: MultisafepayPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 368
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: MultisafepayRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 389
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 406
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: crate::connectors::multisafepay::MultisafepayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 518
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 657
+    },
+    {
+      "name": "deserialize_transaction_id",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<String>, D::Error>\nwhere\n    D: serde::Deserializer<'de>,",
+      "line": 812
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MultisafepayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 830
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MultisafepayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 873
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: crate::connectors::multisafepay::MultisafepayRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::Refund,\n                RefundFlowData,\n                RefundsData,\n                RefundsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 934
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 959
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MultisafepayRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 989
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<MultisafepayRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1015
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::types::MinorUnit;",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync, RSync},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use domain_types::payment_method_data::{BankRedirectData, PaymentMethodData, WalletData};",
+    "use error_stack::ResultExt;",
+    "use domain_types::payment_method_data::{BankRedirectData, PaymentMethodData, WalletData};",
+    "use error_stack::ResultExt;",
+    "use error_stack::ResultExt;",
+    "use domain_types::payment_method_data::PaymentMethodData;",
+    "use error_stack::ResultExt;",
+    "use domain_types::payment_method_data::PaymentMethodData;",
+    "use error_stack::ResultExt;",
+    "use serde::Deserialize;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 411
+    },
+    {
+      "name": "format",
+      "line": 548
+    },
+    {
+      "name": "format",
+      "line": 683
+    }
+  ],
+  "modules": []
+}

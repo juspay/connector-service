@@ -1,0 +1,14 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/http/handlers/composite/mod.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "payments",
+    "refunds"
+  ]
+}

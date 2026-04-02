@@ -1,0 +1,62 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/connector_override/default.rs",
+  "structs": [
+    {
+      "name": "DefaultConnectorOverride",
+      "visibility": "pub",
+      "fields": [
+        "connector"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 5
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "DefaultConnectorOverride",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 9
+    },
+    {
+      "type_name": "DefaultConnectorOverride",
+      "trait_name": "ConnectorOverride",
+      "methods": [
+        "connector_name"
+      ],
+      "line": 16
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "connector: String"
+      ],
+      "return_type": "Self",
+      "line": 11
+    },
+    {
+      "name": "connector_name",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 17
+    }
+  ],
+  "use_statements": [
+    "use super::ConnectorOverride;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

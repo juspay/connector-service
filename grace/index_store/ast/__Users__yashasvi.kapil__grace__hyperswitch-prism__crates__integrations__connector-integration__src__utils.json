@@ -1,0 +1,499 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/utils.rs",
+  "structs": [
+    {
+      "name": "ErrorCodeAndMessage",
+      "visibility": "pub",
+      "fields": [
+        "error_code",
+        "error_message"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 314
+    },
+    {
+      "name": "MerchantDefinedInformation",
+      "visibility": "pub",
+      "fields": [
+        "key",
+        "value"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "PartialEq",
+        "Eq",
+        "PartialOrd",
+        "Ord",
+        "Clone",
+        "Debug",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 397
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConnectorErrorType",
+      "visibility": "pub",
+      "variants": [
+        "UserError",
+        "BusinessError",
+        "TechnicalError",
+        "UnknownError"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "PartialEq",
+        "Eq",
+        "PartialOrd",
+        "Ord",
+        "Clone",
+        "Debug"
+      ],
+      "line": 321
+    }
+  ],
+  "traits": [
+    {
+      "name": "PaymentsAuthorizeRequestData",
+      "visibility": "pub",
+      "methods": [
+        "get_router_return_url"
+      ],
+      "line": 77
+    },
+    {
+      "name": "SplitPaymentData",
+      "visibility": "pub",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 216
+    },
+    {
+      "name": "ConnectorErrorTypeMapping",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_error_type"
+      ],
+      "line": 303
+    },
+    {
+      "name": "MultipleCaptureSyncResponse",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_capture_id",
+        "get_capture_attempt_status",
+        "is_capture_response",
+        "get_connector_reference_id",
+        "get_amount_captured"
+      ],
+      "line": 336
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "PaymentsAuthorizeData",
+      "trait_name": "PaymentsAuthorizeRequestData",
+      "methods": [
+        "get_router_return_url"
+      ],
+      "line": 81
+    },
+    {
+      "type_name": "PaymentsCaptureData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 221
+    },
+    {
+      "type_name": "PaymentsAuthorizeData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 229
+    },
+    {
+      "type_name": "RepeatPaymentData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 237
+    },
+    {
+      "type_name": "PaymentsSyncData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 245
+    },
+    {
+      "type_name": "PaymentVoidData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 253
+    },
+    {
+      "type_name": "SetupMandateRequestData",
+      "trait_name": "SplitPaymentData",
+      "methods": [
+        "get_split_payment_data"
+      ],
+      "line": 261
+    }
+  ],
+  "functions": [
+    {
+      "name": "build_form_from_struct",
+      "visibility": "pub",
+      "parameters": [
+        "data: T"
+      ],
+      "return_type": "Result<MultipartData, errors::ParsingError>",
+      "line": 35
+    },
+    {
+      "name": "get_router_return_url",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 84
+    },
+    {
+      "name": "missing_field_err",
+      "visibility": "pub",
+      "parameters": [
+        "message: &'static str"
+      ],
+      "return_type": "Box<dyn Fn() -> Report<errors::ConnectorError> + 'static>",
+      "line": 91
+    },
+    {
+      "name": "get_unimplemented_payment_method_error_message",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "String",
+      "line": 102
+    },
+    {
+      "name": "to_connector_meta_from_secret",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector_meta: Option<Secret<Value>>"
+      ],
+      "return_type": "Result<T, Error>\nwhere\n    T: serde::de::DeserializeOwned,",
+      "line": 106
+    },
+    {
+      "name": "handle_json_response_deserialization_failure",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "res: Response",
+        "_connector: &'static str"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 133
+    },
+    {
+      "name": "is_refund_failure",
+      "visibility": "pub",
+      "parameters": [
+        "status: enums::RefundStatus"
+      ],
+      "return_type": "bool",
+      "line": 159
+    },
+    {
+      "name": "safe_base64_decode",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "base64_data: String"
+      ],
+      "return_type": "Result<Vec<u8>, Error>",
+      "line": 170
+    },
+    {
+      "name": "deserialize_zero_minor_amount_as_none",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<MinorUnit>, D::Error>\nwhere\n    D: serde::de::Deserializer<'de>,",
+      "line": 192
+    },
+    {
+      "name": "convert_uppercase",
+      "visibility": "pub",
+      "parameters": [
+        "v: D"
+      ],
+      "return_type": "Result<T, D::Error>\nwhere\n    D: serde::Deserializer<'de>,\n    T: FromStr,\n    <T as FromStr>::Err: std::fmt::Debug + std::fmt::Display + std::error::Error,",
+      "line": 205
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 222
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 230
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 238
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 246
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 254
+    },
+    {
+      "name": "get_split_payment_data",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<domain_types::connector_types::SplitPaymentsRequest>",
+      "line": 262
+    },
+    {
+      "name": "serialize_to_xml_string_with_root",
+      "visibility": "pub",
+      "parameters": [
+        "root_name: &str",
+        "data: &T"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 269
+    },
+    {
+      "name": "get_error_code_error_message_based_on_priority",
+      "visibility": "pub",
+      "parameters": [
+        "connector: impl ConnectorErrorTypeMapping",
+        "error_list: Vec<ErrorCodeAndMessage>"
+      ],
+      "return_type": "Option<ErrorCodeAndMessage>",
+      "line": 281
+    },
+    {
+      "name": "get_connector_error_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_error_code: String",
+        "_error_message: String"
+      ],
+      "return_type": "ConnectorErrorType",
+      "line": 304
+    },
+    {
+      "name": "to_connector_meta",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector_meta: Option<Value>"
+      ],
+      "return_type": "Result<T, Error>\nwhere\n    T: serde::de::DeserializeOwned,",
+      "line": 328
+    },
+    {
+      "name": "get_connector_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<String>",
+      "line": 340
+    },
+    {
+      "name": "construct_captures_response_hashmap",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "capture_sync_response_list: Vec<T>"
+      ],
+      "return_type": "CustomResult<HashMap<String, CaptureSyncResponse>, errors::ConnectorError>\nwhere\n    T: MultipleCaptureSyncResponse,",
+      "line": 346
+    },
+    {
+      "name": "is_manual_capture",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "capture_method: Option<enums::CaptureMethod>"
+      ],
+      "return_type": "bool",
+      "line": 377
+    },
+    {
+      "name": "get_token_expiry_month_year_2_digit_with_delimiter",
+      "visibility": "pub",
+      "parameters": [
+        "month: Secret<String>",
+        "year: Secret<String>"
+      ],
+      "return_type": "Secret<String>",
+      "line": 382
+    },
+    {
+      "name": "convert_metadata_to_merchant_defined_info",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: Value"
+      ],
+      "return_type": "Vec<MerchantDefinedInformation>",
+      "line": 409
+    },
+    {
+      "name": "get_state_code_for_country",
+      "visibility": "pub",
+      "parameters": [
+        "state: &Secret<String>",
+        "country: Option<common_enums::CountryAlpha2>"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 430
+    },
+    {
+      "name": "collect_and_sort_values_by_removing_signature",
+      "visibility": "pub",
+      "parameters": [
+        "value: &Value",
+        "signature: &str"
+      ],
+      "return_type": "Vec<String>",
+      "line": 474
+    },
+    {
+      "name": "collect_values_by_removing_signature",
+      "visibility": "",
+      "parameters": [
+        "value: &Value",
+        "signature: &str"
+      ],
+      "return_type": "Vec<String>",
+      "line": 483
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_utils::{\n    consts::{\n        BASE64_ENGINE, BASE64_ENGINE_STD_NO_PAD, BASE64_ENGINE_URL_SAFE,\n        BASE64_ENGINE_URL_SAFE_NO_PAD,\n    },\n    errors::{ParsingError, ReportSwitchExt},\n    ext_traits::ValueExt,\n    request::MultipartData,\n    types::MinorUnit,\n    CustomResult,\n};",
+    "use domain_types::{\n    connector_types::{\n        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_response_types::Response,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde_json::Value;",
+    "use std::{collections::HashMap, str::FromStr};",
+    "pub use xml_utils::preprocess_xml_response_bytes;",
+    "use common_enums::enums;",
+    "use serde::{Deserialize, Serialize};",
+    "use serde::de::Error;"
+  ],
+  "macro_calls": [
+    {
+      "name": "warn",
+      "line": 50
+    },
+    {
+      "name": "warn",
+      "line": 50
+    },
+    {
+      "name": "format",
+      "line": 103
+    },
+    {
+      "name": "format",
+      "line": 186
+    },
+    {
+      "name": "format",
+      "line": 277
+    },
+    {
+      "name": "format",
+      "line": 391
+    },
+    {
+      "name": "format",
+      "line": 421
+    },
+    {
+      "name": "vec",
+      "line": 485
+    },
+    {
+      "name": "vec",
+      "line": 486
+    },
+    {
+      "name": "vec",
+      "line": 488
+    },
+    {
+      "name": "vec",
+      "line": 489
+    },
+    {
+      "name": "vec",
+      "line": 493
+    },
+    {
+      "name": "vec",
+      "line": 495
+    }
+  ],
+  "modules": [
+    "qr_code",
+    "xml_utils"
+  ]
+}

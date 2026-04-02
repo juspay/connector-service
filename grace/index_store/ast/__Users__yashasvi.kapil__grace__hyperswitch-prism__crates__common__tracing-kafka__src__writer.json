@@ -1,0 +1,233 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/tracing-kafka/src/writer.rs",
+  "structs": [
+    {
+      "name": "MetricsProducerContext",
+      "visibility": "",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 28
+    },
+    {
+      "name": "KafkaWriter",
+      "visibility": "pub",
+      "fields": [
+        "producer",
+        "topic"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone"
+      ],
+      "line": 108
+    }
+  ],
+  "enums": [
+    {
+      "name": "KafkaMessageType",
+      "visibility": "",
+      "variants": [
+        "Event",
+        "Log"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug"
+      ],
+      "line": 101
+    },
+    {
+      "name": "KafkaWriterError",
+      "visibility": "pub",
+      "variants": [
+        "ProducerCreation",
+        "MetadataFetch"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 278
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "MetricsProducerContext",
+      "trait_name": "ClientContext",
+      "methods": [],
+      "line": 30
+    },
+    {
+      "type_name": "MetricsProducerContext",
+      "trait_name": "ProducerContext",
+      "methods": [
+        "delivery"
+      ],
+      "line": 32
+    },
+    {
+      "type_name": "KafkaWriter",
+      "trait_name": "std::fmt::Debug",
+      "methods": [
+        "fmt"
+      ],
+      "line": 113
+    },
+    {
+      "type_name": "KafkaWriter",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "publish_event",
+        "builder"
+      ],
+      "line": 121
+    },
+    {
+      "type_name": "KafkaWriter",
+      "trait_name": "Write",
+      "methods": [
+        "write",
+        "flush"
+      ],
+      "line": 231
+    },
+    {
+      "type_name": "KafkaWriter",
+      "trait_name": "tracing_subscriber::fmt::MakeWriter",
+      "methods": [
+        "make_writer"
+      ],
+      "line": 286
+    },
+    {
+      "type_name": "KafkaWriter",
+      "trait_name": "Drop",
+      "methods": [
+        "drop"
+      ],
+      "line": 295
+    }
+  ],
+  "functions": [
+    {
+      "name": "delivery",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "delivery_result: &DeliveryResult<'_>",
+        "opaque: Self::DeliveryOpaque"
+      ],
+      "return_type": "",
+      "line": 35
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 114
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "brokers: Vec<String>",
+        "topic: String",
+        "batch_size: Option<usize>",
+        "linger_ms: Option<u64>",
+        "queue_buffering_max_messages: Option<usize>",
+        "queue_buffering_max_kbytes: Option<usize>",
+        "reconnect_backoff_min_ms: Option<u64>",
+        "reconnect_backoff_max_ms: Option<u64>"
+      ],
+      "return_type": "Result<Self, KafkaWriterError>",
+      "line": 124
+    },
+    {
+      "name": "publish_event",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "topic: &str",
+        "key: Option<&str>",
+        "payload: &[u8]",
+        "headers: Option<OwnedHeaders>"
+      ],
+      "return_type": "Result<(), KafkaError>",
+      "line": 173
+    },
+    {
+      "name": "builder",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "crate::builder::KafkaWriterBuilder",
+      "line": 226
+    },
+    {
+      "name": "write",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "buf: &[u8]"
+      ],
+      "return_type": "io::Result<usize>",
+      "line": 232
+    },
+    {
+      "name": "flush",
+      "visibility": "",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "io::Result<()>",
+      "line": 269
+    },
+    {
+      "name": "make_writer",
+      "visibility": "",
+      "parameters": [
+        "&'a self"
+      ],
+      "return_type": "Self::Writer",
+      "line": 289
+    },
+    {
+      "name": "drop",
+      "visibility": "",
+      "parameters": [
+        "&mut self"
+      ],
+      "return_type": "",
+      "line": 296
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    io::{self, Write},\n    sync::Arc,\n    time::Duration,\n};",
+    "use rdkafka::{\n    config::ClientConfig,\n    error::{KafkaError, RDKafkaErrorCode},\n    message::OwnedHeaders,\n    producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer},\n    ClientContext,\n};",
+    "use super::metrics::{\n    KAFKA_AUDIT_DROPS_MSG_TOO_LARGE, KAFKA_AUDIT_DROPS_OTHER, KAFKA_AUDIT_DROPS_QUEUE_FULL,\n    KAFKA_AUDIT_DROPS_TIMEOUT, KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT,\n    KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER,\n    KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT,\n    KAFKA_QUEUE_SIZE,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 272
+    }
+  ],
+  "modules": []
+}

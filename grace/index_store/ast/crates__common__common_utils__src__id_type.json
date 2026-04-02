@@ -1,0 +1,1103 @@
+{
+  "file_path": "crates/common/common_utils/src/id_type.rs",
+  "structs": [
+    {
+      "name": "AlphaNumericId",
+      "visibility": "pub(crate)",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq"
+      ],
+      "line": 15
+    },
+    {
+      "name": "AlphaNumericIdError",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq",
+        "Debug",
+        "Deserialize",
+        "Hash",
+        "Serialize",
+        "Error",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 27
+    },
+    {
+      "name": "CustomerId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq",
+        "Debug",
+        "Deserialize",
+        "Hash",
+        "Serialize",
+        "Error",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 54
+    },
+    {
+      "name": "MerchantId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq",
+        "Debug",
+        "Deserialize",
+        "Hash",
+        "Serialize",
+        "Error",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 98
+    },
+    {
+      "name": "LengthId",
+      "visibility": "pub(crate)",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq",
+        "Debug",
+        "Deserialize",
+        "Hash",
+        "Serialize",
+        "Error",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 192
+    }
+  ],
+  "enums": [
+    {
+      "name": "LengthIdError",
+      "visibility": "pub",
+      "variants": [
+        "MaxLengthViolated",
+        "MinLengthViolated",
+        "AlphanumericIdError"
+      ],
+      "derives": [
+        "Debug",
+        "PartialEq",
+        "Hash",
+        "Serialize",
+        "Clone",
+        "Eq",
+        "Debug",
+        "Deserialize",
+        "Hash",
+        "Serialize",
+        "Error",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Hash",
+        "Deserialize",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Error",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 248
+    }
+  ],
+  "traits": [
+    {
+      "name": "GenerateId",
+      "visibility": "pub",
+      "methods": [
+        "generate"
+      ],
+      "line": 301
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "AlphaNumericId",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 17
+    },
+    {
+      "type_name": "AlphaNumericId",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 29
+    },
+    {
+      "type_name": "AlphaNumericId",
+      "trait_name": null,
+      "methods": [
+        "from",
+        "new_unchecked"
+      ],
+      "line": 39
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 56
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr"
+      ],
+      "line": 62
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 68
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 78
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 86
+    },
+    {
+      "type_name": "CustomerId",
+      "trait_name": "hyperswitch_masking::SerializableSecret",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "MerchantId",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 100
+    },
+    {
+      "type_name": "MerchantId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr"
+      ],
+      "line": 106
+    },
+    {
+      "type_name": "MerchantId",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 112
+    },
+    {
+      "type_name": "MerchantId",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 122
+    },
+    {
+      "type_name": "PaymentId",
+      "trait_name": null,
+      "methods": [
+        "get_hash_key_for_kv_store",
+        "get_irrelevant_id",
+        "get_attempt_id",
+        "generate_client_secret",
+        "get_pm_auth_key",
+        "get_external_authentication_request_poll_id",
+        "generate_test_payment_id_for_sample_data",
+        "wrap"
+      ],
+      "line": 141
+    },
+    {
+      "type_name": "LengthId",
+      "trait_name": null,
+      "methods": [
+        "from",
+        "new",
+        "new_unchecked",
+        "from_alphanumeric_id"
+      ],
+      "line": 194
+    },
+    {
+      "type_name": "LengthIdError",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 262
+    },
+    {
+      "type_name": "ProfileId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 283
+    },
+    {
+      "type_name": "ProfileId",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 291
+    },
+    {
+      "type_name": "ClientSecretId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 319
+    },
+    {
+      "type_name": "ClientSecretId",
+      "trait_name": null,
+      "methods": [
+        "generate_redis_key"
+      ],
+      "line": 329
+    },
+    {
+      "type_name": "ApiKeyId",
+      "trait_name": null,
+      "methods": [
+        "generate_key_id"
+      ],
+      "line": 348
+    },
+    {
+      "type_name": "ApiKeyId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 355
+    },
+    {
+      "type_name": "MerchantConnectorAccountId",
+      "trait_name": null,
+      "methods": [
+        "wrap"
+      ],
+      "line": 394
+    },
+    {
+      "type_name": "ProfileAcquirerId",
+      "trait_name": "Ord",
+      "methods": [
+        "cmp"
+      ],
+      "line": 414
+    },
+    {
+      "type_name": "ProfileAcquirerId",
+      "trait_name": "PartialOrd",
+      "methods": [
+        "partial_cmp"
+      ],
+      "line": 420
+    },
+    {
+      "type_name": "ProfileAcquirerId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 426
+    },
+    {
+      "type_name": "ProfileAcquirerId",
+      "trait_name": "FromStr",
+      "methods": [
+        "from_str"
+      ],
+      "line": 434
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "Self",
+      "line": 19
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 30
+    },
+    {
+      "name": "from",
+      "visibility": "pub",
+      "parameters": [
+        "input_string: Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, AlphaNumericIdError>",
+      "line": 41
+    },
+    {
+      "name": "new_unchecked",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "input_string: String"
+      ],
+      "return_type": "Self",
+      "line": 47
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 57
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 63
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 69
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 81
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: Cow<'_, str>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 89
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 101
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 107
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 113
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 125
+    },
+    {
+      "name": "get_hash_key_for_kv_store",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 143
+    },
+    {
+      "name": "get_irrelevant_id",
+      "visibility": "pub",
+      "parameters": [
+        "flow: &str"
+      ],
+      "return_type": "Self",
+      "line": 149
+    },
+    {
+      "name": "get_attempt_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "attempt_count: i16"
+      ],
+      "return_type": "String",
+      "line": 157
+    },
+    {
+      "name": "generate_client_secret",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 162
+    },
+    {
+      "name": "get_pm_auth_key",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 167
+    },
+    {
+      "name": "get_external_authentication_request_poll_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 172
+    },
+    {
+      "name": "generate_test_payment_id_for_sample_data",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 177
+    },
+    {
+      "name": "wrap",
+      "visibility": "pub",
+      "parameters": [
+        "payment_id_string: String"
+      ],
+      "return_type": "CustomResult<Self, ValidationError>",
+      "line": 185
+    },
+    {
+      "name": "from",
+      "visibility": "pub",
+      "parameters": [
+        "input_string: Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, LengthIdError>",
+      "line": 196
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "Self",
+      "line": 218
+    },
+    {
+      "name": "new_unchecked",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "alphanumeric_id: AlphaNumericId"
+      ],
+      "return_type": "Self",
+      "line": 223
+    },
+    {
+      "name": "from_alphanumeric_id",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "alphanumeric_id: AlphaNumericId"
+      ],
+      "return_type": "Result<Self, LengthIdError>",
+      "line": 228
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "alphanumeric_id_error: AlphaNumericIdError"
+      ],
+      "return_type": "Self",
+      "line": 263
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 284
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 294
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 320
+    },
+    {
+      "name": "generate_redis_key",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 331
+    },
+    {
+      "name": "generate_key_id",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &'static str"
+      ],
+      "return_type": "Self",
+      "line": 350
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 356
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 364
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 372
+    },
+    {
+      "name": "wrap",
+      "visibility": "pub",
+      "parameters": [
+        "merchant_connector_account_id: String"
+      ],
+      "return_type": "CustomResult<Self, ValidationError>",
+      "line": 396
+    },
+    {
+      "name": "cmp",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "other: &Self"
+      ],
+      "return_type": "std::cmp::Ordering",
+      "line": 415
+    },
+    {
+      "name": "partial_cmp",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "other: &Self"
+      ],
+      "return_type": "Option<std::cmp::Ordering>",
+      "line": 421
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 427
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Err>",
+      "line": 437
+    }
+  ],
+  "use_statements": [
+    "use std::{borrow::Cow, fmt::Debug};",
+    "use serde::{Deserialize, Serialize};",
+    "use thiserror::Error;",
+    "use crate::{\n    fp_utils::{generate_id_with_default_len, when},\n    CustomResult, ValidationError,\n};",
+    "use std::str::FromStr;"
+  ],
+  "macro_calls": [
+    {
+      "name": "id_type",
+      "line": 130
+    },
+    {
+      "name": "id_type",
+      "line": 130
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 134
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 134
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 137
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 137
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 138
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 138
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 139
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 139
+    },
+    {
+      "name": "format",
+      "line": 144
+    },
+    {
+      "name": "format",
+      "line": 151
+    },
+    {
+      "name": "format",
+      "line": 158
+    },
+    {
+      "name": "format",
+      "line": 163
+    },
+    {
+      "name": "format",
+      "line": 168
+    },
+    {
+      "name": "format",
+      "line": 173
+    },
+    {
+      "name": "id_type",
+      "line": 270
+    },
+    {
+      "name": "id_type",
+      "line": 270
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 274
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 274
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 277
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 277
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 278
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 278
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 280
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 280
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 281
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 281
+    },
+    {
+      "name": "id_type",
+      "line": 306
+    },
+    {
+      "name": "id_type",
+      "line": 306
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 310
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 310
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 313
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 313
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 314
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 314
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 316
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 316
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 317
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 317
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 327
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 327
+    },
+    {
+      "name": "format",
+      "line": 332
+    },
+    {
+      "name": "id_type",
+      "line": 336
+    },
+    {
+      "name": "id_type",
+      "line": 336
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 340
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 340
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 343
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 343
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 344
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 344
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 346
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 346
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 379
+    },
+    {
+      "name": "impl_default_id_type",
+      "line": 379
+    },
+    {
+      "name": "id_type",
+      "line": 381
+    },
+    {
+      "name": "id_type",
+      "line": 381
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 385
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 385
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 388
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 388
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 389
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 389
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 390
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 390
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 392
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 392
+    },
+    {
+      "name": "id_type",
+      "line": 401
+    },
+    {
+      "name": "id_type",
+      "line": 401
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 405
+    },
+    {
+      "name": "impl_id_type_methods",
+      "line": 405
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 408
+    },
+    {
+      "name": "impl_debug_id_type",
+      "line": 408
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 409
+    },
+    {
+      "name": "impl_try_from_cow_str_id_type",
+      "line": 409
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 411
+    },
+    {
+      "name": "impl_generate_id_id_type",
+      "line": 411
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 412
+    },
+    {
+      "name": "impl_serializable_secret_id_type",
+      "line": 412
+    }
+  ],
+  "modules": []
+}

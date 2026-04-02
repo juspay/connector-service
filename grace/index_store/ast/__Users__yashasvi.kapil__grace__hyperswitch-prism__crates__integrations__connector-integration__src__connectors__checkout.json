@@ -1,0 +1,460 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/checkout.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 85
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 98
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 102
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 110
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 114
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 118
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 122
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 130
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 134
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 138
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 142
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 150
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 158
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 162
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 170
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 180
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 194
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "get_auth_header",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 281
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 611
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 621
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 631
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 641
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 647
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 653
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 659
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 669
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 679
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 689
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 699
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 709
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 719
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 729
+    },
+    {
+      "type_name": "Checkout",
+      "trait_name": "ConnectorErrorTypeMapping",
+      "methods": [
+        "get_connector_error_type"
+      ],
+      "line": 739
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 284
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 288
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 292
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 304
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 308
+    },
+    {
+      "name": "get_connector_error_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "error_code: String",
+        "_error_message: String"
+      ],
+      "return_type": "ConnectorErrorType",
+      "line": 742
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::ConnectorError,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_request_types::SyncRequestType,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    CheckoutErrorResponse, PaymentCaptureRequest, PaymentCaptureResponse, PaymentVoidRequest,\n    PaymentVoidResponse, PaymentsRequest, PaymentsRequest as SetupMandateRequest,\n    PaymentsRequest as RepeatPaymentRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,\n    PaymentsResponse as SetupMandateResponse, PaymentsResponse as RepeatPaymentResponse,\n    RSyncResponse, RefundRequest, RefundResponse,\n};",
+    "use super::macros;",
+    "use crate::{\n    types::ResponseRouterData,\n    utils::{\n        get_error_code_error_message_based_on_priority, ConnectorErrorType,\n        ConnectorErrorTypeMapping,\n    },\n    with_error_response_body,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 199
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 199
+    },
+    {
+      "name": "vec",
+      "line": 298
+    },
+    {
+      "name": "vec",
+      "line": 316
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 333
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 333
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 365
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 365
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 393
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 393
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 421
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 421
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 461
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 461
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 493
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 493
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 522
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 522
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 554
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 554
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 583
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 583
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

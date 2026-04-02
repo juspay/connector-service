@@ -1,0 +1,107 @@
+{
+  "file_path": "crates/internal/ucs-connector-tests/src/harness/connector_override/json_merge.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "json_merge_patch",
+      "visibility": "pub",
+      "parameters": [
+        "target: &mut Value",
+        "patch: &Value"
+      ],
+      "return_type": "",
+      "line": 10
+    },
+    {
+      "name": "merge_patch_adds_replaces_and_removes_keys",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 40
+    },
+    {
+      "name": "merge_patch_replaces_non_object_values",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 76
+    }
+  ],
+  "use_statements": [
+    "use serde_json::Value;",
+    "use serde_json::json;",
+    "use super::json_merge_patch;"
+  ],
+  "macro_calls": [
+    {
+      "name": "json",
+      "line": 41
+    },
+    {
+      "name": "json",
+      "line": 51
+    },
+    {
+      "name": "assert_eq",
+      "line": 65
+    },
+    {
+      "name": "assert_eq",
+      "line": 65
+    },
+    {
+      "name": "assert_eq",
+      "line": 66
+    },
+    {
+      "name": "assert_eq",
+      "line": 66
+    },
+    {
+      "name": "assert_eq",
+      "line": 67
+    },
+    {
+      "name": "assert_eq",
+      "line": 67
+    },
+    {
+      "name": "assert",
+      "line": 68
+    },
+    {
+      "name": "assert",
+      "line": 68
+    },
+    {
+      "name": "assert_eq",
+      "line": 69
+    },
+    {
+      "name": "assert_eq",
+      "line": 69
+    },
+    {
+      "name": "json",
+      "line": 77
+    },
+    {
+      "name": "json",
+      "line": 78
+    },
+    {
+      "name": "assert_eq",
+      "line": 82
+    },
+    {
+      "name": "assert_eq",
+      "line": 82
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

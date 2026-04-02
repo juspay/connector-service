@@ -1,0 +1,272 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/types.rs",
+  "structs": [
+    {
+      "name": "ErrorStats",
+      "visibility": "pub(crate)",
+      "fields": [
+        "missing_field",
+        "not_implemented",
+        "not_supported",
+        "invalid_config",
+        "other"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 7
+    },
+    {
+      "name": "SamplePayload",
+      "visibility": "pub(crate)",
+      "fields": [
+        "url",
+        "method",
+        "headers",
+        "body"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 27
+    },
+    {
+      "name": "FlowResult",
+      "visibility": "pub(crate)",
+      "fields": [
+        "status",
+        "required_fields",
+        "proto_request",
+        "sample",
+        "error",
+        "service_rpc",
+        "description"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 35
+    },
+    {
+      "name": "ConnectorResult",
+      "visibility": "pub(crate)",
+      "fields": [
+        "connector",
+        "flows"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 50
+    },
+    {
+      "name": "ProbeManifest",
+      "visibility": "pub(crate)",
+      "fields": [
+        "flow_metadata",
+        "connectors",
+        "message_schemas",
+        "schema_version"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "CompactFlowResult",
+      "visibility": "pub(crate)",
+      "fields": [
+        "status",
+        "proto_request",
+        "sample",
+        "error"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 71
+    },
+    {
+      "name": "CompactConnectorResult",
+      "visibility": "pub(crate)",
+      "fields": [
+        "connector",
+        "flows"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Default"
+      ],
+      "line": 98
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ErrorStats",
+      "trait_name": null,
+      "methods": [
+        "total"
+      ],
+      "line": 15
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 83
+    }
+  ],
+  "functions": [
+    {
+      "name": "total",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "usize",
+      "line": 17
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "result: FlowResult"
+      ],
+      "return_type": "Self",
+      "line": 84
+    }
+  ],
+  "use_statements": [
+    "use crate::flow_metadata::{FlowMetadata, MessageSchema};",
+    "use serde::{Deserialize, Serialize};",
+    "use std::collections::BTreeMap;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

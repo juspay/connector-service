@@ -1,0 +1,839 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/phonepe/transformers.rs",
+  "structs": [
+    {
+      "name": "PhonepePaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "request",
+        "checksum"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 42
+    },
+    {
+      "name": "PhonepePaymentRequestPayload",
+      "visibility": "",
+      "fields": [
+        "merchant_id",
+        "merchant_transaction_id",
+        "merchant_user_id",
+        "amount",
+        "callback_url",
+        "mobile_number",
+        "payment_instrument",
+        "device_context",
+        "payment_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 49
+    },
+    {
+      "name": "PhonepeDeviceContext",
+      "visibility": "",
+      "fields": [
+        "device_os"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 70
+    },
+    {
+      "name": "PhonepePaymentInstrument",
+      "visibility": "",
+      "fields": [
+        "instrument_type",
+        "target_app",
+        "vpa"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 76
+    },
+    {
+      "name": "PhonepeSyncRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_transaction_id",
+        "checksum"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 88
+    },
+    {
+      "name": "PhonepeErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "code",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 98
+    },
+    {
+      "name": "PhonepePaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "code",
+        "message",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 106
+    },
+    {
+      "name": "PhonepeSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "success",
+        "code",
+        "message",
+        "data"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 114
+    },
+    {
+      "name": "PhonepeResponseData",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_transaction_id",
+        "transaction_id",
+        "instrument_response",
+        "response_code",
+        "response_code_description"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 132
+    },
+    {
+      "name": "PhonepeInstrumentResponse",
+      "visibility": "pub",
+      "fields": [
+        "instrument_type",
+        "intent_url",
+        "qr_data",
+        "account_type",
+        "card_network",
+        "upi_credit_line"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 151
+    },
+    {
+      "name": "PhonepePaymentInstrumentSync",
+      "visibility": "pub",
+      "fields": [
+        "instrument_type",
+        "card_network",
+        "account_type",
+        "upi_credit_line",
+        "masked_account_number"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 168
+    },
+    {
+      "name": "PhonepeSyncResponseData",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_transaction_id",
+        "transaction_id",
+        "amount",
+        "state",
+        "response_code",
+        "payment_instrument"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 185
+    },
+    {
+      "name": "PhonepeAuthType",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "salt_key",
+        "key_index"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug"
+      ],
+      "line": 669
+    }
+  ],
+  "enums": [
+    {
+      "name": "NextActionData",
+      "visibility": "pub",
+      "variants": [
+        "WaitScreenInstructions"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 27
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PhonepePaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 208
+    },
+    {
+      "type_name": "PhonepePaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 364
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 521
+    },
+    {
+      "type_name": "PhonepeAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 675
+    },
+    {
+      "type_name": "PhonepeSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 734
+    },
+    {
+      "type_name": "PhonepeSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 777
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 821
+    }
+  ],
+  "functions": [
+    {
+      "name": "default_error_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 123
+    },
+    {
+      "name": "default_sync_error_message",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 127
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: PhonepeRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 223
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &PhonepeRouterData<\n            &RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 379
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PhonepePaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 527
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 678
+    },
+    {
+      "name": "is_irctc_merchant",
+      "visibility": "pub",
+      "parameters": [
+        "merchant_id: &str"
+      ],
+      "return_type": "bool",
+      "line": 699
+    },
+    {
+      "name": "generate_phonepe_checksum",
+      "visibility": "",
+      "parameters": [
+        "base64_payload: &str",
+        "api_path: &str",
+        "salt_key: &Secret<String>",
+        "key_index: &str"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 703
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: PhonepeRouterData<\n            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 744
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &PhonepeRouterData<\n            &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 787
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PhonepeSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 826
+    },
+    {
+      "name": "generate_phonepe_sync_checksum",
+      "visibility": "",
+      "parameters": [
+        "api_path: &str",
+        "salt_key: &Secret<String>",
+        "key_index: &str"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 934
+    },
+    {
+      "name": "get_phonepe_error_status",
+      "visibility": "pub",
+      "parameters": [
+        "error_code: &str"
+      ],
+      "return_type": "Option<common_enums::AttemptStatus>",
+      "line": 961
+    },
+    {
+      "name": "get_wait_screen_metadata",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Option<serde_json::Value>",
+      "line": 974
+    },
+    {
+      "name": "get_target_app_for_phonepe",
+      "visibility": "",
+      "parameters": [
+        "intent_data: &domain_types::payment_method_data::UpiIntentData",
+        "browser_info: &Option<BrowserInformation>"
+      ],
+      "return_type": "Option<String>",
+      "line": 988
+    },
+    {
+      "name": "get_mobile_os",
+      "visibility": "",
+      "parameters": [
+        "browser_info: &Option<BrowserInformation>"
+      ],
+      "return_type": "String",
+      "line": 999
+    },
+    {
+      "name": "map_ios_payment_source_to_target_app",
+      "visibility": "pub",
+      "parameters": [
+        "payment_source: Option<&str>"
+      ],
+      "return_type": "Option<String>",
+      "line": 1012
+    },
+    {
+      "name": "get_android_version_from_ua",
+      "visibility": "pub",
+      "parameters": [
+        "user_agent: &str"
+      ],
+      "return_type": "String",
+      "line": 1025
+    },
+    {
+      "name": "get_source_channel",
+      "visibility": "pub",
+      "parameters": [
+        "user_agent: Option<&String>"
+      ],
+      "return_type": "String",
+      "line": 1035
+    },
+    {
+      "name": "get_sync_metadata",
+      "visibility": "",
+      "parameters": [
+        "bin: Option<String>"
+      ],
+      "return_type": "Option<serde_json::Value>",
+      "line": 1044
+    },
+    {
+      "name": "determine_upi_mode",
+      "visibility": "",
+      "parameters": [
+        "payment_instrument: &PhonepePaymentInstrumentSync",
+        "response_code: Option<&String>"
+      ],
+      "return_type": "Option<UpiSource>",
+      "line": 1057
+    },
+    {
+      "name": "extract_upi_mode_from_sync_data",
+      "visibility": "",
+      "parameters": [
+        "sync_data: &PhonepeSyncResponseData"
+      ],
+      "return_type": "Option<UpiSource>",
+      "line": 1081
+    },
+    {
+      "name": "get_connector_response_with_upi_mode",
+      "visibility": "",
+      "parameters": [
+        "upi_mode: Option<UpiSource>"
+      ],
+      "return_type": "Option<domain_types::router_data::ConnectorResponseData>",
+      "line": 1103
+    },
+    {
+      "name": "extract_bin_from_masked_account_number",
+      "visibility": "",
+      "parameters": [
+        "masked_account_number: Option<&str>"
+      ],
+      "return_type": "Option<String>",
+      "line": 1116
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_enums;",
+    "use common_utils::{\n    crypto::{self, GenerateDigest},\n    ext_traits::Encode,\n    types::MinorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_request_types::BrowserInformation,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use super::constants;",
+    "use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};",
+    "use std::fmt::Write;",
+    "use std::fmt::Write;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 352
+    },
+    {
+      "name": "format",
+      "line": 508
+    },
+    {
+      "name": "json",
+      "line": 553
+    },
+    {
+      "name": "warn",
+      "line": 616
+    },
+    {
+      "name": "warn",
+      "line": 616
+    },
+    {
+      "name": "warn",
+      "line": 641
+    },
+    {
+      "name": "warn",
+      "line": 641
+    },
+    {
+      "name": "format",
+      "line": 710
+    },
+    {
+      "name": "write",
+      "line": 718
+    },
+    {
+      "name": "format",
+      "line": 723
+    },
+    {
+      "name": "format",
+      "line": 761
+    },
+    {
+      "name": "format",
+      "line": 804
+    },
+    {
+      "name": "format",
+      "line": 940
+    },
+    {
+      "name": "write",
+      "line": 948
+    },
+    {
+      "name": "format",
+      "line": 953
+    },
+    {
+      "name": "json",
+      "line": 975
+    },
+    {
+      "name": "error",
+      "line": 979
+    },
+    {
+      "name": "error",
+      "line": 979
+    },
+    {
+      "name": "json",
+      "line": 1046
+    },
+    {
+      "name": "error",
+      "line": 1050
+    },
+    {
+      "name": "error",
+      "line": 1050
+    }
+  ],
+  "modules": []
+}

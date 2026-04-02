@@ -1,0 +1,100 @@
+{
+  "file_path": "crates/common/common_utils/src/consts.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "Env",
+      "visibility": "pub",
+      "variants": [
+        "Development",
+        "Production",
+        "Sandbox"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "config_patch_derive::Patch"
+      ],
+      "line": 204
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Env",
+      "trait_name": null,
+      "methods": [
+        "current_env",
+        "config_path"
+      ],
+      "line": 210
+    },
+    {
+      "type_name": "Env",
+      "trait_name": "std::fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 242
+    }
+  ],
+  "functions": [
+    {
+      "name": "current_env",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 221
+    },
+    {
+      "name": "config_path",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "&'static str",
+      "line": 233
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 243
+    }
+  ],
+  "use_statements": [
+    "use serde::{de::IntoDeserializer, Deserialize, Serialize};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 222
+    },
+    {
+      "name": "panic",
+      "line": 227
+    },
+    {
+      "name": "write",
+      "line": 245
+    },
+    {
+      "name": "write",
+      "line": 246
+    },
+    {
+      "name": "write",
+      "line": 247
+    }
+  ],
+  "modules": []
+}

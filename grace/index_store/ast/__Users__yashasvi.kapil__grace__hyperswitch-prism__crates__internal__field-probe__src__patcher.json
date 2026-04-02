@@ -1,0 +1,498 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/patcher.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "full_address",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "grpc_api_types::payments::Address",
+      "line": 20
+    },
+    {
+      "name": "full_customer",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "grpc_api_types::payments::Customer",
+      "line": 39
+    },
+    {
+      "name": "smart_patch",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "req: &mut T",
+        "flow: &str",
+        "error_field: &str"
+      ],
+      "return_type": "",
+      "line": 59
+    },
+    {
+      "name": "clean_error_field",
+      "visibility": "",
+      "parameters": [
+        "field: &str"
+      ],
+      "return_type": "&str",
+      "line": 81
+    },
+    {
+      "name": "parse_rule_key",
+      "visibility": "",
+      "parameters": [
+        "key: &str"
+      ],
+      "return_type": "(&str, Option<&str>)",
+      "line": 95
+    },
+    {
+      "name": "apply_patch",
+      "visibility": "",
+      "parameters": [
+        "config: &PatchConfig",
+        "flow: &str",
+        "field: &str",
+        "json: &mut Value"
+      ],
+      "return_type": "bool",
+      "line": 114
+    },
+    {
+      "name": "patch_type_to_value",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "patch_type: &str",
+        "value: Option<&str>"
+      ],
+      "return_type": "Option<Value>",
+      "line": 140
+    },
+    {
+      "name": "set_at_path",
+      "visibility": "",
+      "parameters": [
+        "json: &mut Value",
+        "path: &str",
+        "value: Value"
+      ],
+      "return_type": "",
+      "line": 164
+    },
+    {
+      "name": "test_smart_patch_billing_city",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 195
+    },
+    {
+      "name": "test_smart_patch_email_via_rule",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 208
+    },
+    {
+      "name": "test_smart_patch_address_country_via_rule",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 216
+    },
+    {
+      "name": "test_smart_patch_capture_amount",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 231
+    },
+    {
+      "name": "test_smart_patch_void_amount",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 242
+    },
+    {
+      "name": "test_smart_patch_simple_json",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 253
+    },
+    {
+      "name": "test_smart_patch_browser_info_time_zone",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 260
+    },
+    {
+      "name": "test_smart_patch_generic_nested",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 267
+    },
+    {
+      "name": "test_patch_type_to_value_full_browser_info",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 274
+    },
+    {
+      "name": "test_patch_type_to_value_full_address",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 283
+    },
+    {
+      "name": "test_patch_type_to_value_full_customer",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 292
+    },
+    {
+      "name": "test_set_at_path",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 301
+    },
+    {
+      "name": "test_set_at_path_existing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 308
+    },
+    {
+      "name": "test_set_at_path_ideal_bank_name",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 315
+    },
+    {
+      "name": "test_smart_patch_ideal_bank_name_proto",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 340
+    },
+    {
+      "name": "test_clean_error_field",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 389
+    }
+  ],
+  "use_statements": [
+    "use serde::Serialize;",
+    "use serde_json::Value;",
+    "use crate::config::{get_patch_config, PatchConfig};",
+    "use crate::sample_data::{full_browser_info, usd_money};",
+    "use grpc_api_types::payments as proto;",
+    "use hyperswitch_masking::Secret;",
+    "use hyperswitch_masking::Secret;",
+    "use grpc_api_types::payments as proto;",
+    "use super::*;",
+    "use hyperswitch_masking::PeekInterface;",
+    "use serde_json::json;",
+    "use grpc_api_types::payments::PaymentServiceAuthorizeRequest;",
+    "use grpc_api_types::payments::PaymentServiceAuthorizeRequest;",
+    "use grpc_api_types::payments::PaymentServiceAuthorizeRequest;",
+    "use grpc_api_types::payments::PaymentServiceCaptureRequest;",
+    "use grpc_api_types::payments::PaymentServiceVoidRequest;",
+    "use grpc_api_types::payments as proto;",
+    "use grpc_api_types::payments::{\n            payment_method::PaymentMethod as PmVariant, Ideal, PaymentMethod,\n            PaymentServiceAuthorizeRequest,\n        };"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 106
+    },
+    {
+      "name": "json",
+      "line": 156
+    },
+    {
+      "name": "assert_eq",
+      "line": 201
+    },
+    {
+      "name": "assert_eq",
+      "line": 201
+    },
+    {
+      "name": "assert",
+      "line": 212
+    },
+    {
+      "name": "assert",
+      "line": 212
+    },
+    {
+      "name": "assert",
+      "line": 227
+    },
+    {
+      "name": "assert",
+      "line": 227
+    },
+    {
+      "name": "assert",
+      "line": 238
+    },
+    {
+      "name": "assert",
+      "line": 238
+    },
+    {
+      "name": "assert",
+      "line": 249
+    },
+    {
+      "name": "assert",
+      "line": 249
+    },
+    {
+      "name": "json",
+      "line": 254
+    },
+    {
+      "name": "assert_eq",
+      "line": 256
+    },
+    {
+      "name": "assert_eq",
+      "line": 256
+    },
+    {
+      "name": "json",
+      "line": 261
+    },
+    {
+      "name": "assert_eq",
+      "line": 263
+    },
+    {
+      "name": "assert_eq",
+      "line": 263
+    },
+    {
+      "name": "json",
+      "line": 268
+    },
+    {
+      "name": "assert_eq",
+      "line": 270
+    },
+    {
+      "name": "assert_eq",
+      "line": 270
+    },
+    {
+      "name": "assert",
+      "line": 276
+    },
+    {
+      "name": "assert",
+      "line": 276
+    },
+    {
+      "name": "assert",
+      "line": 278
+    },
+    {
+      "name": "assert",
+      "line": 278
+    },
+    {
+      "name": "assert",
+      "line": 279
+    },
+    {
+      "name": "assert",
+      "line": 279
+    },
+    {
+      "name": "assert",
+      "line": 285
+    },
+    {
+      "name": "assert",
+      "line": 285
+    },
+    {
+      "name": "assert",
+      "line": 287
+    },
+    {
+      "name": "assert",
+      "line": 287
+    },
+    {
+      "name": "assert",
+      "line": 288
+    },
+    {
+      "name": "assert",
+      "line": 288
+    },
+    {
+      "name": "assert",
+      "line": 294
+    },
+    {
+      "name": "assert",
+      "line": 294
+    },
+    {
+      "name": "assert",
+      "line": 296
+    },
+    {
+      "name": "assert",
+      "line": 296
+    },
+    {
+      "name": "assert",
+      "line": 297
+    },
+    {
+      "name": "assert",
+      "line": 297
+    },
+    {
+      "name": "json",
+      "line": 302
+    },
+    {
+      "name": "json",
+      "line": 303
+    },
+    {
+      "name": "assert_eq",
+      "line": 304
+    },
+    {
+      "name": "assert_eq",
+      "line": 304
+    },
+    {
+      "name": "json",
+      "line": 309
+    },
+    {
+      "name": "json",
+      "line": 310
+    },
+    {
+      "name": "assert_eq",
+      "line": 311
+    },
+    {
+      "name": "assert_eq",
+      "line": 311
+    },
+    {
+      "name": "json",
+      "line": 318
+    },
+    {
+      "name": "json",
+      "line": 328
+    },
+    {
+      "name": "assert",
+      "line": 332
+    },
+    {
+      "name": "assert",
+      "line": 332
+    },
+    {
+      "name": "assert_eq",
+      "line": 333
+    },
+    {
+      "name": "assert_eq",
+      "line": 333
+    },
+    {
+      "name": "println",
+      "line": 357
+    },
+    {
+      "name": "println",
+      "line": 357
+    },
+    {
+      "name": "println",
+      "line": 367
+    },
+    {
+      "name": "println",
+      "line": 367
+    },
+    {
+      "name": "assert",
+      "line": 375
+    },
+    {
+      "name": "assert",
+      "line": 375
+    },
+    {
+      "name": "panic",
+      "line": 381
+    },
+    {
+      "name": "panic",
+      "line": 381
+    },
+    {
+      "name": "panic",
+      "line": 384
+    },
+    {
+      "name": "panic",
+      "line": 384
+    },
+    {
+      "name": "assert_eq",
+      "line": 390
+    },
+    {
+      "name": "assert_eq",
+      "line": 390
+    },
+    {
+      "name": "assert_eq",
+      "line": 394
+    },
+    {
+      "name": "assert_eq",
+      "line": 394
+    },
+    {
+      "name": "assert_eq",
+      "line": 395
+    },
+    {
+      "name": "assert_eq",
+      "line": 395
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

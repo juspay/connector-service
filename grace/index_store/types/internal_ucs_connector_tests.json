@@ -1,0 +1,649 @@
+{
+  "crate": "internal_ucs_connector_tests",
+  "structs": [
+    {
+      "name": "CliArgs",
+      "file": "crates/internal/ucs-connector-tests/src/bin/render_report.rs",
+      "fields": [
+        "help",
+        "path"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "CliArgs",
+      "file": "crates/internal/ucs-connector-tests/src/bin/run_test.rs",
+      "fields": [
+        "suite",
+        "scenario",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "set_defaults",
+        "show_defaults",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "StoredDefaults",
+      "file": "crates/internal/ucs-connector-tests/src/bin/run_test.rs",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "CliArgs",
+      "file": "crates/internal/ucs-connector-tests/src/bin/sdk_run_test.rs",
+      "fields": [
+        "suite",
+        "all",
+        "all_connectors",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "StoredDefaults",
+      "file": "crates/internal/ucs-connector-tests/src/bin/sdk_run_test.rs",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "CliArgs",
+      "file": "crates/internal/ucs-connector-tests/src/bin/suite_run_test.rs",
+      "fields": [
+        "suite",
+        "all",
+        "all_connectors",
+        "connector",
+        "endpoint",
+        "creds_file",
+        "merchant_id",
+        "tenant_id",
+        "report",
+        "plaintext",
+        "help"
+      ],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "StoredDefaults",
+      "file": "crates/internal/ucs-connector-tests/src/bin/suite_run_test.rs",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "StoredDefaults",
+      "file": "crates/internal/ucs-connector-tests/src/bin/test_ucs.rs",
+      "fields": [
+        "endpoint",
+        "creds_file"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "DefaultConnectorOverride",
+      "file": "crates/internal/ucs-connector-tests/src/harness/connector_override/default.rs",
+      "fields": [
+        "connector"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ScenarioOverridePatch",
+      "file": "crates/internal/ucs-connector-tests/src/harness/connector_override/loader.rs",
+      "fields": [
+        "grpc_req",
+        "assert_rules"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "OverrideRegistry",
+      "file": "crates/internal/ucs-connector-tests/src/harness/connector_override/mod.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorExecutor",
+      "file": "crates/internal/ucs-connector-tests/src/harness/executor.rs",
+      "fields": [
+        "server",
+        "auth",
+        "connector",
+        "merchant_id",
+        "tenant_id"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ReportEntry",
+      "file": "crates/internal/ucs-connector-tests/src/harness/report.rs",
+      "fields": [
+        "run_at_epoch_ms",
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "endpoint",
+        "is_dependency",
+        "assertion_result",
+        "response_status",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ScenarioRunReport",
+      "file": "crates/internal/ucs-connector-tests/src/harness/report.rs",
+      "fields": [
+        "runs"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MatrixEntry",
+      "file": "crates/internal/ucs-connector-tests/src/harness/report.rs",
+      "fields": [
+        "suite",
+        "scenario",
+        "connector",
+        "pm",
+        "pmt",
+        "result",
+        "error",
+        "response_status",
+        "run_at",
+        "run_index",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "GrpcurlRequest",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "endpoint",
+        "method",
+        "payload",
+        "headers",
+        "plaintext"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "GrpcExecutionResult",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "response_body",
+        "request_command",
+        "response_output",
+        "success"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SuiteScenarioResult",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "suite",
+        "scenario",
+        "is_dependency",
+        "passed",
+        "error",
+        "dependency",
+        "req_body",
+        "res_body",
+        "grpc_request",
+        "grpc_response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ExecutedScenario",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "effective_req",
+        "response_json",
+        "assertions",
+        "grpc_request",
+        "grpc_response",
+        "execution_error"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "SuiteRunSummary",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "suite",
+        "connector",
+        "passed",
+        "failed",
+        "results"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AllSuitesRunSummary",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "connector",
+        "passed",
+        "failed",
+        "suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "AllConnectorsRunSummary",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "passed",
+        "failed",
+        "connectors"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SuiteRunOptions",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "fields": [
+        "endpoint",
+        "merchant_id",
+        "tenant_id",
+        "plaintext",
+        "backend",
+        "report"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ScenarioDef",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "fields": [
+        "grpc_req",
+        "assert_rules",
+        "is_default"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SuiteSpec",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "fields": [
+        "suite",
+        "suite_type",
+        "depends_on",
+        "strict_dependencies",
+        "dependency_scope"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorSuiteSpec",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "fields": [
+        "connector",
+        "supported_suites"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConfigInterceptor",
+      "file": "crates/internal/ucs-connector-tests/src/harness/server.rs",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "UcsServer",
+      "file": "crates/internal/ucs-connector-tests/src/harness/server.rs",
+      "fields": [
+        "channel",
+        "task",
+        "_socket"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "ConnectorSelection",
+      "file": "crates/internal/ucs-connector-tests/src/bin/test_ucs.rs",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "SuiteSelection",
+      "file": "crates/internal/ucs-connector-tests/src/bin/test_ucs.rs",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "ScenarioSelection",
+      "file": "crates/internal/ucs-connector-tests/src/bin/test_ucs.rs",
+      "variants": [
+        "All",
+        "Specific"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "ConnectorAuth",
+      "file": "crates/internal/ucs-connector-tests/src/harness/credentials.rs",
+      "variants": [
+        "HeaderKey",
+        "BodyKey",
+        "SignatureKey"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "CredentialError",
+      "file": "crates/internal/ucs-connector-tests/src/harness/credentials.rs",
+      "variants": [
+        "FileRead",
+        "Parse",
+        "ConnectorNotFound",
+        "MissingAccountDetails",
+        "InvalidAuthType",
+        "MissingField"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ExecutionBackend",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_api.rs",
+      "variants": [
+        "Grpcurl",
+        "SdkFfi"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DependencyScope",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "variants": [
+        "Suite",
+        "Scenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Default",
+        "Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "SuiteDependency",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "variants": [
+        "SuiteName",
+        "SuiteWithScenario"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "FieldAssert",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "variants": [
+        "MustExist",
+        "MustNotExist",
+        "Equals",
+        "OneOf",
+        "Contains",
+        "Echo"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ScenarioError",
+      "file": "crates/internal/ucs-connector-tests/src/harness/scenario_types.rs",
+      "variants": [
+        "ScenarioFileRead",
+        "ScenarioFileParse",
+        "ScenarioNotFound",
+        "InvalidAssertionRule",
+        "AssertionFailed",
+        "UnsupportedSuite",
+        "JsonSerialize",
+        "CredentialLoad",
+        "GrpcurlExecution",
+        "SdkExecution",
+        "SuiteSpecRead",
+        "SuiteSpecParse",
+        "SuiteSpecMissing",
+        "DefaultScenarioMissing",
+        "MultipleDefaultScenarios",
+        "ConnectorSpecRead",
+        "ConnectorSpecParse",
+        "ConnectorOverrideRead",
+        "ConnectorOverrideParse"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorOverride",
+      "file": "crates/internal/ucs-connector-tests/src/harness/connector_override/mod.rs",
+      "methods": [
+        "connector_name",
+        "apply_overrides",
+        "normalize_tonic_request",
+        "transform_response",
+        "should_skip_scenario",
+        "extra_context_deferred_paths"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/status.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "FlowStatus",
+      "visibility": "pub",
+      "variants": [
+        "Supported",
+        "NotImplemented",
+        "NotSupported",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Default"
+      ],
+      "line": 13
+    },
+    {
+      "name": "ErrorCategory",
+      "visibility": "pub",
+      "variants": [
+        "NotImplemented",
+        "NotSupported",
+        "MissingField",
+        "InvalidConfig",
+        "Other"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Default",
+        "Debug",
+        "Clone",
+        "Copy",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 83
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "FlowStatus",
+      "trait_name": null,
+      "methods": [
+        "as_str",
+        "is_success",
+        "should_include_in_compact"
+      ],
+      "line": 31
+    },
+    {
+      "type_name": "FlowStatus",
+      "trait_name": "fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 54
+    },
+    {
+      "type_name": "String",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 60
+    },
+    {
+      "type_name": "FlowStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 66
+    },
+    {
+      "type_name": "ErrorCategory",
+      "trait_name": null,
+      "methods": [
+        "is_flow_unavailable",
+        "is_patchable"
+      ],
+      "line": 100
+    }
+  ],
+  "functions": [
+    {
+      "name": "as_str",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 33
+    },
+    {
+      "name": "is_success",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 43
+    },
+    {
+      "name": "should_include_in_compact",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 49
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut fmt::Formatter<'_>"
+      ],
+      "return_type": "fmt::Result",
+      "line": 55
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: FlowStatus"
+      ],
+      "return_type": "Self",
+      "line": 61
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "s: &str"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 69
+    },
+    {
+      "name": "is_flow_unavailable",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 103
+    },
+    {
+      "name": "is_patchable",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 109
+    },
+    {
+      "name": "test_status_as_str",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 119
+    },
+    {
+      "name": "test_status_try_from",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 127
+    },
+    {
+      "name": "test_status_is_success",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 145
+    }
+  ],
+  "use_statements": [
+    "use std::fmt;",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 44
+    },
+    {
+      "name": "matches",
+      "line": 50
+    },
+    {
+      "name": "write",
+      "line": 56
+    },
+    {
+      "name": "format",
+      "line": 75
+    },
+    {
+      "name": "matches",
+      "line": 104
+    },
+    {
+      "name": "matches",
+      "line": 110
+    },
+    {
+      "name": "assert_eq",
+      "line": 120
+    },
+    {
+      "name": "assert_eq",
+      "line": 120
+    },
+    {
+      "name": "assert_eq",
+      "line": 121
+    },
+    {
+      "name": "assert_eq",
+      "line": 121
+    },
+    {
+      "name": "assert_eq",
+      "line": 122
+    },
+    {
+      "name": "assert_eq",
+      "line": 122
+    },
+    {
+      "name": "assert_eq",
+      "line": 123
+    },
+    {
+      "name": "assert_eq",
+      "line": 123
+    },
+    {
+      "name": "assert_eq",
+      "line": 128
+    },
+    {
+      "name": "assert_eq",
+      "line": 128
+    },
+    {
+      "name": "assert_eq",
+      "line": 132
+    },
+    {
+      "name": "assert_eq",
+      "line": 132
+    },
+    {
+      "name": "assert_eq",
+      "line": 136
+    },
+    {
+      "name": "assert_eq",
+      "line": 136
+    },
+    {
+      "name": "assert_eq",
+      "line": 140
+    },
+    {
+      "name": "assert_eq",
+      "line": 140
+    },
+    {
+      "name": "assert",
+      "line": 141
+    },
+    {
+      "name": "assert",
+      "line": 141
+    },
+    {
+      "name": "assert",
+      "line": 146
+    },
+    {
+      "name": "assert",
+      "line": 146
+    },
+    {
+      "name": "assert",
+      "line": 147
+    },
+    {
+      "name": "assert",
+      "line": 147
+    },
+    {
+      "name": "assert",
+      "line": 148
+    },
+    {
+      "name": "assert",
+      "line": 148
+    },
+    {
+      "name": "assert",
+      "line": 149
+    },
+    {
+      "name": "assert",
+      "line": 149
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

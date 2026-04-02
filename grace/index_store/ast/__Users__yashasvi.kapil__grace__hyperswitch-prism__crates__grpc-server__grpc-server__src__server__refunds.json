@@ -1,0 +1,69 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/server/refunds.rs",
+  "structs": [
+    {
+      "name": "Refunds",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 25
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "RefundOperationsInternal",
+      "visibility": "",
+      "methods": [
+        "internal_get"
+      ],
+      "line": 17
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Refunds",
+      "trait_name": "RefundOperationsInternal",
+      "methods": [],
+      "line": 27
+    },
+    {
+      "type_name": "Refunds",
+      "trait_name": "RefundService",
+      "methods": [
+        "get"
+      ],
+      "line": 45
+    }
+  ],
+  "functions": [
+    {
+      "name": "get",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: tonic::Request<RefundServiceGetRequest>"
+      ],
+      "return_type": "Result<tonic::Response<RefundResponse>, tonic::Status>",
+      "line": 67
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use connector_integration::types::ConnectorData;",
+    "use domain_types::{\n    connector_flow::{FlowName as DomainFlowName, RSync},\n    connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},\n    utils::ForeignTryFrom,\n};",
+    "use grpc_api_types::payments::{\n    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,\n};",
+    "use ucs_env::error::{ReportSwitchExt, ResultExtGrpc};",
+    "use crate::{implement_connector_operation, request::RequestData, utils};"
+  ],
+  "macro_calls": [
+    {
+      "name": "implement_connector_operation",
+      "line": 28
+    }
+  ],
+  "modules": []
+}

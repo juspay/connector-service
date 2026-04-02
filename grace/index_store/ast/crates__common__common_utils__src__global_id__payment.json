@@ -1,0 +1,154 @@
+{
+  "file_path": "crates/common/common_utils/src/global_id/payment.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalPaymentId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr",
+        "generate",
+        "get_execute_revenue_recovery_id"
+      ],
+      "line": 15
+    },
+    {
+      "type_name": "GlobalPaymentId",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 38
+    },
+    {
+      "type_name": "GlobalAttemptId",
+      "trait_name": null,
+      "methods": [
+        "generate",
+        "get_string_repr",
+        "get_psync_revenue_recovery_id"
+      ],
+      "line": 55
+    },
+    {
+      "type_name": "GlobalAttemptId",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 80
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 17
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "Self",
+      "line": 22
+    },
+    {
+      "name": "get_execute_revenue_recovery_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "task: &str",
+        "runner: enums::ProcessTrackerRunner"
+      ],
+      "return_type": "String",
+      "line": 28
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: std::borrow::Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 40
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "Self",
+      "line": 58
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 65
+    },
+    {
+      "name": "get_psync_revenue_recovery_id",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "task: &str",
+        "runner: enums::ProcessTrackerRunner"
+      ],
+      "return_type": "String",
+      "line": 71
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: std::borrow::Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 82
+    }
+  ],
+  "use_statements": [
+    "use common_enums::enums;",
+    "use error_stack::ResultExt;",
+    "use crate::{errors, global_id::CellId};"
+  ],
+  "macro_calls": [
+    {
+      "name": "global_id_type",
+      "line": 6
+    },
+    {
+      "name": "global_id_type",
+      "line": 6
+    },
+    {
+      "name": "format",
+      "line": 33
+    },
+    {
+      "name": "global_id_type",
+      "line": 50
+    },
+    {
+      "name": "global_id_type",
+      "line": 50
+    },
+    {
+      "name": "format",
+      "line": 76
+    }
+  ],
+  "modules": []
+}

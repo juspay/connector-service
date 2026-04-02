@@ -1,0 +1,433 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/helcim.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 85
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 89
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 93
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 97
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 105
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 109
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 113
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 143
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 163
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 167
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 179
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 184
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 189
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 194
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 199
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 204
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 290
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 548
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 565
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 582
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 595
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 607
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 619
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 636
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 653
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 670
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 686
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 696
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 706
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 716
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 726
+    },
+    {
+      "type_name": "Helcim",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 736
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 293
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 297
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 301
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 314
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 318
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::BytesExt,\n    fp_utils::generate_id, types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,\n        SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,\n        DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,\n        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use std::{\n    fmt::Debug,\n    marker::{Send, Sync},\n};",
+    "use transformers::{\n    self as helcim, HelcimCaptureRequest, HelcimPaymentsCaptureResponse, HelcimPaymentsRequest,\n    HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsVoidResponse,\n    HelcimRefundRequest, HelcimVoidRequest, RefundResponse, RefundSyncResponse,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 209
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 209
+    },
+    {
+      "name": "vec",
+      "line": 308
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 328
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 328
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 353
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 353
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 385
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 385
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 423
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 423
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 452
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 452
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 481
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 481
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 510
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 510
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

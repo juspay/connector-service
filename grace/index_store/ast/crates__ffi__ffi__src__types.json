@@ -1,0 +1,43 @@
+{
+  "file_path": "crates/ffi/ffi/src/types.rs",
+  "structs": [
+    {
+      "name": "FfiMetadataPayload",
+      "visibility": "pub",
+      "fields": [
+        "connector",
+        "connector_config"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 5
+    },
+    {
+      "name": "FfiRequestData",
+      "visibility": "pub",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Debug"
+      ],
+      "line": 11
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use common_utils::metadata::MaskedMetadata;",
+    "use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificConfig};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

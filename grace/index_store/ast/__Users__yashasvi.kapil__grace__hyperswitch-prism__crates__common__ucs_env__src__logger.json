@@ -1,0 +1,19 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/ucs_env/src/logger.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "pub use setup::setup;",
+    "pub use tracing::{debug, error, event as log, info, warn};",
+    "pub use tracing_attributes::instrument;"
+  ],
+  "macro_calls": [],
+  "modules": [
+    "config",
+    "setup",
+    "env"
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/app.rs",
+  "structs": [
+    {
+      "name": "Service",
+      "visibility": "pub",
+      "fields": [
+        "health_check_service",
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service",
+        "payouts_service"
+      ],
+      "derives": [],
+      "line": 101
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Service",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "http_server",
+        "grpc_server"
+      ],
+      "line": 121
+    }
+  ],
+  "functions": [
+    {
+      "name": "server_builder",
+      "visibility": "pub",
+      "parameters": [
+        "config: configs::Config"
+      ],
+      "return_type": "Result<(), ConfigurationError>",
+      "line": 32
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "config: Arc<configs::Config>"
+      ],
+      "return_type": "Self",
+      "line": 127
+    },
+    {
+      "name": "http_server",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "base_config: Arc<configs::Config>",
+        "socket: net::SocketAddr",
+        "shutdown_signal: impl Future<Output = ()> + Send + 'static"
+      ],
+      "return_type": "Result<(), ConfigurationError>",
+      "line": 169
+    },
+    {
+      "name": "grpc_server",
+      "visibility": "pub",
+      "parameters": [
+        "self",
+        "base_config: Arc<configs::Config>",
+        "socket: net::SocketAddr",
+        "shutdown_signal: impl Future<Output = ()>"
+      ],
+      "return_type": "Result<(), ConfigurationError>",
+      "line": 226
+    },
+    {
+      "name": "metrics_server_builder",
+      "visibility": "pub",
+      "parameters": [
+        "config: configs::Config"
+      ],
+      "return_type": "Result<(), ConfigurationError>",
+      "line": 324
+    }
+  ],
+  "use_statements": [
+    "use axum::{extract::Request, http};",
+    "use common_utils::consts;",
+    "use external_services::shared_metrics as metrics;",
+    "use grpc_api_types::{\n    health_check::health_server,\n    payments::{\n        composite_payment_service_server, composite_refund_service_server, customer_service_server,\n        dispute_service_server, event_service_server, merchant_authentication_service_server,\n        payment_method_authentication_service_server, payment_method_service_server,\n        payment_service_server, recurring_payment_service_server, refund_service_server,\n    },\n    payouts::payout_service_server,\n};",
+    "use std::{future::Future, net, sync::Arc};",
+    "use tokio::{\n    signal::unix::{signal, SignalKind},\n    sync::oneshot,\n};",
+    "use tonic::transport::Server;",
+    "use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};",
+    "use ucs_env::{configs, error::ConfigurationError, logger};",
+    "use crate::{\n    config_overrides::RequestExtensionsLayer, http::config_middleware::HttpRequestExtensionsLayer,\n    utils,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "select",
+      "line": 50
+    },
+    {
+      "name": "info",
+      "line": 73
+    },
+    {
+      "name": "info",
+      "line": 73
+    },
+    {
+      "name": "info",
+      "line": 79
+    },
+    {
+      "name": "info",
+      "line": 79
+    },
+    {
+      "name": "info",
+      "line": 132
+    },
+    {
+      "name": "info",
+      "line": 132
+    },
+    {
+      "name": "info",
+      "line": 134
+    },
+    {
+      "name": "info",
+      "line": 134
+    },
+    {
+      "name": "error",
+      "line": 334
+    },
+    {
+      "name": "error",
+      "line": 334
+    },
+    {
+      "name": "error",
+      "line": 348
+    },
+    {
+      "name": "error",
+      "line": 348
+    }
+  ],
+  "modules": []
+}

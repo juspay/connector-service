@@ -1,0 +1,477 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/hyperpg.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 71
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 156
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 196
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 201
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 277
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [
+        "get_connector_about",
+        "get_supported_payment_methods",
+        "get_supported_webhook_flows"
+      ],
+      "line": 527
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 544
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 554
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 564
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 574
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 584
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 594
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 604
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 610
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 616
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 622
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 632
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 642
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 652
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 662
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 672
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 682
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 692
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 698
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 704
+    },
+    {
+      "type_name": "Hyperpg",
+      "trait_name": "interfaces::verification::SourceVerification",
+      "methods": [],
+      "line": 715
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 280
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 284
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 288
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 292
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 296
+    },
+    {
+      "name": "get_connector_about",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static ConnectorInfo>",
+      "line": 530
+    },
+    {
+      "name": "get_supported_payment_methods",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static SupportedPaymentMethods>",
+      "line": 534
+    },
+    {
+      "name": "get_supported_webhook_flows",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static [enums::EventClass]>",
+      "line": 538
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_enums::{self as enums, CurrencyUnit};",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::{ByteSliceExt, ValueExt},\n    FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,\n        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,\n        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,\n        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::ErrorResponse,\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{\n        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,\n        PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,\n    },\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding,\n};",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use std::sync::LazyLock;",
+    "use transformers::{\n    self as hyperpg, HyperpgAuthorizeRequest, HyperpgAuthorizeResponse, HyperpgRefundRequest,\n    HyperpgRefundResponse, HyperpgRefundSyncResponse, HyperpgSyncResponse,\n};",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 206
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 206
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 307
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 307
+    },
+    {
+      "name": "format",
+      "line": 322
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 343
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 343
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 374
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 374
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 405
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 405
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 449
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 449
+    },
+    {
+      "name": "vec",
+      "line": 482
+    },
+    {
+      "name": "vec",
+      "line": 484
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

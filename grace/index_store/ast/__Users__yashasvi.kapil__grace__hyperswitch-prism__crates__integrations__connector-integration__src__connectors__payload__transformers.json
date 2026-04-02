@@ -1,0 +1,425 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/payload/transformers.rs",
+  "structs": [
+    {
+      "name": "PayloadAuth",
+      "visibility": "pub",
+      "fields": [
+        "api_key",
+        "processing_account_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize"
+      ],
+      "line": 55
+    },
+    {
+      "name": "PayloadAuthType",
+      "visibility": "pub",
+      "fields": [
+        "auths"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "line": 61
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PayloadAuth",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 65
+    },
+    {
+      "type_name": "PayloadAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 84
+    },
+    {
+      "type_name": "PayloadCardsRequestData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 172
+    },
+    {
+      "type_name": "PayloadPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 223
+    },
+    {
+      "type_name": "PayloadCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 295
+    },
+    {
+      "type_name": "PayloadVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 318
+    },
+    {
+      "type_name": "PayloadRepeatPaymentRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 341
+    },
+    {
+      "type_name": "PayloadRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 411
+    },
+    {
+      "type_name": "common_enums::AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 446
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 550
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 570
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 590
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 611
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 629
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 642
+    },
+    {
+      "type_name": "enums::RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 655
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 666
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 694
+    }
+  ],
+  "functions": [
+    {
+      "name": "is_manual_capture",
+      "visibility": "",
+      "parameters": [
+        "capture_method: Option<enums::CaptureMethod>"
+      ],
+      "return_type": "bool",
+      "line": 49
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: (&ConnectorSpecificConfig, enums::Currency)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 67
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 86
+    },
+    {
+      "name": "build_payload_cards_request_data",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>",
+        "connector_config: &ConnectorSpecificConfig",
+        "currency: enums::Currency",
+        "amount: FloatMajorUnit",
+        "resource_common_data: &PaymentFlowData",
+        "capture_method: Option<enums::CaptureMethod>",
+        "is_mandate: bool"
+      ],
+      "return_type": "Result<PayloadCardsRequestData<T>, Error>",
+      "line": 106
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayloadRouterData<\n            RouterDataV2<\n                SetupMandate,\n                PaymentFlowData,\n                SetupMandateRequestData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 187
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayloadRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 238
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: PayloadRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 305
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: PayloadRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 328
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayloadRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::RepeatPayment,\n                PaymentFlowData,\n                domain_types::connector_types::RepeatPaymentData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 356
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: PayloadRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 421
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: responses::PayloadPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 447
+    },
+    {
+      "name": "handle_payment_response",
+      "visibility": "",
+      "parameters": [
+        "response: PayloadPaymentsResponse",
+        "router_data: RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>",
+        "http_code: u16",
+        "is_mandate_payment: bool"
+      ],
+      "return_type": "Result<RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>, Error>",
+      "line": 460
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 556
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 581
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 602
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 621
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 634
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 647
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: responses::RefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 656
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 671
+    },
+    {
+      "name": "parse_webhook_event",
+      "visibility": "pub",
+      "parameters": [
+        "body: &[u8]"
+      ],
+      "return_type": "Result<PayloadWebhookEvent, error_stack::Report<errors::ConnectorError>>",
+      "line": 686
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<PayloadRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 699
+    },
+    {
+      "name": "get_event_type_from_trigger",
+      "visibility": "pub",
+      "parameters": [
+        "trigger: PayloadWebhooksTrigger"
+      ],
+      "return_type": "domain_types::connector_types::EventType",
+      "line": 714
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use common_enums::enums;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    ext_traits::ValueExt,\n    types::FloatMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},\n    connector_types::{\n        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,\n        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId, SetupMandateRequestData,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{\n        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,\n        ErrorResponse,\n    },\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeOptionInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use super::{requests, responses};",
+    "use crate::connectors::payload::{PayloadAmountConvertor, PayloadRouterData};",
+    "use crate::types::ResponseRouterData;",
+    "pub use super::requests::{\n    PayloadCaptureRequest, PayloadCardsRequestData, PayloadPaymentsRequest, PayloadRefundRequest,\n    PayloadRepeatPaymentRequest, PayloadVoidRequest,\n};",
+    "pub use super::responses::{\n    PayloadAuthorizeResponse, PayloadCaptureResponse, PayloadErrorResponse, PayloadEventDetails,\n    PayloadPSyncResponse, PayloadPaymentsResponse, PayloadRSyncResponse, PayloadRefundResponse,\n    PayloadRepeatPaymentResponse, PayloadSetupMandateResponse, PayloadVoidResponse,\n    PayloadWebhookEvent, PayloadWebhooksTrigger,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 50
+    },
+    {
+      "name": "json",
+      "line": 487
+    }
+  ],
+  "modules": []
+}

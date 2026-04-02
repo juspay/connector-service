@@ -1,0 +1,11 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/test_authorize_only.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

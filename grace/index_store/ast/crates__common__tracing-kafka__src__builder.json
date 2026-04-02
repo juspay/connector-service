@@ -1,0 +1,151 @@
+{
+  "file_path": "crates/common/tracing-kafka/src/builder.rs",
+  "structs": [
+    {
+      "name": "KafkaWriterBuilder",
+      "visibility": "pub",
+      "fields": [
+        "brokers",
+        "topic",
+        "batch_size",
+        "linger_ms",
+        "queue_buffering_max_messages",
+        "queue_buffering_max_kbytes",
+        "reconnect_backoff_min_ms",
+        "reconnect_backoff_max_ms"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "line": 9
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "KafkaWriterBuilder",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "brokers",
+        "topic",
+        "batch_size",
+        "linger_ms",
+        "linger",
+        "queue_buffering_max_messages",
+        "queue_buffering_max_kbytes",
+        "reconnect_backoff",
+        "build"
+      ],
+      "line": 20
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 22
+    },
+    {
+      "name": "brokers",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "brokers: Vec<String>"
+      ],
+      "return_type": "Self",
+      "line": 27
+    },
+    {
+      "name": "topic",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "topic: impl Into<String>"
+      ],
+      "return_type": "Self",
+      "line": 33
+    },
+    {
+      "name": "batch_size",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 39
+    },
+    {
+      "name": "linger_ms",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "ms: u64"
+      ],
+      "return_type": "Self",
+      "line": 45
+    },
+    {
+      "name": "linger",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "duration: Duration"
+      ],
+      "return_type": "Self",
+      "line": 51
+    },
+    {
+      "name": "queue_buffering_max_messages",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 57
+    },
+    {
+      "name": "queue_buffering_max_kbytes",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "size: usize"
+      ],
+      "return_type": "Self",
+      "line": 63
+    },
+    {
+      "name": "reconnect_backoff",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "min: Duration",
+        "max: Duration"
+      ],
+      "return_type": "Self",
+      "line": 69
+    },
+    {
+      "name": "build",
+      "visibility": "pub",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<KafkaWriter, KafkaWriterError>",
+      "line": 76
+    }
+  ],
+  "use_statements": [
+    "use std::time::Duration;",
+    "use super::writer::{KafkaWriter, KafkaWriterError};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

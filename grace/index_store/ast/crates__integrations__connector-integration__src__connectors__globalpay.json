@@ -1,0 +1,559 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/globalpay.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 230
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 240
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 246
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 251
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 256
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 261
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 266
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 271
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 276
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 282
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 287
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 293
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 298
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 303
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 308
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 313
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 318
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 323
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 329
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 334
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 339
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 345
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 350
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 355
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 361
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 365
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 369
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 373
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_access_token"
+      ],
+      "line": 379
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 388
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 486
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 589
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 600
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 610
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 621
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 632
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 642
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 653
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 660
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 667
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 674
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [
+        "get_headers",
+        "get_content_type",
+        "get_url",
+        "get_request_body",
+        "build_request_v2",
+        "handle_response_v2",
+        "get_error_response_v2"
+      ],
+      "line": 685
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 811
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 822
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 833
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 845
+    },
+    {
+      "type_name": "Globalpay",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 862
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_access_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_payment_method: Option<common_enums::PaymentMethod>"
+      ],
+      "return_type": "bool",
+      "line": 382
+    },
+    {
+      "name": "get_headers",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_req: &RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 693
+    },
+    {
+      "name": "get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 714
+    },
+    {
+      "name": "get_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 718
+    },
+    {
+      "name": "get_request_body",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<RequestContent>, errors::ConnectorError>",
+      "line": 731
+    },
+    {
+      "name": "build_request_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<Option<common_utils::request::Request>, errors::ConnectorError>",
+      "line": 744
+    },
+    {
+      "name": "handle_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >",
+        "event_builder: Option<&mut events::Event>",
+        "res: Response"
+      ],
+      "return_type": "CustomResult<\n        RouterDataV2<\n            CreateAccessToken,\n            PaymentFlowData,\n            AccessTokenRequestData,\n            AccessTokenResponseData,\n        >,\n        errors::ConnectorError,\n    >",
+      "line": 767
+    },
+    {
+      "name": "get_error_response_v2",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 800
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 865
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 869
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 873
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 877
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 881
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 890
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,\n    types::StringMinorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers as globalpay;",
+    "use transformers::{\n    GlobalpayAuthorizeResponse, GlobalpayCaptureRequest, GlobalpayCaptureResponse,\n    GlobalpayPSyncResponse, GlobalpayPaymentsRequest, GlobalpayRSyncResponse,\n    GlobalpayRefundRequest, GlobalpayRefundResponse, GlobalpayVoidRequest, GlobalpayVoidResponse,\n};",
+    "use crate::connectors::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;",
+    "use crate::with_response_body;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 64
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 64
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 65
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 65
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 395
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 395
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 424
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 424
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 456
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 456
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 497
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 497
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 530
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 530
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 560
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 560
+    },
+    {
+      "name": "vec",
+      "line": 702
+    },
+    {
+      "name": "format",
+      "line": 728
+    },
+    {
+      "name": "with_response_body",
+      "line": 791
+    },
+    {
+      "name": "with_response_body",
+      "line": 791
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 900
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 900
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

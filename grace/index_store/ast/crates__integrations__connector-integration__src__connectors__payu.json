@@ -1,0 +1,406 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/payu.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 57
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 67
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 71
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 75
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 79
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 83
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 143
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 160
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 185
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 190
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "base_url",
+        "get_auth_header"
+      ],
+      "line": 430
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 456
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 460
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 464
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 469
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 474
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 483
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 492
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 497
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 502
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 507
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 516
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 527
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 538
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 549
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 560
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 570
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 580
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 590
+    },
+    {
+      "type_name": "Payu",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 600
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 433
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 437
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 441
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 445
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use base64::Engine;",
+    "use common_enums::{enums, CurrencyUnit};",
+    "use common_utils::{\n    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self, ConnectorError},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Maskable;",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse, PayuSyncRequest,\n    PayuSyncResponse,\n};",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 201
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 201
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 271
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 271
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 351
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 351
+    },
+    {
+      "name": "vec",
+      "line": 451
+    }
+  ],
+  "modules": [
+    "transformers"
+  ]
+}

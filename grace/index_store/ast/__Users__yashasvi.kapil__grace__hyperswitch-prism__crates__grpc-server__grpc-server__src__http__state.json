@@ -1,0 +1,60 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/grpc-server/grpc-server/src/http/state.rs",
+  "structs": [
+    {
+      "name": "AppState",
+      "visibility": "pub",
+      "fields": [
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 9
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "AppState",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 23
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "composite_payments_service: CompositePaymentsService",
+        "payments_service: crate::server::payments::Payments",
+        "refund_service: crate::server::refunds::Refunds",
+        "dispute_service: crate::server::disputes::Disputes",
+        "recurring_payment_service: crate::server::payments::RecurringPayments",
+        "event_service: crate::server::events::EventServiceImpl",
+        "payment_method_service: crate::server::payments::PaymentMethod",
+        "merchant_authentication_service: crate::server::payments::MerchantAuthentication",
+        "customer_service: crate::server::payments::Customer",
+        "payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication"
+      ],
+      "return_type": "Self",
+      "line": 24
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

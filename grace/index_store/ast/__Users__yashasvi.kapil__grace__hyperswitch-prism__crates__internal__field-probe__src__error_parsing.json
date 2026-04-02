@@ -1,0 +1,226 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/error_parsing.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "classify_error",
+      "visibility": "pub",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "ErrorCategory",
+      "line": 88
+    },
+    {
+      "name": "is_not_implemented",
+      "visibility": "pub",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "bool",
+      "line": 111
+    },
+    {
+      "name": "is_not_supported",
+      "visibility": "pub",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "bool",
+      "line": 127
+    },
+    {
+      "name": "parse_missing_field",
+      "visibility": "pub",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 148
+    },
+    {
+      "name": "parse_plural_missing_fields",
+      "visibility": "",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 168
+    },
+    {
+      "name": "extract_field_after_pattern",
+      "visibility": "",
+      "parameters": [
+        "msg: &str",
+        "pattern: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 186
+    },
+    {
+      "name": "parse_missing_field_alt",
+      "visibility": "pub",
+      "parameters": [
+        "msg: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 221
+    },
+    {
+      "name": "is_oauth_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &domain_types::connector_types::ConnectorEnum"
+      ],
+      "return_type": "bool",
+      "line": 234
+    },
+    {
+      "name": "test_parse_missing_field_singular",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 245
+    },
+    {
+      "name": "test_parse_missing_field_plural",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 257
+    },
+    {
+      "name": "test_is_not_implemented",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 265
+    },
+    {
+      "name": "test_is_not_supported",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 272
+    },
+    {
+      "name": "test_classify_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 279
+    }
+  ],
+  "use_statements": [
+    "use crate::status::ErrorCategory;",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 236
+    },
+    {
+      "name": "assert_eq",
+      "line": 246
+    },
+    {
+      "name": "assert_eq",
+      "line": 246
+    },
+    {
+      "name": "assert_eq",
+      "line": 250
+    },
+    {
+      "name": "assert_eq",
+      "line": 250
+    },
+    {
+      "name": "assert_eq",
+      "line": 258
+    },
+    {
+      "name": "assert_eq",
+      "line": 258
+    },
+    {
+      "name": "assert",
+      "line": 266
+    },
+    {
+      "name": "assert",
+      "line": 266
+    },
+    {
+      "name": "assert",
+      "line": 267
+    },
+    {
+      "name": "assert",
+      "line": 267
+    },
+    {
+      "name": "assert",
+      "line": 268
+    },
+    {
+      "name": "assert",
+      "line": 268
+    },
+    {
+      "name": "assert",
+      "line": 273
+    },
+    {
+      "name": "assert",
+      "line": 273
+    },
+    {
+      "name": "assert",
+      "line": 274
+    },
+    {
+      "name": "assert",
+      "line": 274
+    },
+    {
+      "name": "assert",
+      "line": 275
+    },
+    {
+      "name": "assert",
+      "line": 275
+    },
+    {
+      "name": "assert_eq",
+      "line": 280
+    },
+    {
+      "name": "assert_eq",
+      "line": 280
+    },
+    {
+      "name": "assert_eq",
+      "line": 284
+    },
+    {
+      "name": "assert_eq",
+      "line": 284
+    },
+    {
+      "name": "assert_eq",
+      "line": 288
+    },
+    {
+      "name": "assert_eq",
+      "line": 288
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

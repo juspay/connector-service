@@ -1,0 +1,584 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/ext_traits.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "Encode",
+      "visibility": "pub",
+      "methods": [
+        "convert_and_encode",
+        "convert_and_url_encode",
+        "url_encode",
+        "encode_to_string_of_json",
+        "encode_to_string_of_xml",
+        "encode_to_value",
+        "encode_to_vec"
+      ],
+      "line": 16
+    },
+    {
+      "name": "BytesExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_struct"
+      ],
+      "line": 148
+    },
+    {
+      "name": "ByteSliceExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_struct"
+      ],
+      "line": 178
+    },
+    {
+      "name": "ConfigExt",
+      "visibility": "pub",
+      "methods": [
+        "is_default",
+        "is_empty_after_trim",
+        "is_default_or_empty"
+      ],
+      "line": 205
+    },
+    {
+      "name": "XmlExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_xml"
+      ],
+      "line": 265
+    },
+    {
+      "name": "ValueExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_value"
+      ],
+      "line": 296
+    },
+    {
+      "name": "AsyncExt",
+      "visibility": "pub",
+      "methods": [
+        "async_map",
+        "async_and_then",
+        "async_unwrap_or_else"
+      ],
+      "line": 333
+    },
+    {
+      "name": "OptionExt",
+      "visibility": "pub",
+      "methods": [
+        "check_value_present",
+        "get_required_value",
+        "parse_enum",
+        "parse_value",
+        "update_value"
+      ],
+      "line": 432
+    },
+    {
+      "name": "StringExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_enum",
+        "parse_struct"
+      ],
+      "line": 531
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "A",
+      "trait_name": "Encode",
+      "methods": [
+        "convert_and_encode",
+        "convert_and_url_encode",
+        "url_encode",
+        "encode_to_string_of_json",
+        "encode_to_string_of_xml",
+        "encode_to_value",
+        "encode_to_vec"
+      ],
+      "line": 71
+    },
+    {
+      "type_name": "bytes::Bytes",
+      "trait_name": "BytesExt",
+      "methods": [
+        "parse_struct"
+      ],
+      "line": 158
+    },
+    {
+      "type_name": "String",
+      "trait_name": "ConfigExt",
+      "methods": [
+        "is_empty_after_trim"
+      ],
+      "line": 234
+    },
+    {
+      "type_name": "Secret",
+      "trait_name": "ConfigExt",
+      "methods": [
+        "is_default",
+        "is_empty_after_trim",
+        "is_default_or_empty"
+      ],
+      "line": 240
+    },
+    {
+      "type_name": "serde_json::Value",
+      "trait_name": "ValueExt",
+      "methods": [
+        "parse_value"
+      ],
+      "line": 303
+    },
+    {
+      "type_name": "Secret",
+      "trait_name": "ValueExt",
+      "methods": [
+        "parse_value"
+      ],
+      "line": 318
+    },
+    {
+      "type_name": "Result",
+      "trait_name": "AsyncExt",
+      "methods": [
+        "async_and_then",
+        "async_map",
+        "async_unwrap_or_else"
+      ],
+      "line": 358
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "AsyncExt",
+      "methods": [
+        "async_and_then",
+        "async_map",
+        "async_unwrap_or_else"
+      ],
+      "line": 396
+    },
+    {
+      "type_name": "Option",
+      "trait_name": "OptionExt",
+      "methods": [
+        "check_value_present",
+        "get_required_value",
+        "parse_enum",
+        "parse_value",
+        "update_value"
+      ],
+      "line": 463
+    },
+    {
+      "type_name": "String",
+      "trait_name": "StringExt",
+      "methods": [
+        "parse_enum",
+        "parse_struct"
+      ],
+      "line": 548
+    }
+  ],
+  "functions": [
+    {
+      "name": "convert_and_encode",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<String, errors::ParsingError>\n    where\n        P: TryFrom<&'e Self> + Serialize,\n        Result<P, <P as TryFrom<&'e Self>>::Error>: ResultExt,\n        <Result<P, <P as TryFrom<&'e Self>>::Error> as ResultExt>::Ok: Serialize,",
+      "line": 75
+    },
+    {
+      "name": "convert_and_url_encode",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<String, errors::ParsingError>\n    where\n        P: TryFrom<&'e Self> + Serialize,\n        Result<P, <P as TryFrom<&'e Self>>::Error>: ResultExt,\n        <Result<P, <P as TryFrom<&'e Self>>::Error> as ResultExt>::Ok: Serialize,",
+      "line": 88
+    },
+    {
+      "name": "url_encode",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<String, errors::ParsingError>\n    where\n        Self: Serialize,",
+      "line": 101
+    },
+    {
+      "name": "encode_to_string_of_json",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<String, errors::ParsingError>\n    where\n        Self: Serialize,",
+      "line": 110
+    },
+    {
+      "name": "encode_to_string_of_xml",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<String, errors::ParsingError>\n    where\n        Self: Serialize,",
+      "line": 119
+    },
+    {
+      "name": "encode_to_value",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<serde_json::Value, errors::ParsingError>\n    where\n        Self: Serialize,",
+      "line": 128
+    },
+    {
+      "name": "encode_to_vec",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "CustomResult<Vec<u8>, errors::ParsingError>\n    where\n        Self: Serialize,",
+      "line": 137
+    },
+    {
+      "name": "parse_struct",
+      "visibility": "",
+      "parameters": [
+        "&'de self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: Deserialize<'de>,",
+      "line": 159
+    },
+    {
+      "name": "parse_struct",
+      "visibility": "",
+      "parameters": [
+        "&'de self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: Deserialize<'de>,",
+      "line": 190
+    },
+    {
+      "name": "is_default",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool\n    where\n        Self: Default + PartialEq<Self>,",
+      "line": 207
+    },
+    {
+      "name": "is_default_or_empty",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool\n    where\n        Self: Default + PartialEq<Self>,",
+      "line": 220
+    },
+    {
+      "name": "is_empty_after_trim",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 229
+    },
+    {
+      "name": "is_empty_after_trim",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 235
+    },
+    {
+      "name": "is_default",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool\n    where\n        T: Default + PartialEq<T>,",
+      "line": 245
+    },
+    {
+      "name": "is_empty_after_trim",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 252
+    },
+    {
+      "name": "is_default_or_empty",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool\n    where\n        T: Default + PartialEq<T>,",
+      "line": 256
+    },
+    {
+      "name": "parse_xml",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "Result<T, de::DeError>\n    where\n        T: serde::de::DeserializeOwned,",
+      "line": 273
+    },
+    {
+      "name": "deserialize_xml_to_struct",
+      "visibility": "pub",
+      "parameters": [
+        "response: &str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\nwhere\n    T: serde::de::DeserializeOwned,",
+      "line": 282
+    },
+    {
+      "name": "parse_value",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: serde::de::DeserializeOwned,",
+      "line": 304
+    },
+    {
+      "name": "parse_value",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: serde::de::DeserializeOwned,",
+      "line": 322
+    },
+    {
+      "name": "async_and_then",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "Self::WrappedSelf<B>\n    where\n        F: FnOnce(A) -> Fut + Send,\n        Fut: futures::Future<Output = Self::WrappedSelf<B>> + Send,",
+      "line": 360
+    },
+    {
+      "name": "async_map",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "Self::WrappedSelf<B>\n    where\n        F: FnOnce(A) -> Fut + Send,\n        Fut: futures::Future<Output = B> + Send,",
+      "line": 371
+    },
+    {
+      "name": "async_unwrap_or_else",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "A\n    where\n        F: FnOnce() -> Fut + Send,\n        Fut: futures::Future<Output = A> + Send,",
+      "line": 382
+    },
+    {
+      "name": "async_and_then",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "Self::WrappedSelf<B>\n    where\n        F: FnOnce(A) -> Fut + Send,\n        Fut: futures::Future<Output = Self::WrappedSelf<B>> + Send,",
+      "line": 398
+    },
+    {
+      "name": "async_map",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "Self::WrappedSelf<B>\n    where\n        F: FnOnce(A) -> Fut + Send,\n        Fut: futures::Future<Output = B> + Send,",
+      "line": 409
+    },
+    {
+      "name": "async_unwrap_or_else",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "func: F"
+      ],
+      "return_type": "A\n    where\n        F: FnOnce() -> Fut + Send,\n        Fut: futures::Future<Output = A> + Send,",
+      "line": 420
+    },
+    {
+      "name": "check_value_present",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "field_name: &'static str"
+      ],
+      "return_type": "CustomResult<(), errors::ValidationError>",
+      "line": 468
+    },
+    {
+      "name": "get_required_value",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "field_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ValidationError>",
+      "line": 482
+    },
+    {
+      "name": "parse_enum",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "enum_name: &'static str"
+      ],
+      "return_type": "CustomResult<E, errors::ParsingError>\n    where\n        T: AsRef<str>,\n        E: std::str::FromStr,\n        <E as std::str::FromStr>::Err: std::error::Error + Send + Sync + 'static,",
+      "line": 496
+    },
+    {
+      "name": "parse_value",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<U, errors::ParsingError>\n    where\n        T: ValueExt,\n        U: serde::de::DeserializeOwned,",
+      "line": 512
+    },
+    {
+      "name": "update_value",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "value: Self"
+      ],
+      "return_type": "",
+      "line": 523
+    },
+    {
+      "name": "parse_enum",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "enum_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: std::str::FromStr,\n        <T as std::str::FromStr>::Err: std::error::Error + Send + Sync + 'static,",
+      "line": 549
+    },
+    {
+      "name": "parse_struct",
+      "visibility": "",
+      "parameters": [
+        "&'de self",
+        "type_name: &'static str"
+      ],
+      "return_type": "CustomResult<T, errors::ParsingError>\n    where\n        T: Deserialize<'de>,",
+      "line": 559
+    }
+  ],
+  "use_statements": [
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret, Strategy};",
+    "use quick_xml::de;",
+    "use serde::{Deserialize, Serialize};",
+    "use crate::{\n    errors::{self, CustomResult},\n    fp_utils::when,\n};",
+    "use bytes::Buf;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 85
+    },
+    {
+      "name": "format",
+      "line": 98
+    },
+    {
+      "name": "format",
+      "line": 107
+    },
+    {
+      "name": "format",
+      "line": 116
+    },
+    {
+      "name": "format",
+      "line": 125
+    },
+    {
+      "name": "format",
+      "line": 134
+    },
+    {
+      "name": "format",
+      "line": 143
+    },
+    {
+      "name": "format",
+      "line": 172
+    },
+    {
+      "name": "format",
+      "line": 199
+    },
+    {
+      "name": "format",
+      "line": 291
+    },
+    {
+      "name": "format",
+      "line": 308
+    },
+    {
+      "name": "format",
+      "line": 476
+    },
+    {
+      "name": "format",
+      "line": 491
+    },
+    {
+      "name": "format",
+      "line": 508
+    },
+    {
+      "name": "format",
+      "line": 556
+    },
+    {
+      "name": "format",
+      "line": 569
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,350 @@
+{
+  "file_path": "crates/internal/field-probe/src/config.rs",
+  "structs": [
+    {
+      "name": "Rule",
+      "visibility": "pub(crate)",
+      "fields": [
+        "aliases",
+        "patch_type",
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 12
+    },
+    {
+      "name": "PatchConfig",
+      "visibility": "pub(crate)",
+      "fields": [
+        "rules"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default"
+      ],
+      "line": 29
+    },
+    {
+      "name": "ConnectorRequestOverrides",
+      "visibility": "pub(crate)",
+      "fields": [
+        "connector_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default"
+      ],
+      "line": 75
+    },
+    {
+      "name": "ProbeConfig",
+      "visibility": "pub(crate)",
+      "fields": [
+        "probe",
+        "access_token",
+        "oauth_connectors",
+        "skip_connectors",
+        "payment_methods",
+        "connector_metadata",
+        "connector_overrides"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 83
+    },
+    {
+      "name": "ProbeSettings",
+      "visibility": "pub(crate)",
+      "fields": [
+        "max_iterations"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 97
+    },
+    {
+      "name": "AccessTokenConfig",
+      "visibility": "pub(crate)",
+      "fields": [
+        "token",
+        "token_type",
+        "expires_in_seconds"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 102
+    },
+    {
+      "name": "OAuthConnector",
+      "visibility": "pub(crate)",
+      "fields": [
+        "name"
+      ],
+      "derives": [
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Default",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 109
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "PatchConfig",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 35
+    },
+    {
+      "type_name": "ProbeConfig",
+      "trait_name": null,
+      "methods": [
+        "load",
+        "get_enabled_payment_methods"
+      ],
+      "line": 113
+    },
+    {
+      "type_name": "ProbeConfig",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 140
+    }
+  ],
+  "functions": [
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 36
+    },
+    {
+      "name": "get_patch_config",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "&'static PatchConfig",
+      "line": 47
+    },
+    {
+      "name": "load",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 114
+    },
+    {
+      "name": "get_enabled_payment_methods",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Vec<(&'static str, fn() -> PaymentMethod)>",
+      "line": 131
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 141
+    },
+    {
+      "name": "get_config",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "&'static ProbeConfig",
+      "line": 188
+    },
+    {
+      "name": "max_iterations",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "usize",
+      "line": 192
+    },
+    {
+      "name": "connector_transaction_id_override",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "Option<String>",
+      "line": 199
+    },
+    {
+      "name": "connector_feature_data_json",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "connector: &ConnectorEnum"
+      ],
+      "return_type": "Option<String>",
+      "line": 209
+    }
+  ],
+  "use_statements": [
+    "use domain_types::connector_types::ConnectorEnum;",
+    "use grpc_api_types::payments::PaymentMethod;",
+    "use serde::Deserialize;",
+    "use std::collections::HashMap;",
+    "use std::sync::OnceLock;"
+  ],
+  "macro_calls": [
+    {
+      "name": "concat",
+      "line": 52
+    },
+    {
+      "name": "eprintln",
+      "line": 56
+    },
+    {
+      "name": "eprintln",
+      "line": 56
+    },
+    {
+      "name": "panic",
+      "line": 58
+    },
+    {
+      "name": "eprintln",
+      "line": 61
+    },
+    {
+      "name": "eprintln",
+      "line": 61
+    },
+    {
+      "name": "concat",
+      "line": 118
+    },
+    {
+      "name": "eprintln",
+      "line": 122
+    },
+    {
+      "name": "eprintln",
+      "line": 122
+    },
+    {
+      "name": "panic",
+      "line": 124
+    },
+    {
+      "name": "eprintln",
+      "line": 127
+    },
+    {
+      "name": "eprintln",
+      "line": 127
+    },
+    {
+      "name": "vec",
+      "line": 150
+    },
+    {
+      "name": "vec",
+      "line": 179
+    },
+    {
+      "name": "format",
+      "line": 201
+    },
+    {
+      "name": "format",
+      "line": 211
+    }
+  ],
+  "modules": []
+}

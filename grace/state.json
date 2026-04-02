@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "processed_threads": {
+    "PRRT_kwDOOiUczc534eYo": {
+      "pr_number": 692,
+      "processed_at": "2026-03-31T11:33:04.818802+00:00",
+      "status": "fixed",
+      "commit_sha": "372bb10207f3f19c43ca17b5eb3450ecc90dc2d0",
+      "path": "crates/integrations/connector-integration/src/connectors/dlocal/transformers.rs",
+      "instruction_preview": "this is not needed we already have serde uppercase"
+    },
+    "PRRT_kwDOOiUczc539Q7W": {
+      "pr_number": 785,
+      "processed_at": "2026-03-31T13:45:43.866135+00:00",
+      "status": "fixed",
+      "commit_sha": "d673a8afb43923402efc7f218bb41f10eabb5ab4",
+      "path": "crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+      "instruction_preview": "use currency enum we have"
+    },
+    "PRRT_kwDOOiUczc539RoG": {
+      "pr_number": 785,
+      "processed_at": "2026-03-31T13:45:46.173079+00:00",
+      "status": "fixed",
+      "commit_sha": "d673a8afb43923402efc7f218bb41f10eabb5ab4",
+      "path": "crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+      "instruction_preview": "use notsupported"
+    },
+    "PRRT_kwDOOiUczc539Stt": {
+      "pr_number": 785,
+      "processed_at": "2026-03-31T13:45:48.013667+00:00",
+      "status": "fixed",
+      "commit_sha": "d673a8afb43923402efc7f218bb41f10eabb5ab4",
+      "path": "crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+      "instruction_preview": "DONT HARDCODE"
+    },
+    "PRRT_kwDOOiUczc539TAE": {
+      "pr_number": 785,
+      "processed_at": "2026-03-31T13:45:50.877875+00:00",
+      "status": "fixed",
+      "commit_sha": "d673a8afb43923402efc7f218bb41f10eabb5ab4",
+      "path": "crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+      "instruction_preview": "DONT HARDCODE"
+    },
+    "PRRT_kwDOOiUczc539TYa": {
+      "pr_number": 785,
+      "processed_at": "2026-03-31T13:45:53.355756+00:00",
+      "status": "fixed",
+      "commit_sha": "d673a8afb43923402efc7f218bb41f10eabb5ab4",
+      "path": "crates/integrations/connector-integration/src/connectors/razorpayv2/transformers.rs",
+      "instruction_preview": "this should not be hardcoded"
+    },
+    "PRRT_kwDOOiUczc538_jE": {
+      "pr_number": 858,
+      "processed_at": "2026-03-31T16:58:41.835775+00:00",
+      "status": "build_blocked",
+      "error": "Branch build broken \u2014 will auto-retry when new commits are pushed"
+    },
+    "PRRT_kwDOOiUczc52IhTr": {
+      "pr_number": 738,
+      "processed_at": "2026-03-31T18:05:57.467389+00:00",
+      "status": "fixed",
+      "commit_sha": "bf64a3d48dbc56d8ae58320a4f337e94c15800dd",
+      "path": "crates/integrations/connector-integration/src/connectors/noon/transformers.rs",
+      "instruction_preview": "```suggestion\r\n        let category = Some(item.request.order_category.clone().ok_or(\r\n            ConnectorError::MissingRequiredField {\r\n                field_name: \"order_category\",\r\n            },",
+      "resolution_summary": "**Summary of changes:** Changed the `category` field to use `item.request.order_category` directly instead of extracting it from metadata, and made it a required field that returns a `MissingRequiredField` error if not provided."
+    },
+    "PRRT_kwDOOiUczc54Br66": {
+      "pr_number": 740,
+      "processed_at": "2026-03-31T18:12:09.873428+00:00",
+      "status": "fixed",
+      "commit_sha": "f968db36efadf1cabade2a243425d89a5169d694",
+      "path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+      "instruction_preview": "import at top common_utils::types:",
+      "resolution_summary": "**Summary:** Added `types` to the `common_utils` import at line 2 and replaced the fully-qualified `common_utils::types::StringMajorUnit` with the shorter `types::StringMajorUnit` at lines 106 and 1000, addressing the reviewer's feedback to import `common_utils::types` at the top of the file."
+    },
+    "PRRT_kwDOOiUczc54BsZp": {
+      "pr_number": 740,
+      "processed_at": "2026-03-31T18:12:12.274318+00:00",
+      "status": "fixed",
+      "commit_sha": "f968db36efadf1cabade2a243425d89a5169d694",
+      "path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+      "instruction_preview": "make this secret",
+      "resolution_summary": "**Summary:** Changed the `token` field in `PayuCreateOrderResponse` from `Option<String>` to `Option<Secret<String>>` to properly mask sensitive token data in logs and debug output."
+    },
+    "PRRT_kwDOOiUczc54BtVG": {
+      "pr_number": 740,
+      "processed_at": "2026-03-31T18:12:14.640836+00:00",
+      "status": "fixed",
+      "commit_sha": "f968db36efadf1cabade2a243425d89a5169d694",
+      "path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+      "instruction_preview": "DONT HARDCODE",
+      "resolution_summary": "**Summary of change:**\n\nChanged line 1112 from using `unwrap_or_else(|| Secret::new(\"Test\".to_string()))` to `ok_or(ConnectorError::MissingRequiredField { field_name: \"billing.first_name\" })?` to properly return a `MissingRequiredField` error when the billing first name is missing instead of using a hardcoded placeholder value."
+    },
+    "PRRT_kwDOOiUczc54BtjL": {
+      "pr_number": 740,
+      "processed_at": "2026-03-31T18:12:16.285610+00:00",
+      "status": "fixed",
+      "commit_sha": "f968db36efadf1cabade2a243425d89a5169d694",
+      "path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+      "instruction_preview": "NO hardcodeing",
+      "resolution_summary": "**Summary of changes:**\n\nI removed the hardcoded fallback values for `email` (\"test@example.com\") and `phone` (\"+919876543210\") in the `PayuCreateOrderRequest` implementation. Instead of using `unwrap_or_else` with hardcoded values, the code now properly returns a `ConnectorError::MissingRequiredField` error when these required fields are not provided, following the same pattern used by the `PayuPaymentRequest` implementation."
+    },
+    "PRRT_kwDOOiUczc54BuCF": {
+      "pr_number": 740,
+      "processed_at": "2026-03-31T18:12:18.131023+00:00",
+      "status": "fixed",
+      "commit_sha": "f968db36efadf1cabade2a243425d89a5169d694",
+      "path": "crates/integrations/connector-integration/src/connectors/payu/transformers.rs",
+      "instruction_preview": "no hardcode",
+      "resolution_summary": "Let me check how another connector handles the CreateOrder flow with IP addresses:"
+    },
+    "PRRT_kwDOOiUczc54dXM5": {
+      "pr_number": 878,
+      "processed_at": "2026-04-02T10:38:50.521288+00:00",
+      "status": "fixed",
+      "commit_sha": "73ab9b915a865da319739d8cd6b53a28f990cf5d",
+      "path": "crates/integrations/connector-integration/src/connectors/dlocal/transformers.rs",
+      "instruction_preview": "Make this secret",
+      "resolution_summary": "**Summary of changes:** Changed `card_id` in `DlocalRepeatPaymentCard` from `String` to `Secret<String>` (line 271) to mask the sensitive card token in logs and debug output, and wrapped the assignment site with `Secret::new(card_id)` so the value is properly encapsulated as a secret."
+    },
+    "PRRT_kwDOOiUczc54dYxf": {
+      "pr_number": 878,
+      "processed_at": "2026-04-02T10:38:52.182050+00:00",
+      "status": "fixed",
+      "commit_sha": "73ab9b915a865da319739d8cd6b53a28f990cf5d",
+      "path": "crates/integrations/connector-integration/src/connectors/dlocal/transformers.rs",
+      "instruction_preview": "use util",
+      "resolution_summary": "Replaced the manual `.email.clone().ok_or(ConnectorError::MissingRequiredField { field_name: \"email\" })?` with the existing utility method `get_email()?`, consistent with how the same field is retrieved in the `Authorize` flow at line 101."
+    },
+    "PRRT_kwDOOiUczc54dZdL": {
+      "pr_number": 882,
+      "processed_at": "2026-04-02T10:49:36.708926+00:00",
+      "status": "fixed",
+      "commit_sha": "4fb4a91c869de992aadb58807597d09a4cb931d3",
+      "path": "crates/integrations/connector-integration/src/connectors/shift4/transformers.rs",
+      "instruction_preview": "use struct email",
+      "resolution_summary": "The changes look correct. Here's a summary:\n\n**Changed `pub email: Option<String>` to `pub email: Option<pii::Email>`** in `Shift4CreateCustomerRequest`, using the proper `Email` struct from `common_utils::pii` (already imported) instead of a plain `String`. The corresponding `try_from` mapping was simplified from triple `.expose()` chaining to a single `.expose().clone()` call, since `Secret<pii::Email>.expose()` now directly yields the `pii::Email` value we need."
+    },
+    "PRRT_kwDOOiUczc54dZnR": {
+      "pr_number": 882,
+      "processed_at": "2026-04-02T10:49:38.389474+00:00",
+      "status": "fixed",
+      "commit_sha": "4fb4a91c869de992aadb58807597d09a4cb931d3",
+      "path": "crates/integrations/connector-integration/src/connectors/shift4/transformers.rs",
+      "instruction_preview": "use util",
+      "resolution_summary": ""
+    },
+    "PRRT_kwDOOiUczc54daUx": {
+      "pr_number": 882,
+      "processed_at": "2026-04-02T10:49:40.428624+00:00",
+      "status": "fixed",
+      "commit_sha": "4fb4a91c869de992aadb58807597d09a4cb931d3",
+      "path": "crates/integrations/connector-integration/src/connectors/shift4/transformers.rs",
+      "instruction_preview": "use util",
+      "resolution_summary": ""
+    },
+    "PRRT_kwDOOiUczc54gRks": {
+      "pr_number": 869,
+      "processed_at": "2026-04-02T13:43:13.634485+00:00",
+      "status": "fixed",
+      "commit_sha": "38ae2d30a464c28ac4eff64a35e8dac037dad46d",
+      "path": "crates/integrations/connector-integration/src/connectors/multisafepay/transformers.rs",
+      "instruction_preview": "Use utils here",
+      "resolution_summary": "The edit looks correct. Here's the summary:\n\n**What changed and why:** Replaced the manual 4\u21922-digit year extraction (`if len == 4 { &year[2..] }`) and `format!` concatenation with the existing utility method `get_card_expiry_year_month_2_digit_with_delimiter(String::new())`, which already encapsulates that same logic and returns a `Secret<String>` in YYMM format \u2014 then `.expose()` unwraps it for parsing to `i64`. This directly addresses the reviewer's suggestion to use `utils` instead of hand-r"
+    }
+  },
+  "last_poll": "2026-04-02T18:52:21.095740+00:00",
+  "build_failures": {
+    "858": {
+      "branch": "feat/grace-jpmorgan-google",
+      "head_sha": "2c12ab22607712d446d6f0a6c799016cfd85693f",
+      "failed_at": "2026-03-31T16:58:41.835710+00:00",
+      "error": "Checking ucs_common_enums v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/common/common_enums)\n   Compiling grpc-api-types v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/types-traits/grpc-api-types)\n    Checking ucs_common_utils v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/common/common_utils)\n    Checking ucs_cards v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/types-traits/cards)\n    Checking domain_types v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/types-traits/domain_types)\n    Checking interfaces v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/types-traits/interfaces)\n    Checking connector-integration v0.1.0 (/Users/yashasvi.kapil/.grace/clones/slot-0/crates/integrations/connector-integration)\nwarning: unused import: `cards::CardNumber`\n --> crates/integrations/connector-integration/src/connectors/jpmorgan/requests.rs:1:5\n  |\n1 | use cards::CardNumber;\n  |     ^^^^^^^^^^^^^^^^^\n  |\n  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default\n\nerror[E0271]: type mismatch resolving `<T as PaymentMethodDataTypes>::Inner == CardNumber`\n   --> crates/integrations/connector-integration/src/connectors/jpmorgan/transformers.rs:438:49\n    |\n438 |   ...                   account_number: domain_types::payment_method_data::RawCardNumber(\n    |  _______________________________________^\n439 | | ...                       google_pay_decrypted_data\n440 | | ...                           .application_primary_account_number\n441 | | ...                           .clone(),\n442 | | ...                   ),\n    | |_______________________^ expected `CardNumber`, found associated type\n    |\n    = note:       expected struct `CardNumber`\n            found associated type `<T as PaymentMethodDataTypes>::Inner`\nhelp: consider constraining the associated type `<T as PaymentMethodDataTypes>::Inner` to `CardNumber`\n    |\n172 | impl<T: PaymentMethodDataTypes<Inner = CardNumber> + std::fmt::Debug + Sync + Send + 'static + Serialize>\n    |                               ++++++++++++++++++++\n\nFor more information about this error, try `rustc --explain E0271`.\nwarning: `connector-integration` (lib) generated 1 warning\nerror: could not compile `connector-integration` (lib) due to 1 previous error; 1 warning emitted"
+    }
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/beta_tests/braintree_payment_flows_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_timestamp",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "u64",
+      "line": 45
+    },
+    {
+      "name": "add_braintree_metadata",
+      "visibility": "",
+      "parameters": [
+        "request: &mut Request<T>"
+      ],
+      "return_type": "",
+      "line": 53
+    },
+    {
+      "name": "extract_transaction_id",
+      "visibility": "",
+      "parameters": [
+        "response: &PaymentServiceAuthorizeResponse"
+      ],
+      "return_type": "String",
+      "line": 110
+    },
+    {
+      "name": "extract_refund_id",
+      "visibility": "",
+      "parameters": [
+        "response: &RefundResponse"
+      ],
+      "return_type": "&String",
+      "line": 121
+    },
+    {
+      "name": "create_payment_authorize_request",
+      "visibility": "",
+      "parameters": [
+        "capture_method: CaptureMethod"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 126
+    },
+    {
+      "name": "create_payment_sync_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str"
+      ],
+      "return_type": "PaymentServiceGetRequest",
+      "line": 173
+    },
+    {
+      "name": "create_payment_capture_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str"
+      ],
+      "return_type": "PaymentServiceCaptureRequest",
+      "line": 198
+    },
+    {
+      "name": "create_payment_void_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str"
+      ],
+      "return_type": "PaymentServiceVoidRequest",
+      "line": 212
+    },
+    {
+      "name": "create_refund_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str"
+      ],
+      "return_type": "PaymentServiceRefundRequest",
+      "line": 230
+    },
+    {
+      "name": "create_refund_sync_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str",
+        "refund_id: &str"
+      ],
+      "return_type": "RefundServiceGetRequest",
+      "line": 252
+    },
+    {
+      "name": "test_health",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 281
+    },
+    {
+      "name": "test_payment_authorization_auto_capture",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 300
+    },
+    {
+      "name": "test_payment_authorization_manual_capture",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 327
+    },
+    {
+      "name": "test_payment_sync_auto_capture",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 381
+    },
+    {
+      "name": "test_payment_void",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 427
+    },
+    {
+      "name": "test_refund",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 500
+    },
+    {
+      "name": "test_refund_sync",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 553
+    }
+  ],
+  "use_statements": [
+    "use cards::CardNumber;",
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use std::{\n    collections::HashMap,\n    str::FromStr,\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use grpc_api_types::{\n    health_check::{health_client::HealthClient, HealthCheckRequest},\n    payments::{\n        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,\n        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,\n        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,\n        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,\n        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,\n        RefundServiceGetRequest, RefundStatus,\n    },\n};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "panic",
+      "line": 63
+    },
+    {
+      "name": "format",
+      "line": 91
+    },
+    {
+      "name": "format",
+      "line": 103
+    },
+    {
+      "name": "panic",
+      "line": 114
+    },
+    {
+      "name": "panic",
+      "line": 116
+    },
+    {
+      "name": "format",
+      "line": 160
+    },
+    {
+      "name": "format",
+      "line": 180
+    },
+    {
+      "name": "format",
+      "line": 219
+    },
+    {
+      "name": "format",
+      "line": 232
+    },
+    {
+      "name": "format",
+      "line": 268
+    },
+    {
+      "name": "grpc_test",
+      "line": 282
+    },
+    {
+      "name": "grpc_test",
+      "line": 282
+    },
+    {
+      "name": "grpc_test",
+      "line": 301
+    },
+    {
+      "name": "grpc_test",
+      "line": 301
+    },
+    {
+      "name": "grpc_test",
+      "line": 328
+    },
+    {
+      "name": "grpc_test",
+      "line": 328
+    },
+    {
+      "name": "grpc_test",
+      "line": 382
+    },
+    {
+      "name": "grpc_test",
+      "line": 382
+    },
+    {
+      "name": "grpc_test",
+      "line": 428
+    },
+    {
+      "name": "grpc_test",
+      "line": 428
+    },
+    {
+      "name": "grpc_test",
+      "line": 501
+    },
+    {
+      "name": "grpc_test",
+      "line": 501
+    },
+    {
+      "name": "grpc_test",
+      "line": 554
+    },
+    {
+      "name": "grpc_test",
+      "line": 554
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

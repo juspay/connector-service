@@ -1,0 +1,19 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/build.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 1
+    }
+  ],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": []
+}

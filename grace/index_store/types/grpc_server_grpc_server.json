@@ -1,0 +1,590 @@
+{
+  "crate": "grpc_server_grpc_server",
+  "structs": [
+    {
+      "name": "Service",
+      "file": "crates/grpc-server/grpc-server/src/app.rs",
+      "fields": [
+        "health_check_service",
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service",
+        "payouts_service"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RequestExtensionsLayer",
+      "file": "crates/grpc-server/grpc-server/src/config_overrides.rs",
+      "fields": [
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "TonicRequestExtensionsMiddleware",
+      "file": "crates/grpc-server/grpc-server/src/config_overrides.rs",
+      "fields": [
+        "inner",
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "HttpRequestExtensionsLayer",
+      "file": "crates/grpc-server/grpc-server/src/http/config_middleware.rs",
+      "fields": [
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "HttpRequestExtensionsMiddleware",
+      "file": "crates/grpc-server/grpc-server/src/http/config_middleware.rs",
+      "fields": [
+        "inner",
+        "base_config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "HttpError",
+      "file": "crates/grpc-server/grpc-server/src/http/error.rs",
+      "fields": [
+        "status",
+        "message"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ErrorResponse",
+      "file": "crates/grpc-server/grpc-server/src/http/error.rs",
+      "fields": [
+        "error"
+      ],
+      "derives": [
+        "Serialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "ErrorDetail",
+      "file": "crates/grpc-server/grpc-server/src/http/error.rs",
+      "fields": [
+        "message",
+        "code"
+      ],
+      "derives": [
+        "Serialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "AppState",
+      "file": "crates/grpc-server/grpc-server/src/http/state.rs",
+      "fields": [
+        "composite_payments_service",
+        "payments_service",
+        "refunds_service",
+        "disputes_service",
+        "recurring_payment_service",
+        "event_service",
+        "payment_method_service",
+        "merchant_authentication_service",
+        "customer_service",
+        "payment_method_authentication_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ValidatedJson",
+      "file": "crates/grpc-server/grpc-server/src/http/utils.rs",
+      "fields": [],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RequestData",
+      "file": "crates/grpc-server/grpc-server/src/request.rs",
+      "fields": [
+        "payload",
+        "extracted_metadata",
+        "masked_metadata",
+        "extensions"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Disputes",
+      "file": "crates/grpc-server/grpc-server/src/server/disputes.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "EventServiceImpl",
+      "file": "crates/grpc-server/grpc-server/src/server/events.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "HealthCheck",
+      "file": "crates/grpc-server/grpc-server/src/server/health_check.rs",
+      "fields": [],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "EventParams",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [
+        "_connector_name",
+        "_service_name",
+        "service_type",
+        "request_id",
+        "lineage_ids",
+        "reference_id",
+        "resource_id",
+        "shadow_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "CardTokenData",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [
+        "card_number",
+        "cvv",
+        "exp_month",
+        "exp_year"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Serialize"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "RecurringPayments",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MerchantAuthentication",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethodAuthentication",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentMethod",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Events",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Payments",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [
+        "merchant_authentication_service",
+        "customer_service"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Customer",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "Payouts",
+      "file": "crates/grpc-server/grpc-server/src/server/payouts.rs",
+      "fields": [],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "Refunds",
+      "file": "crates/grpc-server/grpc-server/src/server/refunds.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConfigInterceptor",
+      "file": "crates/grpc-server/grpc-server/tests/common.rs",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "GenericInner",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "flag"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "GenericWrapper",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "OptionalGenericWrapper",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PatchDerive",
+        "PartialEq"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonInner",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonAssoc",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "Concrete",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonWrapper",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonWrapperOpt",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Debug",
+        "Default",
+        "PartialEq",
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonHolder",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "JsonHolderOpt",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "fields": [
+        "assoc"
+      ],
+      "derives": [
+        "PatchDerive"
+      ],
+      "visibility": ""
+    },
+    {
+      "name": "ConnectorAccountDetails",
+      "file": "crates/grpc-server/grpc-server/tests/utils/credential_utils.rs",
+      "fields": [
+        "auth_type",
+        "api_key",
+        "key1",
+        "api_secret",
+        "key2",
+        "certificate",
+        "private_key",
+        "auth_key_map"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorCredentials",
+      "file": "crates/grpc-server/grpc-server/tests/utils/credential_utils.rs",
+      "fields": [
+        "connector_account_details",
+        "metadata"
+      ],
+      "derives": [
+        "serde::Deserialize",
+        "Debug",
+        "Clone"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "CredentialError",
+      "file": "crates/grpc-server/grpc-server/tests/utils/credential_utils.rs",
+      "variants": [
+        "FileReadError",
+        "ParseError",
+        "ConnectorNotFound",
+        "InvalidAuthType",
+        "MissingField",
+        "InvalidStructure"
+      ],
+      "derives": [
+        "Debug",
+        "thiserror::Error"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "DisputeOperationsInternal",
+      "file": "crates/grpc-server/grpc-server/src/server/disputes.rs",
+      "methods": [
+        "internal_defend"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "ToTokenData",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "methods": [
+        "to_token_data",
+        "to_token_data_with_vault"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "PaymentOperationsInternal",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "methods": [
+        "internal_void_payment",
+        "internal_void_post_capture",
+        "internal_refund",
+        "internal_payment_capture",
+        "internal_incremental_authorization",
+        "internal_create_order"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "PaymentMethodAuthOperational",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "methods": [
+        "internal_pre_authenticate",
+        "internal_authenticate",
+        "internal_post_authenticate"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "RecurringPaymentOperational",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "methods": [
+        "internal_mandate_revoke"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "MerchantAuthenticationOperational",
+      "file": "crates/grpc-server/grpc-server/src/server/payments.rs",
+      "methods": [
+        "internal_sdk_session_token"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "PayoutOperationsInternal",
+      "file": "crates/grpc-server/grpc-server/src/server/payouts.rs",
+      "methods": [
+        "internal_payout_create",
+        "internal_payout_transfer",
+        "internal_payout_get",
+        "internal_payout_void",
+        "internal_payout_stage",
+        "internal_payout_create_link",
+        "internal_payout_create_recipient",
+        "internal_payout_enroll_disburse_account"
+      ],
+      "supertraits": [],
+      "visibility": "pub(crate)"
+    },
+    {
+      "name": "RefundOperationsInternal",
+      "file": "crates/grpc-server/grpc-server/src/server/refunds.rs",
+      "methods": [
+        "internal_get"
+      ],
+      "supertraits": [],
+      "visibility": ""
+    },
+    {
+      "name": "AutoClient",
+      "file": "crates/grpc-server/grpc-server/tests/common.rs",
+      "methods": [
+        "new"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "AssocTrait",
+      "file": "crates/grpc-server/grpc-server/tests/test_config_override.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": ""
+    }
+  ]
+}

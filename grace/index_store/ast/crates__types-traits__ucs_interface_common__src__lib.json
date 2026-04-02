@@ -1,0 +1,20 @@
+{
+  "file_path": "crates/types-traits/ucs_interface_common/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "auth",
+    "config",
+    "error",
+    "flow",
+    "headers",
+    "metadata",
+    "middleware",
+    "request"
+  ]
+}

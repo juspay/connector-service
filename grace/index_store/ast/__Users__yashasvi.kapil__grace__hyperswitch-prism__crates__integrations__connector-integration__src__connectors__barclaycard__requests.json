@@ -1,0 +1,403 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/barclaycard/requests.rs",
+  "structs": [
+    {
+      "name": "BarclaycardPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "processing_information",
+        "payment_information",
+        "order_information",
+        "client_reference_information",
+        "merchant_defined_information"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 11
+    },
+    {
+      "name": "ProcessingInformation",
+      "visibility": "pub",
+      "fields": [
+        "commerce_indicator",
+        "capture",
+        "payment_solution",
+        "cavv_algorithm"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 23
+    },
+    {
+      "name": "CardPaymentInformation",
+      "visibility": "pub",
+      "fields": [
+        "card"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 34
+    },
+    {
+      "name": "Card",
+      "visibility": "pub",
+      "fields": [
+        "number",
+        "expiration_month",
+        "expiration_year",
+        "security_code",
+        "card_type",
+        "type_selection_indicator"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 46
+    },
+    {
+      "name": "OrderInformationWithBill",
+      "visibility": "pub",
+      "fields": [
+        "amount_details",
+        "bill_to"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 58
+    },
+    {
+      "name": "Amount",
+      "visibility": "pub",
+      "fields": [
+        "total_amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 65
+    },
+    {
+      "name": "BillTo",
+      "visibility": "pub",
+      "fields": [
+        "first_name",
+        "last_name",
+        "address1",
+        "locality",
+        "administrative_area",
+        "postal_code",
+        "country",
+        "email"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 72
+    },
+    {
+      "name": "ClientReferenceInformation",
+      "visibility": "pub",
+      "fields": [
+        "code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 85
+    },
+    {
+      "name": "OrderInformation",
+      "visibility": "pub",
+      "fields": [
+        "amount_details"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 91
+    },
+    {
+      "name": "BarclaycardCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "order_information",
+        "client_reference_information",
+        "merchant_defined_information"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 97
+    },
+    {
+      "name": "BarclaycardVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "client_reference_information",
+        "reversal_information",
+        "merchant_defined_information"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 106
+    },
+    {
+      "name": "ReversalInformation",
+      "visibility": "pub",
+      "fields": [
+        "amount_details",
+        "reason"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 115
+    },
+    {
+      "name": "BarclaycardRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "order_information",
+        "client_reference_information"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Clone",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 122
+    }
+  ],
+  "enums": [
+    {
+      "name": "PaymentInformation",
+      "visibility": "pub",
+      "variants": [
+        "Cards"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 40
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use common_enums::CountryAlpha2;",
+    "use common_utils::{pii, types::StringMajorUnit};",
+    "use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};",
+    "use hyperswitch_masking::Secret;",
+    "use serde::Serialize;",
+    "use crate::utils::MerchantDefinedInformation;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,59 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/server/health_check.rs",
+  "structs": [
+    {
+      "name": "HealthCheck",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [],
+      "line": 4
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "HealthCheck",
+      "trait_name": "health_server::Health",
+      "methods": [
+        "check"
+      ],
+      "line": 7
+    }
+  ],
+  "functions": [
+    {
+      "name": "check",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: Request<health_check::HealthCheckRequest>"
+      ],
+      "return_type": "Result<Response<health_check::HealthCheckResponse>, Status>",
+      "line": 8
+    }
+  ],
+  "use_statements": [
+    "use grpc_api_types::health_check::{self, health_server};",
+    "use tonic::{Request, Response, Status};"
+  ],
+  "macro_calls": [
+    {
+      "name": "debug",
+      "line": 12
+    },
+    {
+      "name": "debug",
+      "line": 12
+    },
+    {
+      "name": "info",
+      "line": 17
+    },
+    {
+      "name": "info",
+      "line": 17
+    }
+  ],
+  "modules": []
+}

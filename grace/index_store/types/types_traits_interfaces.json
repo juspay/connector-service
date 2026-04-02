@@ -1,0 +1,717 @@
+{
+  "crate": "types_traits_interfaces",
+  "structs": [
+    {
+      "name": "ExternalAuthenticationPayload",
+      "file": "crates/types-traits/interfaces/src/authentication.rs",
+      "fields": [
+        "trans_status",
+        "authentication_value",
+        "eci"
+      ],
+      "derives": [
+        "Clone",
+        "serde::Deserialize",
+        "Debug",
+        "serde::Serialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputePayload",
+      "file": "crates/types-traits/interfaces/src/disputes.rs",
+      "fields": [
+        "amount",
+        "currency",
+        "dispute_stage",
+        "connector_status",
+        "connector_dispute_id",
+        "connector_reason",
+        "connector_reason_code",
+        "challenge_required_by",
+        "created_at",
+        "updated_at"
+      ],
+      "derives": [
+        "Default",
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorEvent",
+      "file": "crates/types-traits/interfaces/src/events/connector_api_logs.rs",
+      "fields": [
+        "connector_name",
+        "flow",
+        "request",
+        "masked_response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "merchant_id",
+        "created_at",
+        "request_id",
+        "latency",
+        "refund_id",
+        "dispute_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RoutingEvent",
+      "file": "crates/types-traits/interfaces/src/events/routing_api_logs.rs",
+      "fields": [
+        "routable_connectors",
+        "payment_connector",
+        "flow",
+        "request",
+        "response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "profile_id",
+        "merchant_id",
+        "created_at",
+        "status_code",
+        "request_id",
+        "routing_engine",
+        "routing_approach"
+      ],
+      "derives": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RoutableConnectorChoice",
+      "file": "crates/types-traits/interfaces/src/routing.rs",
+      "fields": [
+        "choice_kind",
+        "connector",
+        "merchant_connector_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "ToSchema"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhookRequestDetails",
+      "file": "crates/types-traits/interfaces/src/webhooks.rs",
+      "fields": [
+        "method",
+        "uri",
+        "headers",
+        "body",
+        "query_params"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "MerchantConnectorWebhookDetails",
+      "file": "crates/types-traits/interfaces/src/webhooks.rs",
+      "fields": [
+        "merchant_secret",
+        "additional_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "enums": [
+    {
+      "name": "ApplicationResponse",
+      "file": "crates/types-traits/interfaces/src/api.rs",
+      "variants": [
+        "Json",
+        "StatusOk",
+        "TextPlain",
+        "JsonForRedirection",
+        "Form",
+        "PaymentLinkForm",
+        "FileData",
+        "JsonWithHeaders",
+        "GenericLinkForm"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhookFlowError",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "variants": [
+        "ResourceNotFound",
+        "InternalError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RoutingEngine",
+      "file": "crates/types-traits/interfaces/src/events/routing_api_logs.rs",
+      "variants": [
+        "IntelligentRouter",
+        "DecisionEngine"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ApiMethod",
+      "file": "crates/types-traits/interfaces/src/events/routing_api_logs.rs",
+      "variants": [
+        "Grpc",
+        "Rest"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RoutableChoiceKind",
+      "file": "crates/types-traits/interfaces/src/routing.rs",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "ToSchema",
+        "PartialEq"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "RoutableChoiceSerde",
+      "file": "crates/types-traits/interfaces/src/routing.rs",
+      "variants": [
+        "OnlyConnector",
+        "FullStruct"
+      ],
+      "derives": [
+        "Debug",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorSourceVerificationSecrets",
+      "file": "crates/types-traits/interfaces/src/verification.rs",
+      "variants": [
+        "AuthHeaders",
+        "WebhookSecret",
+        "RedirectResponseSecret",
+        "AuthWithWebHookSecret"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhookFlowError",
+      "file": "crates/types-traits/interfaces/src/webhooks.rs",
+      "variants": [
+        "ResourceNotFound",
+        "InternalError"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhookEvent",
+      "file": "crates/types-traits/interfaces/src/webhooks.rs",
+      "variants": [
+        "PaymentIntentFailure",
+        "PaymentIntentSuccess",
+        "PaymentIntentProcessing",
+        "PaymentIntentPartiallyFunded",
+        "PaymentIntentCancelled",
+        "PaymentIntentCancelFailure",
+        "PaymentIntentAuthorizationSuccess",
+        "PaymentIntentAuthorizationFailure",
+        "PaymentIntentCaptureSuccess",
+        "PaymentIntentCaptureFailure",
+        "PaymentActionRequired",
+        "EventNotSupported",
+        "SourceChargeable",
+        "SourceTransactionCreated",
+        "RefundFailure",
+        "RefundSuccess",
+        "DisputeOpened",
+        "DisputeExpired",
+        "DisputeAccepted",
+        "DisputeCancelled",
+        "DisputeChallenged",
+        "DisputeWon",
+        "DisputeLost",
+        "MandateActive",
+        "MandateRevoked",
+        "EndpointVerification",
+        "ExternalAuthenticationARes",
+        "FrmApproved",
+        "FrmRejected"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Hash",
+        "Serialize",
+        "Deserialize",
+        "Copy"
+      ],
+      "visibility": "pub"
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorCommon",
+      "file": "crates/types-traits/interfaces/src/api.rs",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorIntegrationAnyV2",
+      "file": "crates/types-traits/interfaces/src/connector_integration_v2.rs",
+      "methods": [
+        "get_connector_integration_v2"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorIntegrationV2",
+      "file": "crates/types-traits/interfaces/src/connector_integration_v2.rs",
+      "methods": [
+        "get_headers",
+        "get_content_type",
+        "get_http_method",
+        "get_url",
+        "get_request_body",
+        "get_request_form_data",
+        "build_request_v2",
+        "handle_response_v2",
+        "get_error_response_v2",
+        "get_5xx_error_response",
+        "get_certificate",
+        "get_certificate_key"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorServiceTrait",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentVoidV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentVoidPostCaptureV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ValidationTrait",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [
+        "should_do_order_create",
+        "should_do_session_token",
+        "should_do_access_token",
+        "should_create_connector_customer",
+        "should_do_payment_method_token",
+        "requires_external_webhook_verification"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentOrderCreate",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentSessionToken",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "SdkSessionTokenV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentAccessToken",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "CreateConnectorCustomer",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentTokenV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentAuthorizeV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentSyncV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RefundSyncV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentCapture",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "SetupMandateV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "RepeatPaymentV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "MandateRevokeV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "AcceptDispute",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "SubmitEvidenceV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "DisputeDefend",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentPreAuthenticateV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentAuthenticateV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentPostAuthenticateV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PaymentIncrementalAuthorization",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyWebhookSourceV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhook",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [
+        "verify_webhook_source",
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook",
+        "get_webhook_resource_object",
+        "get_webhook_api_response"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "VerifyRedirectResponse",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [
+        "decode_redirect_response_body",
+        "verify_redirect_response_source",
+        "process_redirect_response"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "ConnectorValidation",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [
+        "validate_connector_against_payment_request",
+        "validate_mandate_payment",
+        "validate_psync_reference_id",
+        "is_webhook_source_verification_mandatory"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutTransferV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutGetV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutVoidV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutStageV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateLinkV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutCreateRecipientV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "PayoutEnrollDisburseAccountV2",
+      "file": "crates/types-traits/interfaces/src/connector_types.rs",
+      "methods": [],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "BodyDecoding",
+      "file": "crates/types-traits/interfaces/src/decode.rs",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_message",
+        "decode"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "FlowIntegrity",
+      "file": "crates/types-traits/interfaces/src/integrity.rs",
+      "methods": [
+        "compare"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "GetIntegrityObject",
+      "file": "crates/types-traits/interfaces/src/integrity.rs",
+      "methods": [
+        "get_response_integrity_object",
+        "get_request_integrity_object"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "CheckIntegrity",
+      "file": "crates/types-traits/interfaces/src/integrity.rs",
+      "methods": [
+        "check_integrity"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "SourceVerification",
+      "file": "crates/types-traits/interfaces/src/verification.rs",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_signature",
+        "get_message",
+        "verify"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    },
+    {
+      "name": "IncomingWebhook",
+      "file": "crates/types-traits/interfaces/src/webhooks.rs",
+      "methods": [
+        "get_webhook_body_decoding_algorithm",
+        "get_webhook_body_decoding_message",
+        "decode_webhook_body",
+        "get_webhook_source_verification_algorithm",
+        "get_webhook_source_verification_merchant_secret",
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "verify_webhook_source",
+        "get_webhook_event_type",
+        "get_webhook_resource_object",
+        "get_webhook_api_response",
+        "get_dispute_details",
+        "get_external_authentication_details",
+        "get_mandate_details",
+        "get_network_txn_id"
+      ],
+      "supertraits": [],
+      "visibility": "pub"
+    }
+  ]
+}

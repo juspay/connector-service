@@ -1,0 +1,81 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/bindings/uniffi.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "run_req_transformer",
+      "visibility": "pub",
+      "parameters": [
+        "request_bytes: Vec<u8>",
+        "options_bytes: Vec<u8>",
+        "handler: impl Fn(\n            crate::types::FfiRequestData<Req>,\n            Option<Environment>,\n        ) -> Result<Option<Request>, IntegrationError>"
+      ],
+      "return_type": "Result<Option<Request>, IntegrationError>,\n    ) -> Vec<u8>\n    where\n        Req: Message + Default,",
+      "line": 32
+    },
+    {
+      "name": "run_res_transformer",
+      "visibility": "pub",
+      "parameters": [
+        "response_bytes: Vec<u8>",
+        "request_bytes: Vec<u8>",
+        "options_bytes: Vec<u8>",
+        "handler: impl Fn(\n            crate::types::FfiRequestData<Req>,\n            Response,\n            Option<Environment>,\n        ) -> Result<Res, ConnectorResponseTransformationError>"
+      ],
+      "return_type": "Result<Res, ConnectorResponseTransformationError>,\n    ) -> Vec<u8>\n    where\n        Req: Message + Default,\n        Res: Message,",
+      "line": 145
+    },
+    {
+      "name": "handle_event_transformer",
+      "visibility": "pub",
+      "parameters": [
+        "request_bytes: Vec<u8>",
+        "options_bytes: Vec<u8>"
+      ],
+      "return_type": "Vec<u8>",
+      "line": 271
+    }
+  ],
+  "use_statements": [
+    "use bytes::Bytes;",
+    "use common_utils::request::Request;",
+    "use domain_types::router_response_types::Response;",
+    "use grpc_api_types::payments::Environment;",
+    "use grpc_api_types::payments::{\n        ffi_result, ConnectorResponseTransformationError, FfiConnectorHttpRequest,\n        FfiConnectorHttpResponse, FfiResult, IntegrationError,\n    };",
+    "use prost::Message;",
+    "use std::collections::HashMap;",
+    "use crate::bindings::utils::{\n        build_domain_response, build_ffi_request_bytes, parse_ffi_options_for_req,\n        parse_ffi_options_for_res, parse_metadata_for_req, parse_metadata_for_res,\n    };",
+    "use crate::define_ffi_flow;",
+    "use grpc_api_types::payments::EventServiceHandleRequest;",
+    "use prost::Message as _;",
+    "pub use uniffi_bindings_inner::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 49
+    },
+    {
+      "name": "format",
+      "line": 126
+    },
+    {
+      "name": "format",
+      "line": 177
+    },
+    {
+      "name": "include",
+      "line": 261
+    },
+    {
+      "name": "format",
+      "line": 282
+    }
+  ],
+  "modules": [
+    "uniffi_bindings_inner"
+  ]
+}

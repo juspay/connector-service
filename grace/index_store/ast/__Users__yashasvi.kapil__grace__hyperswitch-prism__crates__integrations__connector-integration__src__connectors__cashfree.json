@@ -1,0 +1,439 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/cashfree.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 60
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 70
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 75
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 80
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 85
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 90
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 94
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 118
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 122
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 130
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 134
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 138
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 142
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 150
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 154
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 158
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 162
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 170
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 174
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 178
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 182
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 187
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_order_create"
+      ],
+      "line": 193
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 307
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 380
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 385
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 390
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 395
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 400
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 405
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 414
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 419
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 424
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 435
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 446
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 457
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 468
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 475
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 485
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 495
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 506
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 516
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 526
+    },
+    {
+      "type_name": "Cashfree",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 536
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_order_create",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 196
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 310
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 314
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 318
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 322
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 344
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use cashfree::{\n    CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,\n    CashfreePaymentResponse,\n};",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers as cashfree;",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 202
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 202
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 244
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 244
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 275
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 275
+    },
+    {
+      "name": "vec",
+      "line": 327
+    },
+    {
+      "name": "with_response_body",
+      "line": 354
+    },
+    {
+      "name": "with_response_body",
+      "line": 354
+    }
+  ],
+  "modules": [
+    "test",
+    "transformers",
+    "headers"
+  ]
+}

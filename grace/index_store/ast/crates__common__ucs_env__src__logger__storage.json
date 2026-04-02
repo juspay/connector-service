@@ -1,0 +1,237 @@
+{
+  "file_path": "crates/common/ucs_env/src/logger/storage.rs",
+  "structs": [
+    {
+      "name": "StorageSubscription",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 16
+    },
+    {
+      "name": "Storage",
+      "visibility": "pub",
+      "fields": [
+        "values"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 21
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Storage",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "record_value"
+      ],
+      "line": 26
+    },
+    {
+      "type_name": "Storage",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 45
+    },
+    {
+      "type_name": "Storage",
+      "trait_name": "Visit",
+      "methods": [
+        "record_i64",
+        "record_u64",
+        "record_f64",
+        "record_bool",
+        "record_str",
+        "record_debug"
+      ],
+      "line": 54
+    },
+    {
+      "type_name": "StorageSubscription",
+      "trait_name": "Layer",
+      "methods": [
+        "on_new_span",
+        "on_record",
+        "on_enter",
+        "on_close"
+      ],
+      "line": 96
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 28
+    },
+    {
+      "name": "record_value",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "key: &'a str",
+        "value: serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 32
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 46
+    },
+    {
+      "name": "record_i64",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: i64"
+      ],
+      "return_type": "",
+      "line": 56
+    },
+    {
+      "name": "record_u64",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: u64"
+      ],
+      "return_type": "",
+      "line": 61
+    },
+    {
+      "name": "record_f64",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: f64"
+      ],
+      "return_type": "",
+      "line": 66
+    },
+    {
+      "name": "record_bool",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: bool"
+      ],
+      "return_type": "",
+      "line": 71
+    },
+    {
+      "name": "record_str",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: &str"
+      ],
+      "return_type": "",
+      "line": 76
+    },
+    {
+      "name": "record_debug",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "field: &Field",
+        "value: &dyn fmt::Debug"
+      ],
+      "return_type": "",
+      "line": 81
+    },
+    {
+      "name": "on_new_span",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "attrs: &Attributes<'_>",
+        "id: &Id",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 100
+    },
+    {
+      "name": "on_record",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "span: &Id",
+        "values: &Record<'_>",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 119
+    },
+    {
+      "name": "on_enter",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "span: &Id",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 129
+    },
+    {
+      "name": "on_close",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "span: Id",
+        "ctx: Context<'_, S>"
+      ],
+      "return_type": "",
+      "line": 138
+    }
+  ],
+  "use_statements": [
+    "use std::{collections::HashMap, fmt, time::Instant};",
+    "use tracing::{\n    field::{Field, Visit},\n    span::{Attributes, Record},\n    Id, Subscriber,\n};",
+    "use tracing_subscriber::{layer::Context, Layer};"
+  ],
+  "macro_calls": [
+    {
+      "name": "eprintln",
+      "line": 36
+    },
+    {
+      "name": "eprintln",
+      "line": 36
+    },
+    {
+      "name": "format",
+      "line": 86
+    },
+    {
+      "name": "format",
+      "line": 89
+    }
+  ],
+  "modules": []
+}

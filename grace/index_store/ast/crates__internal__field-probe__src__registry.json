@@ -1,0 +1,72 @@
+{
+  "file_path": "crates/internal/field-probe/src/registry.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "authorize_pm_variants",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "Vec<(&'static str, fn() -> PaymentMethod)>",
+      "line": 8
+    },
+    {
+      "name": "authorize_pm_variants_static",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "Vec<(&'static str, fn() -> PaymentMethod)>",
+      "line": 52
+    },
+    {
+      "name": "mock_connector_state",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "grpc_api_types::payments::ConnectorState",
+      "line": 57
+    },
+    {
+      "name": "all_connectors",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "Vec<ConnectorEnum>",
+      "line": 69
+    },
+    {
+      "name": "doc_payment_method_override",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "pm_name: &str"
+      ],
+      "return_type": "Option<serde_json::Value>",
+      "line": 161
+    }
+  ],
+  "use_statements": [
+    "use domain_types::connector_types::ConnectorEnum;",
+    "use grpc_api_types::payments::PaymentMethod;",
+    "use hyperswitch_masking::Secret;",
+    "use crate::config::get_config;",
+    "use crate::sample_data::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 9
+    },
+    {
+      "name": "vec",
+      "line": 70
+    },
+    {
+      "name": "json",
+      "line": 168
+    },
+    {
+      "name": "json",
+      "line": 182
+    }
+  ],
+  "modules": []
+}

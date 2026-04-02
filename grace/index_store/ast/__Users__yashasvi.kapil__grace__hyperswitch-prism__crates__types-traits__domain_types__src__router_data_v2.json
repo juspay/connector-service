@@ -1,0 +1,31 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/domain_types/src/router_data_v2.rs",
+  "structs": [
+    {
+      "name": "RouterDataV2",
+      "visibility": "pub",
+      "fields": [
+        "flow",
+        "resource_common_data",
+        "connector_config",
+        "request",
+        "response"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 6
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use std::marker::PhantomData;",
+    "use crate::router_data::{ConnectorSpecificConfig, ErrorResponse};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

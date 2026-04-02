@@ -1,0 +1,168 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/field-probe/src/requests.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "base_authorize_request_with_meta",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "pm: PaymentMethod",
+        "connector_meta: Option<String>"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 39
+    },
+    {
+      "name": "base_authorize_request_with_state",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "pm: PaymentMethod",
+        "connector_meta: Option<String>",
+        "state: proto::ConnectorState"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 65
+    },
+    {
+      "name": "base_capture_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceCaptureRequest",
+      "line": 87
+    },
+    {
+      "name": "base_refund_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceRefundRequest",
+      "line": 96
+    },
+    {
+      "name": "base_void_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceVoidRequest",
+      "line": 107
+    },
+    {
+      "name": "base_get_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceGetRequest",
+      "line": 115
+    },
+    {
+      "name": "base_reverse_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceReverseRequest",
+      "line": 124
+    },
+    {
+      "name": "base_create_order_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceCreateOrderRequest",
+      "line": 132
+    },
+    {
+      "name": "base_setup_recurring_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentServiceSetupRecurringRequest",
+      "line": 140
+    },
+    {
+      "name": "base_recurring_charge_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "RecurringPaymentServiceChargeRequest",
+      "line": 162
+    },
+    {
+      "name": "base_create_customer_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "CustomerServiceCreateRequest",
+      "line": 190
+    },
+    {
+      "name": "base_tokenize_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethodServiceTokenizeRequest",
+      "line": 202
+    },
+    {
+      "name": "base_create_access_token_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "MerchantAuthenticationServiceCreateAccessTokenRequest",
+      "line": 214
+    },
+    {
+      "name": "base_create_session_token_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "MerchantAuthenticationServiceCreateSessionTokenRequest",
+      "line": 221
+    },
+    {
+      "name": "base_pre_authenticate_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethodAuthenticationServicePreAuthenticateRequest",
+      "line": 229
+    },
+    {
+      "name": "base_authenticate_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethodAuthenticationServiceAuthenticateRequest",
+      "line": 244
+    },
+    {
+      "name": "base_post_authenticate_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "PaymentMethodAuthenticationServicePostAuthenticateRequest",
+      "line": 258
+    },
+    {
+      "name": "base_accept_dispute_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "DisputeServiceAcceptRequest",
+      "line": 272
+    },
+    {
+      "name": "base_submit_evidence_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "DisputeServiceSubmitEvidenceRequest",
+      "line": 280
+    },
+    {
+      "name": "base_defend_dispute_request",
+      "visibility": "pub(crate)",
+      "parameters": [],
+      "return_type": "DisputeServiceDefendRequest",
+      "line": 296
+    }
+  ],
+  "use_statements": [
+    "use grpc_api_types::payments::{\n    self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,\n    AcceptanceType, Address, CaptureMethod, ConnectorMandateReferenceId, CustomerAcceptance,\n    CustomerServiceCreateRequest, DisputeServiceAcceptRequest, DisputeServiceDefendRequest,\n    DisputeServiceSubmitEvidenceRequest, EvidenceDocument, EvidenceType, MandateReference,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateSessionTokenRequest, PaymentAddress, PaymentMethod,\n    PaymentMethodAuthenticationServiceAuthenticateRequest,\n    PaymentMethodAuthenticationServicePostAuthenticateRequest,\n    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,\n    PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,\n    PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceReverseRequest,\n    PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,\n    RecurringPaymentServiceChargeRequest,\n};",
+    "use hyperswitch_masking::Secret;",
+    "use crate::sample_data::{card_payment_method, usd_money};"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 285
+    }
+  ],
+  "modules": []
+}

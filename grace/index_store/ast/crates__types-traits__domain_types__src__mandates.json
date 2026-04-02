@@ -1,0 +1,263 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/mandates.rs",
+  "structs": [
+    {
+      "name": "CustomerAcceptance",
+      "visibility": "pub",
+      "fields": [
+        "acceptance_type",
+        "accepted_at",
+        "online"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 10
+    },
+    {
+      "name": "OnlineMandate",
+      "visibility": "pub",
+      "fields": [
+        "ip_address",
+        "user_agent"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 21
+    },
+    {
+      "name": "MandateData",
+      "visibility": "pub",
+      "fields": [
+        "update_mandate_id",
+        "customer_acceptance",
+        "mandate_type"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Serialize"
+      ],
+      "line": 30
+    },
+    {
+      "name": "MandateAmountData",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "start_date",
+        "end_date",
+        "metadata",
+        "amount_type",
+        "frequency"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "Default",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 55
+    }
+  ],
+  "enums": [
+    {
+      "name": "AcceptanceType",
+      "visibility": "pub",
+      "variants": [
+        "Online",
+        "Offline"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "Default",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 41
+    },
+    {
+      "name": "MandateDataType",
+      "visibility": "pub",
+      "variants": [
+        "SingleUse",
+        "MultiUse"
+      ],
+      "derives": [
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Default",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Clone",
+        "serde::Serialize",
+        "Default",
+        "Debug",
+        "PartialEq",
+        "Eq",
+        "Clone",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 49
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "MandateAmountData",
+      "trait_name": null,
+      "methods": [
+        "get_end_date",
+        "get_metadata"
+      ],
+      "line": 65
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_end_date",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "format: date_time::DateFormat"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 66
+    },
+    {
+      "name": "get_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<SecretSerdeValue, Error>",
+      "line": 73
+    }
+  ],
+  "use_statements": [
+    "use common_enums::Currency;",
+    "use common_utils::{date_time, pii::IpAddress, SecretSerdeValue};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::Secret;",
+    "use time::PrimitiveDateTime;",
+    "use crate::utils::{missing_field_err, Error};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

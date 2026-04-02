@@ -1,0 +1,140 @@
+{
+  "file_path": "crates/common/common_utils/src/custom_serde.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "serialize",
+      "visibility": "pub",
+      "parameters": [
+        "date_time: &PrimitiveDateTime",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: Serializer,",
+      "line": 25
+    },
+    {
+      "name": "deserialize",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<PrimitiveDateTime, D::Error>\n    where\n        D: Deserializer<'a>,",
+      "line": 37
+    },
+    {
+      "name": "serialize",
+      "visibility": "pub",
+      "parameters": [
+        "date_time: &Option<PrimitiveDateTime>",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n        where\n            S: Serializer,",
+      "line": 58
+    },
+    {
+      "name": "deserialize",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<PrimitiveDateTime>, D::Error>\n        where\n            D: Deserializer<'a>,",
+      "line": 73
+    },
+    {
+      "name": "serialize",
+      "visibility": "pub",
+      "parameters": [
+        "date_time: &Option<PrimitiveDateTime>",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n        where\n            S: Serializer,",
+      "line": 96
+    },
+    {
+      "name": "deserialize",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<PrimitiveDateTime>, D::Error>\n        where\n            D: Deserializer<'a>,",
+      "line": 115
+    },
+    {
+      "name": "serialize",
+      "visibility": "pub",
+      "parameters": [
+        "date_time: &PrimitiveDateTime",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: Serializer,",
+      "line": 144
+    },
+    {
+      "name": "deserialize",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<PrimitiveDateTime, D::Error>\n    where\n        D: Deserializer<'a>,",
+      "line": 155
+    },
+    {
+      "name": "serialize",
+      "visibility": "pub",
+      "parameters": [
+        "date_time: &Option<PrimitiveDateTime>",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n        where\n            S: Serializer,",
+      "line": 175
+    },
+    {
+      "name": "deserialize",
+      "visibility": "pub",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Option<PrimitiveDateTime>, D::Error>\n        where\n            D: Deserializer<'a>,",
+      "line": 188
+    }
+  ],
+  "use_statements": [
+    "use std::num::NonZeroU8;",
+    "use serde::{ser::Error as _, Deserializer, Serialize, Serializer};",
+    "use time::{\n        format_description::well_known::{\n            iso8601::{Config, EncodedConfig, TimePrecision},\n            Iso8601,\n        },\n        serde::iso8601,\n        PrimitiveDateTime, UtcOffset,\n    };",
+    "use serde::Serialize;",
+    "use time::format_description::well_known::Iso8601;",
+    "use super::*;",
+    "use serde::{de, Deserialize, Serialize};",
+    "use time::macros::format_description;",
+    "use super::*;",
+    "use serde::{Deserializer, Serialize, Serializer};",
+    "use time::{serde::timestamp, PrimitiveDateTime, UtcOffset};",
+    "use serde::Serialize;",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format_description",
+      "line": 106
+    },
+    {
+      "name": "format_description",
+      "line": 122
+    },
+    {
+      "name": "format",
+      "line": 124
+    }
+  ],
+  "modules": [
+    "iso8601",
+    "option",
+    "option_without_timezone",
+    "timestamp",
+    "option"
+  ]
+}

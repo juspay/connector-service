@@ -1,0 +1,193 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/external-services/src/shared_metrics.rs",
+  "structs": [
+    {
+      "name": "GrpcMetricsLayer",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Clone"
+      ],
+      "line": 65
+    },
+    {
+      "name": "GrpcMetricsService",
+      "visibility": "pub",
+      "fields": [
+        "inner"
+      ],
+      "derives": [
+        "Clone",
+        "Clone"
+      ],
+      "line": 84
+    }
+  ],
+  "enums": [
+    {
+      "name": "MetricsError",
+      "visibility": "pub",
+      "variants": [
+        "EncodingError",
+        "Utf8Error"
+      ],
+      "derives": [
+        "Clone",
+        "Clone",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 230
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GrpcMetricsLayer",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 68
+    },
+    {
+      "type_name": "GrpcMetricsLayer",
+      "trait_name": "Layer",
+      "methods": [
+        "layer"
+      ],
+      "line": 74
+    },
+    {
+      "type_name": "GrpcMetricsService",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 88
+    },
+    {
+      "type_name": "GrpcMetricsService",
+      "trait_name": "Service",
+      "methods": [
+        "poll_ready",
+        "call"
+      ],
+      "line": 94
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 69
+    },
+    {
+      "name": "layer",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "service: S"
+      ],
+      "return_type": "Self::Service",
+      "line": 77
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "inner: S"
+      ],
+      "return_type": "Self",
+      "line": 89
+    },
+    {
+      "name": "poll_ready",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "cx: &mut Context<'_>"
+      ],
+      "return_type": "Poll<Result<(), Self::Error>>",
+      "line": 105
+    },
+    {
+      "name": "call",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "mut req: hyper::Request<B>"
+      ],
+      "return_type": "Self::Future",
+      "line": 111
+    },
+    {
+      "name": "extract_grpc_method_name",
+      "visibility": "",
+      "parameters": [
+        "req: &hyper::Request<B>"
+      ],
+      "return_type": "String",
+      "line": 162
+    },
+    {
+      "name": "extract_grpc_service_name",
+      "visibility": "",
+      "parameters": [
+        "req: &hyper::Request<B>"
+      ],
+      "return_type": "String",
+      "line": 173
+    },
+    {
+      "name": "extract_connector_from_request",
+      "visibility": "",
+      "parameters": [
+        "req: &hyper::Request<B>"
+      ],
+      "return_type": "String",
+      "line": 187
+    },
+    {
+      "name": "is_grpc_success",
+      "visibility": "",
+      "parameters": [
+        "response: &hyper::Response<B>"
+      ],
+      "return_type": "bool",
+      "line": 198
+    },
+    {
+      "name": "metrics_handler",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "error_stack::Result<String, MetricsError>",
+      "line": 219
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    future::Future,\n    pin::Pin,\n    task::{Context, Poll},\n    time::Instant,\n};",
+    "use error_stack::ResultExt;",
+    "use http_body::Body as HttpBody;",
+    "use lazy_static::lazy_static;",
+    "use prometheus::{\n    self, register_histogram_vec, register_int_counter_vec, Encoder, HistogramVec, IntCounterVec,\n    TextEncoder,\n};",
+    "use tower::{Layer, Service};"
+  ],
+  "macro_calls": [
+    {
+      "name": "lazy_static",
+      "line": 22
+    },
+    {
+      "name": "format",
+      "line": 107
+    },
+    {
+      "name": "format",
+      "line": 155
+    }
+  ],
+  "modules": []
+}

@@ -1,0 +1,653 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/loonio/transformers.rs",
+  "structs": [
+    {
+      "name": "LoonioAuthType",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 29
+    },
+    {
+      "name": "LoonioErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "error_code",
+        "message"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 57
+    },
+    {
+      "name": "LoonioCustomerProfile",
+      "visibility": "pub",
+      "fields": [
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "address_a",
+        "city",
+        "province",
+        "postal_code",
+        "country"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 66
+    },
+    {
+      "name": "LoonioRedirectUrls",
+      "visibility": "pub",
+      "fields": [
+        "success_url",
+        "failed_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 85
+    },
+    {
+      "name": "LoonioAuthorizeRequest",
+      "visibility": "pub",
+      "fields": [
+        "currency_code",
+        "customer_profile",
+        "amount",
+        "customer_id",
+        "transaction_id",
+        "payment_method_type",
+        "locale",
+        "redirect_url",
+        "webhook_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 97
+    },
+    {
+      "name": "LoonioAuthorizeResponse",
+      "visibility": "pub",
+      "fields": [
+        "payment_form"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 251
+    },
+    {
+      "name": "LoonioCustomerInfo",
+      "visibility": "pub",
+      "fields": [
+        "customer_name",
+        "customer_email",
+        "customer_phone_number",
+        "customer_bank_id",
+        "customer_bank_name"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize"
+      ],
+      "line": 333
+    },
+    {
+      "name": "LoonioTransactionSyncResponse",
+      "visibility": "pub",
+      "fields": [
+        "transaction_id",
+        "state",
+        "customer_bank_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 349
+    },
+    {
+      "name": "LoonioWebhookBody",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "api_transaction_id",
+        "signature",
+        "event_code",
+        "transaction_type",
+        "customer_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 438
+    }
+  ],
+  "enums": [
+    {
+      "name": "InteracPaymentMethodType",
+      "visibility": "pub",
+      "variants": [
+        "InteracEtransfer"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 92
+    },
+    {
+      "name": "LoonioTransactionStatus",
+      "visibility": "pub",
+      "variants": [
+        "Created",
+        "Prepared",
+        "Pending",
+        "Settled",
+        "Available",
+        "Abandoned",
+        "Rejected",
+        "Failed",
+        "Rollback",
+        "Returned",
+        "Nsf"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 302
+    },
+    {
+      "name": "LoonioPaymentResponseData",
+      "visibility": "pub",
+      "variants": [
+        "Sync",
+        "Webhook"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 343
+    },
+    {
+      "name": "LoonioWebhookEventCode",
+      "visibility": "pub",
+      "variants": [
+        "TransactionPrepared",
+        "TransactionPending",
+        "TransactionAvailable",
+        "TransactionSettled",
+        "TransactionFailed",
+        "TransactionRejected",
+        "TransactionWaitingStatusFile",
+        "TransactionStatusFileReceived",
+        "TransactionStatusFileFailed",
+        "TransactionReturned",
+        "TransactionWrongDestination",
+        "TransactionNsf"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 450
+    },
+    {
+      "name": "LoonioWebhookTransactionType",
+      "visibility": "pub",
+      "variants": [
+        "Incoming",
+        "OutgoingVerified",
+        "OutgoingNotVerified",
+        "OutgoingCustomerDefined"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Copy",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Eq",
+        "PartialEq",
+        "serde::Deserialize",
+        "serde::Serialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 473
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "LoonioAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 34
+    },
+    {
+      "type_name": "LoonioAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 111
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 255
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 316
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 355
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 480
+    },
+    {
+      "type_name": "CustomerInfoDetails",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 501
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 37
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: LoonioRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 125
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<LoonioAuthorizeResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 260
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "item: LoonioTransactionStatus"
+      ],
+      "return_type": "Self",
+      "line": 317
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<LoonioPaymentResponseData, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 360
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "event_code: &LoonioWebhookEventCode"
+      ],
+      "return_type": "Self",
+      "line": 481
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: &LoonioCustomerInfo"
+      ],
+      "return_type": "Self",
+      "line": 502
+    }
+  ],
+  "use_statements": [
+    "use super::LoonioRouterData;",
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::AttemptStatus;",
+    "use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,\n    },\n    errors,\n    payment_method_data::{\n        BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,\n    },\n    router_data::{\n        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,\n        InteracCustomerInfo,\n    },\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n    utils,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use std::collections::HashMap;"
+  ],
+  "macro_calls": [
+    {
+      "name": "report",
+      "line": 47
+    }
+  ],
+  "modules": []
+}

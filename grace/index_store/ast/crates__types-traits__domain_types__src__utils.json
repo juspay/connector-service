@@ -1,0 +1,376 @@
+{
+  "file_path": "crates/types-traits/domain_types/src/utils.rs",
+  "structs": [],
+  "enums": [
+    {
+      "name": "CardIssuer",
+      "visibility": "pub",
+      "variants": [
+        "AmericanExpress",
+        "Master",
+        "Maestro",
+        "Visa",
+        "Discover",
+        "DinersClub",
+        "JCB",
+        "CarteBlanche",
+        "CartesBancaires",
+        "UnionPay"
+      ],
+      "derives": [
+        "Debug",
+        "Copy",
+        "Clone",
+        "strum::Display",
+        "Eq",
+        "Hash",
+        "PartialEq"
+      ],
+      "line": 315
+    }
+  ],
+  "traits": [
+    {
+      "name": "ForeignTryFrom",
+      "visibility": "pub",
+      "methods": [
+        "foreign_try_from"
+      ],
+      "line": 26
+    },
+    {
+      "name": "ForeignFrom",
+      "visibility": "pub",
+      "methods": [
+        "foreign_from"
+      ],
+      "line": 34
+    },
+    {
+      "name": "ValueExt",
+      "visibility": "pub",
+      "methods": [
+        "parse_value"
+      ],
+      "line": 39
+    },
+    {
+      "name": "Encode",
+      "visibility": "pub",
+      "methods": [
+        "encode_to_value"
+      ],
+      "line": 61
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Value",
+      "trait_name": "ValueExt",
+      "methods": [
+        "parse_value"
+      ],
+      "line": 46
+    },
+    {
+      "type_name": "A",
+      "trait_name": "Encode",
+      "methods": [
+        "encode_to_value"
+      ],
+      "line": 70
+    }
+  ],
+  "functions": [
+    {
+      "name": "parse_value",
+      "visibility": "",
+      "parameters": [
+        "self",
+        "type_name: &'static str"
+      ],
+      "return_type": "Result<T, ParsingError>\n    where\n        T: serde::de::DeserializeOwned,",
+      "line": 47
+    },
+    {
+      "name": "encode_to_value",
+      "visibility": "",
+      "parameters": [
+        "&'e self"
+      ],
+      "return_type": "Result<Value, ParsingError>\n    where\n        Self: Serialize,",
+      "line": 74
+    },
+    {
+      "name": "handle_json_response_deserialization_failure",
+      "visibility": "pub",
+      "parameters": [
+        "res: Response",
+        "_: &'static str"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 84
+    },
+    {
+      "name": "generate_random_bytes",
+      "visibility": "pub",
+      "parameters": [
+        "length: usize"
+      ],
+      "return_type": "Vec<u8>",
+      "line": 110
+    },
+    {
+      "name": "missing_field_err",
+      "visibility": "pub",
+      "parameters": [
+        "message: &'static str"
+      ],
+      "return_type": "Box<dyn Fn() -> error_stack::Report<errors::ConnectorError> + 'static>",
+      "line": 116
+    },
+    {
+      "name": "construct_not_supported_error_report",
+      "visibility": "pub",
+      "parameters": [
+        "capture_method: common_enums::CaptureMethod",
+        "connector_name: &'static str"
+      ],
+      "return_type": "error_stack::Report<errors::ConnectorError>",
+      "line": 127
+    },
+    {
+      "name": "to_currency_base_unit_with_zero_decimal_check",
+      "visibility": "pub",
+      "parameters": [
+        "amount: i64",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "core::result::Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 138
+    },
+    {
+      "name": "get_timestamp_in_milliseconds",
+      "visibility": "pub",
+      "parameters": [
+        "datetime: &PrimitiveDateTime"
+      ],
+      "return_type": "i64",
+      "line": 147
+    },
+    {
+      "name": "get_amount_as_string",
+      "visibility": "pub",
+      "parameters": [
+        "currency_unit: &CurrencyUnit",
+        "amount: MinorUnit",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "core::result::Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 152
+    },
+    {
+      "name": "base64_decode",
+      "visibility": "pub",
+      "parameters": [
+        "data: String"
+      ],
+      "return_type": "core::result::Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 164
+    },
+    {
+      "name": "to_currency_base_unit",
+      "visibility": "pub",
+      "parameters": [
+        "amount: MinorUnit",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "core::result::Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 172
+    },
+    {
+      "name": "get_unimplemented_payment_method_error_message",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "String",
+      "line": 183
+    },
+    {
+      "name": "get_header_key_value",
+      "visibility": "pub",
+      "parameters": [
+        "key: &str",
+        "headers: &'a actix_web::http::header::HeaderMap"
+      ],
+      "return_type": "CustomResult<&'a str, errors::ConnectorError>",
+      "line": 187
+    },
+    {
+      "name": "get_http_header",
+      "visibility": "pub",
+      "parameters": [
+        "key: &str",
+        "headers: &'a http::HeaderMap"
+      ],
+      "return_type": "CustomResult<&'a str, errors::ConnectorError>",
+      "line": 194
+    },
+    {
+      "name": "get_header_field",
+      "visibility": "",
+      "parameters": [
+        "field: Option<&http::HeaderValue>"
+      ],
+      "return_type": "CustomResult<&str, errors::ConnectorError>",
+      "line": 201
+    },
+    {
+      "name": "is_payment_failure",
+      "visibility": "pub",
+      "parameters": [
+        "status: common_enums::AttemptStatus"
+      ],
+      "return_type": "bool",
+      "line": 215
+    },
+    {
+      "name": "get_card_details",
+      "visibility": "pub",
+      "parameters": [
+        "payment_method_data: PaymentMethodData<T>",
+        "connector_name: &'static str"
+      ],
+      "return_type": "Result<Card<T>, errors::ConnectorError>\nwhere\n    T: PaymentMethodDataTypes,",
+      "line": 251
+    },
+    {
+      "name": "is_mandate_supported",
+      "visibility": "pub",
+      "parameters": [
+        "selected_pmd: PaymentMethodData<T>",
+        "payment_method_type: Option<PaymentMethodType>",
+        "mandate_implemented_pmds: HashSet<PaymentMethodDataType>",
+        "connector: &'static str"
+      ],
+      "return_type": "core::result::Result<(), Error>\nwhere\n    T: PaymentMethodDataTypes,",
+      "line": 267
+    },
+    {
+      "name": "convert_amount",
+      "visibility": "pub",
+      "parameters": [
+        "amount_convertor: &dyn AmountConvertor<Output = T>",
+        "amount: MinorUnit",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "core::result::Result<T, Error>",
+      "line": 294
+    },
+    {
+      "name": "convert_back_amount_to_minor_units",
+      "visibility": "pub",
+      "parameters": [
+        "amount_convertor: &dyn AmountConvertor<Output = T>",
+        "amount: T",
+        "currency: common_enums::Currency"
+      ],
+      "return_type": "core::result::Result<MinorUnit, error_stack::Report<errors::ConnectorError>>",
+      "line": 304
+    },
+    {
+      "name": "extract_connector_request_reference_id",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "identifier: &Option<String>"
+      ],
+      "return_type": "String",
+      "line": 329
+    },
+    {
+      "name": "get_card_issuer",
+      "visibility": "pub",
+      "parameters": [
+        "card_number: &str"
+      ],
+      "return_type": "core::result::Result<CardIssuer, Error>",
+      "line": 334
+    },
+    {
+      "name": "extract_merchant_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &MaskedMetadata"
+      ],
+      "return_type": "Result<common_utils::id_type::MerchantId, ApplicationErrorResponse>",
+      "line": 377
+    },
+    {
+      "name": "convert_us_state_to_code",
+      "visibility": "pub",
+      "parameters": [
+        "state: &str"
+      ],
+      "return_type": "String",
+      "line": 396
+    },
+    {
+      "name": "convert_canada_state_to_code",
+      "visibility": "pub",
+      "parameters": [
+        "state: &str"
+      ],
+      "return_type": "String",
+      "line": 469
+    },
+    {
+      "name": "convert_spain_state_to_code",
+      "visibility": "pub",
+      "parameters": [
+        "state: &str"
+      ],
+      "return_type": "Result<String, crate::errors::ConnectorError>",
+      "line": 503
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    collections::{HashMap, HashSet},\n    sync::LazyLock,\n};",
+    "use base64::Engine;",
+    "use common_enums::{CurrencyUnit, PaymentMethodType};",
+    "use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};",
+    "use error_stack::{report, Result, ResultExt};",
+    "use regex::Regex;",
+    "use serde::Serialize;",
+    "use serde_json::Value;",
+    "use time::PrimitiveDateTime;",
+    "use crate::{\n    errors::{self, ApiError, ApplicationErrorResponse, ParsingError},\n    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ErrorResponse,\n    router_response_types::Response,\n    types::PaymentMethodDataType,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 51
+    },
+    {
+      "name": "format",
+      "line": 80
+    },
+    {
+      "name": "format",
+      "line": 184
+    },
+    {
+      "name": "report",
+      "line": 210
+    },
+    {
+      "name": "format",
+      "line": 281
+    },
+    {
+      "name": "format",
+      "line": 389
+    }
+  ],
+  "modules": []
+}

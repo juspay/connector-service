@@ -1,0 +1,610 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/trustpay.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 73
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 83
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 88
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 92
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 100
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 104
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 108
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 112
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [
+        "should_do_access_token"
+      ],
+      "line": 116
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 133
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 137
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 145
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 149
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook",
+        "get_webhook_resource_object"
+      ],
+      "line": 153
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 383
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 387
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 391
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 395
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 399
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 404
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 409
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 413
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 418
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 423
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 428
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 432
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 437
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorErrorTypeMapping",
+      "methods": [
+        "get_connector_error_type"
+      ],
+      "line": 603
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ContentTypeSelector",
+      "methods": [
+        "get_dynamic_content_type"
+      ],
+      "line": 664
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "common_get_content_type",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 687
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ContentTypeSelector",
+      "methods": [
+        "get_dynamic_content_type"
+      ],
+      "line": 926
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1026
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1036
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1041
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1046
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1051
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1060
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1069
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1074
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1083
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1088
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1098
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1108
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1118
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1128
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1138
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [],
+      "line": 1149
+    },
+    {
+      "type_name": "Trustpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1156
+    }
+  ],
+  "functions": [
+    {
+      "name": "should_do_access_token",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "payment_method: Option<common_enums::PaymentMethod>"
+      ],
+      "return_type": "bool",
+      "line": 119
+    },
+    {
+      "name": "get_webhook_source_verification_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, Report<errors::ConnectorError>>",
+      "line": 156
+    },
+    {
+      "name": "get_webhook_source_verification_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, Report<errors::ConnectorError>>",
+      "line": 169
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, Report<errors::ConnectorError>>",
+      "line": 190
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<EventType, Report<errors::ConnectorError>>",
+      "line": 216
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, Report<errors::ConnectorError>>",
+      "line": 233
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<RefundWebhookDetailsResponse, Report<errors::ConnectorError>>",
+      "line": 284
+    },
+    {
+      "name": "process_dispute_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::DisputeWebhookDetailsResponse,\n        Report<errors::ConnectorError>,\n    >",
+      "line": 320
+    },
+    {
+      "name": "get_webhook_resource_object",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails"
+      ],
+      "return_type": "Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, Report<errors::ConnectorError>>",
+      "line": 370
+    },
+    {
+      "name": "get_connector_error_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "error_code: String",
+        "error_message: String"
+      ],
+      "return_type": "ConnectorErrorType",
+      "line": 606
+    },
+    {
+      "name": "get_dynamic_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "CustomResult<common_enums::DynamicContentType, errors::ConnectorError>",
+      "line": 668
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 690
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 694
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 698
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 702
+    },
+    {
+      "name": "get_dynamic_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "CustomResult<common_enums::DynamicContentType, errors::ConnectorError>",
+      "line": 929
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_utils::{\n    consts,\n    crypto::VerifySignature,\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    types::{FloatMajorUnitForConnector, StringMajorUnit, StringMinorUnitForConnector},\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,\n        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,\n        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData, WebhookDetailsResponse,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use transformers::{\n    self as trustpay, RefundResponse, RefundResponse as RefundSyncResponse,\n    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayCreateIntentRequest,\n    TrustpayCreateIntentResponse, TrustpayErrorResponse, TrustpayPaymentsRequest,\n    TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse, TrustpayPaymentsResponse,\n    TrustpayRefundRequest,\n};",
+    "use super::macros::{self, ContentTypeSelector};",
+    "use crate::types::ResponseRouterData;",
+    "use crate::utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 64
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 64
+    },
+    {
+      "name": "matches",
+      "line": 120
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 441
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 441
+    },
+    {
+      "name": "json",
+      "line": 749
+    },
+    {
+      "name": "error",
+      "line": 751
+    },
+    {
+      "name": "error",
+      "line": 751
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 758
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 758
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 803
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 803
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 853
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 853
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 886
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 886
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 943
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 943
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 981
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 981
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

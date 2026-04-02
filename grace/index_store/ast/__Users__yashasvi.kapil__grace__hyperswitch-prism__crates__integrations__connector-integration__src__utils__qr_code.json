@@ -1,0 +1,117 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/utils/qr_code.rs",
+  "structs": [
+    {
+      "name": "QrImage",
+      "visibility": "pub",
+      "fields": [
+        "data"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug"
+      ],
+      "line": 40
+    }
+  ],
+  "enums": [
+    {
+      "name": "QrCodeInformation",
+      "visibility": "pub",
+      "variants": [
+        "QrCodeUrl",
+        "QrDataUrl",
+        "QrCodeImageUrl",
+        "QrColorDataUrl"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 16
+    },
+    {
+      "name": "QrCodeError",
+      "visibility": "pub",
+      "variants": [
+        "FailedToCreateQrCode",
+        "InvalidHexColor"
+      ],
+      "derives": [
+        "Clone",
+        "Debug",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Debug",
+        "thiserror::Error"
+      ],
+      "line": 127
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "QrImage",
+      "trait_name": null,
+      "methods": [
+        "new_from_data",
+        "new_colored_from_data",
+        "parse_hex_color"
+      ],
+      "line": 49
+    }
+  ],
+  "functions": [
+    {
+      "name": "new_from_data",
+      "visibility": "pub",
+      "parameters": [
+        "data: String"
+      ],
+      "return_type": "Result<Self, error_stack::Report<QrCodeError>>",
+      "line": 50
+    },
+    {
+      "name": "new_colored_from_data",
+      "visibility": "pub",
+      "parameters": [
+        "data: String",
+        "hex_color: &str"
+      ],
+      "return_type": "Result<Self, error_stack::Report<QrCodeError>>",
+      "line": 72
+    },
+    {
+      "name": "parse_hex_color",
+      "visibility": "pub",
+      "parameters": [
+        "hex: &str"
+      ],
+      "return_type": "Result<(u8, u8, u8), QrCodeError>",
+      "line": 111
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use error_stack::ResultExt;",
+    "use image::{DynamicImage, ImageBuffer, ImageFormat, Luma, Rgba};",
+    "use url::Url;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 62
+    },
+    {
+      "name": "format",
+      "line": 100
+    }
+  ],
+  "modules": []
+}

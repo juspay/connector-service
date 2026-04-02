@@ -1,0 +1,32 @@
+{
+  "file_path": "crates/types-traits/grpc-api-types/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [
+    {
+      "name": "include_file_descriptor_set",
+      "line": 6
+    },
+    {
+      "name": "include_proto",
+      "line": 9
+    },
+    {
+      "name": "include_proto",
+      "line": 13
+    },
+    {
+      "name": "include_proto",
+      "line": 17
+    }
+  ],
+  "modules": [
+    "payments",
+    "health_check",
+    "payouts"
+  ]
+}

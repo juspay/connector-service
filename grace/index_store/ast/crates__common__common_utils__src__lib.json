@@ -1,0 +1,367 @@
+{
+  "file_path": "crates/common/common_utils/src/lib.rs",
+  "structs": [
+    {
+      "name": "DDMMYYYY",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone"
+      ],
+      "line": 149
+    },
+    {
+      "name": "YYYYMMDD",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 152
+    },
+    {
+      "name": "YYYYMMDDHHmmss",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone"
+      ],
+      "line": 155
+    },
+    {
+      "name": "DateTime",
+      "visibility": "pub",
+      "fields": [
+        "inner",
+        "value"
+      ],
+      "derives": [
+        "Debug",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Debug",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 159
+    }
+  ],
+  "enums": [
+    {
+      "name": "DateFormat",
+      "visibility": "pub",
+      "variants": [
+        "YYYYMMDDHHmmss",
+        "YYYYMMDD",
+        "YYYYMMDDHHmm",
+        "DDMMYYYYHHmmss"
+      ],
+      "derives": [
+        "Debug"
+      ],
+      "line": 80
+    }
+  ],
+  "traits": [
+    {
+      "name": "TimeStrategy",
+      "visibility": "pub",
+      "methods": [
+        "fmt"
+      ],
+      "line": 174
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "DateTime",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 164
+    },
+    {
+      "type_name": "DateTime",
+      "trait_name": "Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 179
+    },
+    {
+      "type_name": "DateTime",
+      "trait_name": "std::fmt::Display",
+      "methods": [
+        "fmt"
+      ],
+      "line": 188
+    },
+    {
+      "type_name": "DDMMYYYY",
+      "trait_name": "TimeStrategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 194
+    },
+    {
+      "type_name": "YYYYMMDD",
+      "trait_name": "TimeStrategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 205
+    },
+    {
+      "type_name": "YYYYMMDDHHmmss",
+      "trait_name": "TimeStrategy",
+      "methods": [
+        "fmt"
+      ],
+      "line": 216
+    }
+  ],
+  "functions": [
+    {
+      "name": "init_event_publisher",
+      "visibility": "pub",
+      "parameters": [
+        "_config: &events::EventConfig"
+      ],
+      "return_type": "CustomResult<(), ()>",
+      "line": 26
+    },
+    {
+      "name": "emit_event_with_config",
+      "visibility": "pub",
+      "parameters": [
+        "_event: events::Event",
+        "_config: &events::EventConfig"
+      ],
+      "return_type": "",
+      "line": 30
+    },
+    {
+      "name": "generate_ref_id_with_default_length",
+      "visibility": "",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "id_type::LengthId<MAX_LENGTH, MIN_LENGTH>",
+      "line": 52
+    },
+    {
+      "name": "generate_time_ordered_id",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 60
+    },
+    {
+      "name": "now",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "PrimitiveDateTime",
+      "line": 92
+    },
+    {
+      "name": "convert_to_pdt",
+      "visibility": "pub",
+      "parameters": [
+        "offset_time: OffsetDateTime"
+      ],
+      "return_type": "PrimitiveDateTime",
+      "line": 98
+    },
+    {
+      "name": "now_unix_timestamp",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "i64",
+      "line": 103
+    },
+    {
+      "name": "time_it",
+      "visibility": "pub",
+      "parameters": [
+        "block: F"
+      ],
+      "return_type": "Fut>(\n        block: F,\n    ) -> (T, f64)",
+      "line": 109
+    },
+    {
+      "name": "format_date",
+      "visibility": "pub",
+      "parameters": [
+        "date: PrimitiveDateTime",
+        "format: DateFormat"
+      ],
+      "return_type": "Result<String, time::error::Format>",
+      "line": 118
+    },
+    {
+      "name": "date_as_yyyymmddthhmmssmmmz",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<String, time::error::Format>",
+      "line": 127
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "format: DateFormat"
+      ],
+      "return_type": "Self",
+      "line": 137
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: PrimitiveDateTime"
+      ],
+      "return_type": "Self",
+      "line": 165
+    },
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n        where\n            S: serde::Serializer,",
+      "line": 180
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 189
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "input: &PrimitiveDateTime",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 195
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "input: &PrimitiveDateTime",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 206
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "input: &PrimitiveDateTime",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 217
+    }
+  ],
+  "use_statements": [
+    "pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationError};",
+    "pub use event_publisher::{emit_event_with_config, init_event_publisher};",
+    "pub use global_id::{CellId, GlobalPaymentId};",
+    "pub use id_type::{CustomerId, MerchantId};",
+    "pub use pii::{Email, SecretSerdeValue};",
+    "pub use request::{Method, Request, RequestContent};",
+    "pub use superposition_config::{\n    get_optional_nonempty_string, get_string, SuperpositionConfig, SuperpositionConfigError,\n};",
+    "pub use types::{\n    AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector,\n    StringMajorUnit, StringMajorUnitForConnector, StringMinorUnit,\n};",
+    "use std::time::Instant;",
+    "use std::{marker::PhantomData, num::NonZeroU8};",
+    "use hyperswitch_masking::{Deserialize, Serialize};",
+    "use time::{\n        format_description::{\n            well_known::iso8601::{Config, EncodedConfig, Iso8601, TimePrecision},\n            BorrowedFormatItem,\n        },\n        OffsetDateTime, PrimitiveDateTime,\n    };"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 61
+    },
+    {
+      "name": "format_description",
+      "line": 139
+    },
+    {
+      "name": "format_description",
+      "line": 140
+    },
+    {
+      "name": "format_description",
+      "line": 141
+    },
+    {
+      "name": "format_description",
+      "line": 142
+    },
+    {
+      "name": "format",
+      "line": 200
+    },
+    {
+      "name": "format",
+      "line": 211
+    },
+    {
+      "name": "format",
+      "line": 225
+    }
+  ],
+  "modules": [
+    "config_patch",
+    "crypto",
+    "custom_serde",
+    "errors",
+    "ext_traits",
+    "fp_utils",
+    "id_type",
+    "lineage",
+    "macros",
+    "metadata",
+    "new_types",
+    "pii",
+    "request",
+    "superposition_config",
+    "types",
+    "events",
+    "global_id",
+    "consts",
+    "event_publisher",
+    "date_time"
+  ]
+}

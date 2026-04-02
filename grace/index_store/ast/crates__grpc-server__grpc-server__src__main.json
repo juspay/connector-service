@@ -1,0 +1,74 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/src/main.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Result<(), Box<dyn std::error::Error>>",
+      "line": 9
+    },
+    {
+      "name": "verify_other_config_files",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 53
+    }
+  ],
+  "use_statements": [
+    "use std::sync::Arc;",
+    "use common_utils::SuperpositionConfig;",
+    "use grpc_server::{self, app};",
+    "use ucs_env::{configs, logger};",
+    "use std::path::PathBuf;",
+    "use crate::configs;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 16
+    },
+    {
+      "name": "info",
+      "line": 22
+    },
+    {
+      "name": "info",
+      "line": 22
+    },
+    {
+      "name": "warn",
+      "line": 29
+    },
+    {
+      "name": "warn",
+      "line": 29
+    },
+    {
+      "name": "service_name",
+      "line": 39
+    },
+    {
+      "name": "service_name",
+      "line": 40
+    },
+    {
+      "name": "try_join",
+      "line": 47
+    },
+    {
+      "name": "vec",
+      "line": 57
+    },
+    {
+      "name": "panic",
+      "line": 66
+    }
+  ],
+  "modules": []
+}

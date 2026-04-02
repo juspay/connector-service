@@ -1,0 +1,840 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/iatapay/transformers.rs",
+  "structs": [
+    {
+      "name": "IatapayAuthType",
+      "visibility": "pub",
+      "fields": [
+        "client_id",
+        "merchant_id",
+        "client_secret"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 28
+    },
+    {
+      "name": "IatapayErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "error",
+        "message",
+        "reason"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 56
+    },
+    {
+      "name": "IatapayAuthUpdateRequest",
+      "visibility": "pub",
+      "fields": [
+        "grant_type",
+        "scope"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize"
+      ],
+      "line": 65
+    },
+    {
+      "name": "IatapayAuthUpdateResponse",
+      "visibility": "pub",
+      "fields": [
+        "access_token",
+        "expires_in"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 80
+    },
+    {
+      "name": "IatapayAccessTokenErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "error",
+        "path"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 86
+    },
+    {
+      "name": "IatapayPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_payment_id",
+        "amount",
+        "currency",
+        "country",
+        "locale",
+        "redirect_urls",
+        "notification_url",
+        "payer_info"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 122
+    },
+    {
+      "name": "RedirectUrls",
+      "visibility": "pub",
+      "fields": [
+        "success_url",
+        "failure_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 138
+    },
+    {
+      "name": "PayerInfo",
+      "visibility": "pub",
+      "fields": [
+        "token_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 145
+    },
+    {
+      "name": "IatapayPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "status",
+        "iata_payment_id",
+        "merchant_payment_id",
+        "amount",
+        "currency",
+        "checkout_methods",
+        "failure_code",
+        "failure_details"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 152
+    },
+    {
+      "name": "CheckoutMethods",
+      "visibility": "pub",
+      "fields": [
+        "redirect"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 170
+    },
+    {
+      "name": "RedirectMethod",
+      "visibility": "pub",
+      "fields": [
+        "redirect_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 176
+    },
+    {
+      "name": "IatapayRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "merchant_refund_id",
+        "amount",
+        "currency",
+        "bank_transfer_description",
+        "notification_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 526
+    },
+    {
+      "name": "IatapayRefundResponse",
+      "visibility": "pub",
+      "fields": [
+        "iata_refund_id",
+        "status",
+        "merchant_refund_id",
+        "amount",
+        "currency",
+        "bank_transfer_description",
+        "failure_code",
+        "failure_details",
+        "lock_reason",
+        "creation_date_time",
+        "finish_date_time",
+        "update_date_time",
+        "clearance_date_time",
+        "iata_payment_id",
+        "merchant_payment_id",
+        "payment_amount",
+        "merchant_id",
+        "account_country"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 540
+    }
+  ],
+  "enums": [
+    {
+      "name": "IatapayPaymentStatus",
+      "visibility": "pub",
+      "variants": [
+        "Created",
+        "Initiated",
+        "Authorized",
+        "Settled",
+        "Cleared",
+        "Failed",
+        "UnexpectedSettled"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq"
+      ],
+      "line": 95
+    },
+    {
+      "name": "IatapayRefundStatus",
+      "visibility": "pub",
+      "variants": [
+        "Created",
+        "Locked",
+        "Initiated",
+        "Authorized",
+        "Settled",
+        "Cleared",
+        "Failed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "PartialEq",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 500
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "IatapayAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 34
+    },
+    {
+      "type_name": "IatapayAuthUpdateRequest",
+      "trait_name": null,
+      "methods": [
+        "new"
+      ],
+      "line": 70
+    },
+    {
+      "type_name": "AttemptStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 106
+    },
+    {
+      "type_name": "IatapayPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 231
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 322
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 434
+    },
+    {
+      "type_name": "RefundStatus",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 510
+    },
+    {
+      "type_name": "IatapayRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 565
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 611
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 655
+    },
+    {
+      "type_name": "IatapayAuthUpdateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 700
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 730
+    }
+  ],
+  "functions": [
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 37
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "grant_type: String"
+      ],
+      "return_type": "Self",
+      "line": 71
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: IatapayPaymentStatus"
+      ],
+      "return_type": "Self",
+      "line": 107
+    },
+    {
+      "name": "get_country_from_payment_method",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &PaymentMethodData<T>"
+      ],
+      "return_type": "Result<CountryAlpha2, Report<ConnectorError>>\nwhere\n    T: PaymentMethodDataTypes,",
+      "line": 183
+    },
+    {
+      "name": "get_vpa_id_from_upi",
+      "visibility": "",
+      "parameters": [
+        "upi_data: &UpiData"
+      ],
+      "return_type": "Option<Secret<String, UpiVpaMaskingStrategy>>",
+      "line": 223
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: crate::connectors::iatapay::IatapayRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 246
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<IatapayPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 328
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<IatapaySyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 439
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "status: IatapayRefundStatus"
+      ],
+      "return_type": "Self",
+      "line": 511
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: crate::connectors::iatapay::IatapayRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 575
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<IatapayRefundResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 616
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<IatapayRefundSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 660
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: crate::connectors::iatapay::IatapayRouterData<\n            RouterDataV2<\n                domain_types::connector_flow::CreateAccessToken,\n                PaymentFlowData,\n                domain_types::connector_types::AccessTokenRequestData,\n                domain_types::connector_types::AccessTokenResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 715
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<IatapayAuthUpdateResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 740
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use common_enums::{AttemptStatus, CountryAlpha2, Currency, RefundStatus};",
+    "use common_utils::{pii::UpiVpaMaskingStrategy, types::FloatMajorUnit, Method};",
+    "use domain_types::{\n    connector_flow::{Authorize, PSync, RSync, Refund},\n    connector_types::{\n        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors::ConnectorError,\n    payment_method_data::{\n        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,\n    },\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::RedirectForm,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use serde_json::Value;",
+    "use crate::types::ResponseRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 263
+    }
+  ],
+  "modules": []
+}

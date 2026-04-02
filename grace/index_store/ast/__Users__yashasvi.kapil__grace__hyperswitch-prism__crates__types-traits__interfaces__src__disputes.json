@@ -1,0 +1,36 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/disputes.rs",
+  "structs": [
+    {
+      "name": "DisputePayload",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "currency",
+        "dispute_stage",
+        "connector_status",
+        "connector_dispute_id",
+        "connector_reason",
+        "connector_reason_code",
+        "challenge_required_by",
+        "created_at",
+        "updated_at"
+      ],
+      "derives": [
+        "Default",
+        "Debug"
+      ],
+      "line": 7
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use common_utils::types::StringMinorUnit;",
+    "use time::PrimitiveDateTime;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

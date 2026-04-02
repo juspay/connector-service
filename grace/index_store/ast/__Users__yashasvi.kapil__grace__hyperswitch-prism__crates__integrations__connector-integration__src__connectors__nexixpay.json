@@ -1,0 +1,451 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/nexixpay.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 187
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 192
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 197
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 202
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 207
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 212
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 217
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 228
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 234
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 239
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 244
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 249
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 254
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 259
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 264
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 270
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 275
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 280
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 286
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 291
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 296
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 302
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 306
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 310
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 314
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 320
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 326
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 455
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 592
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 603
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 613
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 624
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 635
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 646
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 657
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 664
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 671
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 678
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 689
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 730
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 771
+    },
+    {
+      "type_name": "Nexixpay",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 788
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 791
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 795
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 799
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 803
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 807
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 822
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers as nexixpay;",
+    "use transformers::{\n    NexixpayCaptureRequest, NexixpayCaptureResponse, NexixpayPaymentsRequest,\n    NexixpayPaymentsResponse, NexixpayPostAuthenticateRequest, NexixpayPostAuthenticateResponse,\n    NexixpayPreAuthenticateRequest, NexixpayPreAuthenticateResponse, NexixpayRSyncResponse,\n    NexixpayRefundRequest, NexixpayRefundResponse, NexixpaySyncResponse, NexixpayVoidRequest,\n    NexixpayVoidResponse,\n};",
+    "use uuid::Uuid;",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 63
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 63
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 333
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 333
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 362
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 362
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 408
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 408
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 466
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 466
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 515
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 515
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 562
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 562
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 701
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 701
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 741
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 741
+    },
+    {
+      "name": "vec",
+      "line": 813
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 832
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 832
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

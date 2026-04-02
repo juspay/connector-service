@@ -1,0 +1,23 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "api",
+    "authentication",
+    "connector_integration_v2",
+    "connector_types",
+    "decode",
+    "disputes",
+    "events",
+    "integrity",
+    "routing",
+    "verification",
+    "webhooks"
+  ]
+}

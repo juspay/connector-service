@@ -1,0 +1,349 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/ffi/ffi/src/services/payments.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "handle_event_transformer",
+      "visibility": "pub",
+      "parameters": [
+        "payload: EventServiceHandleRequest",
+        "_config: &std::sync::Arc<ucs_env::configs::Config>",
+        "connector: domain_types::connector_types::ConnectorEnum",
+        "connector_config: domain_types::router_data::ConnectorSpecificConfig",
+        "_metadata: &common_utils::metadata::MaskedMetadata"
+      ],
+      "return_type": "Result<EventServiceHandleResponse, ConnectorResponseTransformationError>",
+      "line": 475
+    }
+  ],
+  "use_statements": [
+    "use external_services;",
+    "use grpc_api_types::payments::ConnectorResponseTransformationError;",
+    "use grpc_api_types::payments::{\n    CustomerServiceCreateRequest, CustomerServiceCreateResponse, DisputeServiceAcceptRequest,\n    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,\n    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,\n    EventServiceHandleRequest, EventServiceHandleResponse,\n    MerchantAuthenticationServiceCreateAccessTokenRequest,\n    MerchantAuthenticationServiceCreateAccessTokenResponse,\n    MerchantAuthenticationServiceCreateSessionTokenRequest,\n    MerchantAuthenticationServiceCreateSessionTokenResponse,\n    PaymentMethodAuthenticationServiceAuthenticateRequest,\n    PaymentMethodAuthenticationServiceAuthenticateResponse,\n    PaymentMethodAuthenticationServicePostAuthenticateRequest,\n    PaymentMethodAuthenticationServicePostAuthenticateResponse,\n    PaymentMethodAuthenticationServicePreAuthenticateRequest,\n    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,\n    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,\n    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,\n    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,\n    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,\n    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,\n    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,\n    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,\n};",
+    "use crate::macros::{req_transformer, res_transformer};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,\n        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SetupMandate, SubmitEvidence,\n        Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,\n        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,\n        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,\n        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,\n        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n};",
+    "use domain_types::utils::ForeignTryFrom as _;"
+  ],
+  "macro_calls": [
+    {
+      "name": "req_transformer",
+      "line": 50
+    },
+    {
+      "name": "req_transformer",
+      "line": 50
+    },
+    {
+      "name": "res_transformer",
+      "line": 60
+    },
+    {
+      "name": "res_transformer",
+      "line": 60
+    },
+    {
+      "name": "req_transformer",
+      "line": 72
+    },
+    {
+      "name": "req_transformer",
+      "line": 72
+    },
+    {
+      "name": "res_transformer",
+      "line": 82
+    },
+    {
+      "name": "res_transformer",
+      "line": 82
+    },
+    {
+      "name": "req_transformer",
+      "line": 94
+    },
+    {
+      "name": "req_transformer",
+      "line": 94
+    },
+    {
+      "name": "res_transformer",
+      "line": 104
+    },
+    {
+      "name": "res_transformer",
+      "line": 104
+    },
+    {
+      "name": "req_transformer",
+      "line": 116
+    },
+    {
+      "name": "req_transformer",
+      "line": 116
+    },
+    {
+      "name": "res_transformer",
+      "line": 126
+    },
+    {
+      "name": "res_transformer",
+      "line": 126
+    },
+    {
+      "name": "req_transformer",
+      "line": 138
+    },
+    {
+      "name": "req_transformer",
+      "line": 138
+    },
+    {
+      "name": "res_transformer",
+      "line": 148
+    },
+    {
+      "name": "res_transformer",
+      "line": 148
+    },
+    {
+      "name": "req_transformer",
+      "line": 160
+    },
+    {
+      "name": "req_transformer",
+      "line": 160
+    },
+    {
+      "name": "res_transformer",
+      "line": 170
+    },
+    {
+      "name": "res_transformer",
+      "line": 170
+    },
+    {
+      "name": "req_transformer",
+      "line": 182
+    },
+    {
+      "name": "req_transformer",
+      "line": 182
+    },
+    {
+      "name": "res_transformer",
+      "line": 192
+    },
+    {
+      "name": "res_transformer",
+      "line": 192
+    },
+    {
+      "name": "req_transformer",
+      "line": 204
+    },
+    {
+      "name": "req_transformer",
+      "line": 204
+    },
+    {
+      "name": "res_transformer",
+      "line": 214
+    },
+    {
+      "name": "res_transformer",
+      "line": 214
+    },
+    {
+      "name": "req_transformer",
+      "line": 226
+    },
+    {
+      "name": "req_transformer",
+      "line": 226
+    },
+    {
+      "name": "res_transformer",
+      "line": 236
+    },
+    {
+      "name": "res_transformer",
+      "line": 236
+    },
+    {
+      "name": "req_transformer",
+      "line": 248
+    },
+    {
+      "name": "req_transformer",
+      "line": 248
+    },
+    {
+      "name": "res_transformer",
+      "line": 258
+    },
+    {
+      "name": "res_transformer",
+      "line": 258
+    },
+    {
+      "name": "req_transformer",
+      "line": 270
+    },
+    {
+      "name": "req_transformer",
+      "line": 270
+    },
+    {
+      "name": "res_transformer",
+      "line": 280
+    },
+    {
+      "name": "res_transformer",
+      "line": 280
+    },
+    {
+      "name": "req_transformer",
+      "line": 292
+    },
+    {
+      "name": "req_transformer",
+      "line": 292
+    },
+    {
+      "name": "res_transformer",
+      "line": 302
+    },
+    {
+      "name": "res_transformer",
+      "line": 302
+    },
+    {
+      "name": "req_transformer",
+      "line": 314
+    },
+    {
+      "name": "req_transformer",
+      "line": 314
+    },
+    {
+      "name": "res_transformer",
+      "line": 324
+    },
+    {
+      "name": "res_transformer",
+      "line": 324
+    },
+    {
+      "name": "req_transformer",
+      "line": 336
+    },
+    {
+      "name": "req_transformer",
+      "line": 336
+    },
+    {
+      "name": "res_transformer",
+      "line": 346
+    },
+    {
+      "name": "res_transformer",
+      "line": 346
+    },
+    {
+      "name": "req_transformer",
+      "line": 358
+    },
+    {
+      "name": "req_transformer",
+      "line": 358
+    },
+    {
+      "name": "res_transformer",
+      "line": 368
+    },
+    {
+      "name": "res_transformer",
+      "line": 368
+    },
+    {
+      "name": "req_transformer",
+      "line": 380
+    },
+    {
+      "name": "req_transformer",
+      "line": 380
+    },
+    {
+      "name": "res_transformer",
+      "line": 390
+    },
+    {
+      "name": "res_transformer",
+      "line": 390
+    },
+    {
+      "name": "req_transformer",
+      "line": 402
+    },
+    {
+      "name": "req_transformer",
+      "line": 402
+    },
+    {
+      "name": "req_transformer",
+      "line": 412
+    },
+    {
+      "name": "req_transformer",
+      "line": 412
+    },
+    {
+      "name": "req_transformer",
+      "line": 422
+    },
+    {
+      "name": "req_transformer",
+      "line": 422
+    },
+    {
+      "name": "res_transformer",
+      "line": 432
+    },
+    {
+      "name": "res_transformer",
+      "line": 432
+    },
+    {
+      "name": "res_transformer",
+      "line": 444
+    },
+    {
+      "name": "res_transformer",
+      "line": 444
+    },
+    {
+      "name": "res_transformer",
+      "line": 456
+    },
+    {
+      "name": "res_transformer",
+      "line": 456
+    },
+    {
+      "name": "format",
+      "line": 494
+    },
+    {
+      "name": "format",
+      "line": 505
+    },
+    {
+      "name": "format",
+      "line": 537
+    }
+  ],
+  "modules": []
+}

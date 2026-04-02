@@ -1,0 +1,116 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/interfaces/src/events/connector_api_logs.rs",
+  "structs": [
+    {
+      "name": "ConnectorEvent",
+      "visibility": "pub",
+      "fields": [
+        "connector_name",
+        "flow",
+        "request",
+        "masked_response",
+        "error",
+        "url",
+        "method",
+        "payment_id",
+        "merchant_id",
+        "created_at",
+        "request_id",
+        "latency",
+        "refund_id",
+        "dispute_id",
+        "status_code"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize"
+      ],
+      "line": 11
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "ConnectorEvent",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "set_response_body",
+        "set_error_response_body",
+        "set_error"
+      ],
+      "line": 31
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "connector_name: String",
+        "flow: &str",
+        "request: serde_json::Value",
+        "url: String",
+        "method: Method",
+        "payment_id: String",
+        "merchant_id: common_utils::id_type::MerchantId",
+        "request_id: Option<&RequestId>",
+        "latency: u128",
+        "refund_id: Option<String>",
+        "dispute_id: Option<String>",
+        "status_code: u16"
+      ],
+      "return_type": "Self",
+      "line": 34
+    },
+    {
+      "name": "set_response_body",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &T"
+      ],
+      "return_type": "",
+      "line": 76
+    },
+    {
+      "name": "set_error_response_body",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "response: &T"
+      ],
+      "return_type": "",
+      "line": 86
+    },
+    {
+      "name": "set_error",
+      "visibility": "pub",
+      "parameters": [
+        "&mut self",
+        "error: serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 96
+    }
+  ],
+  "use_statements": [
+    "use common_utils::request::Method;",
+    "use serde::Serialize;",
+    "use serde_json::json;",
+    "use time::OffsetDateTime;",
+    "use tracing_actix_web::RequestId;"
+  ],
+  "macro_calls": [
+    {
+      "name": "json",
+      "line": 81
+    },
+    {
+      "name": "json",
+      "line": 91
+    }
+  ],
+  "modules": []
+}

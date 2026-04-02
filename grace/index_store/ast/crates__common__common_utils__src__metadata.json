@@ -1,0 +1,333 @@
+{
+  "file_path": "crates/common/common_utils/src/metadata.rs",
+  "structs": [
+    {
+      "name": "HeaderMaskingConfig",
+      "visibility": "pub",
+      "fields": [
+        "unmasked_keys"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 11
+    },
+    {
+      "name": "Config",
+      "visibility": "",
+      "fields": [
+        "keys"
+      ],
+      "derives": [
+        "serde::Deserialize"
+      ],
+      "line": 43
+    },
+    {
+      "name": "HeaderMaskingConfigPatch",
+      "visibility": "pub",
+      "fields": [
+        "keys"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Default",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 70
+    },
+    {
+      "name": "MaskedMetadata",
+      "visibility": "pub",
+      "fields": [
+        "raw_metadata",
+        "masking_config"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Default",
+        "Deserialize",
+        "Serialize",
+        "Clone"
+      ],
+      "line": 96
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "HeaderMaskingConfig",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "should_unmask"
+      ],
+      "line": 15
+    },
+    {
+      "type_name": "HeaderMaskingConfig",
+      "trait_name": "Serialize",
+      "methods": [
+        "serialize"
+      ],
+      "line": 25
+    },
+    {
+      "type_name": "HeaderMaskingConfig",
+      "trait_name": "Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 37
+    },
+    {
+      "type_name": "HeaderMaskingConfig",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 57
+    },
+    {
+      "type_name": "HeaderMaskingConfig",
+      "trait_name": "Patch",
+      "methods": [
+        "apply"
+      ],
+      "line": 75
+    },
+    {
+      "type_name": "MaskedMetadata",
+      "trait_name": "std::fmt::Debug",
+      "methods": [
+        "fmt"
+      ],
+      "line": 101
+    },
+    {
+      "type_name": "MaskedMetadata",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 110
+    },
+    {
+      "type_name": "MaskedMetadata",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "get",
+        "get_raw",
+        "get_maskable",
+        "get_bin",
+        "get_bin_raw",
+        "get_bin_maskable",
+        "get_all_masked"
+      ],
+      "line": 119
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "unmasked_keys: HashSet<String>"
+      ],
+      "return_type": "Self",
+      "line": 16
+    },
+    {
+      "name": "should_unmask",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "bool",
+      "line": 20
+    },
+    {
+      "name": "serialize",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "serializer: S"
+      ],
+      "return_type": "Result<S::Ok, S::Error>\n    where\n        S: serde::Serializer,",
+      "line": 26
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 38
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 58
+    },
+    {
+      "name": "apply",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "patch: HeaderMaskingConfigPatch"
+      ],
+      "return_type": "",
+      "line": 76
+    },
+    {
+      "name": "fmt",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "f: &mut std::fmt::Formatter<'_>"
+      ],
+      "return_type": "std::fmt::Result",
+      "line": 102
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 111
+    },
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "raw_metadata: tonic::metadata::MetadataMap",
+        "masking_config: HeaderMaskingConfig"
+      ],
+      "return_type": "Self",
+      "line": 120
+    },
+    {
+      "name": "get",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<Secret<String>>",
+      "line": 131
+    },
+    {
+      "name": "get_raw",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<String>",
+      "line": 139
+    },
+    {
+      "name": "get_maskable",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<Maskable<String>>",
+      "line": 147
+    },
+    {
+      "name": "get_bin",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<Secret<Bytes>>",
+      "line": 161
+    },
+    {
+      "name": "get_bin_raw",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<Bytes>",
+      "line": 169
+    },
+    {
+      "name": "get_bin_maskable",
+      "visibility": "pub",
+      "parameters": [
+        "&self",
+        "key: &str"
+      ],
+      "return_type": "Option<Maskable<String>>",
+      "line": 176
+    },
+    {
+      "name": "get_all_masked",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "std::collections::HashMap<String, String>",
+      "line": 188
+    },
+    {
+      "name": "merchant_id_or_default",
+      "visibility": "pub",
+      "parameters": [
+        "value: Option<&str>"
+      ],
+      "return_type": "String",
+      "line": 216
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashSet;",
+    "use crate::config_patch::Patch;",
+    "use bytes::Bytes;",
+    "use hyperswitch_masking::{Maskable, Secret};",
+    "use serde::ser::SerializeStruct;",
+    "use serde::{Deserialize, Serialize};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 200
+    },
+    {
+      "name": "format",
+      "line": 203
+    },
+    {
+      "name": "warn",
+      "line": 218
+    },
+    {
+      "name": "warn",
+      "line": 218
+    }
+  ],
+  "modules": []
+}

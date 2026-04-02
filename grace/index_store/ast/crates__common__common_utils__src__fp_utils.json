@@ -1,0 +1,103 @@
+{
+  "file_path": "crates/common/common_utils/src/fp_utils.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "Applicative",
+      "visibility": "pub",
+      "methods": [
+        "pure"
+      ],
+      "line": 7
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "Option",
+      "trait_name": "Applicative",
+      "methods": [
+        "pure"
+      ],
+      "line": 16
+    },
+    {
+      "type_name": "Result",
+      "trait_name": "Applicative",
+      "methods": [
+        "pure"
+      ],
+      "line": 23
+    }
+  ],
+  "functions": [
+    {
+      "name": "pure",
+      "visibility": "",
+      "parameters": [
+        "v: R"
+      ],
+      "return_type": "Self::WrappedSelf<R>",
+      "line": 18
+    },
+    {
+      "name": "pure",
+      "visibility": "",
+      "parameters": [
+        "v: R"
+      ],
+      "return_type": "Self::WrappedSelf<R>",
+      "line": 25
+    },
+    {
+      "name": "when",
+      "visibility": "pub",
+      "parameters": [
+        "predicate: bool",
+        "f: F"
+      ],
+      "return_type": "W\nwhere\n    F: FnOnce() -> W,",
+      "line": 31
+    },
+    {
+      "name": "generate_id_with_default_len",
+      "visibility": "pub",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 43
+    },
+    {
+      "name": "generate_id",
+      "visibility": "pub",
+      "parameters": [
+        "length: usize",
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 49
+    },
+    {
+      "name": "generate_uuid_v7",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "String",
+      "line": 54
+    }
+  ],
+  "use_statements": [
+    "use crate::consts::{ALPHABETS, ID_LENGTH};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 45
+    },
+    {
+      "name": "format",
+      "line": 50
+    }
+  ],
+  "modules": []
+}

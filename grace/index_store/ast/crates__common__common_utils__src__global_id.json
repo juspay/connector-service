@@ -1,0 +1,415 @@
+{
+  "file_path": "crates/common/common_utils/src/global_id.rs",
+  "structs": [
+    {
+      "name": "GlobalId",
+      "visibility": "pub(crate)",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize"
+      ],
+      "line": 20
+    },
+    {
+      "name": "CellId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 51
+    }
+  ],
+  "enums": [
+    {
+      "name": "GlobalEntity",
+      "visibility": "pub(crate)",
+      "variants": [
+        "Customer",
+        "Payment",
+        "Attempt",
+        "PaymentMethod",
+        "Refund",
+        "PaymentMethodSession",
+        "Token"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "Clone",
+        "Copy"
+      ],
+      "line": 24
+    },
+    {
+      "name": "CellIdError",
+      "visibility": "pub",
+      "variants": [
+        "InvalidCellLength",
+        "InvalidCellIdFormat"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Error",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 63
+    },
+    {
+      "name": "GlobalIdError",
+      "visibility": "pub(crate)",
+      "variants": [
+        "InvalidIdFormat",
+        "LengthIdError",
+        "CellIdError"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "Clone",
+        "Copy",
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Error",
+        "PartialEq",
+        "Eq",
+        "Debug",
+        "Error",
+        "PartialEq",
+        "Eq"
+      ],
+      "line": 121
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalEntity",
+      "trait_name": null,
+      "methods": [
+        "prefix"
+      ],
+      "line": 35
+    },
+    {
+      "type_name": "CellId",
+      "trait_name": "Default",
+      "methods": [
+        "default"
+      ],
+      "line": 53
+    },
+    {
+      "type_name": "CellIdError",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 71
+    },
+    {
+      "type_name": "CellIdError",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 77
+    },
+    {
+      "type_name": "CellId",
+      "trait_name": null,
+      "methods": [
+        "from_str",
+        "from_string",
+        "get_string_repr"
+      ],
+      "line": 83
+    },
+    {
+      "type_name": "CellId",
+      "trait_name": "serde::Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 109
+    },
+    {
+      "type_name": "GlobalId",
+      "trait_name": null,
+      "methods": [
+        "generate",
+        "from_string",
+        "get_string_repr"
+      ],
+      "line": 135
+    },
+    {
+      "type_name": "GlobalId",
+      "trait_name": "serde::Deserialize",
+      "methods": [
+        "deserialize"
+      ],
+      "line": 166
+    }
+  ],
+  "functions": [
+    {
+      "name": "prefix",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "&'static str",
+      "line": 36
+    },
+    {
+      "name": "default",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Self",
+      "line": 54
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "error: LengthIdError"
+      ],
+      "return_type": "Self",
+      "line": 72
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "error: AlphaNumericIdError"
+      ],
+      "return_type": "Self",
+      "line": 78
+    },
+    {
+      "name": "from_str",
+      "visibility": "",
+      "parameters": [
+        "cell_id_string: impl AsRef<str>"
+      ],
+      "return_type": "Result<Self, CellIdError>",
+      "line": 85
+    },
+    {
+      "name": "from_string",
+      "visibility": "pub",
+      "parameters": [
+        "input_string: impl AsRef<str>"
+      ],
+      "return_type": "error_stack::Result<Self, errors::ValidationError>",
+      "line": 93
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 104
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 110
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId",
+        "entity: GlobalEntity"
+      ],
+      "return_type": "Self",
+      "line": 138
+    },
+    {
+      "name": "from_string",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "input_string: std::borrow::Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, GlobalIdError>",
+      "line": 145
+    },
+    {
+      "name": "get_string_repr",
+      "visibility": "pub(crate)",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 159
+    },
+    {
+      "name": "deserialize",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<Self, D::Error>\n    where\n        D: serde::Deserializer<'de>,",
+      "line": 167
+    },
+    {
+      "name": "test_cell_id_from_str",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 182
+    },
+    {
+      "name": "test_global_id_generate",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 189
+    },
+    {
+      "name": "test_global_id_from_string",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 203
+    },
+    {
+      "name": "test_global_id_deser",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 210
+    },
+    {
+      "name": "test_global_id_deser_error",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 221
+    }
+  ],
+  "use_statements": [
+    "pub use payment::GlobalPaymentId;",
+    "use error_stack::ResultExt;",
+    "use thiserror::Error;",
+    "use crate::{\n    consts::{CELL_IDENTIFIER_LENGTH, MAX_GLOBAL_ID_LENGTH, MIN_GLOBAL_ID_LENGTH},\n    errors, generate_time_ordered_id,\n    id_type::{AlphaNumericId, AlphaNumericIdError, LengthId, LengthIdError},\n};",
+    "use super::*;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 139
+    },
+    {
+      "name": "assert_eq",
+      "line": 185
+    },
+    {
+      "name": "assert_eq",
+      "line": 185
+    },
+    {
+      "name": "assert",
+      "line": 199
+    },
+    {
+      "name": "assert",
+      "line": 199
+    },
+    {
+      "name": "assert_eq",
+      "line": 206
+    },
+    {
+      "name": "assert_eq",
+      "line": 206
+    },
+    {
+      "name": "assert_eq",
+      "line": 217
+    },
+    {
+      "name": "assert_eq",
+      "line": 217
+    },
+    {
+      "name": "assert",
+      "line": 226
+    },
+    {
+      "name": "assert",
+      "line": 226
+    },
+    {
+      "name": "format",
+      "line": 228
+    },
+    {
+      "name": "assert_eq",
+      "line": 233
+    },
+    {
+      "name": "assert_eq",
+      "line": 233
+    }
+  ],
+  "modules": [
+    "customer",
+    "payment",
+    "payment_methods",
+    "refunds",
+    "token",
+    "global_id_tests"
+  ]
+}

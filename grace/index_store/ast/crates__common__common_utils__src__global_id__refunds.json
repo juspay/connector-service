@@ -1,0 +1,76 @@
+{
+  "file_path": "crates/common/common_utils/src/global_id/refunds.rs",
+  "structs": [
+    {
+      "name": "GlobalRefundId",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Hash",
+        "PartialEq",
+        "Eq",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 8
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalRefundId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr",
+        "generate"
+      ],
+      "line": 10
+    },
+    {
+      "type_name": "GlobalRefundId",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 24
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 12
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "Self",
+      "line": 17
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: std::borrow::Cow<'static, str>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 26
+    }
+  ],
+  "use_statements": [
+    "use error_stack::ResultExt;",
+    "use crate::{errors, global_id::CellId};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

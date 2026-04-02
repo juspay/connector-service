@@ -1,0 +1,697 @@
+{
+  "file_path": "crates/internal/field-probe/build.rs",
+  "structs": [
+    {
+      "name": "FlowInfo",
+      "visibility": "",
+      "fields": [
+        "key",
+        "service",
+        "rpc",
+        "request_type",
+        "transformer_fn",
+        "needs_oauth",
+        "needs_feature_data",
+        "needs_transaction_id"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 28
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "main",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 17
+    },
+    {
+      "name": "discover_flows_from_ffi",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Vec<FlowInfo>",
+      "line": 40
+    },
+    {
+      "name": "parse_flow_info",
+      "visibility": "",
+      "parameters": [
+        "transformer_fn: &str",
+        "request_type: &str"
+      ],
+      "return_type": "Option<FlowInfo>",
+      "line": 83
+    },
+    {
+      "name": "generate_flow_runners",
+      "visibility": "",
+      "parameters": [
+        "flows: &[FlowInfo]"
+      ],
+      "return_type": "",
+      "line": 171
+    },
+    {
+      "name": "generate_probe_function",
+      "visibility": "",
+      "parameters": [
+        "f: &mut fs::File",
+        "flow: &FlowInfo"
+      ],
+      "return_type": "FlowResult",
+      "line": 233
+    },
+    {
+      "name": "generate_authorize_probe",
+      "visibility": "",
+      "parameters": [
+        "f: &mut fs::File"
+      ],
+      "return_type": "FlowResult",
+      "line": 324
+    },
+    {
+      "name": "generate_flow_definitions",
+      "visibility": "",
+      "parameters": [
+        "f: &mut fs::File",
+        "flows: &[FlowInfo]"
+      ],
+      "return_type": "",
+      "line": 373
+    },
+    {
+      "name": "generate_dispatcher",
+      "visibility": "",
+      "parameters": [
+        "f: &mut fs::File",
+        "flows: &[FlowInfo]"
+      ],
+      "return_type": "Option<FlowResult>",
+      "line": 427
+    }
+  ],
+  "use_statements": [
+    "use std::fs;",
+    "use std::io::Write;",
+    "use std::path::Path;"
+  ],
+  "macro_calls": [
+    {
+      "name": "println",
+      "line": 18
+    },
+    {
+      "name": "println",
+      "line": 18
+    },
+    {
+      "name": "println",
+      "line": 19
+    },
+    {
+      "name": "println",
+      "line": 19
+    },
+    {
+      "name": "println",
+      "line": 24
+    },
+    {
+      "name": "println",
+      "line": 24
+    },
+    {
+      "name": "matches",
+      "line": 130
+    },
+    {
+      "name": "matches",
+      "line": 143
+    },
+    {
+      "name": "matches",
+      "line": 154
+    },
+    {
+      "name": "writeln",
+      "line": 176
+    },
+    {
+      "name": "writeln",
+      "line": 181
+    },
+    {
+      "name": "writeln",
+      "line": 182
+    },
+    {
+      "name": "writeln",
+      "line": 187
+    },
+    {
+      "name": "writeln",
+      "line": 192
+    },
+    {
+      "name": "writeln",
+      "line": 195
+    },
+    {
+      "name": "writeln",
+      "line": 196
+    },
+    {
+      "name": "writeln",
+      "line": 197
+    },
+    {
+      "name": "writeln",
+      "line": 200
+    },
+    {
+      "name": "writeln",
+      "line": 201
+    },
+    {
+      "name": "writeln",
+      "line": 202
+    },
+    {
+      "name": "writeln",
+      "line": 203
+    },
+    {
+      "name": "writeln",
+      "line": 204
+    },
+    {
+      "name": "writeln",
+      "line": 205
+    },
+    {
+      "name": "writeln",
+      "line": 206
+    },
+    {
+      "name": "writeln",
+      "line": 207
+    },
+    {
+      "name": "writeln",
+      "line": 208
+    },
+    {
+      "name": "writeln",
+      "line": 209
+    },
+    {
+      "name": "writeln",
+      "line": 210
+    },
+    {
+      "name": "writeln",
+      "line": 211
+    },
+    {
+      "name": "writeln",
+      "line": 212
+    },
+    {
+      "name": "writeln",
+      "line": 213
+    },
+    {
+      "name": "writeln",
+      "line": 230
+    },
+    {
+      "name": "format",
+      "line": 240
+    },
+    {
+      "name": "writeln",
+      "line": 243
+    },
+    {
+      "name": "writeln",
+      "line": 249
+    },
+    {
+      "name": "writeln",
+      "line": 250
+    },
+    {
+      "name": "writeln",
+      "line": 251
+    },
+    {
+      "name": "writeln",
+      "line": 252
+    },
+    {
+      "name": "writeln",
+      "line": 253
+    },
+    {
+      "name": "writeln",
+      "line": 254
+    },
+    {
+      "name": "writeln",
+      "line": 259
+    },
+    {
+      "name": "writeln",
+      "line": 261
+    },
+    {
+      "name": "writeln",
+      "line": 265
+    },
+    {
+      "name": "writeln",
+      "line": 270
+    },
+    {
+      "name": "writeln",
+      "line": 271
+    },
+    {
+      "name": "writeln",
+      "line": 275
+    },
+    {
+      "name": "writeln",
+      "line": 276
+    },
+    {
+      "name": "writeln",
+      "line": 277
+    },
+    {
+      "name": "writeln",
+      "line": 281
+    },
+    {
+      "name": "writeln",
+      "line": 286
+    },
+    {
+      "name": "writeln",
+      "line": 291
+    },
+    {
+      "name": "writeln",
+      "line": 294
+    },
+    {
+      "name": "writeln",
+      "line": 295
+    },
+    {
+      "name": "writeln",
+      "line": 296
+    },
+    {
+      "name": "writeln",
+      "line": 297
+    },
+    {
+      "name": "writeln",
+      "line": 298
+    },
+    {
+      "name": "writeln",
+      "line": 304
+    },
+    {
+      "name": "writeln",
+      "line": 305
+    },
+    {
+      "name": "writeln",
+      "line": 306
+    },
+    {
+      "name": "writeln",
+      "line": 307
+    },
+    {
+      "name": "writeln",
+      "line": 308
+    },
+    {
+      "name": "writeln",
+      "line": 309
+    },
+    {
+      "name": "writeln",
+      "line": 310
+    },
+    {
+      "name": "writeln",
+      "line": 311
+    },
+    {
+      "name": "writeln",
+      "line": 312
+    },
+    {
+      "name": "writeln",
+      "line": 318
+    },
+    {
+      "name": "writeln",
+      "line": 319
+    },
+    {
+      "name": "writeln",
+      "line": 320
+    },
+    {
+      "name": "writeln",
+      "line": 321
+    },
+    {
+      "name": "writeln",
+      "line": 325
+    },
+    {
+      "name": "writeln",
+      "line": 326
+    },
+    {
+      "name": "writeln",
+      "line": 327
+    },
+    {
+      "name": "writeln",
+      "line": 328
+    },
+    {
+      "name": "writeln",
+      "line": 329
+    },
+    {
+      "name": "writeln",
+      "line": 330
+    },
+    {
+      "name": "writeln",
+      "line": 331
+    },
+    {
+      "name": "writeln",
+      "line": 332
+    },
+    {
+      "name": "writeln",
+      "line": 333
+    },
+    {
+      "name": "writeln",
+      "line": 334
+    },
+    {
+      "name": "writeln",
+      "line": 335
+    },
+    {
+      "name": "writeln",
+      "line": 340
+    },
+    {
+      "name": "writeln",
+      "line": 341
+    },
+    {
+      "name": "writeln",
+      "line": 342
+    },
+    {
+      "name": "writeln",
+      "line": 343
+    },
+    {
+      "name": "writeln",
+      "line": 348
+    },
+    {
+      "name": "writeln",
+      "line": 349
+    },
+    {
+      "name": "writeln",
+      "line": 350
+    },
+    {
+      "name": "writeln",
+      "line": 351
+    },
+    {
+      "name": "writeln",
+      "line": 352
+    },
+    {
+      "name": "writeln",
+      "line": 353
+    },
+    {
+      "name": "writeln",
+      "line": 358
+    },
+    {
+      "name": "writeln",
+      "line": 359
+    },
+    {
+      "name": "writeln",
+      "line": 360
+    },
+    {
+      "name": "writeln",
+      "line": 361
+    },
+    {
+      "name": "writeln",
+      "line": 362
+    },
+    {
+      "name": "writeln",
+      "line": 363
+    },
+    {
+      "name": "writeln",
+      "line": 364
+    },
+    {
+      "name": "writeln",
+      "line": 365
+    },
+    {
+      "name": "writeln",
+      "line": 366
+    },
+    {
+      "name": "writeln",
+      "line": 367
+    },
+    {
+      "name": "writeln",
+      "line": 368
+    },
+    {
+      "name": "writeln",
+      "line": 369
+    },
+    {
+      "name": "writeln",
+      "line": 370
+    },
+    {
+      "name": "writeln",
+      "line": 374
+    },
+    {
+      "name": "writeln",
+      "line": 375
+    },
+    {
+      "name": "writeln",
+      "line": 376
+    },
+    {
+      "name": "writeln",
+      "line": 377
+    },
+    {
+      "name": "writeln",
+      "line": 378
+    },
+    {
+      "name": "writeln",
+      "line": 379
+    },
+    {
+      "name": "writeln",
+      "line": 380
+    },
+    {
+      "name": "writeln",
+      "line": 381
+    },
+    {
+      "name": "writeln",
+      "line": 382
+    },
+    {
+      "name": "writeln",
+      "line": 383
+    },
+    {
+      "name": "writeln",
+      "line": 384
+    },
+    {
+      "name": "writeln",
+      "line": 386
+    },
+    {
+      "name": "writeln",
+      "line": 387
+    },
+    {
+      "name": "writeln",
+      "line": 390
+    },
+    {
+      "name": "writeln",
+      "line": 391
+    },
+    {
+      "name": "writeln",
+      "line": 392
+    },
+    {
+      "name": "writeln",
+      "line": 393
+    },
+    {
+      "name": "writeln",
+      "line": 394
+    },
+    {
+      "name": "writeln",
+      "line": 399
+    },
+    {
+      "name": "writeln",
+      "line": 404
+    },
+    {
+      "name": "writeln",
+      "line": 405
+    },
+    {
+      "name": "writeln",
+      "line": 408
+    },
+    {
+      "name": "writeln",
+      "line": 409
+    },
+    {
+      "name": "writeln",
+      "line": 410
+    },
+    {
+      "name": "writeln",
+      "line": 411
+    },
+    {
+      "name": "writeln",
+      "line": 412
+    },
+    {
+      "name": "writeln",
+      "line": 413
+    },
+    {
+      "name": "writeln",
+      "line": 419
+    },
+    {
+      "name": "writeln",
+      "line": 420
+    },
+    {
+      "name": "writeln",
+      "line": 423
+    },
+    {
+      "name": "writeln",
+      "line": 424
+    },
+    {
+      "name": "writeln",
+      "line": 428
+    },
+    {
+      "name": "writeln",
+      "line": 429
+    },
+    {
+      "name": "writeln",
+      "line": 430
+    },
+    {
+      "name": "writeln",
+      "line": 431
+    },
+    {
+      "name": "writeln",
+      "line": 432
+    },
+    {
+      "name": "writeln",
+      "line": 433
+    },
+    {
+      "name": "writeln",
+      "line": 434
+    },
+    {
+      "name": "writeln",
+      "line": 435
+    },
+    {
+      "name": "writeln",
+      "line": 436
+    },
+    {
+      "name": "writeln",
+      "line": 439
+    },
+    {
+      "name": "writeln",
+      "line": 447
+    },
+    {
+      "name": "writeln",
+      "line": 448
+    },
+    {
+      "name": "writeln",
+      "line": 449
+    }
+  ],
+  "modules": []
+}

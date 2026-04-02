@@ -1,0 +1,362 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/sdk_executor.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "supports_sdk_suite",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "bool",
+      "line": 23
+    },
+    {
+      "name": "supports_sdk_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "bool",
+      "line": 39
+    },
+    {
+      "name": "execute_sdk_request_from_payload",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "grpc_req: &Value",
+        "connector: &str"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 44
+    },
+    {
+      "name": "execute_sdk_flow",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "grpc_req: &Value",
+        "options_bytes: &[u8]",
+        "req_transformer: RequestTransformer",
+        "res_transformer: ResponseTransformer"
+      ],
+      "return_type": "Result<String, ScenarioError>\nwhere\n    Req: Message + Default + DeserializeOwned,\n    Res: Message + Default + Serialize,",
+      "line": 179
+    },
+    {
+      "name": "execute_connector_http_request",
+      "visibility": "",
+      "parameters": [
+        "request: FfiConnectorHttpRequest",
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<FfiConnectorHttpResponse, ScenarioError>",
+      "line": 238
+    },
+    {
+      "name": "parse_sdk_payload",
+      "visibility": "",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str",
+        "connector: &str",
+        "grpc_req: &Value"
+      ],
+      "return_type": "Result<T, ScenarioError>",
+      "line": 306
+    },
+    {
+      "name": "build_ffi_options",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "connector_auth: &ConnectorAuth"
+      ],
+      "return_type": "Result<FfiOptions, ScenarioError>",
+      "line": 316
+    },
+    {
+      "name": "environment_discriminant",
+      "visibility": "",
+      "parameters": [
+        "environment: Environment"
+      ],
+      "return_type": "i32",
+      "line": 328
+    },
+    {
+      "name": "build_proto_connector_config",
+      "visibility": "",
+      "parameters": [
+        "connector: &str",
+        "connector_auth: &ConnectorAuth"
+      ],
+      "return_type": "Result<ConnectorSpecificConfig, ScenarioError>",
+      "line": 337
+    },
+    {
+      "name": "ffi_environment",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Environment",
+      "line": 396
+    },
+    {
+      "name": "map_request_error",
+      "visibility": "",
+      "parameters": [
+        "stage: &str",
+        "suite: &str",
+        "scenario: &str",
+        "error: RequestError"
+      ],
+      "return_type": "ScenarioError",
+      "line": 408
+    },
+    {
+      "name": "map_response_error",
+      "visibility": "",
+      "parameters": [
+        "stage: &str",
+        "suite: &str",
+        "scenario: &str",
+        "error: ResponseError"
+      ],
+      "return_type": "ScenarioError",
+      "line": 439
+    },
+    {
+      "name": "convert_sdk_error_label",
+      "visibility": "",
+      "parameters": [
+        "error: ScenarioError"
+      ],
+      "return_type": "ScenarioError",
+      "line": 471
+    },
+    {
+      "name": "sdk_support_matrix_matches_current_scope",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 490
+    },
+    {
+      "name": "stripe_auth_maps_to_proto_shape",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 502
+    },
+    {
+      "name": "paypal_auth_accepts_body_and_signature_shapes",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 514
+    },
+    {
+      "name": "authorize_scenario_maps_to_card_payment_method",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 540
+    },
+    {
+      "name": "serde_shapes_for_oneof_wrappers_are_nested",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 570
+    }
+  ],
+  "use_statements": [
+    "use std::collections::HashMap;",
+    "use connector_service_ffi::bindings::uniffi as ffi_bindings;",
+    "use grpc_api_types::payments::{\n    self, connector_specific_config, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest,\n    FfiConnectorHttpResponse, FfiOptions, RequestError, ResponseError,\n};",
+    "use prost::Message;",
+    "use reqwest::{blocking::Client, Method};",
+    "use serde::{de::DeserializeOwned, Serialize};",
+    "use serde_json::Value;",
+    "use crate::harness::{\n    credentials::{load_connector_auth, ConnectorAuth},\n    scenario_api::parse_tonic_payload,\n    scenario_types::ScenarioError,\n};",
+    "use super::{\n        build_proto_connector_config, parse_sdk_payload, supports_sdk_connector, supports_sdk_suite,\n    };",
+    "use crate::harness::credentials::ConnectorAuth;",
+    "use crate::harness::scenario_api::get_the_grpc_req_for_connector;",
+    "use grpc_api_types::payments::connector_specific_config;",
+    "use grpc_api_types::payments::identifier;",
+    "use grpc_api_types::payments::{self, payment_method};"
+  ],
+  "macro_calls": [
+    {
+      "name": "matches",
+      "line": 24
+    },
+    {
+      "name": "matches",
+      "line": 40
+    },
+    {
+      "name": "format",
+      "line": 204
+    },
+    {
+      "name": "format",
+      "line": 226
+    },
+    {
+      "name": "format",
+      "line": 245
+    },
+    {
+      "name": "format",
+      "line": 255
+    },
+    {
+      "name": "format",
+      "line": 274
+    },
+    {
+      "name": "format",
+      "line": 291
+    },
+    {
+      "name": "format",
+      "line": 419
+    },
+    {
+      "name": "format",
+      "line": 422
+    },
+    {
+      "name": "format",
+      "line": 432
+    },
+    {
+      "name": "format",
+      "line": 450
+    },
+    {
+      "name": "format",
+      "line": 453
+    },
+    {
+      "name": "format",
+      "line": 463
+    },
+    {
+      "name": "assert",
+      "line": 491
+    },
+    {
+      "name": "assert",
+      "line": 491
+    },
+    {
+      "name": "assert",
+      "line": 492
+    },
+    {
+      "name": "assert",
+      "line": 492
+    },
+    {
+      "name": "assert",
+      "line": 493
+    },
+    {
+      "name": "assert",
+      "line": 493
+    },
+    {
+      "name": "assert",
+      "line": 494
+    },
+    {
+      "name": "assert",
+      "line": 494
+    },
+    {
+      "name": "assert",
+      "line": 496
+    },
+    {
+      "name": "assert",
+      "line": 496
+    },
+    {
+      "name": "assert",
+      "line": 497
+    },
+    {
+      "name": "assert",
+      "line": 497
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 507
+    },
+    {
+      "name": "assert",
+      "line": 507
+    },
+    {
+      "name": "assert",
+      "line": 521
+    },
+    {
+      "name": "assert",
+      "line": 521
+    },
+    {
+      "name": "assert",
+      "line": 533
+    },
+    {
+      "name": "assert",
+      "line": 533
+    },
+    {
+      "name": "assert",
+      "line": 559
+    },
+    {
+      "name": "assert",
+      "line": 559
+    },
+    {
+      "name": "assert",
+      "line": 578
+    },
+    {
+      "name": "assert",
+      "line": 578
+    },
+    {
+      "name": "assert",
+      "line": 585
+    },
+    {
+      "name": "assert",
+      "line": 585
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

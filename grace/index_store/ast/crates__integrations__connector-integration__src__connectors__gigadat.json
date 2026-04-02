@@ -1,0 +1,448 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/gigadat.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 113
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 124
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 129
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 134
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 144
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 150
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 196
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 202
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 207
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 212
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 218
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 223
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 228
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 234
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 238
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 242
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 246
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 252
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 258
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 405
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 412
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 423
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 430
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 437
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 448
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 459
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 470
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 481
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 488
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 495
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 502
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 513
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 523
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 535
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 546
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 557
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 569
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 581
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 591
+    },
+    {
+      "type_name": "Gigadat",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 606
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 609
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 613
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 617
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 621
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 625
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 646
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use super::macros;",
+    "use crate::types::ResponseRouterData;",
+    "use crate::with_error_response_body;",
+    "use base64::Engine;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, FloatMajorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,\n        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,\n        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,\n        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    self as gigadat, GigadatPaymentsRequest, GigadatPaymentsResponse, GigadatRefundRequest,\n    GigadatRefundResponse, GigadatSyncResponse,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 55
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 55
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 264
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 264
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 300
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 300
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 337
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 337
+    },
+    {
+      "name": "format",
+      "line": 633
+    },
+    {
+      "name": "format",
+      "line": 638
+    },
+    {
+      "name": "vec",
+      "line": 640
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 656
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 656
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

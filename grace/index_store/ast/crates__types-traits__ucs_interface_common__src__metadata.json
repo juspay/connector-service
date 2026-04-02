@@ -1,0 +1,297 @@
+{
+  "file_path": "crates/types-traits/ucs_interface_common/src/metadata.rs",
+  "structs": [
+    {
+      "name": "MetadataPayload",
+      "visibility": "pub",
+      "fields": [
+        "tenant_id",
+        "request_id",
+        "merchant_id",
+        "connector",
+        "lineage_ids",
+        "connector_config",
+        "reference_id",
+        "shadow_mode",
+        "resource_id",
+        "environment"
+      ],
+      "derives": [
+        "Clone",
+        "Debug"
+      ],
+      "line": 26
+    }
+  ],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_metadata_payload",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap",
+        "server_config: Arc<configs::Config>"
+      ],
+      "return_type": "CustomResult<MetadataPayload, ApplicationErrorResponse>",
+      "line": 44
+    },
+    {
+      "name": "extract_lineage_fields_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap",
+        "config: &configs::LineageConfig"
+      ],
+      "return_type": "LineageIds<'static>",
+      "line": 76
+    },
+    {
+      "name": "connector_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse>",
+      "line": 106
+    },
+    {
+      "name": "merchant_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<String, ApplicationErrorResponse>",
+      "line": 121
+    },
+    {
+      "name": "request_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<String, ApplicationErrorResponse>",
+      "line": 131
+    },
+    {
+      "name": "tenant_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<String, ApplicationErrorResponse>",
+      "line": 146
+    },
+    {
+      "name": "reference_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<Option<String>, ApplicationErrorResponse>",
+      "line": 154
+    },
+    {
+      "name": "resource_id_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "CustomResult<Option<String>, ApplicationErrorResponse>",
+      "line": 160
+    },
+    {
+      "name": "shadow_mode_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "bool",
+      "line": 166
+    },
+    {
+      "name": "environment_from_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &metadata::MetadataMap"
+      ],
+      "return_type": "Option<String>",
+      "line": 175
+    },
+    {
+      "name": "parse_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &'a metadata::MetadataMap",
+        "key: &str"
+      ],
+      "return_type": "CustomResult<&'a str, ApplicationErrorResponse>",
+      "line": 182
+    },
+    {
+      "name": "parse_optional_metadata",
+      "visibility": "pub",
+      "parameters": [
+        "metadata: &'a metadata::MetadataMap",
+        "key: &str"
+      ],
+      "return_type": "CustomResult<Option<&'a str>, ApplicationErrorResponse>",
+      "line": 208
+    },
+    {
+      "name": "merchant_id_defaults_when_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 232
+    },
+    {
+      "name": "merchant_id_resolves_when_present",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 239
+    },
+    {
+      "name": "request_id_generates_uuid_v7_when_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 247
+    },
+    {
+      "name": "request_id_resolves_when_present",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 258
+    },
+    {
+      "name": "tenant_id_defaults_when_missing",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 266
+    },
+    {
+      "name": "connector_resolves_from_metadata",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 273
+    }
+  ],
+  "use_statements": [
+    "use common_utils::{\n    consts::{self, X_ENVIRONMENT, X_SHADOW_MODE},\n    errors::CustomResult,\n    fp_utils,\n    lineage::LineageIds,\n};",
+    "use domain_types::{\n    connector_types,\n    errors::{ApiError, ApplicationErrorResponse},\n    router_data::ConnectorSpecificConfig,\n};",
+    "use error_stack::Report;",
+    "use std::{str::FromStr, sync::Arc};",
+    "use tonic::metadata;",
+    "use ucs_env::configs;",
+    "use crate::auth::connector_and_config_from_metadata;",
+    "use super::*;",
+    "use tonic::metadata::MetadataMap;"
+  ],
+  "macro_calls": [
+    {
+      "name": "info",
+      "line": 89
+    },
+    {
+      "name": "warn",
+      "line": 95
+    },
+    {
+      "name": "format",
+      "line": 114
+    },
+    {
+      "name": "debug",
+      "line": 138
+    },
+    {
+      "name": "debug",
+      "line": 138
+    },
+    {
+      "name": "format",
+      "line": 192
+    },
+    {
+      "name": "format",
+      "line": 201
+    },
+    {
+      "name": "format",
+      "line": 220
+    },
+    {
+      "name": "assert_eq",
+      "line": 235
+    },
+    {
+      "name": "assert_eq",
+      "line": 235
+    },
+    {
+      "name": "assert_eq",
+      "line": 243
+    },
+    {
+      "name": "assert_eq",
+      "line": 243
+    },
+    {
+      "name": "assert_eq",
+      "line": 251
+    },
+    {
+      "name": "assert_eq",
+      "line": 251
+    },
+    {
+      "name": "assert_eq",
+      "line": 253
+    },
+    {
+      "name": "assert_eq",
+      "line": 253
+    },
+    {
+      "name": "assert_eq",
+      "line": 254
+    },
+    {
+      "name": "assert_eq",
+      "line": 254
+    },
+    {
+      "name": "assert_eq",
+      "line": 262
+    },
+    {
+      "name": "assert_eq",
+      "line": 262
+    },
+    {
+      "name": "assert_eq",
+      "line": 269
+    },
+    {
+      "name": "assert_eq",
+      "line": 269
+    },
+    {
+      "name": "assert_eq",
+      "line": 277
+    },
+    {
+      "name": "assert_eq",
+      "line": 277
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

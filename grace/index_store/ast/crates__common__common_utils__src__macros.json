@@ -1,0 +1,13 @@
+{
+  "file_path": "crates/common/common_utils/src/macros.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [],
+  "modules": [
+    "id_type"
+  ]
+}

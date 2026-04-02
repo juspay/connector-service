@@ -1,0 +1,27 @@
+{
+  "file_path": "crates/ffi/ffi/src/lib.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [],
+  "macro_calls": [
+    {
+      "name": "setup_scaffolding",
+      "line": 2
+    },
+    {
+      "name": "setup_scaffolding",
+      "line": 2
+    }
+  ],
+  "modules": [
+    "bindings",
+    "handlers",
+    "macros",
+    "services",
+    "types",
+    "utils"
+  ]
+}

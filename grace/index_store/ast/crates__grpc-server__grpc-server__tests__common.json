@@ -1,0 +1,280 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/common.rs",
+  "structs": [
+    {
+      "name": "ConfigInterceptor",
+      "visibility": "",
+      "fields": [
+        "config"
+      ],
+      "derives": [
+        "Clone"
+      ],
+      "line": 36
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "AutoClient",
+      "visibility": "pub",
+      "methods": [
+        "new"
+      ],
+      "line": 47
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "ConfigInterceptor",
+      "trait_name": "tonic::service::Interceptor",
+      "methods": [
+        "call"
+      ],
+      "line": 40
+    },
+    {
+      "type_name": "PaymentServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 50
+    },
+    {
+      "type_name": "HealthClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 55
+    },
+    {
+      "type_name": "RefundServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 61
+    },
+    {
+      "type_name": "RecurringPaymentServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 67
+    },
+    {
+      "type_name": "DisputeServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 73
+    },
+    {
+      "type_name": "PaymentMethodServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 79
+    },
+    {
+      "type_name": "CustomerServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 85
+    },
+    {
+      "type_name": "MerchantAuthenticationServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 91
+    },
+    {
+      "type_name": "PaymentMethodAuthenticationServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 97
+    },
+    {
+      "type_name": "PayoutServiceClient",
+      "trait_name": "AutoClient",
+      "methods": [
+        "new"
+      ],
+      "line": 103
+    }
+  ],
+  "functions": [
+    {
+      "name": "call",
+      "visibility": "",
+      "parameters": [
+        "&mut self",
+        "mut req: tonic::Request<()>"
+      ],
+      "return_type": "Result<tonic::Request<()>, tonic::Status>",
+      "line": 41
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 51
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 56
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 62
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 68
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 74
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 80
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 86
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 92
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 98
+    },
+    {
+      "name": "new",
+      "visibility": "",
+      "parameters": [
+        "channel: Channel"
+      ],
+      "return_type": "Self",
+      "line": 104
+    },
+    {
+      "name": "build_server",
+      "visibility": "",
+      "parameters": [
+        "service: grpc_server::app::Service",
+        "interceptor: ConfigInterceptor"
+      ],
+      "return_type": "tonic::transport::server::Router",
+      "line": 110
+    },
+    {
+      "name": "server_and_client_stub",
+      "visibility": "pub",
+      "parameters": [
+        "service: grpc_server::app::Service",
+        "base_config: Arc<Config>"
+      ],
+      "return_type": "Result<(impl Future<Output = ()>, T), Box<dyn std::error::Error>>\nwhere\n    T: AutoClient,",
+      "line": 178
+    },
+    {
+      "name": "server_and_channel_stub",
+      "visibility": "pub",
+      "parameters": [
+        "service: grpc_server::app::Service",
+        "base_config: Arc<Config>"
+      ],
+      "return_type": "Result<(impl Future<Output = ()>, Channel), Box<dyn std::error::Error>>",
+      "line": 227
+    }
+  ],
+  "use_statements": [
+    "use std::{future::Future, sync::Arc};",
+    "use grpc_api_types::{\n    health_check::health_client::HealthClient,\n    payments::{\n        customer_service_client::CustomerServiceClient,\n        dispute_service_client::DisputeServiceClient,\n        merchant_authentication_service_client::MerchantAuthenticationServiceClient,\n        payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,\n        payment_method_service_client::PaymentMethodServiceClient,\n        payment_service_client::PaymentServiceClient,\n        recurring_payment_service_client::RecurringPaymentServiceClient,\n        refund_service_client::RefundServiceClient,\n    },\n    payouts::{\n        payout_service_client::PayoutServiceClient, payout_service_server::PayoutServiceServer,\n    },\n};",
+    "use http::Uri;",
+    "use hyper_util::rt::TokioIo;",
+    "use tempfile::NamedTempFile;",
+    "use tokio::net::UnixListener;",
+    "use tokio_stream::wrappers::UnixListenerStream;",
+    "use tonic::transport::{Channel, Endpoint, Server};",
+    "use tower::service_fn;",
+    "use ucs_env::configs::Config;"
+  ],
+  "macro_calls": [
+    {
+      "name": "assert",
+      "line": 201
+    },
+    {
+      "name": "assert",
+      "line": 201
+    },
+    {
+      "name": "assert",
+      "line": 246
+    },
+    {
+      "name": "assert",
+      "line": 246
+    }
+  ],
+  "modules": []
+}

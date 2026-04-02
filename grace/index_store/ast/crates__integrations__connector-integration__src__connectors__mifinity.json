@@ -1,0 +1,439 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/mifinity.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 57
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 67
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 72
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 82
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 87
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 95
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 99
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 119
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 143
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 163
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 167
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 175
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 179
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 184
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 307
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 313
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 319
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 325
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 331
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 340
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 345
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 350
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 355
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 364
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 374
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 384
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 393
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 403
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 413
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 423
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 433
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 443
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 455
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 465
+    },
+    {
+      "type_name": "Mifinity",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 475
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 478
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 482
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 486
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 490
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>",
+      "line": 494
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, ConnectorError>",
+      "line": 506
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMajorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors::ConnectorError,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use super::macros;",
+    "use crate::{\n    connectors::mifinity::transformers::{\n        auth_headers, MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest,\n        MifinityPaymentsResponse, MifinityPsyncResponse,\n    },\n    types::ResponseRouterData,\n    utils,\n};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 191
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 191
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 238
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 238
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 273
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 273
+    },
+    {
+      "name": "vec",
+      "line": 500
+    },
+    {
+      "name": "json",
+      "line": 561
+    },
+    {
+      "name": "error",
+      "line": 563
+    },
+    {
+      "name": "error",
+      "line": 563
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

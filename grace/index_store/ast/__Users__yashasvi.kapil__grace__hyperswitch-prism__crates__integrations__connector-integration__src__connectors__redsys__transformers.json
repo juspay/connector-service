@@ -1,0 +1,679 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/redsys/transformers.rs",
+  "structs": [
+    {
+      "name": "RedsysAuthType",
+      "visibility": "pub",
+      "fields": [
+        "merchant_id",
+        "terminal_id",
+        "sha256_pwd"
+      ],
+      "derives": [],
+      "line": 54
+    },
+    {
+      "name": "RedsysTransaction",
+      "visibility": "pub",
+      "fields": [
+        "ds_signature_version",
+        "ds_merchant_parameters",
+        "ds_signature"
+      ],
+      "derives": [
+        "Debug",
+        "Serialize",
+        "Deserialize",
+        "Clone"
+      ],
+      "line": 62
+    }
+  ],
+  "enums": [],
+  "traits": [
+    {
+      "name": "SignatureCalculationData",
+      "visibility": "pub",
+      "methods": [
+        "get_merchant_parameters",
+        "get_order_id"
+      ],
+      "line": 321
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "requests::RedsysEmvThreeDsRequestData",
+      "trait_name": null,
+      "methods": [
+        "new",
+        "add_browser_data",
+        "set_three_d_s_server_trans_i_d",
+        "set_protocol_version",
+        "set_notification_u_r_l",
+        "set_three_d_s_comp_ind",
+        "set_three_d_s_cres",
+        "set_billing_data",
+        "set_shipping_data"
+      ],
+      "line": 73
+    },
+    {
+      "type_name": "requests::RedsysCardData",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 215
+    },
+    {
+      "type_name": "RedsysAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 259
+    },
+    {
+      "type_name": "requests::RedsysPaymentRequest",
+      "trait_name": "SignatureCalculationData",
+      "methods": [
+        "get_merchant_parameters",
+        "get_order_id"
+      ],
+      "line": 326
+    },
+    {
+      "type_name": "requests::RedsysOperationRequest",
+      "trait_name": "SignatureCalculationData",
+      "methods": [
+        "get_merchant_parameters",
+        "get_order_id"
+      ],
+      "line": 337
+    },
+    {
+      "type_name": "RedsysTransaction",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 348
+    },
+    {
+      "type_name": "common_enums::RefundStatus",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 408
+    },
+    {
+      "type_name": "requests::RedsysThreeDSCompInd",
+      "trait_name": "From",
+      "methods": [
+        "from"
+      ],
+      "line": 691
+    },
+    {
+      "type_name": "requests::RedsysPreAuthenticateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 703
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 800
+    },
+    {
+      "type_name": "requests::RedsysAuthenticateRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 873
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 982
+    },
+    {
+      "type_name": "requests::RedsysAuthorizeRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1050
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1226
+    },
+    {
+      "type_name": "requests::RedsysCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1289
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1334
+    },
+    {
+      "type_name": "requests::RedsysVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1398
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1448
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1593
+    },
+    {
+      "type_name": "requests::RedsysRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1720
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1756
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 1804
+    }
+  ],
+  "functions": [
+    {
+      "name": "new",
+      "visibility": "pub",
+      "parameters": [
+        "three_d_s_info: requests::RedsysThreeDsInfo"
+      ],
+      "return_type": "Self",
+      "line": 74
+    },
+    {
+      "name": "add_browser_data",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "browser_info: domain_types::router_request_types::BrowserInformation"
+      ],
+      "return_type": "Result<Self, Error>",
+      "line": 97
+    },
+    {
+      "name": "set_three_d_s_server_trans_i_d",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "three_d_s_server_trans_i_d: String"
+      ],
+      "return_type": "Self",
+      "line": 114
+    },
+    {
+      "name": "set_protocol_version",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "protocol_version: String"
+      ],
+      "return_type": "Self",
+      "line": 119
+    },
+    {
+      "name": "set_notification_u_r_l",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "notification_u_r_l: url::Url"
+      ],
+      "return_type": "Self",
+      "line": 124
+    },
+    {
+      "name": "set_three_d_s_comp_ind",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "three_d_s_comp_ind: requests::RedsysThreeDSCompInd"
+      ],
+      "return_type": "Self",
+      "line": 129
+    },
+    {
+      "name": "set_three_d_s_cres",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "cres: String"
+      ],
+      "return_type": "Self",
+      "line": 137
+    },
+    {
+      "name": "set_billing_data",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "address: Option<&domain_types::payment_address::Address>"
+      ],
+      "return_type": "Result<Self, Error>",
+      "line": 142
+    },
+    {
+      "name": "set_shipping_data",
+      "visibility": "pub",
+      "parameters": [
+        "mut self",
+        "address: Option<&domain_types::payment_address::Address>"
+      ],
+      "return_type": "Result<Self, Error>",
+      "line": 178
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "payment_method_data: &Option<PaymentMethodData<T>>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 220
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 261
+    },
+    {
+      "name": "des_encrypt",
+      "visibility": "",
+      "parameters": [
+        "message: &str",
+        "key: &str"
+      ],
+      "return_type": "Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 280
+    },
+    {
+      "name": "get_signature",
+      "visibility": "",
+      "parameters": [
+        "order_id: &str",
+        "params: &str",
+        "key: &str"
+      ],
+      "return_type": "Result<String, error_stack::Report<errors::ConnectorError>>",
+      "line": 307
+    },
+    {
+      "name": "get_merchant_parameters",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 327
+    },
+    {
+      "name": "get_order_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 332
+    },
+    {
+      "name": "get_merchant_parameters",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Result<String, Error>",
+      "line": 338
+    },
+    {
+      "name": "get_order_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 343
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "data: (&T, &RedsysAuthType)"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 353
+    },
+    {
+      "name": "get_redsys_attempt_status",
+      "visibility": "",
+      "parameters": [
+        "ds_response: responses::DsResponse",
+        "capture_method: Option<enums::CaptureMethod>"
+      ],
+      "return_type": "Result<common_enums::AttemptStatus, error_stack::Report<errors::ConnectorError>>",
+      "line": 368
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "ds_response: responses::DsResponse"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 410
+    },
+    {
+      "name": "to_connector_response_data",
+      "visibility": "",
+      "parameters": [
+        "connector_response: &str"
+      ],
+      "return_type": "Result<T, Error>\nwhere\n    T: serde::de::DeserializeOwned,",
+      "line": 421
+    },
+    {
+      "name": "build_threeds_form",
+      "visibility": "",
+      "parameters": [
+        "ds_emv3ds: &responses::RedsysEmv3DSResponseData"
+      ],
+      "return_type": "Result<router_response_types::RedirectForm, Error>",
+      "line": 435
+    },
+    {
+      "name": "get_preauthenticate_response",
+      "visibility": "",
+      "parameters": [
+        "response_data: &responses::RedsysPaymentsResponse",
+        "continue_redirection_url: Option<&url::Url>",
+        "existing_connector_meta: Option<Secret<serde_json::Value>>"
+      ],
+      "return_type": "Result<responses::PreAuthenticateResponseData, Error>",
+      "line": 458
+    },
+    {
+      "name": "build_threeds_invoke_response",
+      "visibility": "",
+      "parameters": [
+        "response_data: &responses::RedsysPaymentsResponse",
+        "three_d_s_server_trans_i_d: &str",
+        "three_ds_method_url: &str",
+        "continue_redirection_url: Option<&url::Url>",
+        "protocol_version: common_utils::types::SemanticVersion"
+      ],
+      "return_type": "Result<responses::PreAuthenticateResponseData, Error>",
+      "line": 511
+    },
+    {
+      "name": "build_threeds_exempt_response",
+      "visibility": "",
+      "parameters": [
+        "response_data: &responses::RedsysPaymentsResponse",
+        "authentication_data: Option<domain_types::router_request_types::AuthenticationData>"
+      ],
+      "return_type": "Result<responses::PreAuthenticateResponseData, Error>",
+      "line": 563
+    },
+    {
+      "name": "get_payments_response",
+      "visibility": "",
+      "parameters": [
+        "redsys_payments_response: responses::RedsysPaymentsResponse",
+        "capture_method: Option<enums::CaptureMethod>",
+        "authentication_data: Option<domain_types::router_request_types::AuthenticationData>",
+        "http_code: u16",
+        "use_transaction_response: bool"
+      ],
+      "return_type": "Result<\n    (\n        Result<PaymentsResponseData, domain_types::router_data::ErrorResponse>,\n        common_enums::AttemptStatus,\n        String,\n    ),\n    Error,\n>",
+      "line": 575
+    },
+    {
+      "name": "from",
+      "visibility": "",
+      "parameters": [
+        "value: connector_types::ThreeDsCompletionIndicator"
+      ],
+      "return_type": "Self",
+      "line": 692
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<\n                PreAuthenticate,\n                PaymentFlowData,\n                PaymentsPreAuthenticateData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 721
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 810
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<\n                Authenticate,\n                PaymentFlowData,\n                PaymentsAuthenticateData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 891
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 992
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1068
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1231
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1301
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1339
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1410
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1453
+    },
+    {
+      "name": "find_latest_response",
+      "visibility": "",
+      "parameters": [
+        "responses: Vec<responses::RedsysSyncResponseData>"
+      ],
+      "return_type": "Option<responses::RedsysSyncResponseData>",
+      "line": 1510
+    },
+    {
+      "name": "construct_sync_request",
+      "visibility": "pub",
+      "parameters": [
+        "order_id: String",
+        "transaction_type: Option<String>",
+        "auth: RedsysAuthType"
+      ],
+      "return_type": "Result<Vec<u8>, Error>",
+      "line": 1538
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1598
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: RedsysRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1729
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1761
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<responses::RedsysSyncResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 1809
+    }
+  ],
+  "use_statements": [
+    "use std::str::FromStr;",
+    "use crate::{\n    connectors::redsys::{RedsysAmountConvertor, RedsysRouterData},\n    types::ResponseRouterData,\n    utils,\n};",
+    "use base64::Engine;",
+    "use common_enums::enums;",
+    "use common_utils::{\n    consts::BASE64_ENGINE,\n    crypto::{self, EncodeMessage, SignMessage},\n    ext_traits::Encode,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Authenticate, Authorize, Capture, PSync, PreAuthenticate, RSync, Refund, Void,\n    },\n    connector_types::{\n        self, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,\n        PaymentsCaptureData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,\n        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n    router_response_types,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Serialize};",
+    "use super::{requests, responses};"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 225
+    },
+    {
+      "name": "format",
+      "line": 403
+    },
+    {
+      "name": "format",
+      "line": 416
+    },
+    {
+      "name": "format",
+      "line": 1585
+    }
+  ],
+  "modules": [
+    "transaction_type"
+  ]
+}

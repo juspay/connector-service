@@ -1,0 +1,167 @@
+{
+  "file_path": "crates/grpc-server/grpc-server/tests/beta_tests/bluecode_payment_flows_test.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_timestamp",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "u64",
+      "line": 36
+    },
+    {
+      "name": "add_bluecode_metadata",
+      "visibility": "",
+      "parameters": [
+        "request: &mut Request<T>"
+      ],
+      "return_type": "",
+      "line": 44
+    },
+    {
+      "name": "extract_transaction_id",
+      "visibility": "",
+      "parameters": [
+        "response: &PaymentServiceAuthorizeResponse"
+      ],
+      "return_type": "String",
+      "line": 104
+    },
+    {
+      "name": "generate_unique_request_ref_id",
+      "visibility": "",
+      "parameters": [
+        "prefix: &str"
+      ],
+      "return_type": "String",
+      "line": 115
+    },
+    {
+      "name": "generate_unique_email",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 124
+    },
+    {
+      "name": "random_name",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "String",
+      "line": 129
+    },
+    {
+      "name": "create_payment_authorize_request",
+      "visibility": "",
+      "parameters": [
+        "capture_method: common_enums::CaptureMethod"
+      ],
+      "return_type": "PaymentServiceAuthorizeRequest",
+      "line": 139
+    },
+    {
+      "name": "create_payment_sync_request",
+      "visibility": "",
+      "parameters": [
+        "transaction_id: &str"
+      ],
+      "return_type": "PaymentServiceGetRequest",
+      "line": 249
+    },
+    {
+      "name": "test_health",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 268
+    },
+    {
+      "name": "test_payment_authorization_auto_capture",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 287
+    },
+    {
+      "name": "test_payment_sync",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 324
+    }
+  ],
+  "use_statements": [
+    "use grpc_server::app;",
+    "use ucs_env::configs;",
+    "use std::{\n    collections::HashMap,\n    time::{SystemTime, UNIX_EPOCH},\n};",
+    "use grpc_api_types::{\n    health_check::{health_client::HealthClient, HealthCheckRequest},\n    payments::{\n        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,\n        wallet_payment_method_type, Address, AuthenticationType, Bluecode, BrowserInformation,\n        CaptureMethod, CountryAlpha2, Identifier, PaymentAddress, PaymentMethod,\n        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,\n        PaymentStatus, WalletPaymentMethodType,\n    },\n};",
+    "use hyperswitch_masking::{ExposeInterface, Secret};",
+    "use rand::{distributions::Alphanumeric, Rng};",
+    "use tonic::{transport::Channel, Request};"
+  ],
+  "macro_calls": [
+    {
+      "name": "panic",
+      "line": 50
+    },
+    {
+      "name": "format",
+      "line": 76
+    },
+    {
+      "name": "format",
+      "line": 90
+    },
+    {
+      "name": "panic",
+      "line": 108
+    },
+    {
+      "name": "panic",
+      "line": 110
+    },
+    {
+      "name": "format",
+      "line": 116
+    },
+    {
+      "name": "format",
+      "line": 125
+    },
+    {
+      "name": "format",
+      "line": 255
+    },
+    {
+      "name": "grpc_test",
+      "line": 269
+    },
+    {
+      "name": "grpc_test",
+      "line": 269
+    },
+    {
+      "name": "grpc_test",
+      "line": 288
+    },
+    {
+      "name": "grpc_test",
+      "line": 288
+    },
+    {
+      "name": "grpc_test",
+      "line": 325
+    },
+    {
+      "name": "grpc_test",
+      "line": 325
+    }
+  ],
+  "modules": [
+    "common",
+    "utils"
+  ]
+}

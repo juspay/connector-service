@@ -1,0 +1,497 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/internal/ucs-connector-tests/src/harness/scenario_loader.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "scenario_root",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 13
+    },
+    {
+      "name": "connector_specs_root",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "PathBuf",
+      "line": 20
+    },
+    {
+      "name": "connector_spec_dir",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 33
+    },
+    {
+      "name": "scenario_file_path",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 38
+    },
+    {
+      "name": "suite_spec_file_path",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 45
+    },
+    {
+      "name": "connector_spec_file_path",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "PathBuf",
+      "line": 53
+    },
+    {
+      "name": "load_suite_scenarios",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "Result<ScenarioFile, ScenarioError>",
+      "line": 63
+    },
+    {
+      "name": "load_scenario",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<ScenarioDef, ScenarioError>",
+      "line": 75
+    },
+    {
+      "name": "load_suite_spec",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "Result<SuiteSpec, ScenarioError>",
+      "line": 86
+    },
+    {
+      "name": "load_default_scenario_name",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str"
+      ],
+      "return_type": "Result<String, ScenarioError>",
+      "line": 102
+    },
+    {
+      "name": "is_suite_supported_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str",
+        "suite: &str"
+      ],
+      "return_type": "Result<bool, ScenarioError>",
+      "line": 124
+    },
+    {
+      "name": "load_supported_suites_for_connector",
+      "visibility": "pub",
+      "parameters": [
+        "connector: &str"
+      ],
+      "return_type": "Result<Vec<String>, ScenarioError>",
+      "line": 152
+    },
+    {
+      "name": "discover_all_connectors",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Result<Vec<String>, ScenarioError>",
+      "line": 209
+    },
+    {
+      "name": "configured_all_connectors",
+      "visibility": "pub",
+      "parameters": [],
+      "return_type": "Vec<String>",
+      "line": 258
+    },
+    {
+      "name": "get_the_grpc_req",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<Value, ScenarioError>",
+      "line": 281
+    },
+    {
+      "name": "get_the_assertion",
+      "visibility": "pub",
+      "parameters": [
+        "suite: &str",
+        "scenario: &str"
+      ],
+      "return_type": "Result<std::collections::BTreeMap<String, FieldAssert>, ScenarioError>",
+      "line": 286
+    },
+    {
+      "name": "discover_suites",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "Vec<String>",
+      "line": 305
+    },
+    {
+      "name": "can_load_any_scenario_by_name_if_present",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 323
+    },
+    {
+      "name": "can_get_grpc_req_and_assertions_for_any_existing_scenario",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 351
+    },
+    {
+      "name": "can_load_suite_specs_for_all_suites",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 377
+    },
+    {
+      "name": "dependency_scope_defaults_and_overrides_are_loaded",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 403
+    },
+    {
+      "name": "explicit_context_maps_exist_for_name_mismatch_dependencies",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 418
+    },
+    {
+      "name": "can_load_supported_suites_for_known_connector",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 455
+    },
+    {
+      "name": "can_discover_all_connectors",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 465
+    },
+    {
+      "name": "configured_connectors_defaults_to_static_run_list",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 483
+    },
+    {
+      "name": "configured_connectors_supports_env_override",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 503
+    },
+    {
+      "name": "recurring_charge_scenarios_exclude_unsupported_connector_transaction_field",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 518
+    },
+    {
+      "name": "setup_recurring_extended_scenarios_have_billing_address",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 534
+    },
+    {
+      "name": "three_connector_suite_coverage_includes_recurring_flows",
+      "visibility": "",
+      "parameters": [],
+      "return_type": "",
+      "line": 554
+    }
+  ],
+  "use_statements": [
+    "use std::{collections::BTreeSet, fs, path::PathBuf};",
+    "use serde_json::Value;",
+    "use crate::harness::scenario_types::{\n    ConnectorSuiteSpec, FieldAssert, ScenarioDef, ScenarioError, ScenarioFile, SuiteSpec,\n};",
+    "use std::fs;",
+    "use crate::harness::scenario_types::DependencyScope;",
+    "use crate::harness::scenario_loader::{\n        configured_all_connectors, discover_all_connectors, get_the_assertion, get_the_grpc_req,\n        load_scenario, load_suite_scenarios, load_suite_spec, load_supported_suites_for_connector,\n        scenario_root,\n    };"
+  ],
+  "macro_calls": [
+    {
+      "name": "env",
+      "line": 16
+    },
+    {
+      "name": "env",
+      "line": 27
+    },
+    {
+      "name": "format",
+      "line": 40
+    },
+    {
+      "name": "format",
+      "line": 47
+    },
+    {
+      "name": "format",
+      "line": 58
+    },
+    {
+      "name": "assert",
+      "line": 325
+    },
+    {
+      "name": "assert",
+      "line": 325
+    },
+    {
+      "name": "assert",
+      "line": 330
+    },
+    {
+      "name": "assert",
+      "line": 330
+    },
+    {
+      "name": "assert",
+      "line": 338
+    },
+    {
+      "name": "assert",
+      "line": 338
+    },
+    {
+      "name": "assert",
+      "line": 342
+    },
+    {
+      "name": "assert",
+      "line": 342
+    },
+    {
+      "name": "assert",
+      "line": 353
+    },
+    {
+      "name": "assert",
+      "line": 353
+    },
+    {
+      "name": "assert",
+      "line": 364
+    },
+    {
+      "name": "assert",
+      "line": 364
+    },
+    {
+      "name": "assert",
+      "line": 368
+    },
+    {
+      "name": "assert",
+      "line": 368
+    },
+    {
+      "name": "assert",
+      "line": 379
+    },
+    {
+      "name": "assert",
+      "line": 379
+    },
+    {
+      "name": "assert_eq",
+      "line": 383
+    },
+    {
+      "name": "assert_eq",
+      "line": 383
+    },
+    {
+      "name": "assert",
+      "line": 389
+    },
+    {
+      "name": "assert",
+      "line": 389
+    },
+    {
+      "name": "assert_eq",
+      "line": 405
+    },
+    {
+      "name": "assert_eq",
+      "line": 405
+    },
+    {
+      "name": "assert_eq",
+      "line": 409
+    },
+    {
+      "name": "assert_eq",
+      "line": 409
+    },
+    {
+      "name": "assert",
+      "line": 434
+    },
+    {
+      "name": "assert",
+      "line": 434
+    },
+    {
+      "name": "assert",
+      "line": 448
+    },
+    {
+      "name": "assert",
+      "line": 448
+    },
+    {
+      "name": "assert",
+      "line": 458
+    },
+    {
+      "name": "assert",
+      "line": 458
+    },
+    {
+      "name": "assert",
+      "line": 468
+    },
+    {
+      "name": "assert",
+      "line": 468
+    },
+    {
+      "name": "assert",
+      "line": 472
+    },
+    {
+      "name": "assert",
+      "line": 472
+    },
+    {
+      "name": "assert_eq",
+      "line": 479
+    },
+    {
+      "name": "assert_eq",
+      "line": 479
+    },
+    {
+      "name": "assert",
+      "line": 494
+    },
+    {
+      "name": "assert",
+      "line": 494
+    },
+    {
+      "name": "assert",
+      "line": 495
+    },
+    {
+      "name": "assert",
+      "line": 495
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 498
+    },
+    {
+      "name": "assert",
+      "line": 499
+    },
+    {
+      "name": "assert",
+      "line": 499
+    },
+    {
+      "name": "assert_eq",
+      "line": 514
+    },
+    {
+      "name": "assert_eq",
+      "line": 514
+    },
+    {
+      "name": "assert",
+      "line": 526
+    },
+    {
+      "name": "assert",
+      "line": 526
+    },
+    {
+      "name": "assert",
+      "line": 546
+    },
+    {
+      "name": "assert",
+      "line": 546
+    },
+    {
+      "name": "assert",
+      "line": 557
+    },
+    {
+      "name": "assert",
+      "line": 557
+    },
+    {
+      "name": "assert",
+      "line": 565
+    },
+    {
+      "name": "assert",
+      "line": 565
+    },
+    {
+      "name": "assert",
+      "line": 574
+    },
+    {
+      "name": "assert",
+      "line": 574
+    }
+  ],
+  "modules": [
+    "tests"
+  ]
+}

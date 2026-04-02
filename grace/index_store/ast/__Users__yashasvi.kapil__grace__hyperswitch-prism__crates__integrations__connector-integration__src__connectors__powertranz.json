@@ -1,0 +1,469 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/powertranz.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 66
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 76
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 86
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 91
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 96
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 106
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 116
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 121
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 126
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 136
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 141
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 146
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 156
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 161
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 166
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 191
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 196
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 201
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 206
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 211
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 216
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 225
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 235
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 245
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 255
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 265
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 275
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 285
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 295
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 301
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 307
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 313
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 323
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 333
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 343
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 353
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 363
+    },
+    {
+      "type_name": "Powertranz",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "common_get_content_type",
+        "base_url",
+        "get_auth_header",
+        "build_error_response"
+      ],
+      "line": 467
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 470
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CurrencyUnit",
+      "line": 474
+    },
+    {
+      "name": "common_get_content_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 478
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 482
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 486
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 503
+    }
+  ],
+  "use_statements": [
+    "use std::fmt::Debug;",
+    "use common_enums::CurrencyUnit;",
+    "use common_utils::{\n    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,\n        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,\n        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,\n        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,\n        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,\n        SubmitEvidenceData,\n    },\n    errors::{self},\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers as powertranz;",
+    "use transformers::{\n    PowertranzCaptureRequest, PowertranzCaptureResponse, PowertranzPaymentsRequest,\n    PowertranzPaymentsResponse, PowertranzPaymentsResponse as PowertranzPaymentsSyncResponse,\n    PowertranzRSyncResponse, PowertranzRefundRequest, PowertranzRefundResponse,\n    PowertranzVoidRequest, PowertranzVoidResponse,\n};",
+    "use crate::{types::ResponseRouterData, with_response_body};",
+    "use super::macros;"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 381
+    },
+    {
+      "name": "create_amount_converter_wrapper",
+      "line": 381
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 384
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 384
+    },
+    {
+      "name": "vec",
+      "line": 491
+    },
+    {
+      "name": "with_response_body",
+      "line": 513
+    },
+    {
+      "name": "with_response_body",
+      "line": 513
+    },
+    {
+      "name": "with_response_body",
+      "line": 524
+    },
+    {
+      "name": "with_response_body",
+      "line": 524
+    },
+    {
+      "name": "with_response_body",
+      "line": 541
+    },
+    {
+      "name": "with_response_body",
+      "line": 541
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 569
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 569
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 602
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 602
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 636
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 636
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 664
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 664
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 692
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 692
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 720
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 720
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "file_path": "crates/common/common_enums/src/transformers.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "CountryAlpha2",
+      "trait_name": null,
+      "methods": [
+        "from_alpha2_to_alpha3"
+      ],
+      "line": 3
+    }
+  ],
+  "functions": [
+    {
+      "name": "from_alpha2_to_alpha3",
+      "visibility": "pub",
+      "parameters": [
+        "code: Self"
+      ],
+      "return_type": "CountryAlpha3",
+      "line": 4
+    }
+  ],
+  "use_statements": [
+    "use crate::enums::{CountryAlpha2, CountryAlpha3};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

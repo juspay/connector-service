@@ -1,0 +1,703 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/adyen.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 88
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 98
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 103
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 107
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 111
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 115
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 120
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 125
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 130
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 143
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 163
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 168
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 173
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 178
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 183
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 188
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 193
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 198
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 203
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 207
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 212
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 222
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 352
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 514
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 519
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 524
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 599
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 605
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 615
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 625
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 642
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 652
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 662
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 672
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 682
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [
+        "get_webhook_source_verification_signature",
+        "get_webhook_source_verification_message",
+        "verify_webhook_source",
+        "get_event_type",
+        "process_payment_webhook",
+        "process_refund_webhook",
+        "process_dispute_webhook",
+        "get_webhook_api_response"
+      ],
+      "line": 692
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorSpecifications",
+      "methods": [
+        "get_connector_about",
+        "get_supported_payment_methods",
+        "get_supported_webhook_flows"
+      ],
+      "line": 1196
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorValidation",
+      "methods": [
+        "validate_mandate_payment",
+        "validate_psync_reference_id",
+        "is_webhook_source_verification_mandatory"
+      ],
+      "line": 1210
+    },
+    {
+      "type_name": "Adyen",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 1245
+    }
+  ],
+  "functions": [
+    {
+      "name": "build_env_specific_endpoint",
+      "visibility": "",
+      "parameters": [
+        "base_url: &str",
+        "test_mode: Option<bool>",
+        "connector_config: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<String, errors::ConnectorError>",
+      "line": 334
+    },
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 355
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 358
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 361
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 372
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 376
+    },
+    {
+      "name": "get_webhook_source_verification_signature",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 695
+    },
+    {
+      "name": "get_webhook_source_verification_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: &RequestDetails",
+        "_connector_webhook_secret: &ConnectorWebhookSecrets"
+      ],
+      "return_type": "Result<Vec<u8>, error_stack::Report<errors::ConnectorError>>",
+      "line": 715
+    },
+    {
+      "name": "verify_webhook_source",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<bool, error_stack::Report<errors::ConnectorError>>",
+      "line": 742
+    },
+    {
+      "name": "get_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>",
+      "line": 783
+    },
+    {
+      "name": "process_payment_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 798
+    },
+    {
+      "name": "process_refund_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>>",
+      "line": 852
+    },
+    {
+      "name": "process_dispute_webhook",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "request: RequestDetails",
+        "_connector_webhook_secret: Option<ConnectorWebhookSecrets>",
+        "_connector_account_details: Option<ConnectorSpecificConfig>"
+      ],
+      "return_type": "Result<\n        domain_types::connector_types::DisputeWebhookDetailsResponse,\n        error_stack::Report<errors::ConnectorError>,\n    >",
+      "line": 887
+    },
+    {
+      "name": "get_webhook_api_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_request: RequestDetails",
+        "_error_kind: Option<connector_types::IncomingWebhookFlowError>"
+      ],
+      "return_type": "Result<\n        interfaces::api::ApplicationResponse<serde_json::Value>,\n        error_stack::Report<errors::ConnectorError>,\n    >",
+      "line": 932
+    },
+    {
+      "name": "get_connector_about",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static ConnectorInfo>",
+      "line": 1197
+    },
+    {
+      "name": "get_supported_payment_methods",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static SupportedPaymentMethods>",
+      "line": 1201
+    },
+    {
+      "name": "get_supported_webhook_flows",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&'static [EventClass]>",
+      "line": 1205
+    },
+    {
+      "name": "validate_mandate_payment",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "pm_type: Option<PaymentMethodType>",
+        "pm_data: PaymentMethodData<DefaultPCIHolder>"
+      ],
+      "return_type": "CustomResult<(), errors::ConnectorError>",
+      "line": 1211
+    },
+    {
+      "name": "validate_psync_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "data: &PaymentsSyncData",
+        "_is_three_ds: bool",
+        "_status: AttemptStatus",
+        "_connector_feature_data: Option<SecretSerdeValue>"
+      ],
+      "return_type": "CustomResult<(), errors::ConnectorError>",
+      "line": 1225
+    },
+    {
+      "name": "is_webhook_source_verification_mandatory",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "bool",
+      "line": 1240
+    }
+  ],
+  "use_statements": [
+    "use std::{\n    fmt::Debug,\n    marker::{Send, Sync},\n    sync::LazyLock,\n};",
+    "use base64::Engine;",
+    "use common_enums::{\n    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,\n};",
+    "use common_utils::{\n    consts,\n    crypto::{self, SignMessage},\n    errors::CustomResult,\n    events,\n    ext_traits::ByteSliceExt,\n    pii::SecretSerdeValue,\n    types::StringMinorUnit,\n};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,\n        DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateRevokeRequestData,\n        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,\n        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,\n        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,\n        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,\n        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,\n        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,\n        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,\n        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,\n        WebhookDetailsResponse,\n    },\n    errors,\n    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::{\n        self, CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus,\n        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,\n        SupportedPaymentMethods,\n    },\n    utils,\n};",
+    "use error_stack::report;",
+    "use error_stack::ResultExt;",
+    "use hex;",
+    "use hyperswitch_masking::{Mask, Maskable};",
+    "use interfaces::{\n    api::ConnectorCommon,\n    connector_integration_v2::ConnectorIntegrationV2,\n    connector_types::{self, is_mandate_supported, ConnectorValidation},\n    decode::BodyDecoding,\n    verification::SourceVerification,\n};",
+    "use serde::Serialize;",
+    "use transformers::{\n    self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,\n    AdyenDefendDisputeResponse, AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse,\n    AdyenDisputeSubmitEvidenceRequest, AdyenNotificationRequestItemWH, AdyenPSyncResponse,\n    AdyenPaymentRequest, AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest,\n    AdyenRefundResponse, AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse,\n    AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse, SetupMandateRequest,\n    SetupMandateResponse,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "create_all_prerequisites",
+      "line": 227
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 227
+    },
+    {
+      "name": "vec",
+      "line": 367
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 386
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 386
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 444
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 444
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 477
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 477
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 534
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 534
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 568
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 568
+    },
+    {
+      "name": "report",
+      "line": 702
+    },
+    {
+      "name": "format",
+      "line": 703
+    },
+    {
+      "name": "report",
+      "line": 722
+    },
+    {
+      "name": "format",
+      "line": 723
+    },
+    {
+      "name": "format",
+      "line": 727
+    },
+    {
+      "name": "report",
+      "line": 792
+    },
+    {
+      "name": "format",
+      "line": 793
+    },
+    {
+      "name": "report",
+      "line": 795
+    },
+    {
+      "name": "report",
+      "line": 807
+    },
+    {
+      "name": "format",
+      "line": 808
+    },
+    {
+      "name": "report",
+      "line": 861
+    },
+    {
+      "name": "format",
+      "line": 862
+    },
+    {
+      "name": "report",
+      "line": 899
+    },
+    {
+      "name": "format",
+      "line": 900
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 946
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 946
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 983
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 983
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1016
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1016
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1047
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1047
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1078
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 1078
+    },
+    {
+      "name": "vec",
+      "line": 1112
+    },
+    {
+      "name": "vec",
+      "line": 1119
+    }
+  ],
+  "modules": [
+    "test",
+    "transformers",
+    "headers"
+  ]
+}

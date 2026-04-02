@@ -1,0 +1,68 @@
+{
+  "file_path": "crates/types-traits/interfaces/src/decode.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [
+    {
+      "name": "BodyDecoding",
+      "visibility": "pub",
+      "methods": [
+        "get_secrets",
+        "get_algorithm",
+        "get_message",
+        "decode"
+      ],
+      "line": 6
+    }
+  ],
+  "impl_blocks": [],
+  "functions": [
+    {
+      "name": "get_secrets",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "_secrets: ConnectorSourceVerificationSecrets"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 7
+    },
+    {
+      "name": "get_algorithm",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError>",
+      "line": 15
+    },
+    {
+      "name": "get_message",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "body: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 23
+    },
+    {
+      "name": "decode",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "secrets: Option<ConnectorSourceVerificationSecrets>",
+        "body: &[u8]"
+      ],
+      "return_type": "CustomResult<Vec<u8>, domain_types::errors::ConnectorError>",
+      "line": 31
+    }
+  ],
+  "use_statements": [
+    "use crate::verification::ConnectorSourceVerificationSecrets;",
+    "use common_utils::{crypto, CustomResult};",
+    "use error_stack::ResultExt;"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

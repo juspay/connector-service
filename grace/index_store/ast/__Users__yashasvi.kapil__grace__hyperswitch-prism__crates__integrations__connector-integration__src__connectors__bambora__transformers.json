@@ -1,0 +1,832 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/integrations/connector-integration/src/connectors/bambora/transformers.rs",
+  "structs": [
+    {
+      "name": "BamboraAuthType",
+      "visibility": "pub",
+      "fields": [
+        "api_key"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 23
+    },
+    {
+      "name": "BamboraErrorResponse",
+      "visibility": "pub",
+      "fields": [
+        "code",
+        "category",
+        "message",
+        "reference",
+        "transaction_id",
+        "order_number",
+        "details",
+        "card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize"
+      ],
+      "line": 64
+    },
+    {
+      "name": "BamboraPaymentsRequest",
+      "visibility": "pub",
+      "fields": [
+        "order_number",
+        "amount",
+        "payment_method",
+        "card",
+        "billing"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 82
+    },
+    {
+      "name": "BamboraCard",
+      "visibility": "pub",
+      "fields": [
+        "name",
+        "number",
+        "expiry_month",
+        "expiry_year",
+        "cvd",
+        "complete"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 97
+    },
+    {
+      "name": "BamboraBillingAddress",
+      "visibility": "pub",
+      "fields": [
+        "name",
+        "address_line1",
+        "address_line2",
+        "city",
+        "province",
+        "country",
+        "postal_code",
+        "phone_number",
+        "email_address"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 107
+    },
+    {
+      "name": "BamboraPaymentsResponse",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "authorizing_merchant_id",
+        "approved",
+        "message",
+        "message_id",
+        "auth_code",
+        "created",
+        "order_number",
+        "payment_type",
+        "amount",
+        "payment_method",
+        "risk_score",
+        "custom",
+        "card",
+        "links"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 183
+    },
+    {
+      "name": "BamboraCardResponse",
+      "visibility": "pub",
+      "fields": [
+        "card_type",
+        "last_four",
+        "card_bin",
+        "address_match",
+        "postal_result",
+        "avs_result",
+        "cvd_result",
+        "avs"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 211
+    },
+    {
+      "name": "BamboraAvsDetails",
+      "visibility": "pub",
+      "fields": [
+        "id",
+        "message",
+        "processed"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 229
+    },
+    {
+      "name": "BamboraCaptureRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount",
+        "payment_method"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 432
+    },
+    {
+      "name": "BamboraSyncRequest",
+      "visibility": "pub",
+      "fields": [],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 506
+    },
+    {
+      "name": "BamboraRefundRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 593
+    },
+    {
+      "name": "BamboraVoidRequest",
+      "visibility": "pub",
+      "fields": [
+        "amount"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Deserialize",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 687
+    }
+  ],
+  "enums": [
+    {
+      "name": "PaymentMethodType",
+      "visibility": "pub",
+      "variants": [
+        "Card"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize"
+      ],
+      "line": 92
+    },
+    {
+      "name": "BamboraPaymentType",
+      "visibility": "pub",
+      "variants": [
+        "Payment",
+        "PreAuth",
+        "PreAuthCompletion",
+        "Return",
+        "VoidPayment",
+        "VoidRefund"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Clone",
+        "Serialize",
+        "Deserialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Serialize",
+        "Debug",
+        "Clone",
+        "PartialEq",
+        "Eq",
+        "Deserialize",
+        "Serialize"
+      ],
+      "line": 133
+    },
+    {
+      "name": "StrOrI32",
+      "visibility": "",
+      "variants": [
+        "Str",
+        "I32"
+      ],
+      "derives": [
+        "Deserialize"
+      ],
+      "line": 161
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "BamboraAuthType",
+      "trait_name": null,
+      "methods": [
+        "generate_authorization_header"
+      ],
+      "line": 27
+    },
+    {
+      "type_name": "BamboraAuthType",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 35
+    },
+    {
+      "type_name": "BamboraPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 237
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 368
+    },
+    {
+      "type_name": "BamboraCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 437
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 466
+    },
+    {
+      "type_name": "BamboraSyncRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 508
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 523
+    },
+    {
+      "type_name": "BamboraRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 597
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 615
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 646
+    },
+    {
+      "type_name": "BamboraVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 691
+    },
+    {
+      "type_name": "RouterDataV2",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 731
+    },
+    {
+      "type_name": "BamboraPaymentsRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 774
+    },
+    {
+      "type_name": "BamboraCaptureRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 805
+    },
+    {
+      "type_name": "BamboraVoidRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 826
+    },
+    {
+      "type_name": "BamboraRefundRequest",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 847
+    }
+  ],
+  "functions": [
+    {
+      "name": "generate_authorization_header",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "String",
+      "line": 30
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 38
+    },
+    {
+      "name": "str_or_i32",
+      "visibility": "",
+      "parameters": [
+        "deserializer: D"
+      ],
+      "return_type": "Result<String, D::Error>\nwhere\n    D: Deserializer<'de>,",
+      "line": 155
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<\n            Authorize,\n            PaymentFlowData,\n            PaymentsAuthorizeData<T>,\n            PaymentsResponseData,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 244
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 373
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 442
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 471
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "_item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 513
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 528
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 602
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 620
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 651
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 696
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "item: ResponseRouterData<BamboraPaymentsResponse, Self>"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 736
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: BamboraRouterData<\n            RouterDataV2<\n                Authorize,\n                PaymentFlowData,\n                PaymentsAuthorizeData<T>,\n                PaymentsResponseData,\n            >,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 789
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: BamboraRouterData<\n            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 815
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: BamboraRouterData<\n            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 836
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "wrapper: BamboraRouterData<\n            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,\n            T,\n        >"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 857
+    }
+  ],
+  "use_statements": [
+    "use crate::types::ResponseRouterData;",
+    "use common_enums::{AttemptStatus, RefundStatus};",
+    "use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};",
+    "use domain_types::{\n    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},\n    connector_types::{\n        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,\n        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,\n        RefundsResponseData, ResponseId,\n    },\n    errors,\n    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},\n    router_data::ConnectorSpecificConfig,\n    router_data_v2::RouterDataV2,\n};",
+    "use error_stack::ResultExt;",
+    "use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};",
+    "use serde::{Deserialize, Deserializer, Serialize};",
+    "use crate::connectors::bambora::BamboraRouterData;"
+  ],
+  "macro_calls": [
+    {
+      "name": "format",
+      "line": 45
+    },
+    {
+      "name": "format",
+      "line": 51
+    },
+    {
+      "name": "report",
+      "line": 54
+    },
+    {
+      "name": "matches",
+      "line": 399
+    },
+    {
+      "name": "matches",
+      "line": 560
+    }
+  ],
+  "modules": []
+}

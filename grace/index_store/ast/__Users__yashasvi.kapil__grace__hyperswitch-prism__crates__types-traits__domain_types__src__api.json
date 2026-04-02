@@ -1,0 +1,319 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/types-traits/domain_types/src/api.rs",
+  "structs": [
+    {
+      "name": "RedirectionFormData",
+      "visibility": "pub",
+      "fields": [
+        "redirect_form",
+        "payment_method_data",
+        "amount",
+        "currency"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 9
+    },
+    {
+      "name": "PaymentLinkFormData",
+      "visibility": "pub",
+      "fields": [
+        "js_script",
+        "css_script",
+        "sdk_url",
+        "html_meta_tags"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 23
+    },
+    {
+      "name": "PaymentLinkStatusData",
+      "visibility": "pub",
+      "fields": [
+        "js_script",
+        "css_script"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 31
+    },
+    {
+      "name": "GenericLinks",
+      "visibility": "pub",
+      "fields": [
+        "allowed_domains",
+        "data",
+        "locale"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 37
+    },
+    {
+      "name": "GenericExpiredLinkData",
+      "visibility": "pub",
+      "fields": [
+        "title",
+        "message",
+        "theme"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 54
+    },
+    {
+      "name": "GenericLinkFormData",
+      "visibility": "pub",
+      "fields": [
+        "js_data",
+        "css_data",
+        "sdk_url",
+        "html_meta_tags"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 61
+    },
+    {
+      "name": "GenericLinkStatusData",
+      "visibility": "pub",
+      "fields": [
+        "js_data",
+        "css_data"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize"
+      ],
+      "line": 69
+    }
+  ],
+  "enums": [
+    {
+      "name": "PaymentLinkAction",
+      "visibility": "pub",
+      "variants": [
+        "PaymentLinkFormData",
+        "PaymentLinkStatus"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 17
+    },
+    {
+      "name": "GenericLinksData",
+      "visibility": "pub",
+      "variants": [
+        "ExpiredLink",
+        "PaymentMethodCollect",
+        "PayoutLink",
+        "PayoutLinkStatus",
+        "PaymentMethodCollectStatus",
+        "SecurePaymentLink"
+      ],
+      "derives": [
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Clone",
+        "serde::Serialize",
+        "serde::Deserialize",
+        "Debug",
+        "Eq",
+        "PartialEq",
+        "Debug",
+        "Eq",
+        "PartialEq"
+      ],
+      "line": 44
+    }
+  ],
+  "traits": [],
+  "impl_blocks": [],
+  "functions": [],
+  "use_statements": [
+    "use std::collections::HashSet;",
+    "use crate::{\n    payment_method_data::{DefaultPCIHolder, PaymentMethodData},\n    router_response_types::RedirectForm,\n};"
+  ],
+  "macro_calls": [],
+  "modules": []
+}

@@ -1,0 +1,85 @@
+{
+  "file_path": "/Users/yashasvi.kapil/grace/hyperswitch-prism/crates/common/common_utils/src/global_id/customer.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "GlobalCustomerId",
+      "trait_name": null,
+      "methods": [
+        "get_string_repr",
+        "generate"
+      ],
+      "line": 11
+    },
+    {
+      "type_name": "crate::id_type::CustomerId",
+      "trait_name": "TryFrom",
+      "methods": [
+        "try_from"
+      ],
+      "line": 24
+    },
+    {
+      "type_name": "GlobalCustomerId",
+      "trait_name": "crate::events::ApiEventMetric",
+      "methods": [
+        "get_api_event_type"
+      ],
+      "line": 32
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_string_repr",
+      "visibility": "pub",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 13
+    },
+    {
+      "name": "generate",
+      "visibility": "pub",
+      "parameters": [
+        "cell_id: &CellId"
+      ],
+      "return_type": "Self",
+      "line": 18
+    },
+    {
+      "name": "try_from",
+      "visibility": "",
+      "parameters": [
+        "value: GlobalCustomerId"
+      ],
+      "return_type": "Result<Self, Self::Error>",
+      "line": 27
+    },
+    {
+      "name": "get_api_event_type",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<crate::events::ApiEventsType>",
+      "line": 33
+    }
+  ],
+  "use_statements": [
+    "use crate::{errors, global_id::CellId};"
+  ],
+  "macro_calls": [
+    {
+      "name": "global_id_type",
+      "line": 3
+    },
+    {
+      "name": "global_id_type",
+      "line": 3
+    }
+  ],
+  "modules": []
+}

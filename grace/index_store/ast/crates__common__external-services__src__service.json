@@ -1,0 +1,791 @@
+{
+  "file_path": "crates/common/external-services/src/service.rs",
+  "structs": [
+    {
+      "name": "TestContext",
+      "visibility": "pub",
+      "fields": [
+        "session_id",
+        "mock_server_url"
+      ],
+      "derives": [
+        "Debug",
+        "Clone"
+      ],
+      "line": 27
+    },
+    {
+      "name": "EventProcessingParams",
+      "visibility": "pub",
+      "fields": [
+        "connector_name",
+        "service_name",
+        "service_type",
+        "flow_name",
+        "event_config",
+        "request_id",
+        "lineage_ids",
+        "reference_id",
+        "resource_id",
+        "shadow_mode"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 256
+    }
+  ],
+  "enums": [
+    {
+      "name": "ApplicationResponse",
+      "visibility": "pub",
+      "variants": [
+        "Json"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug"
+      ],
+      "line": 665
+    },
+    {
+      "name": "Tag",
+      "visibility": "pub",
+      "variants": [
+        "General",
+        "RedisGet",
+        "RedisSet",
+        "ApiIncomingRequest",
+        "ApiOutgoingRequestBody",
+        "ApiOutgoingRequestHeaders",
+        "EndRequest",
+        "InitiatedToConnector",
+        "IncomingApi",
+        "OutgoingApi"
+      ],
+      "derives": [
+        "Debug",
+        "Clone",
+        "Debug",
+        "Debug",
+        "Default",
+        "serde::Deserialize",
+        "Clone",
+        "strum::EnumString"
+      ],
+      "line": 1259
+    }
+  ],
+  "traits": [
+    {
+      "name": "ConnectorRequestReference",
+      "visibility": "pub",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 32
+    },
+    {
+      "name": "AdditionalHeaders",
+      "visibility": "pub",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 36
+    },
+    {
+      "name": "ToHttpMethod",
+      "visibility": "",
+      "methods": [
+        "to_http_method"
+      ],
+      "line": 238
+    },
+    {
+      "name": "HeaderExt",
+      "visibility": "pub(super)",
+      "methods": [
+        "construct_header_map"
+      ],
+      "line": 1224
+    },
+    {
+      "name": "RequestBuilderExt",
+      "visibility": "pub(super)",
+      "methods": [
+        "add_headers"
+      ],
+      "line": 1247
+    }
+  ],
+  "impl_blocks": [
+    {
+      "type_name": "domain_types::connector_types::PaymentFlowData",
+      "trait_name": "ConnectorRequestReference",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 40
+    },
+    {
+      "type_name": "domain_types::connector_types::VerifyWebhookSourceFlowData",
+      "trait_name": "ConnectorRequestReference",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 46
+    },
+    {
+      "type_name": "domain_types::connector_types::VerifyWebhookSourceFlowData",
+      "trait_name": "AdditionalHeaders",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 52
+    },
+    {
+      "type_name": "domain_types::connector_types::PaymentFlowData",
+      "trait_name": "AdditionalHeaders",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 58
+    },
+    {
+      "type_name": "domain_types::connector_types::RefundFlowData",
+      "trait_name": "ConnectorRequestReference",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 64
+    },
+    {
+      "type_name": "domain_types::connector_types::RefundFlowData",
+      "trait_name": "AdditionalHeaders",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 70
+    },
+    {
+      "type_name": "domain_types::connector_types::DisputeFlowData",
+      "trait_name": "ConnectorRequestReference",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 77
+    },
+    {
+      "type_name": "domain_types::connector_types::DisputeFlowData",
+      "trait_name": "AdditionalHeaders",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 83
+    },
+    {
+      "type_name": "domain_types::payouts::payouts_types::PayoutFlowData",
+      "trait_name": "ConnectorRequestReference",
+      "methods": [
+        "get_connector_request_reference_id"
+      ],
+      "line": 90
+    },
+    {
+      "type_name": "domain_types::payouts::payouts_types::PayoutFlowData",
+      "trait_name": "AdditionalHeaders",
+      "methods": [
+        "get_vault_headers"
+      ],
+      "line": 96
+    },
+    {
+      "type_name": "Method",
+      "trait_name": "ToHttpMethod",
+      "methods": [
+        "to_http_method"
+      ],
+      "line": 243
+    },
+    {
+      "type_name": "Headers",
+      "trait_name": "HeaderExt",
+      "methods": [
+        "construct_header_map"
+      ],
+      "line": 1228
+    },
+    {
+      "type_name": "reqwest::RequestBuilder",
+      "trait_name": "RequestBuilderExt",
+      "methods": [
+        "add_headers"
+      ],
+      "line": 1251
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_connector_request_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 41
+    },
+    {
+      "name": "get_connector_request_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 47
+    },
+    {
+      "name": "get_vault_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&HashMap<String, Secret<String>>>",
+      "line": 53
+    },
+    {
+      "name": "get_vault_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&HashMap<String, Secret<String>>>",
+      "line": 59
+    },
+    {
+      "name": "get_connector_request_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 65
+    },
+    {
+      "name": "get_vault_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&HashMap<String, Secret<String>>>",
+      "line": 71
+    },
+    {
+      "name": "get_connector_request_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 78
+    },
+    {
+      "name": "get_vault_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&HashMap<String, Secret<String>>>",
+      "line": 84
+    },
+    {
+      "name": "get_connector_request_reference_id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&str",
+      "line": 91
+    },
+    {
+      "name": "get_vault_headers",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "Option<&HashMap<String, Secret<String>>>",
+      "line": 97
+    },
+    {
+      "name": "handle_connector_response",
+      "visibility": "pub",
+      "parameters": [
+        "response: CustomResult<Result<Response, Response>, ConnectorError>",
+        "mut updated_router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>",
+        "connector: &BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>",
+        "mut event: Option<&mut Event>",
+        "all_keys_required: Option<bool>",
+        "method: Method",
+        "url: String",
+        "event_params: Option<&EventProcessingParams<'_>>"
+      ],
+      "return_type": "CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>\nwhere\n    F: Clone + 'static,\n    Req: Clone + 'static + std::fmt::Debug,\n    Resp: Clone + 'static + std::fmt::Debug,\n    ResourceCommonData: Clone + RawConnectorRequestResponse + ConnectorResponseHeaders,",
+      "line": 125
+    },
+    {
+      "name": "to_http_method",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "HttpMethod",
+      "line": 244
+    },
+    {
+      "name": "execute_connector_processing_step",
+      "visibility": "pub",
+      "parameters": [
+        "proxy: &Proxy",
+        "connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>",
+        "router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>",
+        "all_keys_required: Option<bool>",
+        "event_params: EventProcessingParams<'_>",
+        "token_data: Option<TokenData>",
+        "call_connector_action: common_enums::CallConnectorAction",
+        "test_context: Option<TestContext>",
+        "api_tag: Option<String>"
+      ],
+      "return_type": "CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>\nwhere\n    F: Clone + 'static,\n    T: FlowIntegrity,\n    Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,\n    Resp: Clone + 'static + std::fmt::Debug,\n    ResourceCommonData: Clone\n        + 'static\n        + RawConnectorRequestResponse\n        + ConnectorResponseHeaders\n        + ConnectorRequestReference\n        + AdditionalHeaders,",
+      "line": 287
+    },
+    {
+      "name": "call_connector_api",
+      "visibility": "pub",
+      "parameters": [
+        "proxy: &Proxy",
+        "request: Request",
+        "_flow_name: &str",
+        "test_mode: bool"
+      ],
+      "return_type": "CustomResult<Result<Response, Response>, ApiClientError>",
+      "line": 673
+    },
+    {
+      "name": "create_client",
+      "visibility": "pub",
+      "parameters": [
+        "proxy_config: &Proxy",
+        "should_bypass_proxy: bool",
+        "_client_certificate: Option<Secret<String>>",
+        "_client_certificate_key: Option<Secret<String>>",
+        "test_mode: bool"
+      ],
+      "return_type": "CustomResult<Client, ApiClientError>",
+      "line": 842
+    },
+    {
+      "name": "get_or_create_proxy_client",
+      "visibility": "",
+      "parameters": [
+        "cache: &RwLock<HashMap<Proxy, Client>>",
+        "cache_key: Proxy",
+        "proxy_config: &Proxy",
+        "should_bypass_proxy: bool",
+        "test_mode: bool"
+      ],
+      "return_type": "CustomResult<Client, ApiClientError>",
+      "line": 886
+    },
+    {
+      "name": "get_base_client",
+      "visibility": "",
+      "parameters": [
+        "proxy_config: &Proxy",
+        "should_bypass_proxy: bool",
+        "test_mode: bool"
+      ],
+      "return_type": "CustomResult<Client, ApiClientError>",
+      "line": 936
+    },
+    {
+      "name": "load_custom_ca_certificate_from_content",
+      "visibility": "",
+      "parameters": [
+        "mut client_builder: reqwest::ClientBuilder",
+        "cert_content: &str"
+      ],
+      "return_type": "CustomResult<reqwest::ClientBuilder, ApiClientError>",
+      "line": 977
+    },
+    {
+      "name": "get_client_builder",
+      "visibility": "",
+      "parameters": [
+        "proxy_config: &Proxy",
+        "should_bypass_proxy: bool",
+        "test_mode: bool"
+      ],
+      "return_type": "CustomResult<reqwest::ClientBuilder, ApiClientError>",
+      "line": 988
+    },
+    {
+      "name": "handle_response",
+      "visibility": "",
+      "parameters": [
+        "response: CustomResult<reqwest::Response, ApiClientError>"
+      ],
+      "return_type": "CustomResult<Result<Response, Response>, ApiClientError>",
+      "line": 1088
+    },
+    {
+      "name": "strip_bom_and_convert_to_string",
+      "visibility": "",
+      "parameters": [
+        "response_bytes: &[u8]"
+      ],
+      "return_type": "Option<String>",
+      "line": 1143
+    },
+    {
+      "name": "extract_raw_connector_request",
+      "visibility": "",
+      "parameters": [
+        "connector_request: &Request"
+      ],
+      "return_type": "String",
+      "line": 1155
+    },
+    {
+      "name": "parse_json_with_bom_handling",
+      "visibility": "",
+      "parameters": [
+        "response_bytes: &[u8]"
+      ],
+      "return_type": "Result<serde_json::Value, serde_json::Error>",
+      "line": 1204
+    },
+    {
+      "name": "construct_header_map",
+      "visibility": "",
+      "parameters": [
+        "self"
+      ],
+      "return_type": "CustomResult<reqwest::header::HeaderMap, ApiClientError>",
+      "line": 1229
+    },
+    {
+      "name": "add_headers",
+      "visibility": "",
+      "parameters": [
+        "mut self",
+        "headers: reqwest::header::HeaderMap"
+      ],
+      "return_type": "Self",
+      "line": 1252
+    },
+    {
+      "name": "debug_log",
+      "visibility": "pub",
+      "parameters": [
+        "action: &str",
+        "message: &serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 1284
+    },
+    {
+      "name": "info_log",
+      "visibility": "pub",
+      "parameters": [
+        "action: &str",
+        "message: &serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 1289
+    },
+    {
+      "name": "error_log",
+      "visibility": "pub",
+      "parameters": [
+        "action: &str",
+        "message: &serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 1294
+    },
+    {
+      "name": "warn_log",
+      "visibility": "pub",
+      "parameters": [
+        "action: &str",
+        "message: &serde_json::Value"
+      ],
+      "return_type": "",
+      "line": 1299
+    }
+  ],
+  "use_statements": [
+    "use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};",
+    "use common_enums::ApiClientError;",
+    "use common_utils::{\n    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},\n    events::{EventStage, MaskedSerdeValue},\n};",
+    "use common_utils::{\n    ext_traits::AsyncExt,\n    lineage,\n    request::{Method, Request, RequestContent},\n};",
+    "use domain_types::{\n    connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},\n    errors::{ApiErrorResponse, ConnectorError},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Proxy,\n};",
+    "use hyperswitch_masking::Secret;",
+    "use injector;",
+    "use common_utils::events::{Event, EventConfig, FlowName};",
+    "use common_utils::{consts, emit_event_with_config};",
+    "use error_stack::{report, ResultExt};",
+    "use hyperswitch_masking::Maskable;",
+    "use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};",
+    "use injector::{injector_core, HttpMethod, TokenData};",
+    "use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;",
+    "use interfaces::integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject};",
+    "use once_cell::sync::OnceCell;",
+    "use reqwest::Client;",
+    "use serde_json::json;",
+    "use tracing::field::Empty;",
+    "use crate::shared_metrics as metrics;",
+    "use reqwest::header::{HeaderMap, HeaderName, HeaderValue};"
+  ],
+  "macro_calls": [
+    {
+      "name": "info",
+      "line": 183
+    },
+    {
+      "name": "info",
+      "line": 183
+    },
+    {
+      "name": "json",
+      "line": 325
+    },
+    {
+      "name": "info",
+      "line": 344
+    },
+    {
+      "name": "info",
+      "line": 344
+    },
+    {
+      "name": "info",
+      "line": 408
+    },
+    {
+      "name": "info",
+      "line": 408
+    },
+    {
+      "name": "info",
+      "line": 421
+    },
+    {
+      "name": "info",
+      "line": 421
+    },
+    {
+      "name": "format",
+      "line": 425
+    },
+    {
+      "name": "json",
+      "line": 449
+    },
+    {
+      "name": "json",
+      "line": 451
+    },
+    {
+      "name": "json",
+      "line": 452
+    },
+    {
+      "name": "info",
+      "line": 456
+    },
+    {
+      "name": "info",
+      "line": 456
+    },
+    {
+      "name": "debug",
+      "line": 481
+    },
+    {
+      "name": "debug",
+      "line": 481
+    },
+    {
+      "name": "json",
+      "line": 576
+    },
+    {
+      "name": "info",
+      "line": 591
+    },
+    {
+      "name": "info",
+      "line": 591
+    },
+    {
+      "name": "info",
+      "line": 661
+    },
+    {
+      "name": "info",
+      "line": 661
+    },
+    {
+      "name": "format",
+      "line": 726
+    },
+    {
+      "name": "format",
+      "line": 755
+    },
+    {
+      "name": "format",
+      "line": 784
+    },
+    {
+      "name": "format",
+      "line": 813
+    },
+    {
+      "name": "json",
+      "line": 831
+    },
+    {
+      "name": "report",
+      "line": 833
+    },
+    {
+      "name": "debug",
+      "line": 900
+    },
+    {
+      "name": "debug",
+      "line": 900
+    },
+    {
+      "name": "debug",
+      "line": 910
+    },
+    {
+      "name": "debug",
+      "line": 910
+    },
+    {
+      "name": "info",
+      "line": 917
+    },
+    {
+      "name": "info",
+      "line": 917
+    },
+    {
+      "name": "debug",
+      "line": 926
+    },
+    {
+      "name": "debug",
+      "line": 926
+    },
+    {
+      "name": "debug",
+      "line": 943
+    },
+    {
+      "name": "debug",
+      "line": 943
+    },
+    {
+      "name": "debug",
+      "line": 960
+    },
+    {
+      "name": "debug",
+      "line": 960
+    },
+    {
+      "name": "info",
+      "line": 965
+    },
+    {
+      "name": "info",
+      "line": 965
+    },
+    {
+      "name": "json",
+      "line": 1029
+    },
+    {
+      "name": "json",
+      "line": 1043
+    },
+    {
+      "name": "report",
+      "line": 1109
+    },
+    {
+      "name": "report",
+      "line": 1121
+    },
+    {
+      "name": "json",
+      "line": 1133
+    },
+    {
+      "name": "report",
+      "line": 1135
+    },
+    {
+      "name": "warn",
+      "line": 1171
+    },
+    {
+      "name": "warn",
+      "line": 1171
+    },
+    {
+      "name": "json",
+      "line": 1193
+    },
+    {
+      "name": "debug",
+      "line": 1285
+    },
+    {
+      "name": "debug",
+      "line": 1285
+    },
+    {
+      "name": "info",
+      "line": 1290
+    },
+    {
+      "name": "info",
+      "line": 1290
+    },
+    {
+      "name": "error",
+      "line": 1295
+    },
+    {
+      "name": "error",
+      "line": 1295
+    },
+    {
+      "name": "warn",
+      "line": 1300
+    },
+    {
+      "name": "warn",
+      "line": 1300
+    }
+  ],
+  "modules": []
+}

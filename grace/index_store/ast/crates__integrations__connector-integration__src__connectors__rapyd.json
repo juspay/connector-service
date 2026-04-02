@@ -1,0 +1,448 @@
+{
+  "file_path": "crates/integrations/connector-integration/src/connectors/rapyd.rs",
+  "structs": [],
+  "enums": [],
+  "traits": [],
+  "impl_blocks": [
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 62
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::SdkSessionTokenV2",
+      "methods": [],
+      "line": 72
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::ConnectorServiceTrait",
+      "methods": [],
+      "line": 77
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentAuthorizeV2",
+      "methods": [],
+      "line": 81
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentSyncV2",
+      "methods": [],
+      "line": 85
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentVoidV2",
+      "methods": [],
+      "line": 89
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::RefundSyncV2",
+      "methods": [],
+      "line": 93
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::RefundV2",
+      "methods": [],
+      "line": 97
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentCapture",
+      "methods": [],
+      "line": 101
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentIncrementalAuthorization",
+      "methods": [],
+      "line": 105
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentVoidPostCaptureV2",
+      "methods": [],
+      "line": 109
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 113
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::ValidationTrait",
+      "methods": [],
+      "line": 123
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentOrderCreate",
+      "methods": [],
+      "line": 127
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::SetupMandateV2",
+      "methods": [],
+      "line": 131
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::RepeatPaymentV2",
+      "methods": [],
+      "line": 135
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::AcceptDispute",
+      "methods": [],
+      "line": 139
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::SubmitEvidenceV2",
+      "methods": [],
+      "line": 143
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::DisputeDefend",
+      "methods": [],
+      "line": 147
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::IncomingWebhook",
+      "methods": [],
+      "line": 151
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::VerifyRedirectResponse",
+      "methods": [],
+      "line": 155
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "SourceVerification",
+      "methods": [],
+      "line": 159
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "BodyDecoding",
+      "methods": [],
+      "line": 163
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentSessionToken",
+      "methods": [],
+      "line": 167
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentPreAuthenticateV2",
+      "methods": [],
+      "line": 171
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentAuthenticateV2",
+      "methods": [],
+      "line": 176
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentPostAuthenticateV2",
+      "methods": [],
+      "line": 181
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::MandateRevokeV2",
+      "methods": [],
+      "line": 186
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorCommon",
+      "methods": [
+        "id",
+        "get_currency_unit",
+        "get_auth_header",
+        "base_url",
+        "build_error_response"
+      ],
+      "line": 190
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 253
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentTokenV2",
+      "methods": [],
+      "line": 263
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 268
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::PaymentAccessToken",
+      "methods": [],
+      "line": 278
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "connector_types::CreateConnectorCustomer",
+      "methods": [],
+      "line": 283
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 603
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 613
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 619
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 625
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 631
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 641
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 651
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 661
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 670
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 680
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 690
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 700
+    },
+    {
+      "type_name": "Rapyd",
+      "trait_name": "ConnectorIntegrationV2",
+      "methods": [],
+      "line": 710
+    }
+  ],
+  "functions": [
+    {
+      "name": "id",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "&'static str",
+      "line": 193
+    },
+    {
+      "name": "get_currency_unit",
+      "visibility": "",
+      "parameters": [
+        "&self"
+      ],
+      "return_type": "common_enums::CurrencyUnit",
+      "line": 197
+    },
+    {
+      "name": "get_auth_header",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "auth_type: &ConnectorSpecificConfig"
+      ],
+      "return_type": "CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>",
+      "line": 201
+    },
+    {
+      "name": "base_url",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "connectors: &'a Connectors"
+      ],
+      "return_type": "&'a str",
+      "line": 215
+    },
+    {
+      "name": "build_error_response",
+      "visibility": "",
+      "parameters": [
+        "&self",
+        "res: Response",
+        "event_builder: Option<&mut events::Event>"
+      ],
+      "return_type": "CustomResult<ErrorResponse, errors::ConnectorError>",
+      "line": 219
+    }
+  ],
+  "use_statements": [
+    "use base64::Engine;",
+    "use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMajorUnit};",
+    "use domain_types::{\n    connector_flow::{\n        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,\n        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,\n        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,\n        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,\n    },\n    connector_types::{\n        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,\n        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,\n        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,\n        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,\n        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,\n        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,\n        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,\n        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,\n        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,\n        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,\n        SetupMandateRequestData, SubmitEvidenceData,\n    },\n    errors,\n    payment_method_data::PaymentMethodDataTypes,\n    router_data::{ConnectorSpecificConfig, ErrorResponse},\n    router_data_v2::RouterDataV2,\n    router_response_types::Response,\n    types::Connectors,\n};",
+    "use error_stack::{Report, ResultExt};",
+    "use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};",
+    "use interfaces::{\n    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,\n    decode::BodyDecoding, verification::SourceVerification,\n};",
+    "use rand::distributions::{Alphanumeric, DistString};",
+    "use ring::hmac;",
+    "use serde::Serialize;",
+    "use std::fmt::Debug;",
+    "use transformers::{\n    CaptureRequest, RapydAuthType, RapydPaymentsRequest,\n    RapydPaymentsResponse as RapydCaptureResponse, RapydPaymentsResponse as RapydPSyncResponse,\n    RapydPaymentsResponse, RapydPaymentsResponse as RapydVoidResponse,\n    RapydPaymentsResponse as RapydAuthorizeResponse, RapydRefundRequest, RefundResponse,\n    RefundResponse as RapydRSyncResponse,\n};",
+    "use super::macros;",
+    "use crate::{types::ResponseRouterData, with_error_response_body};"
+  ],
+  "macro_calls": [
+    {
+      "name": "vec",
+      "line": 209
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 229
+    },
+    {
+      "name": "with_error_response_body",
+      "line": 229
+    },
+    {
+      "name": "json",
+      "line": 244
+    },
+    {
+      "name": "error",
+      "line": 246
+    },
+    {
+      "name": "error",
+      "line": 246
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 288
+    },
+    {
+      "name": "create_all_prerequisites",
+      "line": 288
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 404
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 439
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 439
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 471
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 471
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 506
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 506
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 537
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 537
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 571
+    },
+    {
+      "name": "macro_connector_implementation",
+      "line": 571
+    }
+  ],
+  "modules": [
+    "transformers",
+    "headers"
+  ]
+}
