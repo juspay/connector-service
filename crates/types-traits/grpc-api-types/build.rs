@@ -34,8 +34,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add serde rename attributes for PproConfig fields to handle camelCase JSON from Euler
     config.field_attribute(".types.PproConfig.api_key", "#[serde(rename = \"apiKey\")]");
-    config.field_attribute(".types.PproConfig.merchant_id", "#[serde(rename = \"merchantId\")]");
-    config.field_attribute(".types.PproConfig.base_url", "#[serde(rename = \"baseUrl\")]");
+    config.field_attribute(
+        ".types.PproConfig.merchant_id",
+        "#[serde(rename = \"merchantId\")]",
+    );
+    config.field_attribute(
+        ".types.PproConfig.base_url",
+        "#[serde(rename = \"baseUrl\")]",
+    );
 
     // Use compile_protos_with_config which handles everything internally
     // including string enum support, serde derives, and descriptor set writing
