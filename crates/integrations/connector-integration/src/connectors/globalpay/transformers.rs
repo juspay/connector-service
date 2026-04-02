@@ -13,7 +13,7 @@ use domain_types::{
         RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData,
     },
-    errors,
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -65,7 +65,7 @@ pub struct GlobalpayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for GlobalpayAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -76,7 +76,9 @@ impl TryFrom<&ConnectorSpecificConfig> for GlobalpayAuthType {
                 app_key: app_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                IntegrationError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -185,7 +187,7 @@ impl
         >,
     > for GlobalpayAccessTokenRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -222,7 +224,9 @@ impl
             })
         } else {
             Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                IntegrationError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             ))
         }
     }
@@ -239,7 +243,7 @@ pub struct GlobalpayAccessTokenResponse {
 impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>,
@@ -377,7 +381,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for GlobalpayPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: GlobalpayRouterData<
@@ -394,9 +398,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Convert to 2-digit year using built-in helper method
-                let expiry_year_2digit = card_data
-                    .get_card_expiry_year_2_digit()
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                let expiry_year_2digit = card_data.get_card_expiry_year_2_digit().change_context(
+                    IntegrationError::RequestEncodingFailed {
+                        context: Default::default(),
+                    },
+                )?;
 
                 // Determine cvv_indicator based on whether CVV is provided
                 let cvv_indicator = if card_data.card_cvc.peek().is_empty() {
@@ -423,11 +429,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
                     BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
                     _ => {
-                        return Err(error_stack::report!(
-                            errors::ConnectorError::NotImplemented(
-                                "Bank redirect payment method not supported".to_string()
-                            )
-                        ))
+                        return Err(error_stack::report!(IntegrationError::not_implemented(
+                            "Bank redirect payment method not supported".to_string()
+                        )))
                     }
                 };
 
@@ -441,11 +445,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             _ => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented(
-                        "Payment method not supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Payment method not supported".to_string()
+                )))
             }
         };
 
@@ -482,7 +484,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_amount,
                 item.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
             currency: item.request.currency,
             reference: item
                 .resource_common_data
@@ -514,7 +518,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for GlobalpayCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: GlobalpayRouterData<
@@ -529,7 +533,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_amount_to_capture,
                 item.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
             capture_sequence: item.request.multiple_capture_data.as_ref().map(|mcd| {
                 if mcd.capture_sequence == 1 {
                     Sequence::First
@@ -587,7 +593,7 @@ pub struct GlobalpayCardResponse {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
@@ -605,7 +611,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             })
             .filter(|redirect_str| !redirect_str.is_empty())
             .map(|url| {
-                Url::parse(url).change_context(errors::ConnectorError::FailedToObtainIntegrationUrl)
+                Url::parse(url).change_context(crate::utils::response_handling_fail_for_connector(
+                    item.http_code,
+                    "globalpay",
+                ))
             })
             .transpose()?;
 
@@ -687,7 +696,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
 impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
@@ -765,7 +774,7 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
@@ -856,7 +865,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for GlobalpayRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: GlobalpayRouterData<
@@ -870,7 +879,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.request.minor_refund_amount,
                 item.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?,
         })
     }
 }
@@ -890,7 +901,7 @@ pub struct GlobalpayRefundResponse {
 impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayRefundResponse, Self>,
@@ -912,7 +923,7 @@ impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayRefundResponse, Self>,
@@ -946,7 +957,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for GlobalpayVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         wrapper: GlobalpayRouterData<
@@ -958,7 +969,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Validate that we have a connector transaction ID (required for URL construction)
         if item.request.connector_transaction_id.is_empty() {
             return Err(error_stack::report!(
-                errors::ConnectorError::MissingConnectorTransactionID
+                IntegrationError::MissingConnectorTransactionID {
+                    context: Default::default()
+                }
             ));
         }
 
@@ -968,8 +981,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .amount
             .zip(item.request.currency)
             .map(|(amount_value, currency)| {
-                GlobalpayAmountConvertor::convert(amount_value, currency)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                GlobalpayAmountConvertor::convert(amount_value, currency).change_context(
+                    IntegrationError::RequestEncodingFailed {
+                        context: Default::default(),
+                    },
+                )
             })
             .transpose()?;
 
@@ -982,7 +998,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,

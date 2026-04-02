@@ -28,7 +28,6 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -49,6 +48,8 @@ use self::{
     response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
+use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(
@@ -95,7 +96,7 @@ macros::create_all_prerequisites!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             // First try to parse as session token error response format
             if let Ok(session_error_response) = res
                 .response
@@ -114,8 +115,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Try to parse as callback error response format
@@ -144,8 +145,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: callback_response.body.txn_info.order_id,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Try to parse as original JSON error response format
@@ -166,8 +167,8 @@ macros::create_all_prerequisites!(
                     connector_transaction_id: response.transaction_id,
                     network_decline_code: None,
                     network_advice_code: None,
-                    network_error_message: None,
-                });
+                    network_error_message: None
+});
             }
 
             // Final fallback for non-JSON responses (HTML errors, etc.)
@@ -178,8 +179,8 @@ macros::create_all_prerequisites!(
                 500 => "Internal server error".to_string(),
                 404 => "Not found".to_string(),
                 400 => "Bad request".to_string(),
-                _ => format!("HTTP {} error", res.status_code),
-            };
+                _ => format!("HTTP {} error", res.status_code)
+};
 
             Ok(ErrorResponse {
                 code: res.status_code.to_string(),
@@ -193,8 +194,8 @@ macros::create_all_prerequisites!(
                 connector_transaction_id: None,
                 network_decline_code: None,
                 network_advice_code: None,
-                network_error_message: None,
-            })
+                network_error_message: None
+})
         }
     }
 );
@@ -382,7 +383,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         Ok(vec![(
             constants::CONTENT_TYPE_HEADER.to_string(),
             constants::CONTENT_TYPE_JSON.into(),
@@ -393,7 +394,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_custom_error_response(res, event_builder)
     }
 }
@@ -415,7 +416,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<ServerSessionAuthenticationToken, PaymentFlowData, ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
@@ -423,7 +424,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<ServerSessionAuthenticationToken, PaymentFlowData, ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
@@ -438,7 +439,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -483,7 +484,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
 
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
@@ -492,7 +493,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
@@ -507,7 +508,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -530,7 +531,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
@@ -538,7 +539,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/v3/order/status"))
         }
@@ -547,7 +548,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             self.build_custom_error_response(res, event_builder)
         }
     }

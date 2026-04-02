@@ -28,7 +28,6 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -53,6 +52,8 @@ use transformers::{
 use super::macros;
 use super::macros::GetSoapXml;
 use crate::types::ResponseRouterData;
+use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -280,7 +281,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let header = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -314,11 +315,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
         &self,
         _data: &RouterDataV2<F, FCD, Req, Res>,
         response_bytes: bytes::Bytes,
-    ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+        _status_code: u16,
+    ) -> CustomResult<bytes::Bytes, IntegrationError> {
         use error_stack::ResultExt;
 
-        let response_str = String::from_utf8(response_bytes.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response_str = String::from_utf8(response_bytes.to_vec()).change_context(
+            IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         // Only remove namespace prefixes for easier deserialization
         // Keep the full structure including Envelope
@@ -361,7 +366,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         // Bambora APAC includes auth in the request body (SOAP), not headers
         Ok(vec![])
     }
@@ -370,7 +375,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         _event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: BamboraapacErrorResponse = if res.response.is_empty() {
             BamboraapacErrorResponse::default()
         } else {
@@ -415,7 +420,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
     }
@@ -439,7 +444,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
     }
@@ -463,7 +468,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
     }
@@ -487,7 +492,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
         }
     }
@@ -511,7 +516,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
         }
     }
@@ -535,7 +540,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/sipp.asmx", self.connector_base_url_payments(req)))
         }
     }
@@ -559,7 +564,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
         }
     }
