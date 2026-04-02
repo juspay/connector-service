@@ -1,4 +1,4 @@
-use common_enums::{self, enums, AttemptStatus};
+use common_enums::{self, AttemptStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     types::MinorUnit,
@@ -13,7 +13,6 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +21,7 @@ use crate::types::ResponseRouterData;
 // Auth
 pub struct AmazonpayAuthType {
     pub(super) api_key: Secret<String>,
-    pub(super) api_secret: Option<Secret<String>>,
+    pub(super) _api_secret: Option<Secret<String>>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for AmazonpayAuthType {
@@ -35,7 +34,7 @@ impl TryFrom<&ConnectorSpecificConfig> for AmazonpayAuthType {
                 ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                api_secret: api_secret.to_owned(),
+                _api_secret: api_secret.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
