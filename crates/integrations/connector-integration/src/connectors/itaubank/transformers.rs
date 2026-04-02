@@ -63,10 +63,10 @@ pub struct ItaubankAccessTokenRequest {
 impl
     TryFrom<
         &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     > for ItaubankAccessTokenRequest
 {
@@ -74,10 +74,10 @@ impl
 
     fn try_from(
         req: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = ItaubankAuthType::try_from(&req.connector_config)?;

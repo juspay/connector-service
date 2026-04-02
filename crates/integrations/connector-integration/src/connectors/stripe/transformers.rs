@@ -11,16 +11,18 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, PaymentMethodToken,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
+        IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse, MandateReference,
+        MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
+        StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -5260,6 +5262,112 @@ impl<F, T> TryFrom<ResponseRouterData<StripeTokenResponse, Self>>
         let token = item.response.id.clone().expose();
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse { token }),
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates an unconfirmed PaymentIntent. `confirm` is intentionally omitted —
+/// confirmation happens browser-side via `stripe.confirmPayment()` using the
+/// returned `client_secret`.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeClientAuthRequest {
+    pub amount: MinorUnit,
+    pub currency: String,
+    #[serde(rename = "automatic_payment_methods[enabled]")]
+    pub automatic_payment_methods_enabled: Option<bool>,
+    #[serde(flatten)]
+    pub meta_data: HashMap<String, String>,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for StripeClientAuthRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        let amount = StripeAmountConvertor::convert(
+            router_data.request.amount,
+            router_data.request.currency,
+        )?;
+
+        let currency = router_data.request.currency.to_string().to_lowercase();
+
+        let order_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let meta_data = get_transaction_metadata(None, order_id);
+
+        Ok(Self {
+            amount,
+            currency,
+            automatic_payment_methods_enabled: Some(true),
+            meta_data,
+        })
+    }
+}
+
+/// Wraps PaymentIntentResponse for the ClientAuthenticationToken flow.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StripeClientAuthResponse(PaymentIntentResponse);
+
+impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response.0;
+
+        let client_secret = response
+            .client_secret
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "client_secret",
+            })?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Stripe(
+                StripeClientAuthenticationResponseDomain { client_secret },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
     }

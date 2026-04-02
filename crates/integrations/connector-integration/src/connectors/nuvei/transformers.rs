@@ -427,10 +427,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         NuveiRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
+                domain_types::connector_flow::ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -441,10 +441,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: NuveiRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
+                domain_types::connector_flow::ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -481,10 +481,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Session Token Response Transformation
 impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::CreateSessionToken,
+        domain_types::connector_flow::ServerSessionAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
     >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -532,9 +532,10 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
                     field_name: "session_token",
                 })?;
 
-        let session_response_data = domain_types::connector_types::SessionTokenResponseData {
-            session_token: session_token.clone(),
-        };
+        let session_response_data =
+            domain_types::connector_types::ServerSessionAuthenticationTokenResponseData {
+                session_token: session_token.clone(),
+            };
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -817,7 +818,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = router_data.request.currency;
 
         // Extract session token from PaymentFlowData
-        // The CreateSessionToken flow runs before Authorize and populates this field
+        // The ServerSessionAuthenticationToken flow runs before Authorize and populates this field
         let session_token = router_data
             .resource_common_data
             .session_token

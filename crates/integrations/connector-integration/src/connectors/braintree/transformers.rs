@@ -7,19 +7,21 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void,
+        Authorize, Capture, ClientAuthenticationToken, PSync, PaymentMethodToken, RSync,
+        RepeatPayment, Void,
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
-        ApplepaySessionTokenResponse, GooglePaySessionResponse, GpayAllowedMethodsParameters,
-        GpayAllowedPaymentMethods, GpayMerchantInfo, GpaySessionTokenResponse,
-        GpayShippingAddressParameters, GpayTokenParameters, GpayTokenizationSpecification,
-        GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalSessionTokenResponse,
+        ApplepayClientAuthenticationResponse, ClientAuthenticationTokenData,
+        ClientAuthenticationTokenRequestData, GooglePaySessionResponse,
+        GpayAllowedMethodsParameters, GpayAllowedPaymentMethods, GpayClientAuthenticationResponse,
+        GpayMerchantInfo, GpayShippingAddressParameters, GpayTokenParameters,
+        GpayTokenizationSpecification, GpayTransactionInfo, MandateReference, NextActionCall,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentRequestMetadata, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, PaypalClientAuthenticationResponse,
         PaypalTransactionInfo, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk, SessionToken,
+        RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
         ThirdPartySdkSessionResponse,
     },
     errors::ConnectorError,
@@ -1851,9 +1853,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         BraintreeRouterData<
             RouterDataV2<
-                SdkSessionToken,
+                ClientAuthenticationToken,
                 PaymentFlowData,
-                PaymentsSdkSessionTokenData,
+                ClientAuthenticationTokenRequestData,
                 PaymentsResponseData,
             >,
             T,
@@ -1864,9 +1866,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: BraintreeRouterData<
             RouterDataV2<
-                SdkSessionToken,
+                ClientAuthenticationToken,
                 PaymentFlowData,
-                PaymentsSdkSessionTokenData,
+                ClientAuthenticationTokenRequestData,
                 PaymentsResponseData,
             >,
             T,
@@ -1892,7 +1894,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -1915,7 +1917,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             )?,
                         };
 
-                        let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
+                        let session_response = Some(ApplePaySessionResponse::ThirdPartySdk(
                             ThirdPartySdkSessionResponse {
                                 secrets: SecretInfoToInitiateSdk {
                                     display: res.data.create_client_token.client_token.clone(),
@@ -1923,92 +1925,98 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 },
                             },
                         ));
-                        SessionToken::ApplePay(Box::new(ApplepaySessionTokenResponse {
-                            session_token_data,
-                            payment_request_data: Some(ApplePayPaymentRequest {
-                                country_code: item.router_data.request.country.ok_or(
-                                    ConnectorError::MissingRequiredField {
-                                        field_name: "country",
-                                    },
-                                )?,
-                                currency_code: item.router_data.request.currency,
-                                total: AmountInfo {
-                                    label: payment_request_data.label,
-                                    total_type: None,
-                                    amount: item.router_data.request.amount,
-                                },
-                                merchant_capabilities: Some(
-                                    payment_request_data.merchant_capabilities,
-                                ),
-                                supported_networks: Some(payment_request_data.supported_networks),
-                                merchant_identifier: None,
-                                required_billing_contact_fields: None,
-                                required_shipping_contact_fields: None,
-                                recurring_payment_request: None,
-                            }),
-                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
-                            delayed_session_token: false,
-                            sdk_next_action: SdkNextAction {
-                                next_action: NextActionCall::Confirm,
-                            },
-                            connector_reference_id: None,
-                            connector_sdk_public_key: None,
-                            connector_merchant_id: None,
-                        }))
-                    }
-                    Some(common_enums::PaymentMethodType::GooglePay) => {
-                        SessionToken::GooglePay(Box::new(
-                            GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
-                                merchant_info: GpayMerchantInfo {
-                                    merchant_name: auth.gpay_merchant_name.unwrap_or_default(),
-                                    merchant_id: auth.gpay_merchant_id,
-                                },
-                                shipping_address_required: false,
-                                email_required: false,
-                                shipping_address_parameters: GpayShippingAddressParameters {
-                                    phone_number_required: false,
-                                },
-                                allowed_payment_methods: vec![GpayAllowedPaymentMethods {
-                                    payment_method_type: "CARD".to_string(),
-                                    parameters: GpayAllowedMethodsParameters {
-                                        allowed_auth_methods: auth.gpay_allowed_auth_methods,
-                                        allowed_card_networks: auth.gpay_allowed_card_networks,
-                                        billing_address_required: None,
-                                        billing_address_parameters: None,
-                                        assurance_details_required: None,
-                                    },
-                                    tokenization_specification: GpayTokenizationSpecification {
-                                        token_specification_type: "PAYMENT_GATEWAY".to_string(),
-                                        parameters: GpayTokenParameters {
-                                            gateway: Some("braintree".to_string()),
-                                            gateway_merchant_id: auth
-                                                .gpay_gateway_merchant_id
-                                                .clone(),
-                                            protocol_version: None,
-                                            public_key: None,
-                                        },
-                                    },
-                                }],
-                                transaction_info: GpayTransactionInfo {
+                        ClientAuthenticationTokenData::ApplePay(Box::new(
+                            ApplepayClientAuthenticationResponse {
+                                session_response,
+                                payment_request_data: Some(ApplePayPaymentRequest {
                                     country_code: item.router_data.request.country.ok_or(
                                         ConnectorError::MissingRequiredField {
                                             field_name: "country",
                                         },
                                     )?,
                                     currency_code: item.router_data.request.currency,
-                                    total_price_status: GooglePayPriceStatus::Final.to_string(),
-                                    total_price: item.router_data.request.amount,
-                                },
-                                secrets: Some(SecretInfoToInitiateSdk {
-                                    display: res.data.create_client_token.client_token.clone(),
-                                    payment: None,
+                                    total: AmountInfo {
+                                        label: payment_request_data.label,
+                                        total_type: None,
+                                        amount: item.router_data.request.amount,
+                                    },
+                                    merchant_capabilities: Some(
+                                        payment_request_data.merchant_capabilities,
+                                    ),
+                                    supported_networks: Some(
+                                        payment_request_data.supported_networks,
+                                    ),
+                                    merchant_identifier: None,
+                                    required_billing_contact_fields: None,
+                                    required_shipping_contact_fields: None,
+                                    recurring_payment_request: None,
                                 }),
-                                delayed_session_token: false,
                                 connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                                delayed_session_token: false,
                                 sdk_next_action: SdkNextAction {
                                     next_action: NextActionCall::Confirm,
                                 },
-                            }),
+                                connector_reference_id: None,
+                                connector_sdk_public_key: None,
+                                connector_merchant_id: None,
+                            },
+                        ))
+                    }
+                    Some(common_enums::PaymentMethodType::GooglePay) => {
+                        ClientAuthenticationTokenData::GooglePay(Box::new(
+                            GpayClientAuthenticationResponse::GooglePaySession(
+                                GooglePaySessionResponse {
+                                    merchant_info: GpayMerchantInfo {
+                                        merchant_name: auth.gpay_merchant_name.unwrap_or_default(),
+                                        merchant_id: auth.gpay_merchant_id,
+                                    },
+                                    shipping_address_required: false,
+                                    email_required: false,
+                                    shipping_address_parameters: GpayShippingAddressParameters {
+                                        phone_number_required: false,
+                                    },
+                                    allowed_payment_methods: vec![GpayAllowedPaymentMethods {
+                                        payment_method_type: "CARD".to_string(),
+                                        parameters: GpayAllowedMethodsParameters {
+                                            allowed_auth_methods: auth.gpay_allowed_auth_methods,
+                                            allowed_card_networks: auth.gpay_allowed_card_networks,
+                                            billing_address_required: None,
+                                            billing_address_parameters: None,
+                                            assurance_details_required: None,
+                                        },
+                                        tokenization_specification: GpayTokenizationSpecification {
+                                            token_specification_type: "PAYMENT_GATEWAY".to_string(),
+                                            parameters: GpayTokenParameters {
+                                                gateway: Some("braintree".to_string()),
+                                                gateway_merchant_id: auth
+                                                    .gpay_gateway_merchant_id
+                                                    .clone(),
+                                                protocol_version: None,
+                                                public_key: None,
+                                            },
+                                        },
+                                    }],
+                                    transaction_info: GpayTransactionInfo {
+                                        country_code: item.router_data.request.country.ok_or(
+                                            ConnectorError::MissingRequiredField {
+                                                field_name: "country",
+                                            },
+                                        )?,
+                                        currency_code: item.router_data.request.currency,
+                                        total_price_status: GooglePayPriceStatus::Final.to_string(),
+                                        total_price: item.router_data.request.amount,
+                                    },
+                                    secrets: Some(SecretInfoToInitiateSdk {
+                                        display: res.data.create_client_token.client_token.clone(),
+                                        payment: None,
+                                    }),
+                                    delayed_session_token: false,
+                                    connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                                    sdk_next_action: SdkNextAction {
+                                        next_action: NextActionCall::Confirm,
+                                    },
+                                },
+                            ),
                         ))
                     }
                     Some(common_enums::PaymentMethodType::Paypal) => {
@@ -2018,21 +2026,23 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             },
                         )?;
 
-                        SessionToken::Paypal(Box::new(PaypalSessionTokenResponse {
-                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
-                            session_token: paypal_client_id,
-                            sdk_next_action: SdkNextAction {
-                                next_action: NextActionCall::Confirm,
+                        ClientAuthenticationTokenData::Paypal(Box::new(
+                            PaypalClientAuthenticationResponse {
+                                connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                                session_token: paypal_client_id,
+                                sdk_next_action: SdkNextAction {
+                                    next_action: NextActionCall::Confirm,
+                                },
+                                client_token: Some(
+                                    res.data.create_client_token.client_token.clone().expose(),
+                                ),
+                                transaction_info: Some(PaypalTransactionInfo {
+                                    flow: PaypalFlow::Checkout.into(),
+                                    currency_code: item.router_data.request.currency,
+                                    total_price: item.router_data.request.amount,
+                                }),
                             },
-                            client_token: Some(
-                                res.data.create_client_token.client_token.clone().expose(),
-                            ),
-                            transaction_info: Some(PaypalTransactionInfo {
-                                flow: PaypalFlow::Checkout.into(),
-                                currency_code: item.router_data.request.currency,
-                                total_price: item.router_data.request.amount,
-                            }),
-                        }))
+                        ))
                     }
                     _ => {
                         return Err(ConnectorError::NotImplemented(
@@ -2046,8 +2056,8 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                 };
 
                 Ok(Self {
-                    response: Ok(PaymentsResponseData::SdkSessionTokenResponse {
-                        session_token,
+                    response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                        session_data: session_token,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
