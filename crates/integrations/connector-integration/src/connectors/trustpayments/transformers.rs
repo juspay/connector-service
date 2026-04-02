@@ -164,7 +164,7 @@ pub struct TrustpaymentsAuthRequest {
 #[serde(untagged)]
 pub enum TrustpaymentsPaymentMethod {
     Card(TrustpaymentsCardData),
-    GooglePay(TrustpaymentsGooglePayData),
+    GooglePay(Box<TrustpaymentsGooglePayData>),
 }
 
 #[derive(Debug, Serialize)]
@@ -316,7 +316,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     } else {
                         None
                     },
-                    eci: token_data.eci_indicator.clone(),
+                    // For PAN_ONLY, eci is required by TrustPayments; default to "06" if absent.
+                    // Google Pay PAN_ONLY decrypted payloads never include eciIndicator (by spec).
+                    // Ref: https://github.com/juspay/hyperswitch-prism/issues/894
+                    eci: if !is_cryptogram_3ds {
+                        Some(
+                            token_data
+                                .eci_indicator
+                                .clone()
+                                .unwrap_or_else(|| "06".to_string()),
+                        )
+                    } else {
+                        token_data.eci_indicator.clone()
+                    },
                     // For PAN_ONLY flow: enrolled and status are required
                     enrolled: if !is_cryptogram_3ds {
                         Some("Y".to_string())
@@ -358,7 +370,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     walletsource: "GOOGLEPAY".to_string(),
                 };
 
-                TrustpaymentsPaymentMethod::GooglePay(google_pay_method)
+                TrustpaymentsPaymentMethod::GooglePay(Box::new(google_pay_method))
             }
             _ => {
                 return Err(error_stack::report!(ConnectorError::NotImplemented(
