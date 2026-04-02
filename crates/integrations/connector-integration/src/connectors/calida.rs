@@ -152,6 +152,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
@@ -169,6 +170,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SdkSessionTokenV2 for Calida<T>
 {
 }
+
+macros::macro_connector_payout_implementation!(
+    connector: Calida,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Calida<T>
