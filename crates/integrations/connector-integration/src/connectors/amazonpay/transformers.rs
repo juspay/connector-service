@@ -104,9 +104,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .clone(),
                 }),
             }),
-            _ => Err(
-                errors::ConnectorError::NotImplemented("Payment method".to_string()).into(),
-            ),
+            _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
         }
     }
 }
@@ -177,9 +175,7 @@ where
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.charge_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.charge_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -214,7 +210,9 @@ impl<F> TryFrom<ResponseRouterData<AmazonpaySyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<AmazonpaySyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AmazonpaySyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,

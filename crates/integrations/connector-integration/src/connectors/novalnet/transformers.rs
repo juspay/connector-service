@@ -480,10 +480,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashfreeRedirect(_)
                 | WalletDataPaymentMethod::PayURedirect(_)
                 | WalletDataPaymentMethod::EaseBuzzRedirect(_)
-                | WalletDataPaymentMethod::AmazonPayDirect(_) => Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("novalnet"),
-                )
-                .into()),
+                | WalletDataPaymentMethod::AmazonPayDirect(_) => {
+                    Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into())
+                }
             },
             PaymentMethodData::BankDebit(ref bank_debit_data) => {
                 let payment_type = NovalNetPaymentTypes::try_from(
@@ -2175,9 +2177,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashfreeRedirect(_)
                 | WalletDataPaymentMethod::PayURedirect(_)
                 | WalletDataPaymentMethod::EaseBuzzRedirect(_)
-                | WalletDataPaymentMethod::AmazonPayDirect(_) => Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("novalnet"),
-                ))?,
+                | WalletDataPaymentMethod::AmazonPayDirect(_) => {
+                    Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    ))?
+                }
             },
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),

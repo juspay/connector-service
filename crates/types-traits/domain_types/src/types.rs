@@ -1033,7 +1033,7 @@ impl<
                                     error_message: "Missing wallet token".to_owned(),
                                     error_object: None,
                                 }))?,
-                            customer_id: if data.customer_id.as_ref().map_or(true, |s| s.is_empty()) {
+                            customer_id: if data.customer_id.as_ref().is_none_or(|s| s.is_empty()) {
                                 None
                             } else {
                                 data.customer_id
@@ -2142,12 +2142,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
                 Ok(Some(PaymentMethodType::Satispay))
             }
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
-            grpc_api_types::payments::PaymentMethodType::LazyPay => Ok(Some(PaymentMethodType::LazyPay)),
-            grpc_api_types::payments::PaymentMethodType::PhonePe => Ok(Some(PaymentMethodType::PhonePe)),
-            grpc_api_types::payments::PaymentMethodType::BillDesk => Ok(Some(PaymentMethodType::BillDesk)),
-            grpc_api_types::payments::PaymentMethodType::CashFree => Ok(Some(PaymentMethodType::Cashfree)),
+            grpc_api_types::payments::PaymentMethodType::LazyPay => {
+                Ok(Some(PaymentMethodType::LazyPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::PhonePe => {
+                Ok(Some(PaymentMethodType::PhonePe))
+            }
+            grpc_api_types::payments::PaymentMethodType::BillDesk => {
+                Ok(Some(PaymentMethodType::BillDesk))
+            }
+            grpc_api_types::payments::PaymentMethodType::CashFree => {
+                Ok(Some(PaymentMethodType::Cashfree))
+            }
             grpc_api_types::payments::PaymentMethodType::PayU => Ok(Some(PaymentMethodType::PayU)),
-            grpc_api_types::payments::PaymentMethodType::EaseBuzz => Ok(Some(PaymentMethodType::EaseBuzz)),
+            grpc_api_types::payments::PaymentMethodType::EaseBuzz => {
+                Ok(Some(PaymentMethodType::EaseBuzz))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,

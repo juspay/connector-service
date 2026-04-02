@@ -11,7 +11,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{
+        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -308,12 +310,17 @@ fn extract_payment_method_and_data<
                 WalletData::CashfreeRedirect(_) => RazorpayWalletType::Cashfree,
                 WalletData::PayURedirect(_) => RazorpayWalletType::PayU,
                 WalletData::EaseBuzzRedirect(_) => RazorpayWalletType::EaseBuzz,
-                _ => return Err(errors::ConnectorError::NotImplemented(
-                    "This wallet type is not supported for Razorpay".to_string(),
-                )),
+                _ => {
+                    return Err(errors::ConnectorError::NotImplemented(
+                        "This wallet type is not supported for Razorpay".to_string(),
+                    ))
+                }
             };
-            Ok((PaymentMethodType::Wallet, PaymentMethodSpecificData::Wallet(wallet_type)))
-        },
+            Ok((
+                PaymentMethodType::Wallet,
+                PaymentMethodSpecificData::Wallet(wallet_type),
+            ))
+        }
         PaymentMethodData::CardRedirect(_)
         | PaymentMethodData::PayLater(_)
         | PaymentMethodData::BankRedirect(_)
