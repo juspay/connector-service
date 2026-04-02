@@ -2805,7 +2805,9 @@ impl ForeignTryFrom<common_enums::Currency> for grpc_api_types::payments::Curren
             ConnectorResponseTransformationError::UnexpectedResponseError {
                 context: ResponseTransformationErrorContext {
                     http_status_code: None,
-                    additional_context: Some("Failed to parse Currency from connector response".to_string()),
+                    additional_context: Some(
+                        "Failed to parse Currency from connector response".to_string(),
+                    ),
                 },
             }
         })?;
@@ -2821,7 +2823,9 @@ impl ForeignTryFrom<CountryAlpha2> for grpc_api_types::payments::CountryAlpha2 {
             ConnectorResponseTransformationError::UnexpectedResponseError {
                 context: ResponseTransformationErrorContext {
                     http_status_code: None,
-                    additional_context: Some("Failed to parse CountryAlpha2 from connector response".to_string()),
+                    additional_context: Some(
+                        "Failed to parse CountryAlpha2 from connector response".to_string(),
+                    ),
                 },
             }
         })?;
@@ -4028,19 +4032,18 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .transpose()?;
 
     let response = match transaction_response {
-        Ok(response) => {
-            match response {
-                PaymentsResponseData::TransactionResponse {
-                    resource_id,
-                    redirection_data,
-                    connector_metadata,
-                    network_txn_id,
-                    connector_response_reference_id,
-                    incremental_authorization_allowed,
-                    mandate_reference,
-                    status_code,
-                } => {
-                    let mandate_reference_grpc =
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data,
+                connector_metadata,
+                network_txn_id,
+                connector_response_reference_id,
+                incremental_authorization_allowed,
+                mandate_reference,
+                status_code,
+            } => {
+                let mandate_reference_grpc =
                     mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
                         mandate_id_type: Some(grpc_api_types::payments::mandate_reference::MandateIdType::ConnectorMandateId(
                             grpc_payment_types::ConnectorMandateReferenceId {
@@ -4051,7 +4054,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                              }
                         )),
                     });
-                    PaymentServiceAuthorizeResponse {
+                PaymentServiceAuthorizeResponse {
                     connector_transaction_id: Option::foreign_try_from(resource_id)?,
                     redirection_data: redirection_data
                         .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
@@ -4081,21 +4084,20 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                         .map(|amount_authorized| amount_authorized.get_amount_as_i64()),
                     connector_response,
                 }
-                }
-                _ => {
-                    return Err(report!(
-                        ConnectorResponseTransformationError::UnexpectedResponseError {
-                            context: ResponseTransformationErrorContext {
-                                http_status_code: None,
-                                additional_context: Some(
-                                    "Invalid response type received from connector".to_owned()
-                                ),
-                            },
-                        }
-                    ))
-                }
             }
-        }
+            _ => {
+                return Err(report!(
+                    ConnectorResponseTransformationError::UnexpectedResponseError {
+                        context: ResponseTransformationErrorContext {
+                            http_status_code: None,
+                            additional_context: Some(
+                                "Invalid response type received from connector".to_owned()
+                            ),
+                        },
+                    }
+                ))
+            }
+        },
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
                 err.status_code,
@@ -4796,18 +4798,16 @@ pub fn generate_payment_void_response(
                     ),
                 })
             }
-            _ => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
-            }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -4906,18 +4906,16 @@ pub fn generate_payment_void_post_capture_response(
                         .get_connector_response_headers_as_map(),
                 })
             }
-            _ => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
-            }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -5096,24 +5094,23 @@ pub fn generate_payment_sync_response(
         .transpose()?;
 
     match transaction_response {
-        Ok(response) => {
-            match response {
-                PaymentsResponseData::TransactionResponse {
-                    resource_id,
-                    redirection_data,
-                    connector_metadata: _,
-                    network_txn_id,
-                    connector_response_reference_id,
-                    incremental_authorization_allowed,
-                    mandate_reference,
-                    status_code,
-                } => {
-                    let status = router_data_v2.resource_common_data.status;
-                    let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data,
+                connector_metadata: _,
+                network_txn_id,
+                connector_response_reference_id,
+                incremental_authorization_allowed,
+                mandate_reference,
+                status_code,
+            } => {
+                let status = router_data_v2.resource_common_data.status;
+                let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
 
-                    let grpc_resource_id = Option::foreign_try_from(resource_id)?;
+                let grpc_resource_id = Option::foreign_try_from(resource_id)?;
 
-                    let mandate_reference_grpc =
+                let mandate_reference_grpc =
                     mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
                         mandate_id_type: Some(grpc_api_types::payments::mandate_reference::MandateIdType::ConnectorMandateId(
                             grpc_payment_types::ConnectorMandateReferenceId {
@@ -5124,20 +5121,21 @@ pub fn generate_payment_sync_response(
                             }))
                     });
 
-                    let amount = router_data_v2
-                        .resource_common_data
-                        .amount
-                        .as_ref()
-                        .map(|money| {
-                            grpc_api_types::payments::Currency::foreign_try_from(money.currency)
-                                .map(|currency| grpc_api_types::payments::Money {
-                                    minor_amount: money.amount.get_amount_as_i64(),
-                                    currency: currency as i32,
-                                })
-                        })
-                        .transpose()?;
+                let amount = router_data_v2
+                    .resource_common_data
+                    .amount
+                    .as_ref()
+                    .map(|money| {
+                        grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                            |currency| grpc_api_types::payments::Money {
+                                minor_amount: money.amount.get_amount_as_i64(),
+                                currency: currency as i32,
+                            },
+                        )
+                    })
+                    .transpose()?;
 
-                    Ok(PaymentServiceGetResponse {
+                Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
                         &grpc_resource_id,
                     ),
@@ -5174,21 +5172,18 @@ pub fn generate_payment_sync_response(
                     incremental_authorization_allowed,
                     payment_method_update: None,
                 })
-                }
-                _ => {
-                    Err(report!(
-                        ConnectorResponseTransformationError::UnexpectedResponseError {
-                            context: ResponseTransformationErrorContext {
-                                http_status_code: None,
-                                additional_context: Some(
-                                    "Invalid response type received from connector".to_owned()
-                                ),
-                            },
-                        }
-                    ))
-                }
             }
-        }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
+        },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
                 e.status_code,
@@ -5594,18 +5589,17 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
             | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
             | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
             | router_response_types::RedirectForm::Payme
-            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "RedirectForm type not supported in gRPC API from connector response".to_string(),
-                            ),
-                        },
-                    }
-                ))
-            }
+            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "RedirectForm type not supported in gRPC API from connector response"
+                                .to_string(),
+                        ),
+                    },
+                }
+            )),
         }
     }
 }
@@ -7022,18 +7016,16 @@ pub fn generate_payment_incremental_authorization_response(
                     state,
                 })
             }
-            _ => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
-            }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
         },
         Err(e) => Ok(PaymentServiceIncrementalAuthorizationResponse {
             status: grpc_api_types::payments::AuthorizationStatus::AuthorizationFailure.into(),
@@ -7145,18 +7137,16 @@ pub fn generate_payment_capture_response(
                     ),
                 })
             }
-            _ => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
-            }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -9871,18 +9861,16 @@ pub fn generate_payment_sdk_session_token_response(
                     },
                 )
             }
-            _ => {
-                Err(report!(
-                    ConnectorResponseTransformationError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
-            }
+            _ => Err(report!(
+                ConnectorResponseTransformationError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }
+            )),
         },
         Err(e) => Ok(
             MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse {
@@ -11250,7 +11238,8 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
-            _ => return Err(report!(
+            _ => {
+                return Err(report!(
                 ConnectorResponseTransformationError::UnexpectedResponseError {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
@@ -11260,7 +11249,8 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         ),
                     },
                 }
-            )),
+            ))
+            }
         },
         Err(err) => {
             let status = err
@@ -11528,7 +11518,8 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            _ => return Err(report!(
+            _ => {
+                return Err(report!(
                 ConnectorResponseTransformationError::UnexpectedResponseError {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
@@ -11538,7 +11529,8 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                         ),
                     },
                 }
-            )),
+            ))
+            }
         },
         Err(err) => {
             let status = err

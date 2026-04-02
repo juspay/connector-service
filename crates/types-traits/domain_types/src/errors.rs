@@ -536,7 +536,6 @@ pub enum WebhookError {
     WebhookResponseEncodingFailed,
 }
 
-
 /// Wrapper enum used by `execute_connector_processing_step` (gRPC unified path)
 /// which performs all three phases in one call.
 /// SDK uses `IntegrationError` / `ConnectorResponseTransformationError` directly.
