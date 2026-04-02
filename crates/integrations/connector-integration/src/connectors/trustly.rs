@@ -88,6 +88,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Trustly<T>
 {
 }
+macros::macro_connector_payout_implementation!(
+    connector: Trustly,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Trustly<T>
 {
@@ -535,7 +540,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn verify_webhook_source(
         &self,
         request: RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let webhook_body: TrustlyWebhookBody = request
@@ -543,7 +548,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("TrustlyWebhookBody")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        trustly::verify_webhook_signature(webhook_body)
+        let webhook_secret = match connector_webhook_secret {
+            Some(secrets) => secrets.secret,
+            None => return Ok(false),
+        };
+
+        trustly::verify_webhook_signature(webhook_body, webhook_secret)
     }
 
     fn get_event_type(
@@ -597,7 +607,41 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
+            payment_method_update: None,
         })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: TrustlyWebhookBody = request
+            .body
+            .parse_struct("TrustlyWebhookBody")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let status = trustly::get_trustly_refund_webhook_status(&details.method);
+
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id: Some(details.params.data.orderid.clone()),
+                status,
+                connector_response_reference_id: Some(details.params.uuid.clone()),
+                error_code: details.params.data.errorcode,
+                error_message: details.params.data.errormessage,
+                raw_connector_response: Some(
+                    String::from_utf8_lossy(&request_body_copy).to_string(),
+                ),
+                status_code: 200,
+                response_headers: None,
+            },
+        )
     }
 
     fn get_webhook_resource_object(

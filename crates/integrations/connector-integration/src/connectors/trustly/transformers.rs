@@ -17,7 +17,7 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{base64_decode, convert_amount},
+    utils::base64_decode,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -31,8 +31,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 const TRUSTLY_VERSION: &str = "1.1";
-const TRUSTLY_PUBLIC_KEY_TEST: &str = "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF5N2gveVg4REVBMm01ODhTcld5ZQpBQzhyVE1iRXJ3SHQyaG9UaVA5ZnRlL2lPbzBGWElaU21Oc051NDIyTCtpSnl2WlF1MTllYmVMN1hnQjBVWHF0CnpBNkt0WEJNWElLd3VNQ1poYmRlUjhzYjdPS2JYMm5sV00rZTJIbXJyOUNUZmtaa0ZCZVNDK2lOOWZBVTZQb1IKWDBpNVBXbTB1Wm5hb1dYY1puazVDeFFDZ25mWWdzeDd4c2Q4QXUrbXJxRThTSGVUOHppL0ludzBYcDZiYTI1RwpZc1poSGZJUEQycmNaUU9wV2JtSFJTNEprNGFHelNPQkhiQVpoS2xQOTdQeG9WZlVjUEkzaUNBMSszak1zMWwyClBZc0hVYlA2ME5NVndrR1BqRk9UdjRtMWExd0tzdWUwbWhzcERkdnN3WlVlS0UrUE9HT3Vld3FUUUorZ0loWHcKbVFJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t";
-const TRUSTLY_PUBLIC_KEY_LIVE: &str = "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFvWmhucWlFTGVvWDNRTlNnN2pwVQprYkxWNEJVMzJMb1NNdUFCQWFQZHhocFphY2NGWXVkMno0UVVsTXEvajQ2dmRWRHBhQ0ZhQ1orcU5UNSt0SGJRCkJGZ2NyeDgydTdyK2FNSHZLeTRGRWN6VDVhZXYwTnhSbFFLSG1OUXlndnAzaE5rcWVPdzRuSnkzUG9ENGNnQ3AKU2xMVGlQT0J5MlpzV1VIUXBTVkpkRFVpTHdBUWZOVjkwak1xYTN6cTFuVGZtVEJtZDZOUjFYQWpnNWVTNlNXcgp0bzFuVlMxYjdYS0d2N0NjMWt0MFJWZDU0dFdxb0NNREh3RWlVMHN0NjZCQ0tkWWszcjV3b0RaeEdaVVVqVmRtCmc5TzJ4cHFSUkRjZEpHbThISU9WSEdTTlQ5UjdMTXVjSC9QR3dyZnBkV21CRGp5MEJrdURsc3N1QmdoNzMxbDIKY3dJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t";
 
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrustlyAuthType {
@@ -57,23 +55,6 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustlyAuthType {
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
-    }
-}
-
-//Metadata
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct TrustlyMetadata {
-    private_key: Secret<String>,
-}
-
-impl TryFrom<&Option<pii::SecretSerdeValue>> for TrustlyMetadata {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
-        Ok(metadata)
     }
 }
 
@@ -277,11 +258,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?;
                 let uuid = uuid::Uuid::new_v4().to_string();
                 let attributes = TrustlyPaymentRequestAttributes {
-                    amount: convert_amount(
-                        item.connector.amount_converter,
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )?,
+                    amount: item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_amount,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     country: item
                         .router_data
                         .resource_common_data
@@ -406,8 +390,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::MobilePayment(_) => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Truelayer"),
+                utils::get_unimplemented_payment_method_error_message("Trustly"),
             )
             .into()),
         }
@@ -564,11 +549,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?,
         });
         let data = TrustlyRefundRequestData {
-            amount: convert_amount(
-                item.connector.amount_converter,
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )?,
+            amount: item
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::AmountConversionFailed)?,
             attributes,
             currency: item.router_data.request.currency,
             order_i_d: item.router_data.request.connector_transaction_id.clone(),
@@ -650,7 +638,7 @@ impl TryFrom<ResponseRouterData<TrustlyRefundResponse, Self>>
         match item.response {
             TrustlyRefundResponse::Success(response) => Ok(Self {
                 response: Ok(RefundsResponseData {
-                    connector_refund_id: response.result.uuid,
+                    connector_refund_id: response.result.data.orderid,
                     refund_status: common_enums::RefundStatus::from(response.result.data.result),
                     status_code: item.http_code,
                 }),
@@ -693,6 +681,8 @@ impl TrustlyWebhookMethod {
             Self::Cancel => "cancel",
             Self::Account => "account",
             Self::Pending => "pending",
+            Self::PayoutConfirmation => "payoutconfirmation",
+            Self::PayoutFailed => "payoutfailed",
         }
     }
 }
@@ -705,6 +695,8 @@ pub enum TrustlyWebhookMethod {
     Cancel,
     Account,
     Pending,
+    PayoutConfirmation,
+    PayoutFailed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -726,6 +718,8 @@ pub struct TrustlyWebhookData {
     pub notificationid: String,
     pub timestamp: Option<String>,
     pub attributes: Option<TrustlyWebhookAttributes>,
+    pub errorcode: Option<String>,
+    pub errormessage: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -743,19 +737,15 @@ pub struct TrustlyWebhookAttributes {
 
 pub fn verify_webhook_signature(
     webhook_body: TrustlyWebhookBody,
+    public_key: Vec<u8>,
 ) -> error_stack::Result<bool, errors::ConnectorError> {
-    let public_key = match std::env::var("ROUTER_ENV") {
-        Ok(val) if val.eq_ignore_ascii_case("production") => TRUSTLY_PUBLIC_KEY_LIVE,
-        _ => TRUSTLY_PUBLIC_KEY_TEST,
-    };
-
     let method = webhook_body.method;
     let uuid = webhook_body.params.uuid;
     let data = &webhook_body.params.data;
     let signature = &webhook_body.params.signature;
 
     let pem_bytes = general_purpose::STANDARD
-        .decode(public_key.as_bytes())
+        .decode(&public_key)
         .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
     let rsa = Rsa::public_key_from_pem(&pem_bytes)
@@ -808,6 +798,12 @@ pub fn get_webhook_event(event: TrustlyWebhookMethod) -> domain_types::connector
         TrustlyWebhookMethod::Account | TrustlyWebhookMethod::Pending => {
             domain_types::connector_types::EventType::PaymentIntentProcessing
         }
+        TrustlyWebhookMethod::PayoutConfirmation => {
+            domain_types::connector_types::EventType::RefundSuccess
+        }
+        TrustlyWebhookMethod::PayoutFailed => {
+            domain_types::connector_types::EventType::RefundFailure
+        }
     }
 }
 
@@ -816,5 +812,16 @@ pub fn get_trustly_payment_webhook_status(event: &TrustlyWebhookMethod) -> Attem
         TrustlyWebhookMethod::Credit => AttemptStatus::Charged,
         TrustlyWebhookMethod::Debit | TrustlyWebhookMethod::Cancel => AttemptStatus::Failure,
         TrustlyWebhookMethod::Account | TrustlyWebhookMethod::Pending => AttemptStatus::Pending,
+        _ => AttemptStatus::Pending,
+    }
+}
+
+pub fn get_trustly_refund_webhook_status(
+    event: &TrustlyWebhookMethod,
+) -> common_enums::RefundStatus {
+    match event {
+        TrustlyWebhookMethod::PayoutConfirmation => common_enums::RefundStatus::Success,
+        TrustlyWebhookMethod::PayoutFailed => common_enums::RefundStatus::Failure,
+        _ => common_enums::RefundStatus::Pending,
     }
 }

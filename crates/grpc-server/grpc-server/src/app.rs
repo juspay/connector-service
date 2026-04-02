@@ -314,10 +314,6 @@ impl Service {
             .add_service(payout_service_server::PayoutServiceServer::new(
                 self.payouts_service,
             ))
-            .add_service(
-                event_service_server::EventServiceServer::new(
-                    self.event_service,
-            ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
 
