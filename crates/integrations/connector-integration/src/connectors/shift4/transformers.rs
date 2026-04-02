@@ -20,7 +20,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -101,12 +101,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            email: item
-                .router_data
-                .request
-                .email
-                .clone()
-                .map(|e| e.expose()),
+            email: item.router_data.request.email.clone().expose_option(),
             description: item.router_data.request.description.clone(),
         })
     }
@@ -869,9 +864,7 @@ impl<T: PaymentMethodDataTypes>
                 // Approach 3: Raw card details for MIT (no customer needed)
                 let cardholder_name = item
                     .resource_common_data
-                    .address
-                    .get_payment_method_billing()
-                    .and_then(|billing| billing.get_optional_full_name())
+                    .get_optional_billing_full_name()
                     .unwrap_or_else(|| Secret::new("".to_string()));
 
                 (
