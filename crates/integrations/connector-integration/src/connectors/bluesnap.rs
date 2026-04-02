@@ -34,7 +34,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -534,7 +534,19 @@ macros::macro_connector_implementation!(
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
                 _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
             };
-            Ok(format!("{}/services/2/transactions/{}", self.connector_base_url_payments(req), connector_tx_id))
+            let base_url = self.connector_base_url_payments(req);
+            // Bank debit (ACH/SEPA) uses alt-transactions endpoint for retrieval.
+            // The Authorize response stores {"is_alt_transaction": true} in connector_metadata,
+            // which flows to PSync as connector_feature_data.
+            let is_alt = req
+                .resource_common_data
+                .connector_feature_data
+                .as_ref()
+                .and_then(|data| data.peek().get("is_alt_transaction"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let endpoint = if is_alt { "alt-transactions" } else { "transactions" };
+            Ok(format!("{}/services/2/{}/{}", base_url, endpoint, connector_tx_id))
         }
     }
 );

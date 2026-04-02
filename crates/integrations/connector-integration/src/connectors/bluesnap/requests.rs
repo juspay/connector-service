@@ -200,11 +200,13 @@ pub struct BluesnapSepaPayerInfo {
     pub country: String,
 }
 
-// Local bank transfer transaction data for SEPA DD (BlueSnap alt-transactions format)
-// BlueSnap expects an empty object `{}` for localBankTransferTransaction for SEPA DD
+// SEPA Direct Debit transaction data (BlueSnap alt-transactions format)
+// BlueSnap requires sepaDirectDebitTransaction with the shopper's IBAN
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BluesnapLocalBankTransferTransaction {}
+pub struct BluesnapSepaDirectDebitTransaction {
+    pub iban: Secret<String>,
+}
 
 // SEPA DD-specific authorize request structure
 #[derive(Debug, Serialize)]
@@ -214,7 +216,7 @@ pub struct BluesnapSepaAuthorizeRequest {
     pub currency: String,
     pub authorized_by_shopper: bool,
     pub payer_info: BluesnapSepaPayerInfo,
-    pub local_bank_transfer_transaction: BluesnapLocalBankTransferTransaction,
+    pub sepa_direct_debit_transaction: BluesnapSepaDirectDebitTransaction,
     pub merchant_transaction_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub soft_descriptor: Option<String>,

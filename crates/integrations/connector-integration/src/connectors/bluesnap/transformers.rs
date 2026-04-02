@@ -28,11 +28,11 @@ const WALLET_TYPE_GOOGLE_PAY: &str = "GOOGLE_PAY";
 pub use requests::{
     BluesnapAchAuthorizeRequest, BluesnapAchData, BluesnapAuthorizeRequest, BluesnapCaptureRequest,
     BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,
-    BluesnapEcpTransaction, BluesnapLocalBankTransferTransaction, BluesnapMetadata,
-    BluesnapPayerInfo, BluesnapPaymentMethodDetails, BluesnapPaymentsRequest,
-    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapSepaAuthorizeRequest,
-    BluesnapSepaPayerInfo, BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest,
-    BluesnapWallet, RequestMetadata, TransactionFraudInfo,
+    BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,
+    BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,
+    BluesnapSepaAuthorizeRequest, BluesnapSepaDirectDebitTransaction, BluesnapSepaPayerInfo,
+    BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,
+    RequestMetadata, TransactionFraudInfo,
 };
 
 // Re-export response types
@@ -98,10 +98,10 @@ fn map_ecp_account_type(
 ) -> String {
     match (bank_holder_type, bank_type) {
         (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Checking)) => {
-            "BUSINESS_CHECKING"
+            "CORPORATE_CHECKING"
         }
         (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Savings)) => {
-            "BUSINESS_SAVINGS"
+            "CORPORATE_SAVINGS"
         }
         (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Savings))
         | (None, Some(common_enums::BankType::Savings)) => "CONSUMER_SAVINGS",
@@ -427,35 +427,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         transaction_fraud_info,
                     }))
                 }
-                BankDebitData::SepaBankDebit {
-                    bank_account_holder_name,
-                    ..
-                } => {
-                    // Get payer info from billing address or bank account holder name
-                    let address_details = billing_address.and_then(|addr| addr.address.as_ref());
+                BankDebitData::SepaBankDebit { iban, .. } => {
+                    let first_name = router_data
+                        .resource_common_data
+                        .get_billing_first_name()
+                        .change_context(errors::ConnectorError::MissingRequiredField {
+                            field_name: "billing_address.first_name",
+                        })?;
 
-                    let (first_name, last_name) =
-                        if let Some(holder_name) = bank_account_holder_name {
-                            // Split holder name into first/last
-                            let parts: Vec<&str> = holder_name.peek().splitn(2, ' ').collect();
-                            let first = Secret::new(parts[0].to_string());
-                            let last = if parts.len() > 1 {
-                                Secret::new(parts[1].to_string())
-                            } else {
-                                first.clone()
-                            };
-                            (first, last)
-                        } else if let Some(details) = address_details {
-                            let first = details.get_first_name()?.clone();
-                            let last = details.get_last_name().unwrap_or(&first).clone();
-                            (first, last)
-                        } else {
-                            return Err(error_stack::report!(
-                                errors::ConnectorError::MissingRequiredField {
-                                    field_name: "bank_account_holder_name or billing_address"
-                                }
-                            ));
-                        };
+                    let last_name = router_data
+                        .resource_common_data
+                        .get_billing_last_name()
+                        .unwrap_or_else(|_| first_name.clone());
 
                     // Extract country from billing address
                     let country = billing_address
@@ -485,7 +468,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             last_name,
                             country: country.to_lowercase(),
                         },
-                        local_bank_transfer_transaction: BluesnapLocalBankTransferTransaction {},
+                        sepa_direct_debit_transaction: BluesnapSepaDirectDebitTransaction {
+                            iban: iban.clone(),
+                        },
                         merchant_transaction_id: router_data
                             .resource_common_data
                             .connector_request_reference_id
@@ -621,6 +606,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
             item.response.processing_info.processing_status.clone(),
         );
 
+        // When card_transaction_type is absent, it's a bank debit (ACH/SEPA) response.
+        // Store this hint so PSync can route to the alt-transactions endpoint.
+        let connector_metadata = if item.response.card_transaction_type.is_none() {
+            Some(serde_json::json!({"is_alt_transaction": true}))
+        } else {
+            None
+        };
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
@@ -628,7 +621,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
                 ),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
