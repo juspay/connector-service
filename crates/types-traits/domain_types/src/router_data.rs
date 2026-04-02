@@ -1881,6 +1881,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
                 base_url: fiservcommercehub.base_url,
             }),
+            AuthType::Itaubank(itaubank) => Ok(Self::Itaubank {
+                client_secret: itaubank.client_secret.ok_or_else(err)?,
+                client_id: itaubank.client_id.ok_or_else(err)?,
+                base_url: itaubank.base_url,
+            }),
         }
     }
 }
@@ -2836,8 +2841,8 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 } => Ok(Self::Finix {
                     finix_user_name: api_key.clone(),
                     finix_password: api_secret.clone(),
-                    merchant_identity_id: key1.clone(),
-                    merchant_id: key2.clone(),
+                    merchant_id: key1.clone(),
+                    merchant_identity_id: key2.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

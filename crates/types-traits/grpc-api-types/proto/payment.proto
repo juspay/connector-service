@@ -1215,6 +1215,9 @@ message RedirectForm {
 
     // Mifinity-specific redirection data for SDK-based flows.
     MifinityData mifinity = 5;
+
+    // NMI-specific redirection data for 3DS flows.
+    NmiData nmi = 6;
   }
 }
 
@@ -1261,6 +1264,24 @@ message BraintreeData {
 message MifinityData {
   // Initialization token for Mifinity SDK initialization
   string initialization_token = 1;
+}
+
+// Represents NMI-specific redirection data for 3DS flows
+message NmiData {
+  // Transaction amount
+  Money amount = 1;
+
+  // NMI public key for 3DS
+  SecretString public_key = 2;
+
+  // Customer vault ID for the tokenized card
+  string customer_vault_id = 3;
+
+  // Order ID for the transaction
+  string order_id = 4;
+
+  // URL to redirect to after 3DS completion
+  string continue_redirection_url = 5;
 }
 
 // Details of an HTTP request, typically for incoming webhooks
@@ -2819,6 +2840,9 @@ message PaymentMethodAuthenticationServicePostAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 14;
+  
+  // Capture Settings
+  optional CaptureMethod capture_method = 15;
 }
 
 // Response message for post-authentication step
@@ -3679,6 +3703,12 @@ message FiservcommercehubConfig {
   optional string base_url = 50;
 }
 
+message ItaubankConfig {
+  SecretString client_secret = 1;
+  SecretString client_id = 2;
+  optional string base_url = 50;
+}
+
 message GigadatConfig {
   SecretString campaign_id = 1;
   SecretString access_token = 2;
@@ -4066,8 +4096,11 @@ message ConnectorSpecificConfig {
     // FISERVCOMMERCEHUB = 114
     FiservcommercehubConfig fiservcommercehub = 112;
 
-    // TRUSTLY = 115
-    TrustlyConfig trustly = 113;
+    // ITAUBANKCONFIG = 115
+    ItaubankConfig itaubank = 113;
+
+    // TRUSTLY = 116
+    TrustlyConfig trustly = 114;
   }
 }
 
