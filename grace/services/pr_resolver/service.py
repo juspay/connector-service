@@ -295,6 +295,24 @@ class PRResolverService:
             counts["skipped"] = len(threads)
             return counts
 
+        # FAST CHECK: Is this PR's build already known to be broken? (no checkout needed)
+        from .clone_pool import _run as _pool_run
+        rc, sha_out, _ = await _pool_run(
+            ["gh", "pr", "view", str(pr_number), "--repo", f"{self.config.owner}/{self.config.repo}",
+             "--json", "headRefOid", "--jq", ".headRefOid"],
+            self.config.repo_path, timeout=15,
+        )
+        current_sha = sha_out.strip() if rc == 0 else ""
+
+        if current_sha and self.state.should_skip_build(pr_number, current_sha):
+            stored = self.state._state.get("build_failures", {}).get(str(pr_number), {})
+            stored_error = stored.get("error", "No error details available")
+            await self._gate("Baseline build", False,
+                             "Build failed previously — waiting for new commits",
+                             pr=pr_number, output=stored_error)
+            counts["skipped"] = len(threads)
+            return counts
+
         # GATE 2: Acquire clone slot + checkout
         slot = await self.pool.acquire(pr_number)
         if slot is None:
@@ -321,19 +339,6 @@ class PRResolverService:
                 return counts
             threads = still_open
 
-            # Check if this PR's build already failed (same SHA = no new commits)
-            from .clone_pool import _run as _pool_run
-            _, head_sha, _ = await _pool_run(["git", "rev-parse", "HEAD"], slot.path)
-            head_sha = head_sha.strip()
-
-            if self.state.should_skip_build(pr_number, head_sha):
-                # Load the stored error output from the previous failure
-                stored = self.state._state.get("build_failures", {}).get(str(pr_number), {})
-                stored_error = stored.get("error", "No error details available")
-                await self._gate("Baseline build", False, "Build failed previously — waiting for new commits on this branch", pr=pr_number, output=stored_error)
-                counts["skipped"] = len(threads)
-                return counts
-
             # GATE 4: Baseline cargo build
             build_ok, build_out = await self.pool.cargo_build(slot)
             if not await self._gate("Baseline build", build_ok, "Branch has build errors" if not build_ok else "OK", pr=pr_number, output=build_out if not build_ok else ""):
@@ -351,15 +356,24 @@ class PRResolverService:
             actionable_threads = []
             for t in threads:
                 if _is_question(t.instruction):
-                    # Reply asking for clarification instead of trying to fix
-                    reply = (
-                        f"This looks like a question rather than a code change request. "
-                        f"Could you clarify what specific change you'd like made?\n\n"
-                        f"— 10xGrace"
-                    )
-                    await self.github.post_thread_reply(t.thread_id, reply)
+                    if not self.state.is_processed(t.thread_id):
+                        # Use Claude to answer the question with codebase context
+                        connector = _extract_connector(t.path)
+                        resolver = CommentResolver(
+                            repo_path=slot.path,
+                            index_dir=self.config.index_dir,
+                            claude_api_key=self.claude_api_key,
+                            claude_base_url=self.claude_base_url,
+                            claude_model=self.claude_model,
+                            max_turns=10,
+                            event_callback=self.event_callback,
+                        )
+                        answer = await resolver.answer_question(t, connector, pr_number=pr_number)
+                        reply = f"{answer}\n\n— *10xGrace*"
+                        await self.github.post_thread_reply(t.thread_id, reply)
+                    self.state.mark_failed(t.thread_id, pr_number, "Question — answered")
                     await self._emit("subtask_gate", pr=pr_number, connector=_extract_connector(t.path),
-                                     gate="Triage", passed=False, detail="Question — asked for clarification")
+                                     gate="Triage", passed=True, detail="Question — answered with codebase context")
                     counts["skipped"] += 1
                 else:
                     actionable_threads.append(t)

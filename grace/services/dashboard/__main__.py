@@ -15,7 +15,7 @@ from ..pr_resolver.config import PRResolverConfig
 @click.option("--github-repo", required=True, help="GitHub repo in owner/repo format")
 @click.option("--port", default=8080, type=int, help="Dashboard port")
 @click.option("--interval", default=300, type=int, help="Poll interval in seconds")
-@click.option("--trigger", default="@10xGrace", help="Trigger tag")
+@click.option("--trigger", default="@HS-prism-bot", help="Trigger tag")
 @click.option("--index-dir", default="./index_store", type=click.Path(), help="Index store directory")
 @click.option("--state-file", default="./state.json", type=click.Path(), help="State file path")
 @click.option("--clone-dir", default=None, type=click.Path(), help="Clone pool directory (default: ~/.grace/clones)")

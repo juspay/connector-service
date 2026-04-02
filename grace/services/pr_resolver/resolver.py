@@ -202,6 +202,37 @@ Do NOT run cargo build — the service verifies externally.
         result.fixed_threads = [thread.thread_id]
         return result
 
+    async def answer_question(
+        self,
+        thread: Any,
+        connector_name: str,
+        pr_number: int = 0,
+    ) -> str:
+        """Answer a reviewer's question using codebase context. Returns the answer text."""
+        import re
+        prompt = f"""A code reviewer asked this question on file `{thread.path}` at line {thread.line or '?'}:
+
+"{thread.instruction}"
+
+Code context from the PR diff:
+```
+{thread.diff_hunk}
+```
+
+Read the file `{thread.path}` to understand the full context around line {thread.line or '?'}.
+Then answer the reviewer's question based on the actual code.
+
+Rules:
+- Be concise (2-4 sentences max)
+- Reference specific code, types, or functions when relevant
+- If the question implies a bug or issue, point it out
+- If the question implies a code change is needed, suggest what to change
+- Use RELATIVE paths only
+"""
+        prompt = re.sub(r'/Users/[^\s\]\)"]+/', '', prompt)
+        result = await self._run_claude_session(prompt, connector=connector_name, pr_number=pr_number)
+        return result.summary or "I couldn't determine an answer from the codebase."
+
     async def resolve_connector(
         self,
         connector_name: str,

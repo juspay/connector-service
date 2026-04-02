@@ -67,7 +67,10 @@ class StateManager:
         return thread_id in self._state.get("processed_threads", {})
 
     def get_processed_ids(self) -> Set[str]:
-        return set(self._state.get("processed_threads", {}).keys())
+        """Return thread IDs that should be skipped. Excludes build_blocked
+        (those need to be re-checked every cycle for new commits)."""
+        threads = self._state.get("processed_threads", {})
+        return {tid for tid, t in threads.items() if t.get("status") != "build_blocked"}
 
     def retry(self, thread_id: str) -> bool:
         """Remove a thread from processed state so it gets picked up again."""

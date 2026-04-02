@@ -10,9 +10,9 @@ class PRResolverConfig:
     """Configuration for the PR Resolver service."""
 
     repo_path: Path
-    github_repo: str  # e.g. "juspay/hyperswitch"
+    github_repo: str  # e.g. "juspay/hyperswitch-prism"
     poll_interval: int = 300
-    trigger_tag: str = "@10xGrace"
+    trigger_tag: str = "@HS-prism-bot"
     max_comments_per_cycle: int = 10
     state_file: Path = field(default_factory=lambda: Path.home() / ".grace" / "pr_resolver_state.json")
     index_dir: Path = field(default_factory=lambda: Path.home() / ".grace" / "index")
@@ -50,7 +50,7 @@ class PRResolverConfig:
         )
         github_repo = overrides.get(
             "github_repo",
-            os.environ.get(f"{prefix}GITHUB_REPO", "juspay/hyperswitch"),
+            os.environ.get(f"{prefix}GITHUB_REPO", "juspay/hyperswitch-prism"),
         )
         poll_interval = overrides.get(
             "poll_interval",
