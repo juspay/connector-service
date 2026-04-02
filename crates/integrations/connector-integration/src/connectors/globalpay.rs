@@ -9,22 +9,23 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken, CreateOrder,
+        DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, ServerAuthenticationToken,
+        ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
@@ -254,7 +255,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Globalpay<T>
+    connector_types::ClientAuthentication for Globalpay<T>
 {
 }
 
@@ -312,7 +313,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Globalpay<T>
+    connector_types::ServerSessionAuthentication for Globalpay<T>
 {
 }
 
@@ -322,7 +323,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Globalpay<T>
+    connector_types::ServerAuthentication for Globalpay<T>
 {
 }
 
@@ -637,19 +638,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Session Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     > for Globalpay<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SdkSessionToken,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        PaymentsSdkSessionTokenData,
+        ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     > for Globalpay<T>
 {
@@ -687,22 +688,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Access Token (required by PaymentAccessToken trait)
+// Access Token (required by ServerAuthentication trait)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        ServerAuthenticationToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     > for Globalpay<T>
 {
     fn get_headers(
         &self,
         _req: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(vec![
@@ -724,10 +725,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_url(
         &self,
         req: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
@@ -737,10 +738,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_request_body(
         &self,
         req: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let request = globalpay::GlobalpayAccessTokenRequest::try_from(req)?;
@@ -750,10 +751,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn build_request_v2(
         &self,
         req: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request_body = self.get_request_body(req)?;
@@ -773,19 +774,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
         errors::ConnectorError,
     > {

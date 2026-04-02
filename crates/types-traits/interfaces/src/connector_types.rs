@@ -6,7 +6,7 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
@@ -14,11 +14,13 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
+        WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     payouts::payouts_types::{
@@ -55,8 +57,8 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentAuthorizeV2<T>
     + PaymentSyncV2
     + PaymentOrderCreate
-    + PaymentSessionToken
-    + PaymentAccessToken
+    + ServerSessionAuthentication
+    + ServerAuthentication
     + CreateConnectorCustomer
     + PaymentTokenV2<T>
     + PaymentVoidV2
@@ -73,7 +75,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentPreAuthenticateV2<T>
     + PaymentAuthenticateV2<T>
     + PaymentPostAuthenticateV2<T>
-    + SdkSessionTokenV2
+    + ClientAuthentication
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
     + VerifyWebhookSourceV2
@@ -158,32 +160,32 @@ pub trait PaymentOrderCreate:
 {
 }
 
-pub trait PaymentSessionToken:
+pub trait ServerSessionAuthentication:
     ConnectorIntegrationV2<
-    connector_flow::CreateSessionToken,
+    connector_flow::ServerSessionAuthenticationToken,
     PaymentFlowData,
-    SessionTokenRequestData,
-    SessionTokenResponseData,
+    ServerSessionAuthenticationTokenRequestData,
+    ServerSessionAuthenticationTokenResponseData,
 >
 {
 }
 
-pub trait SdkSessionTokenV2:
+pub trait ClientAuthentication:
     ConnectorIntegrationV2<
-    connector_flow::SdkSessionToken,
+    connector_flow::ClientAuthenticationToken,
     PaymentFlowData,
-    PaymentsSdkSessionTokenData,
+    ClientAuthenticationTokenRequestData,
     PaymentsResponseData,
 >
 {
 }
 
-pub trait PaymentAccessToken:
+pub trait ServerAuthentication:
     ConnectorIntegrationV2<
-    connector_flow::CreateAccessToken,
+    connector_flow::ServerAuthenticationToken,
     PaymentFlowData,
-    AccessTokenRequestData,
-    AccessTokenResponseData,
+    ServerAuthenticationTokenRequestData,
+    ServerAuthenticationTokenResponseData,
 >
 {
 }
