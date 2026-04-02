@@ -225,6 +225,16 @@ class ClonePool:
 
         return True, ""
 
+    async def cargo_fmt(self, slot: CloneSlot) -> Tuple[bool, str]:
+        """Run cargo +nightly fmt --all."""
+        rc, out, err = await _run(
+            ["cargo", "+nightly", "fmt", "--all"],
+            slot.path,
+            timeout=120,
+        )
+        output = (out + "\n" + err).strip()
+        return rc == 0, output
+
     async def git_stage_connector(self, slot: CloneSlot, connector: str) -> Tuple[bool, str]:
         """Stage only files belonging to a specific connector."""
         # Stage both the connector .rs file and its directory

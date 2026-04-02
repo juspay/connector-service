@@ -22,6 +22,9 @@ class PRResolverConfig:
     repo_clone_url: str = ""  # Auto-derived from github_repo if empty
     max_build_fix_loops: int = 3
     verbose: bool = False
+    allowed_associations: list = field(default_factory=lambda: ["OWNER", "MEMBER", "COLLABORATOR"])
+    allowed_users: list = field(default_factory=list)
+    blocked_users: list = field(default_factory=list)
 
     @property
     def owner(self) -> str:
@@ -96,6 +99,18 @@ class PRResolverConfig:
             "verbose",
             os.environ.get(f"{prefix}VERBOSE", "").lower() in ("1", "true", "yes"),
         )
+        allowed_associations = overrides.get(
+            "allowed_associations",
+            [a.strip() for a in os.environ.get(f"{prefix}ALLOWED_ASSOCIATIONS", "OWNER,MEMBER,COLLABORATOR").split(",") if a.strip()],
+        )
+        allowed_users = overrides.get(
+            "allowed_users",
+            [u.strip() for u in os.environ.get(f"{prefix}ALLOWED_USERS", "").split(",") if u.strip()],
+        )
+        blocked_users = overrides.get(
+            "blocked_users",
+            [u.strip() for u in os.environ.get(f"{prefix}BLOCKED_USERS", "").split(",") if u.strip()],
+        )
 
         return cls(
             repo_path=Path(repo_path) if isinstance(repo_path, str) else repo_path,
@@ -111,4 +126,7 @@ class PRResolverConfig:
             repo_clone_url=repo_clone_url,
             max_build_fix_loops=max_build_fix_loops,
             verbose=verbose,
+            allowed_associations=allowed_associations,
+            allowed_users=allowed_users,
+            blocked_users=blocked_users,
         )

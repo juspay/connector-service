@@ -166,6 +166,14 @@ class PRResolverService:
             await self._emit("gate", name=name, passed=passed, detail=detail, output=output, pr=pr)
         return passed
 
+    def _is_authorized(self, thread: TriggeredThread) -> bool:
+        """Check if the comment author is authorized to trigger the bot."""
+        if thread.author in self.config.blocked_users:
+            return False
+        if self.config.allowed_users and thread.author in self.config.allowed_users:
+            return True
+        return thread.author_association in self.config.allowed_associations
+
     # ------------------------------------------------------------------
     # Main loops
     # ------------------------------------------------------------------
@@ -216,6 +224,28 @@ class PRResolverService:
                 all_triggered.extend(triggered)
 
             self.state.update_last_poll()
+
+            if not all_triggered:
+                display_no_comments()
+                await self._emit("no_comments")
+                return summary
+
+            # Authorization check
+            authorized = []
+            for t in all_triggered:
+                if self._is_authorized(t):
+                    authorized.append(t)
+                else:
+                    if not self.state.is_processed(t.thread_id):
+                        await self.github.post_thread_reply(
+                            t.thread_id,
+                            f"@{t.author} You don't have permission to trigger this bot. "
+                            f"Only repository members and collaborators can use {self.config.trigger_tag}.\n\n— *10xGrace*"
+                        )
+                        self.state.mark_failed(t.thread_id, t.pr_number, f"Unauthorized: {t.author} ({t.author_association})")
+                    await self._emit("comment_unauthorized", pr=t.pr_number, author=t.author,
+                                     association=t.author_association, thread_id=t.thread_id)
+            all_triggered = authorized
 
             if not all_triggered:
                 display_no_comments()
@@ -443,50 +473,86 @@ class PRResolverService:
             counts["failed"] = len(threads)
             return counts
 
-        # Build-fix loop: cargo build + clippy → retry on failure
-        loop_count = 0
-        last_error = ""
+        # Check if Claude actually changed anything
+        changed = await self.pool.git_changed_files(slot)
+        if not changed:
+            display_skip("all", f"no changes produced for {connector}")
+            for t in threads:
+                self.state.mark_failed(t.thread_id, pr_number, "No code changes produced — may already be fixed")
+            counts["skipped"] = len(threads)
+            return counts
 
-        while loop_count < self.config.max_build_fix_loops:
-            loop_count += 1
+        # === PHASE 1: Build loop ===
+        build_loop = 0
+        last_build_error = ""
+        build_passed = False
 
-            # Check if Claude actually changed anything
-            changed = await self.pool.git_changed_files(slot)
-            if not changed:
-                display_skip("all", f"no changes produced for {connector}")
-                # Mark as processed so we don't retry endlessly
-                for t in threads:
-                    self.state.mark_failed(t.thread_id, pr_number, "No code changes produced — may already be fixed")
-                counts["skipped"] = len(threads)
-                return counts
+        while build_loop < self.config.max_build_fix_loops:
+            build_loop += 1
+            build_ok, build_output = await self.pool.cargo_build(slot)
 
-            # Run cargo build + clippy
-            both_ok, error_output = await self.pool.cargo_build_and_clippy(slot)
-
-            if both_ok:
-                await self._gate(f"Build+Clippy (loop {loop_count})", True, "PASS", pr=pr_number, connector=connector)
+            if build_ok:
+                await self._gate("Build", True, "PASS", pr=pr_number, connector=connector)
+                build_passed = True
                 break
             else:
-                await self._gate(f"Build+Clippy (loop {loop_count})", False, error_output, pr=pr_number, connector=connector)
-                last_error = error_output
+                await self._gate(f"Build (loop {build_loop})", False, build_output[:200], pr=pr_number, connector=connector, output=build_output)
+                last_build_error = build_output
 
-                if loop_count < self.config.max_build_fix_loops:
-                    # Send errors back to Claude
+                if build_loop < self.config.max_build_fix_loops:
                     fix_result = await resolver.run_fix_loop(
-                        connector, threads, error_output, loop_count, pr_number=pr_number,
+                        connector, threads, build_output, build_loop, pr_number=pr_number,
                     )
                     if fix_result.error:
-                        display_error(f"Fix loop {loop_count} failed: {fix_result.error}")
+                        display_error(f"Build fix loop {build_loop} failed: {fix_result.error}")
                         break
-        else:
-            # Exhausted all loops — revert and fail
-            display_error(f"Build-fix loop exhausted for {connector} after {loop_count} attempts")
+
+        if not build_passed:
+            display_error(f"Build phase exhausted for {connector} after {build_loop} attempts")
             await self.pool.git_revert_all(slot)
-            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=f"Build failed after {loop_count} loops: {last_error[:200]}")
+            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=f"Build failed after {build_loop} loops: {last_build_error[:200]}")
             for t in threads:
-                self.state.mark_failed(t.thread_id, pr_number, f"Build failed: {last_error[:200]}")
+                self.state.mark_failed(t.thread_id, pr_number, f"Build failed: {last_build_error[:200]}")
             counts["failed"] = len(threads)
             return counts
+
+        # === PHASE 2: Clippy loop ===
+        clippy_loop = 0
+        last_clippy_error = ""
+        clippy_passed = False
+
+        while clippy_loop < self.config.max_build_fix_loops:
+            clippy_loop += 1
+            clippy_ok, clippy_output = await self.pool.cargo_clippy(slot)
+
+            if clippy_ok:
+                await self._gate("Clippy", True, "PASS", pr=pr_number, connector=connector)
+                clippy_passed = True
+                break
+            else:
+                await self._gate(f"Clippy (loop {clippy_loop})", False, clippy_output[:200], pr=pr_number, connector=connector, output=clippy_output)
+                last_clippy_error = clippy_output
+
+                if clippy_loop < self.config.max_build_fix_loops:
+                    fix_result = await resolver.run_fix_loop(
+                        connector, threads, clippy_output, clippy_loop, pr_number=pr_number,
+                    )
+                    if fix_result.error:
+                        display_error(f"Clippy fix loop {clippy_loop} failed: {fix_result.error}")
+                        break
+
+        if not clippy_passed:
+            display_error(f"Clippy phase exhausted for {connector} after {clippy_loop} attempts")
+            await self.pool.git_revert_all(slot)
+            await self._emit("subtask_failed", pr=pr_number, connector=connector, error=f"Clippy failed after {clippy_loop} loops: {last_clippy_error[:200]}")
+            for t in threads:
+                self.state.mark_failed(t.thread_id, pr_number, f"Clippy failed: {last_clippy_error[:200]}")
+            counts["failed"] = len(threads)
+            return counts
+
+        # === PHASE 3: Format (no loop) ===
+        fmt_ok, fmt_output = await self.pool.cargo_fmt(slot)
+        await self._gate("Format", fmt_ok, "PASS" if fmt_ok else fmt_output[:200], pr=pr_number, connector=connector)
 
         # Scope check: only connector files should have changed
         changed = await self.pool.git_changed_files(slot)

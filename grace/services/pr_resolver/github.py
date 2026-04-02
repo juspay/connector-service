@@ -19,6 +19,7 @@ class ReviewComment:
     id: str
     body: str
     author: str
+    author_association: str
     created_at: str
     updated_at: str
     diff_hunk: str
@@ -56,6 +57,7 @@ class TriggeredThread:
     diff_hunk: str
     author: str
     comment_node_id: str = ""  # For adding reactions (👀)
+    author_association: str = "NONE"
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +88,7 @@ query($owner: String!, $repo: String!, $cursor: String) {
                 id
                 body
                 author { login }
+                authorAssociation
                 createdAt
                 updatedAt
                 diffHunk
@@ -172,6 +175,7 @@ def _parse_pr_node(node: Dict[str, Any]) -> PRInfo:
                     id=c["id"],
                     body=c.get("body", ""),
                     author=(c.get("author") or {}).get("login", "unknown"),
+                    author_association=c.get("authorAssociation", "NONE"),
                     created_at=c.get("createdAt", ""),
                     updated_at=c.get("updatedAt", ""),
                     diff_hunk=c.get("diffHunk", ""),
@@ -311,6 +315,7 @@ def filter_triggered_threads(
         # Search all comments for trigger
         instruction: Optional[str] = None
         author: str = "unknown"
+        author_association: str = "NONE"
         diff_hunk: str = ""
         comment_node_id: str = ""
 
@@ -320,6 +325,7 @@ def filter_triggered_threads(
                 raw = re.sub(re.escape(trigger), "", comment.body, flags=re.IGNORECASE).strip()
                 instruction = raw
                 author = comment.author
+                author_association = comment.author_association
                 comment_node_id = comment.id
                 diff_hunk = comment.diff_hunk or (thread.comments[0].diff_hunk if thread.comments else "")
                 break
@@ -336,6 +342,7 @@ def filter_triggered_threads(
                     diff_hunk=diff_hunk,
                     author=author,
                     comment_node_id=comment_node_id,
+                    author_association=author_association,
                 )
             )
 

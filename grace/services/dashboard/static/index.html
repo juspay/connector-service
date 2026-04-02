@@ -19,6 +19,7 @@
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 3px; }
+    .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
   </style>
 </head>
 <body class="text-gray-200 min-h-screen">
@@ -83,16 +84,18 @@
         <div id="failed-col" class="space-y-2"></div>
       </div>
     </div>
-
-    <!-- Live Activity Panel -->
-    <div id="activity-panel" class="mt-6 card p-4 hidden">
-      <div class="flex items-center justify-between mb-3">
-        <h2 id="activity-title" class="font-medium text-sm">Live Activity</h2>
-        <button onclick="document.getElementById('activity-panel').classList.add('hidden')" class="text-gray-500 hover:text-gray-300 text-sm">Close</button>
-      </div>
-      <div id="activity-steps" class="space-y-1 max-h-96 overflow-y-auto step-line"></div>
-    </div>
   </main>
+
+  <!-- PR Detail Modal -->
+  <div id="pr-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-start justify-center pt-12 px-4">
+    <div class="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl w-full max-w-4xl max-h-[82vh] overflow-hidden flex flex-col fade-in">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-[#2a2d3a]">
+        <h2 id="modal-title" class="font-semibold text-sm"></h2>
+        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-300 text-lg leading-none">&times;</button>
+      </div>
+      <div id="modal-body" class="flex-1 overflow-hidden flex"></div>
+    </div>
+  </div>
 
   <!-- Status Bar -->
   <footer class="fixed bottom-0 left-0 right-0 border-t border-[#2a2d3a] bg-[#0f1117] px-6 py-2 flex items-center justify-between text-xs text-gray-500">
@@ -114,23 +117,58 @@
       completed: [],
       failed: [],
       currentPR: null,
-      stepsByPR: {},  // { pr_number: [steps] } — persists across clicks
+      selectedComment: null, // index into allComments for right panel
+      stepsByPR: {},
     };
 
-    // ── Card Templates ──
-    function backlogCard(item) {
-      const tid = (item.thread_id || '').slice(-8);
-      return `<div class="card p-3 fade-in cursor-pointer" onclick="showActivity(${item.pr})">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-mono text-[#7c3aed]">PR #${item.pr}</span>
-          <span class="text-xs text-gray-500">@${item.author}</span>
+    // ── Helpers ──
+    function groupByPR(items, prKey) {
+      const groups = {};
+      for (const item of items) {
+        const pr = item[prKey || 'pr_number'] || item.pr;
+        if (!pr) continue;
+        if (!groups[pr]) groups[pr] = { pr_number: pr, comments: [] };
+        groups[pr].comments.push(item);
+      }
+      return groups;
+    }
+
+    function extractConnector(path) {
+      if (!path || !path.includes('connectors/')) return '';
+      const after = path.split('connectors/').pop();
+      return after.split('/')[0].replace('.rs', '');
+    }
+
+    function getConnectors(comments) {
+      const set = new Set();
+      for (const c of comments) {
+        const conn = extractConnector(c.path || '');
+        if (conn) set.add(conn);
+      }
+      return [...set];
+    }
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    // ── PR Card Templates ──
+    function prCardQueued(pr, comments) {
+      const connectors = getConnectors(comments);
+      const authors = [...new Set(comments.map(c => c.author).filter(Boolean))];
+      return `<div class="card p-3 fade-in cursor-pointer" onclick="openPRDetail(${pr})">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs font-mono text-[#7c3aed]">PR #${pr}</span>
+          <span class="text-xs bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded">${comments.length} comment${comments.length > 1 ? 's' : ''}</span>
         </div>
-        <div class="text-xs text-gray-400 font-mono truncate">${item.path || ''}</div>
-        <div class="text-xs text-gray-300 mt-1 line-clamp-2">${item.instruction || ''}</div>
-        <div class="flex justify-between mt-1">
-          ${item.line ? `<span class="text-xs text-gray-500">L:${item.line}</span>` : '<span></span>'}
-          ${tid ? `<span class="text-xs text-gray-600 font-mono">${tid}</span>` : ''}
-        </div>
+        ${connectors.length > 0 ? `<div class="flex gap-1 mb-1">${connectors.map(c => `<span class="text-xs bg-[#7c3aed]/20 text-[#a78bfa] px-1.5 py-0.5 rounded">${c}</span>`).join('')}</div>` : ''}
+        <div class="text-xs text-gray-400 mt-1 line-clamp-2">${comments.slice(0, 2).map(c => c.instruction || '').join(' | ')}</div>
+        ${authors.length > 0 ? `<div class="text-xs text-gray-600 mt-1">@${authors.join(', @')}</div>` : ''}
       </div>`;
     }
 
@@ -140,19 +178,14 @@
       const prGates = prSteps['_pr'] || [];
       const connectors = Object.keys(prSteps).filter(k => k !== '_pr');
 
-      // Build step lines: show PR gates first, then per-connector
       let stepsHTML = '';
-
-      // Always show PR-level gates on the card
       if (prGates.length > 0) {
-        stepsHTML += prGates.map(s => {
+        stepsHTML += prGates.slice(-3).map(s => {
           const icon = s.icon === 'pass' ? '&#10003;' : s.icon === 'fail' ? '&#10007;' : '&#9889;';
           const color = s.icon === 'pass' ? 'text-green-400' : s.icon === 'fail' ? 'text-red-400' : 'text-yellow-400';
-          return `<div class="text-xs ${color} mt-0.5">${icon} ${s.text} <span class="text-gray-500">${s.detail || ''}</span></div>`;
+          return `<div class="text-xs ${color} mt-0.5">${icon} ${s.text} <span class="text-gray-500">${(s.detail || '').slice(0, 40)}</span></div>`;
         }).join('');
       }
-
-      // Show per-connector subtasks
       if (connectors.length > 0) {
         stepsHTML += connectors.map(c => {
           const steps = prSteps[c] || [];
@@ -162,10 +195,9 @@
           return `<div class="text-xs ${color} mt-0.5">${icon} <span class="text-[#7c3aed]">${c}</span> ${last ? '— ' + last.text : ''}</div>`;
         }).join('');
       }
-
       if (!stepsHTML) stepsHTML = '<div class="text-xs text-gray-500 mt-1">Waiting...</div>';
 
-      return `<div class="card p-3 fade-in cursor-pointer border-blue-500/30" onclick="showActivity(${pr})">
+      return `<div class="card p-3 fade-in cursor-pointer border-blue-500/30" onclick="openPRDetail(${pr})">
         <div class="flex items-center justify-between mb-1">
           <span class="text-xs font-mono text-blue-400">PR #${pr}</span>
           <span class="w-2 h-2 rounded-full bg-blue-500 pulse"></span>
@@ -175,47 +207,226 @@
       </div>`;
     }
 
-    function completedCard(item) {
-      const ago = timeAgo(item.processed_at);
-      return `<div class="card p-3 fade-in cursor-pointer" onclick="showActivity(${item.pr_number})">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-mono text-green-400">PR #${item.pr_number}</span>
-          <span class="text-xs text-gray-500">${ago}</span>
+    function prCardCompleted(pr, comments) {
+      const latest = comments.reduce((a, b) => (a.processed_at || '') > (b.processed_at || '') ? a : b, comments[0]);
+      const connectors = getConnectors(comments);
+      const sha = comments.find(c => c.commit_sha)?.commit_sha || '';
+      return `<div class="card p-3 fade-in cursor-pointer" onclick="openPRDetail(${pr})">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs font-mono text-green-400">PR #${pr}</span>
+          <span class="text-xs text-gray-500">${timeAgo(latest.processed_at)}</span>
         </div>
-        <div class="text-xs text-gray-400 font-mono truncate">${item.path}</div>
-        <div class="text-xs text-gray-300 mt-1 truncate">${item.instruction}</div>
-        ${item.commit_sha ? `<div class="text-xs text-green-500/70 mt-1 font-mono">${item.commit_sha.slice(0,12)}</div>` : ''}
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">${comments.length} fixed</span>
+          ${connectors.map(c => `<span class="text-xs bg-[#7c3aed]/20 text-[#a78bfa] px-1.5 py-0.5 rounded">${c}</span>`).join('')}
+        </div>
+        ${sha ? `<div class="text-xs text-green-500/60 font-mono mt-1">${sha.slice(0,12)}</div>` : ''}
       </div>`;
     }
 
-    function failedCard(item) {
-      const ago = timeAgo(item.processed_at);
-      const tid = item.thread_id || '';
-      const isBlocked = item.status === 'build_blocked';
-      const borderColor = isBlocked ? 'border-yellow-500/20' : 'border-red-500/20';
-      const titleColor = isBlocked ? 'text-yellow-400' : 'text-red-400';
-      const badge = isBlocked
-        ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">BLOCKED</span>'
-        : '<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">FAILED</span>';
-      const errorColor = isBlocked ? 'text-yellow-300/70' : 'text-red-300/70';
-      const retryNote = isBlocked
-        ? '<div class="text-xs text-yellow-500/60 mt-1">Auto-retries when new commits are pushed</div>'
-        : `<button onclick="retryThread('${tid}')" class="mt-2 text-xs bg-[#2a2d3a] hover:bg-[#3a3d4a] text-gray-300 px-2 py-1 rounded">Retry</button>`;
+    function prCardFailed(pr, comments) {
+      const latest = comments.reduce((a, b) => (a.processed_at || '') > (b.processed_at || '') ? a : b, comments[0]);
+      const hasBlocked = comments.some(c => c.status === 'build_blocked');
+      const borderColor = hasBlocked ? 'border-yellow-500/20' : 'border-red-500/20';
+      const titleColor = hasBlocked ? 'text-yellow-400' : 'text-red-400';
+      const badge = hasBlocked
+        ? `<span class="text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">${comments.length} blocked</span>`
+        : `<span class="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">${comments.length} failed</span>`;
+      const connectors = getConnectors(comments);
 
-      return `<div class="card p-3 fade-in ${borderColor}" onclick="showActivity(${item.pr_number})">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-mono ${titleColor}">PR #${item.pr_number}</span>
-          <div class="flex items-center gap-2">
-            ${badge}
-            <span class="text-xs text-gray-500">${ago}</span>
+      return `<div class="card p-3 fade-in cursor-pointer ${borderColor}" onclick="openPRDetail(${pr})">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs font-mono ${titleColor}">PR #${pr}</span>
+          <span class="text-xs text-gray-500">${timeAgo(latest.processed_at)}</span>
+        </div>
+        <div class="flex items-center gap-2 mb-1">
+          ${badge}
+          ${connectors.map(c => `<span class="text-xs bg-[#7c3aed]/20 text-[#a78bfa] px-1.5 py-0.5 rounded">${c}</span>`).join('')}
+        </div>
+        <div class="text-xs text-gray-500 mt-1 truncate">${(latest.error || '').slice(0, 60)}</div>
+      </div>`;
+    }
+
+    // ── PR Detail Modal ──
+    function openPRDetail(prNumber) {
+      state.currentPR = prNumber;
+      state.selectedComment = null;
+      document.getElementById('pr-modal').classList.remove('hidden');
+      renderModal();
+    }
+
+    function closeModal() {
+      document.getElementById('pr-modal').classList.add('hidden');
+      state.currentPR = null;
+      state.selectedComment = null;
+    }
+
+    function selectComment(idx) {
+      state.selectedComment = idx;
+      renderModal();
+    }
+
+    document.getElementById('pr-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'pr-modal') closeModal();
+    });
+
+    function getCommentPhase(pr, comment) {
+      const tid = comment.thread_id;
+      if (state.completed.some(c => c.thread_id === tid && c.pr_number == pr)) return 'fixed';
+      if (state.failed.some(f => f.thread_id === tid && f.pr_number == pr)) return 'failed';
+      const isActive = state.inProgress.some(p => (p.pr_number || p.pr) == pr);
+      if (!isActive) return 'queued';
+      const prSteps = state.stepsByPR[pr];
+      if (!prSteps) return 'queued';
+      const conn = extractConnector(comment.path || '');
+      const connSteps = conn ? (prSteps[conn] || []) : [];
+      if (connSteps.some(s => s.text && (s.text.startsWith('Committed') || s.text === 'Fixed'))) return 'fixed';
+      const hasBuild = connSteps.some(s => s.text && (s.text.startsWith('Build') || s.text.startsWith('Clippy') || s.text.startsWith('Format')));
+      if (hasBuild) return 'building';
+      const instruction = (comment.instruction || '').slice(0, 30);
+      const wasResolved = connSteps.some(s => (s.text || '').includes('Resolving comment') && (s.text || '').includes(instruction));
+      if (wasResolved) {
+        const myIdx = connSteps.findIndex(s => (s.text || '').includes('Resolving comment') && (s.text || '').includes(instruction));
+        const laterResolving = connSteps.slice(myIdx + 1).some(s => (s.text || '').match(/Resolving comment \d+\/\d+/));
+        return laterResolving ? 'building' : 'resolving';
+      }
+      if (connSteps.some(s => (s.text || '').match(/Resolving comment/))) return 'queued';
+      return 'queued';
+    }
+
+    const phaseConfig = {
+      queued:    { icon: '&#9675;', label: 'Queued', color: 'text-gray-400', bg: 'bg-gray-500/20', badge: 'text-gray-400' },
+      resolving: { icon: '&#9889;', label: 'Resolving', color: 'text-yellow-400', bg: 'bg-yellow-500/20', badge: 'text-yellow-400' },
+      building:  { icon: '&#9881;', label: 'Building', color: 'text-blue-400', bg: 'bg-blue-500/20', badge: 'text-blue-400' },
+      fixed:     { icon: '&#10003;', label: 'Fixed', color: 'text-green-400', bg: 'bg-green-500/20', badge: 'text-green-400' },
+      failed:    { icon: '&#10007;', label: 'Failed', color: 'text-red-400', bg: 'bg-red-500/20', badge: 'text-red-400' },
+    };
+
+    function renderModal() {
+      const container = document.getElementById('modal-body');
+      const pr = state.currentPR;
+      if (!pr) return;
+
+      const completed = state.completed.filter(c => c.pr_number == pr);
+      const failed = state.failed.filter(f => f.pr_number == pr);
+      const queued = state.backlog.filter(b => (b.pr || b.pr_number) == pr);
+      const allComments = [...queued, ...completed, ...failed];
+
+      // Add phase to each
+      const comments = allComments.map(c => ({ ...c, _phase: getCommentPhase(pr, c) }));
+
+      const total = comments.length;
+      document.getElementById('modal-title').textContent = `PR #${pr} — ${total} comment${total !== 1 ? 's' : ''}`;
+
+      // ── LEFT PANEL: Comment list ──
+      let leftHTML = '<div class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Comments</div>';
+      if (comments.length === 0) {
+        leftHTML += '<div class="text-xs text-gray-600 px-4 py-8 text-center">No comments</div>';
+      }
+      comments.forEach((c, idx) => {
+        const cfg = phaseConfig[c._phase] || phaseConfig.queued;
+        const file = (c.path || '').split('/').pop() || '';
+        const line = c.line ? ':' + c.line : '';
+        const selected = state.selectedComment === idx;
+        const selectedBorder = selected ? 'border-[#7c3aed] bg-[#7c3aed]/10' : 'border-transparent hover:border-[#3a3d4a]';
+        leftHTML += `<div class="px-3 py-2 cursor-pointer border-l-2 ${selectedBorder} transition-colors" onclick="selectComment(${idx})">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="${cfg.color} text-xs flex-shrink-0">${cfg.icon}</span>
+              <span class="text-xs font-mono text-gray-300 truncate">${file}${line}</span>
+            </div>
+            <span class="text-xs ${cfg.badge} ${cfg.bg} px-1.5 py-0.5 rounded flex-shrink-0 ml-2">${cfg.label}</span>
           </div>
+          <div class="text-xs text-gray-500 mt-0.5 truncate pl-5">${(c.instruction || '').slice(0, 50)}</div>
+        </div>`;
+      });
+
+      // ── RIGHT PANEL: Details ──
+      let rightHTML = '';
+      const sel = state.selectedComment !== null ? comments[state.selectedComment] : null;
+
+      if (sel) {
+        // Selected comment detail
+        const cfg = phaseConfig[sel._phase] || phaseConfig.queued;
+        const file = (sel.path || '').split('/').pop() || '';
+        rightHTML += `<div class="px-4 pt-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="${cfg.color}">${cfg.icon}</span>
+            <span class="text-sm font-mono text-gray-200">${file}${sel.line ? ':' + sel.line : ''}</span>
+            <span class="text-xs ${cfg.badge} ${cfg.bg} px-1.5 py-0.5 rounded">${cfg.label}</span>
+          </div>
+          <div class="text-xs text-gray-300 mb-3">${sel.instruction || ''}</div>`;
+
+        if (sel.resolution_summary) {
+          rightHTML += `<div class="mb-3"><div class="text-xs text-gray-500 font-medium mb-1">Resolution</div>
+            <div class="text-xs text-gray-300 bg-[#0f1117] p-3 rounded-lg border border-[#2a2d3a]">${sel.resolution_summary}</div></div>`;
+        }
+        if (sel.commit_sha) {
+          rightHTML += `<div class="text-xs text-green-500/60 font-mono mb-3">Commit: ${sel.commit_sha.slice(0, 12)}</div>`;
+        }
+        if (sel.error) {
+          rightHTML += `<div class="mb-3"><div class="text-xs text-gray-500 font-medium mb-1">Error</div>
+            <div class="text-xs text-red-300/70 bg-[#0f1117] p-3 rounded-lg border border-red-500/20">${sel.error}</div></div>`;
+        }
+        if (sel._phase === 'resolving') {
+          rightHTML += '<div class="text-xs text-yellow-400 pulse mb-3">Claude is working on this comment...</div>';
+        }
+        if (sel._phase === 'building') {
+          rightHTML += '<div class="text-xs text-blue-400 mb-3">Running Build / Clippy / Format...</div>';
+        }
+        if (sel.thread_id && sel._phase === 'failed' && sel.status !== 'build_blocked') {
+          rightHTML += `<button onclick="retryThread('${sel.thread_id}')" class="text-xs bg-[#2a2d3a] hover:bg-[#3a3d4a] text-gray-300 px-3 py-1.5 rounded mb-3">Retry This Comment</button>`;
+        }
+        rightHTML += '</div>';
+      }
+
+      // Activity log (always shown, below selected comment or as default)
+      const prSteps = state.stepsByPR[pr];
+      if (prSteps && Object.keys(prSteps).length > 0) {
+        rightHTML += `<div class="${sel ? 'border-t border-[#2a2d3a] mt-2' : ''} px-4 pt-3">
+          <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Activity Log</div>
+          <div class="step-line space-y-1">`;
+
+        const prGates = prSteps['_pr'] || [];
+        prGates.forEach(s => { rightHTML += modalStepHTML(s); });
+
+        for (const [connector, steps] of Object.entries(prSteps)) {
+          if (connector === '_pr') continue;
+          rightHTML += `<div class="mt-2 mb-1 -ml-5"><span class="text-xs font-semibold text-[#7c3aed]">[${connector}]</span></div>`;
+          steps.forEach(s => { rightHTML += modalStepHTML(s); });
+        }
+        rightHTML += '</div></div>';
+      }
+
+      if (!sel && (!prSteps || Object.keys(prSteps).length === 0)) {
+        rightHTML = '<div class="text-xs text-gray-500 px-4 pt-8 text-center">Select a comment to view details</div>';
+      }
+
+      container.innerHTML = `
+        <div class="w-2/5 border-r border-[#2a2d3a] overflow-y-auto flex-shrink-0">${leftHTML}</div>
+        <div class="w-3/5 overflow-y-auto">${rightHTML}</div>`;
+    }
+
+    let _modalStepId = 0;
+    function modalStepHTML(s) {
+      const id = `ms-${_modalStepId++}`;
+      const color = s.color || (s.icon === 'pass' ? 'text-green-400' : s.icon === 'fail' ? 'text-red-400' : s.icon === 'tool' ? 'text-yellow-400' : 'text-blue-300');
+      const icon = s.icon === 'pass' ? '&#10003;' : s.icon === 'fail' ? '&#10007;' : s.icon === 'tool' ? '&#9889;' : s.icon === 'start' ? '&#9654;' : '&#128172;';
+      const output = s.output || '';
+      return `<div class="flex items-start gap-2 py-0.5">
+        <span class="text-xs mt-0.5">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <span class="text-xs ${color}">${s.text || ''}</span>
+          ${s.detail ? `<span class="text-xs text-gray-500 ml-1">${(s.detail || '').slice(0, 80)}</span>` : ''}
+          ${output.length > 0 ? `
+            <button onclick="document.getElementById('${id}').classList.toggle('hidden')" class="text-xs text-gray-500 hover:text-gray-300 ml-1 underline">[show output]</button>
+            <pre id="${id}" class="hidden mt-1 text-xs text-gray-300 bg-[#0a0c10] p-3 rounded-lg overflow-auto whitespace-pre-wrap break-words border border-[#2a2d3a] font-mono leading-5" style="max-height: 300px;">${output.replace(/</g,'&lt;')}</pre>
+          ` : ''}
         </div>
-        <div class="text-xs text-gray-400 font-mono truncate">${item.path || ''}</div>
-        <div class="text-xs ${errorColor} mt-1 truncate">${item.error || 'Unknown error'}</div>
-        ${retryNote}
       </div>`;
     }
 
+    // ── Actions ──
     async function retryThread(threadId) {
       if (!threadId) return;
       const res = await fetch('/api/retry/' + threadId, {method: 'POST'});
@@ -244,7 +455,7 @@
         const res = await fetch('/api/poll-now', {method: 'POST'});
         const data = await res.json();
         if (data.ok) {
-          document.getElementById('status-msg').textContent = 'Poll triggered — checking for @10xGrace comments...';
+          document.getElementById('status-msg').textContent = 'Poll triggered — checking for @HS-prism-bot comments...';
         }
       } finally {
         setTimeout(() => {
@@ -255,120 +466,47 @@
       }
     }
 
-    // ── Activity Steps ──
-    let _stepId = 0;
-    function stepHTML(icon, color, text, detail, output) {
-      const id = `step-${_stepId++}`;
-      // output = full terminal output (for dropdown), detail = short status text (inline)
-      const terminalOutput = output || '';
-      const hasDropdown = terminalOutput.length > 0;
-
-      return `<div class="flex items-start gap-2 py-1 fade-in">
-        <span class="text-xs mt-0.5">${icon}</span>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs ${color}">${text}</span>
-          ${detail ? `<span class="text-xs text-gray-500 ml-1">${detail}</span>` : ''}
-          ${hasDropdown ? `
-            <button onclick="document.getElementById('${id}').classList.toggle('hidden')" class="text-xs text-gray-500 hover:text-gray-300 ml-1 underline">[show output]</button>
-            <pre id="${id}" class="hidden mt-2 text-xs text-gray-300 bg-[#0a0c10] p-4 rounded-lg overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words border border-[#2a2d3a] font-mono leading-5" style="max-height: 400px; min-height: 120px;">${terminalOutput.replace(/</g,'&lt;')}</pre>
-          ` : ''}
-        </div>
-      </div>`;
-    }
-
-    function showActivity(prNumber) {
-      const panel = document.getElementById('activity-panel');
-      const title = document.getElementById('activity-title');
-      panel.classList.remove('hidden');
-      title.textContent = `Live Activity — PR #${prNumber}`;
-      state.currentPR = prNumber;
-      renderSteps();
-    }
-
-    function addStep(prNumber, icon, color, text, detail, output) {
-      addSubStep(prNumber, '_pr', icon, color, text, detail, output);
-    }
-
-    function addSubStep(prNumber, connector, icon, color, text, detail, output) {
-      if (!state.stepsByPR[prNumber]) state.stepsByPR[prNumber] = {};
-      if (!state.stepsByPR[prNumber][connector]) state.stepsByPR[prNumber][connector] = [];
-      state.stepsByPR[prNumber][connector].push({ icon, color, text, detail, output: output || '' });
-      if (state.currentPR === prNumber) renderSteps();
-    }
-
-    function renderSteps() {
-      const container = document.getElementById('activity-steps');
-      const prSteps = state.stepsByPR[state.currentPR];
-      if (!prSteps || Object.keys(prSteps).length === 0) {
-        // No live steps — check if this PR is in completed/failed and show summary
-        const completed = state.completed.filter(c => c.pr_number === state.currentPR);
-        const failed = state.failed.filter(f => f.pr_number === state.currentPR);
-        if (completed.length > 0) {
-          container.innerHTML = completed.map(c =>
-            `<div class="py-2">
-               <div class="text-xs text-green-400">&#10003; <strong>${c.path?.split('/').pop() || ''}</strong>:${c.line || ''}</div>
-               <div class="text-xs text-gray-400 mt-1"><strong>Comment:</strong> ${c.instruction || ''}</div>
-               ${c.resolution_summary ? `<div class="text-xs text-gray-300 mt-1 bg-[#0a0c10] p-2 rounded border border-[#2a2d3a]"><strong>What was changed:</strong> ${c.resolution_summary}</div>` : ''}
-               ${c.commit_sha ? `<div class="text-xs text-gray-500 mt-1 font-mono">Commit: ${c.commit_sha.slice(0,12)}</div>` : ''}
-               <div class="text-xs text-gray-600 mt-0.5">${timeAgo(c.processed_at)}</div>
-             </div>`
-          ).join('<hr class="border-[#2a2d3a] my-1">');
-          return;
-        }
-        if (failed.length > 0) {
-          container.innerHTML = failed.map(f =>
-            `<div class="text-xs text-red-400 py-1">&#10007; ${f.error || 'Unknown error'}</div>
-             <div class="text-xs text-gray-500">${timeAgo(f.processed_at)}</div>`
-          ).join('');
-          return;
-        }
-        container.innerHTML = '<div class="text-xs text-gray-500 py-2">No activity recorded for this PR</div>';
-        return;
-      }
-
-      let html = '';
-      // Show PR-level gates first
-      const prGates = prSteps['_pr'] || [];
-      if (prGates.length > 0) {
-        prGates.forEach(s => { html += stepHTML(s.icon, s.color || (s.icon === 'pass' ? 'text-green-400' : 'text-red-400'), s.text, s.detail, s.output); });
-      }
-
-      // Show per-connector sub-tasks
-      for (const [connector, steps] of Object.entries(prSteps)) {
-        if (connector === '_pr') continue;
-        html += `<div class="mt-2 mb-1"><span class="text-xs font-semibold text-[#7c3aed]">[${connector}]</span></div>`;
-        steps.forEach(s => {
-          const color = s.color || (s.icon === 'pass' ? 'text-green-400' : s.icon === 'fail' ? 'text-red-400' : s.icon === 'tool' ? 'text-yellow-400' : 'text-blue-300');
-          const icon = s.icon === 'pass' ? '&#10003;' : s.icon === 'fail' ? '&#10007;' : s.icon === 'tool' ? '&#9889;' : s.icon === 'start' ? '&#9654;' : '&#128172;';
-          html += stepHTML(icon, color, s.text, s.detail, s.output);
-        });
-      }
-
-      container.innerHTML = html;
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // ── Render Columns ──
+    // ── Render Columns (PR-grouped) ──
     function render() {
-      document.getElementById('backlog-col').innerHTML = state.backlog.map(backlogCard).join('');
-      document.getElementById('progress-col').innerHTML = state.inProgress.map(progressCard).join('');
-      document.getElementById('completed-col').innerHTML = state.completed.slice(0, 20).map(completedCard).join('');
-      document.getElementById('failed-col').innerHTML = state.failed.slice(0, 10).map(failedCard).join('');
+      // Group backlog by PR
+      const backlogPRs = groupByPR(state.backlog, 'pr');
+      document.getElementById('backlog-col').innerHTML =
+        Object.entries(backlogPRs).map(([pr, g]) => prCardQueued(pr, g.comments)).join('');
 
-      document.getElementById('backlog-count').textContent = state.backlog.length;
+      // In Progress — already PR-level
+      document.getElementById('progress-col').innerHTML =
+        state.inProgress.map(progressCard).join('');
+
+      // Group completed by PR
+      const completedPRs = groupByPR(state.completed);
+      const completedEntries = Object.entries(completedPRs);
+      completedEntries.sort((a, b) => {
+        const aTime = Math.max(...a[1].comments.map(c => new Date(c.processed_at || 0).getTime()));
+        const bTime = Math.max(...b[1].comments.map(c => new Date(c.processed_at || 0).getTime()));
+        return bTime - aTime;
+      });
+      document.getElementById('completed-col').innerHTML =
+        completedEntries.slice(0, 20).map(([pr, g]) => prCardCompleted(pr, g.comments)).join('');
+
+      // Group failed by PR
+      const failedPRs = groupByPR(state.failed);
+      const failedEntries = Object.entries(failedPRs);
+      failedEntries.sort((a, b) => {
+        const aTime = Math.max(...a[1].comments.map(c => new Date(c.processed_at || 0).getTime()));
+        const bTime = Math.max(...b[1].comments.map(c => new Date(c.processed_at || 0).getTime()));
+        return bTime - aTime;
+      });
+      document.getElementById('failed-col').innerHTML =
+        failedEntries.slice(0, 10).map(([pr, g]) => prCardFailed(pr, g.comments)).join('');
+
+      // Counts show PR count
+      document.getElementById('backlog-count').textContent = Object.keys(backlogPRs).length;
       document.getElementById('progress-count').textContent = state.inProgress.length;
-      document.getElementById('completed-count').textContent = state.completed.length;
-      document.getElementById('failed-count').textContent = state.failed.length;
-    }
+      document.getElementById('completed-count').textContent = completedEntries.length;
+      document.getElementById('failed-count').textContent = failedEntries.length;
 
-    // ── Time formatting ──
-    function timeAgo(iso) {
-      if (!iso) return '';
-      const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-      if (diff < 60) return 'just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
+      // Re-render modal if open
+      if (state.currentPR) renderModal();
     }
 
     // ── Load initial state ──
@@ -379,7 +517,6 @@
         state.completed = data.completed || [];
         state.failed = data.failed || [];
 
-        // Build set of done thread_ids to exclude from backlog/in_progress
         const doneTids = new Set([
           ...state.completed.map(c => c.thread_id).filter(Boolean),
           ...state.failed.map(f => f.thread_id).filter(Boolean),
@@ -392,7 +529,6 @@
         state.backlog = (data.backlog || []).filter(b => !doneTids.has(b.thread_id));
         state.inProgress = (data.in_progress || []).filter(p => !donePRs.has(p.pr_number));
 
-        // Load steps from API (server-side replay of events) — now per-connector
         const serverSteps = data.steps_by_pr || {};
         for (const [pr, connectors] of Object.entries(serverSteps)) {
           const prNum = parseInt(pr);
@@ -410,7 +546,6 @@
           }
         }
 
-        // Update pool status + status bar
         if (data.pool) {
           const busy = data.pool.filter(s => s.busy).length;
           const total = data.pool.length;
@@ -422,7 +557,6 @@
         }
 
         render();
-        if (state.currentPR) renderSteps();
       } catch (e) {
         console.error('Failed to load state:', e);
       }
@@ -431,29 +565,16 @@
     // ── SSE Connection ──
     function connectSSE() {
       const source = new EventSource('/api/events');
-
       source.onmessage = (e) => {
-        try {
-          const event = JSON.parse(e.data);
-          handleEvent(event);
-        } catch (err) {
-          console.error('SSE parse error:', err);
-        }
+        try { handleEvent(JSON.parse(e.data)); } catch (err) { console.error('SSE parse error:', err); }
       };
-
       source.onerror = () => {
-        document.getElementById('live-dot').querySelector('span').classList.remove('bg-green-500');
-        document.getElementById('live-dot').querySelector('span').classList.add('bg-red-500');
-        setTimeout(() => {
-          source.close();
-          connectSSE();
-        }, 3000);
+        document.getElementById('live-dot').querySelector('span').classList.replace('bg-green-500', 'bg-red-500');
+        setTimeout(() => { source.close(); connectSSE(); }, 3000);
       };
-
       source.onopen = () => {
         const dot = document.getElementById('live-dot').querySelector('span');
-        dot.classList.remove('bg-red-500');
-        dot.classList.add('bg-green-500');
+        dot.classList.replace('bg-red-500', 'bg-green-500');
       };
     }
 
@@ -463,7 +584,7 @@
       const dot = document.getElementById('status-dot');
       const statusMap = {
         'cycle_start': [`Polling GitHub... (cycle #${event.cycle})`, 'bg-blue-500'],
-        'no_comments': ['No @10xGrace comments found', 'bg-gray-500'],
+        'no_comments': ['No @HS-prism-bot comments found', 'bg-gray-500'],
         'comment_found': [`Found comment on ${event.path || ''}`, 'bg-yellow-500'],
         'pr_start': [`Processing PR #${event.pr_number}...`, 'bg-blue-500'],
         'clone_acquired': [`Acquired clone slot ${event.slot_id} for PR #${event.pr}`, 'bg-blue-500'],
@@ -484,13 +605,19 @@
       dot.className = `w-1.5 h-1.5 rounded-full ${color}`;
     }
 
+    // ── Step tracking helpers ──
+    function addSubStep(prNumber, connector, icon, color, text, detail, output) {
+      if (!state.stepsByPR[prNumber]) state.stepsByPR[prNumber] = {};
+      if (!state.stepsByPR[prNumber][connector]) state.stepsByPR[prNumber][connector] = [];
+      state.stepsByPR[prNumber][connector].push({ icon, color, text, detail, output: output || '' });
+      if (state.currentPR === prNumber) renderModal();
+    }
+
     // ── Event Handler ──
-    let activePR = null; // Track which PR is currently being processed
+    let activePR = null;
 
     function handleEvent(event) {
       const t = event.type;
-
-      // Update status bar for every event
       setStatus(t, event);
 
       if (t === 'cycle_start') {
@@ -500,7 +627,6 @@
         render();
 
       } else if (t === 'comment_found') {
-        // Deduplicate by thread_id
         const tid = event.thread_id || `${event.pr}_${event.path}_${event.line}`;
         if (!state.backlog.some(b => (b.thread_id || `${b.pr}_${b.path}_${b.line}`) === tid)) {
           state.backlog.push({...event, thread_id: tid});
@@ -509,15 +635,13 @@
 
       } else if (t === 'pr_start') {
         activePR = event.pr_number;
-        // Remove ALL items for this PR from backlog (they're now in progress)
         state.backlog = state.backlog.filter(b => b.pr !== event.pr_number);
-        // Don't duplicate in_progress
         if (!state.inProgress.some(p => (p.pr_number || p.pr) === activePR)) {
           state.inProgress.push(event);
         }
         state.stepsByPR[activePR] = {};
         render();
-        showActivity(activePR);
+        openPRDetail(activePR);
 
       } else if (t === 'clone_acquired') {
         if (event.pr) addSubStep(event.pr, '_pr', 'pass', 'text-green-400', `Clone slot ${event.slot_id} acquired`, '');
@@ -562,45 +686,35 @@
         const pr = event.pr;
         state.inProgress = state.inProgress.filter(p => (p.pr_number || p.pr) !== pr);
         state.completed.unshift({
-          thread_id: event.thread_id,
-          pr_number: pr,
-          path: event.path,
-          instruction: event.instruction,
-          commit_sha: event.commit_sha,
-          processed_at: new Date().toISOString(),
-          status: 'fixed',
+          thread_id: event.thread_id, pr_number: pr, path: event.path,
+          instruction: event.instruction, commit_sha: event.commit_sha,
+          processed_at: new Date().toISOString(), status: 'fixed',
         });
-        addStep(pr, '&#10003;', 'text-green-400', 'Fixed', event.path);
         render();
 
       } else if (t === 'failed') {
         const pr = event.pr || activePR;
         state.inProgress = state.inProgress.filter(p => (p.pr_number || p.pr) !== pr);
         state.failed.unshift({
-          thread_id: event.thread_id,
-          pr_number: pr,
-          error: event.error,
-          processed_at: new Date().toISOString(),
-          status: 'failed',
+          thread_id: event.thread_id, pr_number: pr, error: event.error,
+          processed_at: new Date().toISOString(), status: 'failed',
         });
-        if (pr) addStep(pr, '&#10007;', 'text-red-400', 'Failed', event.error || '');
         render();
 
       } else if (t === 'cycle_end') {
         document.getElementById('cycle-badge').textContent =
-          `Cycle done: ${event.fixed || 0} fixed, ${event.failed || 0} failed (${(event.duration || 0).toFixed(1)}s)`;
+          `Cycle done: ${event.fixed || 0} fixed, ${event.failed || 0} failed`;
         state.inProgress = [];
         render();
 
       } else if (t === 'no_comments') {
-        document.getElementById('cycle-badge').textContent = 'No @10xGrace comments';
+        document.getElementById('cycle-badge').textContent = 'No @HS-prism-bot comments';
       }
     }
 
     // ── Init ──
     loadState();
     connectSSE();
-    // Refresh state every 30s
     setInterval(loadState, 30000);
   </script>
 </body>
