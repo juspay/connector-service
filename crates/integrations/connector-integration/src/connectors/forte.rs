@@ -45,8 +45,11 @@ use std::fmt::Debug;
 use transformers::{
     self as forte, ForteCancelRequest, ForteCancelResponse, ForteCaptureRequest,
     ForteCaptureResponse, FortePaymentsRequest, FortePaymentsResponse, FortePaymentsSyncResponse,
-    ForteRefundRequest, RefundResponse, RefundSyncResponse,
+    ForteRefundRequest, ForteRepeatPaymentRequest, RefundResponse, RefundSyncResponse,
 };
+
+// Type alias for RepeatPayment response (reuses FortePaymentsResponse)
+pub type ForteRepeatPaymentResponse = FortePaymentsResponse;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -275,16 +278,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Forte<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -392,6 +385,12 @@ macros::create_all_prerequisites!(
             request_body: ForteCancelRequest,
             response_body: ForteCancelResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: ForteRepeatPaymentRequest,
+            response_body: ForteRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -619,6 +618,40 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!("{}/organizations/{}/locations/{}/transactions/{}", self.connector_base_url_payments(req), auth.organization_id.peek(),auth.location_id.peek(),req.request.connector_transaction_id))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Forte,
+    curl_request: Json(ForteRepeatPaymentRequest),
+    curl_response: ForteRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
+            Ok(format!(
+                "{}/organizations/{}/locations/{}/transactions",
+                self.base_url(&req.resource_common_data.connectors),
+                auth.organization_id.peek(),
+                auth.location_id.peek()
+            ))
         }
     }
 );

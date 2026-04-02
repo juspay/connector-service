@@ -1,13 +1,16 @@
 use super::ForteRouterData;
+
+// Type alias for RepeatPayment response (defined in forte.rs)
+use super::FortePaymentsResponse as ForteRepeatPaymentResponse;
 use common_enums::enums;
 use common_enums::BankType;
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, Void},
+    connector_flow::{Authorize, Capture, Refund, RepeatPayment, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
@@ -937,4 +940,145 @@ pub struct ErrorResponseStatus {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ForteErrorResponse {
     pub response: Option<ErrorResponseStatus>,
+}
+
+// RepeatPayment (MIT) Request
+#[derive(Debug, Serialize)]
+pub struct ForteRepeatPaymentRequest {
+    pub action: ForteAction,
+    pub authorization_amount: FloatMajorUnit,
+    pub billing_address: BillingAddress,
+    pub paymethod_token: String,
+    pub sec_code: ForteSecCode,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        ForteRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for ForteRepeatPaymentRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: ForteRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        if item.router_data.request.currency != enums::Currency::USD {
+            return Err(IntegrationError::NotSupported {
+                message: "Only USD currency is supported by Forte".to_string(),
+                connector: "Forte",
+                context: Default::default(),
+            }
+            .into());
+        }
+
+        // Extract mandate ID from mandate_reference
+        let paymethod_token = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
+                .get_connector_mandate_id()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                    context: Default::default(),
+                })?,
+            MandateReferenceId::NetworkMandateId(_) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "Network mandate ID not supported for repeat payments in Forte"
+                        .to_string(),
+                    connector: "Forte",
+                    context: Default::default(),
+                }
+                .into())
+            }
+            MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "Network token with NTI not supported for repeat payments in Forte"
+                        .to_string(),
+                    connector: "Forte",
+                    context: Default::default(),
+                }
+                .into())
+            }
+        };
+
+        let action = match item.router_data.request.capture_method {
+            Some(common_enums::CaptureMethod::Automatic) => ForteAction::Sale,
+            _ => ForteAction::Authorize,
+        };
+
+        let address = item
+            .router_data
+            .resource_common_data
+            .get_billing_address()?;
+        let first_name = address.get_first_name()?;
+        let billing_address = BillingAddress {
+            first_name: first_name.clone(),
+            last_name: address.get_last_name().unwrap_or(first_name).clone(),
+        };
+
+        let authorization_amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
+        Ok(Self {
+            action,
+            authorization_amount,
+            billing_address,
+            paymethod_token,
+            sec_code: ForteSecCode::WEB,
+        })
+    }
+}
+
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<ForteRepeatPaymentResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    fn try_from(
+        item: ResponseRouterData<ForteRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response_code = item.response.response.response_code;
+        let action = item.response.action;
+        let transaction_id = &item.response.transaction_id;
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: get_status(response_code, action),
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(transaction_id.to_string()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: Some(serde_json::json!(ForteMeta {
+                    auth_id: item.response.authorization_code
+                })),
+                network_txn_id: None,
+                connector_response_reference_id: Some(transaction_id.to_string()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }
