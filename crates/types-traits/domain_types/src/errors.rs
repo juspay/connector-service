@@ -536,17 +536,6 @@ pub enum WebhookError {
     WebhookResponseEncodingFailed,
 }
 
-/// Direct conversion from domain WebhookError to proto ConnectorResponseTransformationError.
-/// Webhooks are part of the response/processing path, so they map to ConnectorResponseTransformationError.
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for WebhookError {
-    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        grpc_api_types::payments::ConnectorResponseTransformationError {
-            error_message: self.to_string(),
-            error_code: self.as_ref().to_string(),
-            http_status_code: None,
-        }
-    }
-}
 
 /// Wrapper enum used by `execute_connector_processing_step` (gRPC unified path)
 /// which performs all three phases in one call.

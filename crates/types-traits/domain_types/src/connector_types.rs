@@ -18,7 +18,7 @@ use strum::{Display, EnumIter, EnumString};
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{IntegrationError, IntegrationErrorContext},
+    errors::{IntegrationError, IntegrationErrorContext, WebhookError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -2091,7 +2091,7 @@ impl EventType {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
-    type Error = IntegrationError;
+    type Error = WebhookError;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::WebhookEventType,
