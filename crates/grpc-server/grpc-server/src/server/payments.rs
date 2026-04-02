@@ -29,7 +29,7 @@ use domain_types::{
         ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
         ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData,
     },
-    errors::ApplicationErrorResponse,
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -91,9 +91,7 @@ use interfaces::{
 use tracing::info;
 use ucs_env::{
     configs::Config,
-    error::{
-        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
-    },
+    error::{IntoGrpcStatus, ResultExtGrpc},
 };
 
 #[derive(Debug, Clone)]
@@ -283,7 +281,7 @@ impl Customer {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<ConnectorCustomerResponse, PaymentAuthorizationError> {
+    ) -> Result<ConnectorCustomerResponse, tonic::Status> {
         // Get connector integration for CreateConnectorCustomer flow
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -297,12 +295,9 @@ impl Customer {
         let connector_customer_request_data =
             ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
                 tracing::error!("Failed to process connector customer data: {:?}", err);
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to process connector customer data".to_string()),
-                    Some("CONNECTOR_CUSTOMER_DATA_ERROR".to_string()),
-                    None,
-                )
+                tonic::Status::invalid_argument(format!(
+                    "Failed to process connector customer data: {err}"
+                ))
             })?;
 
         // Create router data for connector customer flow
@@ -328,14 +323,7 @@ impl Customer {
         let test_context = config
             .test
             .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -365,28 +353,13 @@ impl Customer {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Connector customer creation failed: {e}")),
-                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
+        .into_grpc_status()?;
 
         match response.response {
             Ok(connector_customer_data) => Ok(connector_customer_data),
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Connector customer creation failed: {message}")),
-                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
-                Some(status_code.into()),
-            )),
+            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
+                "Connector customer creation failed: {message}"
+            ))),
         }
     }
 
@@ -483,10 +456,7 @@ impl Customer {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            tonic::Status::internal(format!("Connector customer creation failed: {e}"))
-        })?;
+        .into_grpc_status()?;
 
         match response.response {
             Ok(connector_customer_data) => Ok(connector_customer_data),
@@ -647,14 +617,7 @@ impl CustomerService for Customer {
                         ),
                     )
                     .await
-                    .switch()
-                    .map_err(
-                        |e: error_stack::Report<ApplicationErrorResponse>| {
-                            tonic::Status::internal(format!(
-                                "Connector customer creation failed: {e}"
-                            ))
-                        },
-                    )?;
+                    .into_grpc_status()?;
 
                     // Generate response using the new function
                     let connector_customer_response =
@@ -693,7 +656,7 @@ impl Payments {
         service_name: &str,
         request_id: &str,
         token_data: Option<TokenData>,
-    ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+    ) -> Result<PaymentServiceAuthorizeResponse, tonic::Status> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -714,13 +677,7 @@ impl Payments {
         )
         .map_err(|e| {
             tracing::error!("Failed to resolve connector overrides: {:?}", e);
-            let api_error = e.get_api_error();
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(api_error.error_message.clone()),
-                Some(api_error.sub_code.clone()),
-                Some(api_error.error_identifier.into()),
-            )
+            tonic::Status::internal(format!("Failed to resolve connector overrides: {e}"))
         })?;
 
         // Create common request data
@@ -728,12 +685,9 @@ impl Payments {
             PaymentFlowData::foreign_try_from((payload.clone(), connectors, metadata)).map_err(
                 |err| {
                     tracing::error!("Failed to process payment flow data: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to process payment flow data".to_string()),
-                        Some("PAYMENT_FLOW_ERROR".to_string()),
-                        None,
-                    )
+                    tonic::Status::invalid_argument(format!(
+                        "Failed to process payment flow data: {err}"
+                    ))
                 },
             )?;
 
@@ -741,12 +695,9 @@ impl Payments {
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
             .map_err(|err| {
                 tracing::error!("Failed to process payment authorize data: {:?}", err);
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to process payment authorize data".to_string()),
-                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                    None,
-                )
+                tonic::Status::invalid_argument(format!(
+                    "Failed to process payment authorize data: {err}"
+                ))
             })?;
 
         // Construct router data
@@ -769,14 +720,10 @@ impl Payments {
             .get_tag(FlowName::Authorize, router_data.request.payment_method_type);
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(request_id).map_err(|e| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Test mode configuration error: {e}")),
-                Some("TEST_CONFIG_ERROR".to_string()),
-                None,
-            )
-        })?;
+        let test_context = config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -806,75 +753,15 @@ impl Payments {
         )
         .await;
 
-        // Generate response - pass both success and error cases
-        let authorize_response = match response {
-            Ok(success_response) => domain_types::types::generate_payment_authorize_response(
-                success_response,
-            )
-            .map_err(|err| {
-                tracing::error!("Failed to generate authorize response: {:?}", err);
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to generate authorize response".to_string()),
-                    Some("RESPONSE_GENERATION_ERROR".to_string()),
-                    None,
-                )
-            })?,
-            Err(error_report) => {
-                tracing::error!("{:?}", error_report);
-                // Convert connector flow error to ApplicationErrorResponse for error details
-                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
-                let api_error = app_err.get_api_error();
+        // Generate response - connector flow errors propagate as Err(tonic::Status)
+        let success_response = response.into_grpc_status()?;
 
-                // Convert error to RouterDataV2 with error response
-                let error_router_data = RouterDataV2 {
-                    flow: std::marker::PhantomData,
-                    resource_common_data: payment_flow_data,
-                    connector_config,
-                    request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
-                        |err| {
-                            tracing::error!(
-                                "Failed to process payment authorize data in error path: {:?}",
-                                err
-                            );
-                            PaymentAuthorizationError::new(
-                                grpc_api_types::payments::PaymentStatus::Pending,
-                                Some(
-                                    "Failed to process payment authorize data in error path"
-                                        .to_string(),
-                                ),
-                                Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                                None,
-                            )
-                        },
-                    )?,
-                    response: Err(ErrorResponse {
-                        status_code: api_error.error_identifier,
-                        code: api_error.sub_code.clone(),
-                        message: api_error.error_message.clone(),
-                        reason: None,
-                        attempt_status: Some(common_enums::AttemptStatus::Failure),
-                        connector_transaction_id: None,
-                        network_decline_code: None,
-                        network_advice_code: None,
-                        network_error_message: None,
-                    }),
-                };
-                domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
-                    .map_err(|err| {
-                        tracing::error!(
-                            "Failed to generate authorize response for connector error: {:?}",
-                            err
-                        );
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some(format!("Connector error: {error_report}")),
-                            Some("CONNECTOR_ERROR".to_string()),
-                            None,
-                        )
-                    })?
-            }
-        };
+        let authorize_response =
+            domain_types::types::generate_payment_authorize_response(success_response)
+                .map_err(|err| {
+                    tracing::error!("Failed to generate authorize response: {:?}", err);
+                    tonic::Status::internal("Failed to generate authorize response")
+                })?;
 
         Ok(authorize_response)
     }
@@ -901,7 +788,7 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<PaymentCreateOrderResponse, PaymentAuthorizationError> {
+    ) -> Result<PaymentCreateOrderResponse, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -910,45 +797,26 @@ impl Payments {
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
-        let amount = match payload.amount {
-            Some(a) => Ok(a),
-            None => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Unresolved,
-                Some("Amount is required for order creation".to_string()),
-                Some("AMOUNT_MISSING".to_string()),
-                None,
-            )),
-        }?;
+        let amount = payload
+            .amount
+            .ok_or_else(|| tonic::Status::invalid_argument("Amount is required for order creation"))?;
 
         let currency =
             common_enums::Currency::foreign_try_from(amount.currency()).map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Currency conversion failed: {e}")),
-                    Some("CURRENCY_ERROR".to_string()),
-                    None,
-                )
+                tonic::Status::invalid_argument(format!("Currency conversion failed: {e}"))
             })?;
 
         let payment_method: grpc_api_types::payments::PaymentMethod =
             payload.payment_method.clone().ok_or_else(|| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Payment method is required".to_string()),
-                    Some("PAYMENT_METHOD_REQUIRED".to_string()),
-                    None,
-                )
+                tonic::Status::invalid_argument("Payment method is required")
             })?;
 
         let payment_method_type: Option<common_enums::PaymentMethodType> =
             <Option<common_enums::PaymentMethodType>>::foreign_try_from(payment_method).map_err(
                 |e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Payment method type conversion failed: {e}")),
-                        Some("PAYMENT_METHOD_TYPE_ERROR".to_string()),
-                        None,
-                    )
+                    tonic::Status::invalid_argument(format!(
+                        "Payment method type conversion failed: {e}"
+                    ))
                 },
             )?;
 
@@ -986,14 +854,7 @@ impl Payments {
         let test_context = config
             .test
             .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
@@ -1024,16 +885,7 @@ impl Payments {
             ),
         )
         .await
-        .map_err(
-            |e: error_stack::Report<domain_types::errors::ConnectorFlowError>| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Order creation failed: {e}")),
-                    Some("ORDER_CREATION_ERROR".to_string()),
-                    None,
-                )
-            },
-        )?;
+        .into_grpc_status()?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse {
@@ -1043,12 +895,10 @@ impl Payments {
                 order_id,
                 session_data,
             }),
-            Err(e) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(e.message.clone()),
-                Some(e.code.clone()),
-                Some(e.status_code.into()),
-            )),
+            Err(e) => Err(tonic::Status::internal(format!(
+                "Order creation failed: {} ({})",
+                e.message, e.code
+            ))),
         }
     }
     #[allow(clippy::too_many_arguments, dead_code)]
@@ -1159,8 +1009,7 @@ impl Payments {
             ),
         )
         .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
+        .into_grpc_status()?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
@@ -1192,7 +1041,7 @@ impl Payments {
         payment_authorize_data: &PaymentsAuthorizeData<T>,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
+    ) -> Result<PaymentMethodTokenResponse, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -1225,14 +1074,7 @@ impl Payments {
         let test_context = config
             .test
             .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -1259,31 +1101,16 @@ impl Payments {
             api_tag,
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Payment Method Token creation failed: {e}")),
-                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
+        .into_grpc_status()?;
 
         match response.response {
             Ok(payment_method_token_data) => {
                 tracing::info!("Payment method token created successfully");
                 Ok(payment_method_token_data)
             }
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Payment Method Token creation failed: {message}")),
-                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
-                Some(status_code.into()),
-            )),
+            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
+                "Payment Method Token creation failed: {message}"
+            ))),
         }
     }
 }
@@ -1426,7 +1253,8 @@ impl PaymentService for Payments {
                         match pm.payment_method.as_ref() {
                             Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
                                 let token_data = proxy_card_details.to_token_data();
-                                match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                tracing::info!("INJECTOR: Authorization completed successfully with injector");
+                                Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                     &config,
                                     payload.clone(),
                                     metadata_payload.connector,
@@ -1437,21 +1265,11 @@ impl PaymentService for Payments {
                                     &metadata_payload.request_id,
                                     Some(token_data),
                                 ))
-                                .await
-                                {
-                                    Ok(response) => {
-                                        tracing::info!("INJECTOR: Authorization completed successfully with injector");
-                                        response
-                                    },
-                                    Err(error_response) => {
-                                        tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
-                                        PaymentServiceAuthorizeResponse::from(error_response)
-                                    },
-                                }
+                                .await?
                             }
                             _ => {
                                 tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
-                                match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                     &config,
                                     payload.clone(),
                                     metadata_payload.connector,
@@ -1462,22 +1280,12 @@ impl PaymentService for Payments {
                                     &metadata_payload.request_id,
                                     None,
                                 ))
-                                .await
-                                {
-                                    Ok(response) => {
-                                        tracing::info!("REGULAR: Authorization completed successfully without injector");
-                                        response
-                                    },
-                                    Err(error_response) => {
-                                        tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
-                                        PaymentServiceAuthorizeResponse::from(error_response)
-                                    },
-                                }
+                                .await?
                             }
                         }
                     }
                     _ => {
-                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                        Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
                             payload.clone(),
                             metadata_payload.connector,
@@ -1488,11 +1296,7 @@ impl PaymentService for Payments {
                             &metadata_payload.request_id,
                             None,
                         ))
-                        .await
-                        {
-                            Ok(response) => response,
-                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
-                        }
+                        .await?
                     }
                 };
 
@@ -1577,7 +1381,7 @@ impl PaymentService for Payments {
                         &metadata_payload.connector_config,
                         metadata_payload.environment.as_deref(),
                     )
-                    .map_err(|e| error_stack::Report::new(e).into_grpc_status())?;
+                    .into_grpc_status()?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -1696,7 +1500,6 @@ impl PaymentService for Payments {
                         ),
                     )
                     .await
-                    .switch()
                     .into_grpc_status()?;
 
                     // Generate response
@@ -2025,7 +1828,6 @@ impl PaymentService for Payments {
                         .process_redirect_response(
                             &updated_request_details,
                         )
-                        .switch()
                         .into_grpc_status()?;
 
                     let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((source_verified, redirect_details_response))
@@ -2337,7 +2139,6 @@ impl PaymentService for Payments {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response
@@ -2784,7 +2585,6 @@ impl PaymentMethodService for PaymentMethod {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response using the existing function
@@ -2836,10 +2636,10 @@ impl MerchantAuthentication {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<ServerSessionAuthenticationTokenResponseData, PaymentAuthorizationError>
+    ) -> Result<ServerSessionAuthenticationTokenResponseData, tonic::Status>
     where
         ServerSessionAuthenticationTokenRequestData:
-            ForeignTryFrom<P, Error = ApplicationErrorResponse>,
+            ForeignTryFrom<P, Error = IntegrationError>,
     {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2853,14 +2653,7 @@ impl MerchantAuthentication {
         // Create session token request data using try_from_foreign
         let session_token_request_data =
             ServerSessionAuthenticationTokenRequestData::foreign_try_from(payload.clone())
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Session Token creation failed: {e}")),
-                        Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                        Some(400), // Bad Request - client data issue
-                    )
-                })?;
+                .into_grpc_status()?;
 
         let session_token_router_data = RouterDataV2::<
             ServerSessionAuthenticationToken,
@@ -2884,14 +2677,7 @@ impl MerchantAuthentication {
         let test_context = config
             .test
             .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
@@ -2918,19 +2704,11 @@ impl MerchantAuthentication {
                 None,
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
-                api_tag,
-            ),
-        )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Session Token creation failed: {e}")),
-                Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                Some(500), // Internal Server Error - connector processing failed
-            )
-        })?;
+            api_tag,
+        ),
+    )
+    .await
+    .into_grpc_status()?;
 
         match response.response {
             Ok(session_response) => {
@@ -2940,16 +2718,9 @@ impl MerchantAuthentication {
                 );
                 Ok(session_response)
             }
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Session Token creation failed: {message}")),
-                Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                Some(status_code.into()), // Use actual status code from ErrorResponse
-            )),
+            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
+                "Session Token creation failed: {message}"
+            ))),
         }
     }
 
@@ -2975,10 +2746,10 @@ impl MerchantAuthentication {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-    ) -> Result<ServerAuthenticationTokenResponseData, PaymentAuthorizationError>
+    ) -> Result<ServerAuthenticationTokenResponseData, tonic::Status>
     where
         ServerAuthenticationTokenRequestData:
-            for<'a> ForeignTryFrom<&'a ConnectorSpecificConfig, Error = ApplicationErrorResponse>,
+            for<'a> ForeignTryFrom<&'a ConnectorSpecificConfig, Error = IntegrationError>,
     {
         // Get connector integration for ServerAuthenticationToken flow
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2993,14 +2764,7 @@ impl MerchantAuthentication {
         let access_token_request_data = ServerAuthenticationTokenRequestData::foreign_try_from(
             &connector_config, // Contains typed connector config
         )
-        .map_err(|e| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Failed to create access token request: {e}")),
-                Some("ACCESS_TOKEN_REQUEST_ERROR".to_string()),
-                Some(400),
-            )
-        })?;
+        .into_grpc_status()?;
 
         // Create router data for access token flow
         let access_token_router_data = RouterDataV2::<
@@ -3025,14 +2789,7 @@ impl MerchantAuthentication {
         let test_context = config
             .test
             .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -3062,24 +2819,10 @@ impl MerchantAuthentication {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Access Token creation failed: {e}")),
-                Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
+        .into_grpc_status()?;
 
-        generate_access_token_response_data(response).map_err(|e| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(e.to_string()),
-                Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })
+        generate_access_token_response_data(response)
+            .map_err(|e| tonic::Status::internal(format!("Access Token creation failed: {e}")))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -3128,13 +2871,7 @@ impl MerchantAuthentication {
                     service_name,
                     event_params,
                 ))
-                .await
-                .map_err(|e| {
-                    let message = e
-                        .error_message
-                        .unwrap_or_else(|| "Access token creation failed".to_string());
-                    tonic::Status::internal(message)
-                })?;
+                .await?;
 
                 tracing::info!(
                     "Access token created successfully with expiry: {:?}",
@@ -3310,13 +3047,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         &service_name,
                         event_params,
                     ))
-                    .await
-                    .map_err(|e| {
-                        let message = e
-                            .error_message
-                            .unwrap_or_else(|| "Session token creation failed".to_string());
-                        tonic::Status::internal(message)
-                    })?;
+                    .await?;
 
                     tracing::info!(
                         "Session token created successfully: {}",
@@ -3431,13 +3162,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         &service_name,
                         event_params,
                     ))
-                    .await
-                    .map_err(|e| {
-                        let message = e
-                            .error_message
-                            .unwrap_or_else(|| "Access token creation failed".to_string());
-                        tonic::Status::internal(message)
-                    })?;
+                    .await?;
 
                     tracing::info!(
                         "Access token created successfully with expiry: {:?}",
@@ -3613,7 +3338,6 @@ impl RecurringPaymentService for RecurringPayments {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response
@@ -3858,7 +3582,7 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ConnectorResponseTransformationError>> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data
