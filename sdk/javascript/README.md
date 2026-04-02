@@ -195,12 +195,18 @@ for (const payment of payments) {
 ## Error Handling
 
 ```typescript
-import { ConnectorError } from 'hyperswitch-prism';
+import { IntegrationError, ConnectorResponseTransformationError } from 'hyperswitch-prism';
 
 try {
   const response = await client.authorize(request);
 } catch (error) {
-  if (error instanceof ConnectorError) {
+  if (error instanceof IntegrationError) {
+    // Request-phase error (auth, URL construction, serialization, etc.)
+    console.error('Code:', error.errorCode);
+    console.error('Status:', error.statusCode);
+    console.error('Message:', error.message);
+  } else if (error instanceof ConnectorResponseTransformationError) {
+    // Response-phase error (deserialization, transformation, etc.)
     console.error('Code:', error.errorCode);
     console.error('Status:', error.statusCode);
     console.error('Message:', error.message);
