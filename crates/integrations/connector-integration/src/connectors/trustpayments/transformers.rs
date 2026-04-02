@@ -316,7 +316,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     } else {
                         None
                     },
-                    eci: token_data.eci_indicator.clone(),
+                    // For PAN_ONLY, eci is required by TrustPayments; default to "06" if absent
+                    eci: if !is_cryptogram_3ds {
+                        Some(
+                            token_data
+                                .eci_indicator
+                                .clone()
+                                .unwrap_or_else(|| "06".to_string()),
+                        )
+                    } else {
+                        token_data.eci_indicator.clone()
+                    },
                     // For PAN_ONLY flow: enrolled and status are required
                     enrolled: if !is_cryptogram_3ds {
                         Some("Y".to_string())
