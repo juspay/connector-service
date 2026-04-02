@@ -1541,7 +1541,7 @@ pub struct RazorpayNetbankingRequest {
     pub order_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contact: Option<Secret<String>>,
-    pub method: String,
+    pub method: PaymentMethodType,
     pub bank: String,
     pub callback_url: String,
     pub ip: Secret<String>,
@@ -1623,7 +1623,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .get_billing_phone_number()
                 .ok(),
-            method: "netbanking".to_string(),
+            method: PaymentMethodType::Netbanking,
             bank: nb_data.bank_code.clone(),
             callback_url: item.router_data.request.get_router_return_url()?,
             ip: item
