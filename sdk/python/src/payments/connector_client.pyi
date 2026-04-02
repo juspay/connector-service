@@ -35,11 +35,15 @@ from payments.generated.payment_pb2 import (
     PaymentServiceCreateOrderResponse,
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
+    PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest,
     PaymentServiceRefundRequest,
     PaymentServiceReverseRequest,
     PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse,
+    PaymentServiceTokenAuthorizeRequest,
+    PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
     PayoutServiceCreateLinkRequest,
@@ -128,31 +132,47 @@ class PaymentClient(_ConnectorClientBase):
         ...
 
     def capture(self, request: PaymentServiceCaptureRequest, options: RequestConfig | None = ...) -> PaymentServiceCaptureResponse:
-        """PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle."""
+        """PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account."""
         ...
 
     def create_order(self, request: PaymentServiceCreateOrderRequest, options: RequestConfig | None = ...) -> PaymentServiceCreateOrderResponse:
-        """PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates."""
+        """PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls."""
         ...
 
     def get(self, request: PaymentServiceGetRequest, options: RequestConfig | None = ...) -> PaymentServiceGetResponse:
         """PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
         ...
 
+    def proxy_authorize(self, request: PaymentServiceProxyAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
+        """PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        ...
+
+    def proxy_setup_recurring(self, request: PaymentServiceProxySetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
+        """PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        ...
+
     def refund(self, request: PaymentServiceRefundRequest, options: RequestConfig | None = ...) -> RefundResponse:
-        """PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment."""
+        """PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled."""
         ...
 
     def reverse(self, request: PaymentServiceReverseRequest, options: RequestConfig | None = ...) -> PaymentServiceReverseResponse:
-        """PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations."""
+        """PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization."""
         ...
 
     def setup_recurring(self, request: PaymentServiceSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
-        """PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases."""
+        """PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges."""
+        ...
+
+    def token_authorize(self, request: PaymentServiceTokenAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
+        """PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token."""
+        ...
+
+    def token_setup_recurring(self, request: PaymentServiceTokenSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
+        """PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token."""
         ...
 
     def void(self, request: PaymentServiceVoidRequest, options: RequestConfig | None = ...) -> PaymentServiceVoidResponse:
-        """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
+        """PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed."""
         ...
 
 

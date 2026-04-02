@@ -19,6 +19,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.02.0
+
+### Features
+
+- **connector:**
+  - [NMI] add 3DS support for Card payments ([#760](https://github.com/juspay/connector-service/pull/760)) ([`266d7cc`](https://github.com/juspay/connector-service/commit/266d7cc3f042ff57020ab8fe278174e37ab59ef3))
+  - Implement googlepay for finix ([#866](https://github.com/juspay/connector-service/pull/866)) ([`927623d`](https://github.com/juspay/connector-service/commit/927623d3f606a0876ea16077ed3fd5fa11fbe511))
+  - Implement GooglePay for nmi ([#876](https://github.com/juspay/connector-service/pull/876)) ([`ed8c2cd`](https://github.com/juspay/connector-service/commit/ed8c2cd96fb42f95d057cfbe295a9d006894588e))
+- **pr-reviewer:** Add scenario-aware PR review system with multi-tool skill wiring ([#792](https://github.com/juspay/connector-service/pull/792)) ([`09afd88`](https://github.com/juspay/connector-service/commit/09afd88f00611d1bbe61976c072b211dc0300b6b))
+
+### Documentation
+
+- Error-handling after proto change ([#821](https://github.com/juspay/connector-service/pull/821)) ([`d81557f`](https://github.com/juspay/connector-service/commit/d81557f6f232c257b29789d96bef921c7688cbb9))
+
+**Full Changelog:** [`2026.04.01.0...2026.04.02.0`](https://github.com/juspay/connector-service/compare/2026.04.01.0...2026.04.02.0)
+
+- - -
+
+## 2026.04.01.0
+
+### Features
+
+- **client:** Add support for non-pci payment client ([#774](https://github.com/juspay/connector-service/pull/774)) ([`f044c7c`](https://github.com/juspay/connector-service/commit/f044c7cf960d368e19d0a5e7941de783b578b879))
+- **connector:** [Itaubank] add payout flows ([#826](https://github.com/juspay/connector-service/pull/826)) ([`962763b`](https://github.com/juspay/connector-service/commit/962763b3db9a001a1a11e0ea9673bf21f1400561))
+- **connectors:** [revolv3] add external 3ds support ([#815](https://github.com/juspay/connector-service/pull/815)) ([`253ead5`](https://github.com/juspay/connector-service/commit/253ead5b7a5fe959c1521ff88b2a2ee157fb0595))
+
+### Refactors
+
+- **connector:** Added pms to ForeignTryFrom<grpc_api_types::payments::PaymentMethod> ([#860](https://github.com/juspay/connector-service/pull/860)) ([`fe221f4`](https://github.com/juspay/connector-service/commit/fe221f4b2a53da848b3202e648b199da215345bf))
+
+### Documentation
+
+- **readme:** Add routing demo GIF with tagline ([`b07dc3a`](https://github.com/juspay/connector-service/commit/b07dc3a23a167dd997e0e08fc5ac0142a5df14a3))
+
+### Miscellaneous Tasks
+
+- Feature-gate superposition deps to reduce transitive dependencies ([#857](https://github.com/juspay/connector-service/pull/857)) ([`0de0cb9`](https://github.com/juspay/connector-service/commit/0de0cb9aeb0db7b01401ffae04c270ba2e3a1137))
+
+**Full Changelog:** [`2026.03.31.0...2026.04.01.0`](https://github.com/juspay/connector-service/compare/2026.03.31.0...2026.04.01.0)
+
+- - -
+
+## 2026.03.31.0
+
+### Refactors
+
+- **connector:** Use RedirectForm::Uri instead of Form for redire… ([#811](https://github.com/juspay/connector-service/pull/811)) ([`02842f7`](https://github.com/juspay/connector-service/commit/02842f75294cc2d8a13eafe8afe9dd347a8c223f))
+
+**Full Changelog:** [`2026.03.30.0...2026.03.31.0`](https://github.com/juspay/connector-service/compare/2026.03.30.0...2026.03.31.0)
+
+- - -
+
 ## 2026.03.30.0
 
 ### Bug Fixes
