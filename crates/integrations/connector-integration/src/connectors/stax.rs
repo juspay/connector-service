@@ -6,15 +6,16 @@ use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, RSync, Refund, SdkSessionToken, Void,
+        Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, RSync, Refund, Void,
     },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ClientAuthenticationTokenRequestData, ConnectorCustomerData, ConnectorCustomerResponse,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -179,7 +180,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Stax<T>
+    connector_types::ClientAuthentication for Stax<T>
 {
 }
 
@@ -191,9 +192,9 @@ macros::macro_connector_payout_implementation!(
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SdkSessionToken,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        PaymentsSdkSessionTokenData,
+        ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     > for Stax<T>
 {
@@ -583,14 +584,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // These are required by ConnectorServiceTrait but not supported by Stax
 
 use domain_types::connector_flow::{
-    Accept, CreateAccessToken, CreateOrder, CreateSessionToken, DefendDispute, RepeatPayment,
-    SetupMandate, SubmitEvidence, VoidPC,
+    Accept, CreateOrder, DefendDispute, RepeatPayment, ServerAuthenticationToken,
+    ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence, VoidPC,
 };
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-    DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-    PaymentsCancelPostCaptureData, RepeatPaymentData, SessionTokenRequestData,
-    SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+    AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+    PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentsCancelPostCaptureData,
+    RepeatPaymentData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+    ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 
 // Order Create
@@ -612,32 +614,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Session Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     > for Stax<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Stax<T>
+    connector_types::ServerSessionAuthentication for Stax<T>
 {
 }
 
 // Access Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        ServerAuthenticationToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     > for Stax<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Stax<T>
+    connector_types::ServerAuthentication for Stax<T>
 {
 }
 

@@ -12,19 +12,20 @@ use common_enums::CurrencyUnit;
 use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, RSync, Refund,
-        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
+        IncrementalAuthorization, MandateRevoke, PSync, RSync, Refund, RepeatPayment,
+        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence,
+        Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -56,14 +57,14 @@ pub(crate) mod headers {
 
 // Trait to abstract over PaymentFlowData and RefundFlowData for header building
 pub trait JpmorganResourceData {
-    fn access_token(&self) -> Option<&AccessTokenResponseData>;
+    fn access_token(&self) -> Option<&ServerAuthenticationTokenResponseData>;
     fn connector_request_reference_id(&self) -> String;
     fn merchant_id(&self) -> &common_utils::id_type::MerchantId;
     fn connectors(&self) -> &Connectors;
 }
 
 impl JpmorganResourceData for PaymentFlowData {
-    fn access_token(&self) -> Option<&AccessTokenResponseData> {
+    fn access_token(&self) -> Option<&ServerAuthenticationTokenResponseData> {
         self.access_token.as_ref()
     }
 
@@ -81,7 +82,7 @@ impl JpmorganResourceData for PaymentFlowData {
 }
 
 impl JpmorganResourceData for RefundFlowData {
-    fn access_token(&self) -> Option<&AccessTokenResponseData> {
+    fn access_token(&self) -> Option<&ServerAuthenticationTokenResponseData> {
         self.access_token.as_ref()
     }
 
@@ -113,7 +114,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Jpmorgan<T>
+    connector_types::ClientAuthentication for Jpmorgan<T>
 {
 }
 macros::macro_connector_payout_implementation!(
@@ -181,7 +182,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Jpmorgan<T>
+    connector_types::ServerSessionAuthentication for Jpmorgan<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -209,7 +210,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Jpmorgan<T>
+    connector_types::ServerAuthentication for Jpmorgan<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -223,10 +224,10 @@ macros::create_all_prerequisites!(
     generic_type: T,
     api: [
         (
-            flow: CreateAccessToken,
+            flow: ServerAuthenticationToken,
             request_body: JpmorganTokenRequest,
             response_body: JpmorganAuthUpdateResponse,
-            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            router_data: RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
         ),
         (
             flow: Authorize,
@@ -410,10 +411,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     > for Jpmorgan<T>
 {
 }
@@ -480,9 +481,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SdkSessionToken,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        PaymentsSdkSessionTokenData,
+        ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     > for Jpmorgan<T>
 {
@@ -513,10 +514,10 @@ macros::macro_connector_implementation!(
     connector: Jpmorgan,
     curl_request: FormUrlEncoded(JpmorganTokenRequest),
     curl_response: JpmorganAuthUpdateResponse,
-    flow_name: CreateAccessToken,
+    flow_name: ServerAuthenticationToken,
     resource_common_data: PaymentFlowData,
-    flow_request: AccessTokenRequestData,
-    flow_response: AccessTokenResponseData,
+    flow_request: ServerAuthenticationTokenRequestData,
+    flow_response: ServerAuthenticationTokenResponseData,
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
@@ -526,7 +527,7 @@ macros::macro_connector_implementation!(
         }
         fn get_headers(
             &self,
-            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = jpmorgan::JpmorganAuthType::try_from(&req.connector_config)?;
             let creds = format!("{}:{}", auth.client_id.peek(), auth.client_secret.peek());
@@ -546,7 +547,7 @@ macros::macro_connector_implementation!(
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}/am/oauth2/alpha/access_token",

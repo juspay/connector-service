@@ -1859,6 +1859,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
                 base_url: fiservcommercehub.base_url,
             }),
+            AuthType::Itaubank(itaubank) => Ok(Self::Itaubank {
+                client_secret: itaubank.client_secret.ok_or_else(err)?,
+                client_id: itaubank.client_id.ok_or_else(err)?,
+                base_url: itaubank.base_url,
+            }),
             AuthType::Ppro(ppro) => Ok(Self::Ppro {
                 api_key: ppro.api_key.ok_or_else(err)?,
                 merchant_id: Secret::new(ppro.merchant_id),

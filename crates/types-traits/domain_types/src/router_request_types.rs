@@ -452,7 +452,7 @@ pub struct PostAuthenticateIntegrityObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SdkSessionTokenIntegrityObject {}
+pub struct ClientAuthenticationTokenIntegrityObject {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct IncrementalAuthorizationIntegrityObject {}
