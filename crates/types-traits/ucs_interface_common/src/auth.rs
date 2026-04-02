@@ -51,19 +51,17 @@ fn parse_connector_config_from_typed_header(
 
     let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
 
-    let connector_config =
-        ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
-            IntegrationError::InvalidConnectorConfig {
-                config: "X-Connector-Config",
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "Failed to convert connector config from X-Connector-Config header"
-                            .to_string(),
-                    ),
-                    ..Default::default()
-                },
+    let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
+        IntegrationError::InvalidConnectorConfig {
+            config: "X-Connector-Config",
+            context: IntegrationErrorContext {
+                additional_context: Some(
+                    "Failed to convert connector config from X-Connector-Config header".to_string(),
+                ),
+                ..Default::default()
             },
-        )?;
+        },
+    )?;
 
     logger::debug!(
         "Connector config successfully resolved from X-Connector-Config header for connector: {}",
@@ -117,19 +115,17 @@ fn parse_connector_config_from_deprecated_header(
 
     let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
 
-    let connector_config =
-        ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
-            IntegrationError::InvalidConnectorConfig {
-                config: "x-connector-auth",
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "Failed to convert config from deprecated x-connector-auth header"
-                            .to_string(),
-                    ),
-                    ..Default::default()
-                },
+    let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
+        IntegrationError::InvalidConnectorConfig {
+            config: "x-connector-auth",
+            context: IntegrationErrorContext {
+                additional_context: Some(
+                    "Failed to convert config from deprecated x-connector-auth header".to_string(),
+                ),
+                ..Default::default()
             },
-        )?;
+        },
+    )?;
 
     Ok((connector, connector_config))
 }

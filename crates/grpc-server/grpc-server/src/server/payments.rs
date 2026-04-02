@@ -681,15 +681,15 @@ impl Payments {
         })?;
 
         // Create common request data
-        let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), connectors, metadata)).map_err(
-                |err| {
-                    tracing::error!("Failed to process payment flow data: {:?}", err);
-                    tonic::Status::invalid_argument(format!(
-                        "Failed to process payment flow data: {err}"
-                    ))
-                },
-            )?;
+        let payment_flow_data = PaymentFlowData::foreign_try_from((
+            payload.clone(),
+            connectors,
+            metadata,
+        ))
+        .map_err(|err| {
+            tracing::error!("Failed to process payment flow data: {:?}", err);
+            tonic::Status::invalid_argument(format!("Failed to process payment flow data: {err}"))
+        })?;
 
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
@@ -756,12 +756,13 @@ impl Payments {
         // Generate response - connector flow errors propagate as Err(tonic::Status)
         let success_response = response.into_grpc_status()?;
 
-        let authorize_response =
-            domain_types::types::generate_payment_authorize_response(success_response)
-                .map_err(|err| {
-                    tracing::error!("Failed to generate authorize response: {:?}", err);
-                    tonic::Status::internal("Failed to generate authorize response")
-                })?;
+        let authorize_response = domain_types::types::generate_payment_authorize_response(
+            success_response,
+        )
+        .map_err(|err| {
+            tracing::error!("Failed to generate authorize response: {:?}", err);
+            tonic::Status::internal("Failed to generate authorize response")
+        })?;
 
         Ok(authorize_response)
     }
@@ -797,28 +798,28 @@ impl Payments {
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
-        let amount = payload
-            .amount
-            .ok_or_else(|| tonic::Status::invalid_argument("Amount is required for order creation"))?;
+        let amount = payload.amount.ok_or_else(|| {
+            tonic::Status::invalid_argument("Amount is required for order creation")
+        })?;
 
         let currency =
             common_enums::Currency::foreign_try_from(amount.currency()).map_err(|e| {
                 tonic::Status::invalid_argument(format!("Currency conversion failed: {e}"))
             })?;
 
-        let payment_method: grpc_api_types::payments::PaymentMethod =
-            payload.payment_method.clone().ok_or_else(|| {
-                tonic::Status::invalid_argument("Payment method is required")
-            })?;
+        let payment_method: grpc_api_types::payments::PaymentMethod = payload
+            .payment_method
+            .clone()
+            .ok_or_else(|| tonic::Status::invalid_argument("Payment method is required"))?;
 
-        let payment_method_type: Option<common_enums::PaymentMethodType> =
-            <Option<common_enums::PaymentMethodType>>::foreign_try_from(payment_method).map_err(
-                |e| {
-                    tonic::Status::invalid_argument(format!(
-                        "Payment method type conversion failed: {e}"
-                    ))
-                },
-            )?;
+        let payment_method_type: Option<common_enums::PaymentMethodType> = <Option<
+            common_enums::PaymentMethodType,
+        >>::foreign_try_from(
+            payment_method
+        )
+        .map_err(|e| {
+            tonic::Status::invalid_argument(format!("Payment method type conversion failed: {e}"))
+        })?;
 
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -2638,8 +2639,7 @@ impl MerchantAuthentication {
         event_params: EventParams<'_>,
     ) -> Result<ServerSessionAuthenticationTokenResponseData, tonic::Status>
     where
-        ServerSessionAuthenticationTokenRequestData:
-            ForeignTryFrom<P, Error = IntegrationError>,
+        ServerSessionAuthenticationTokenRequestData: ForeignTryFrom<P, Error = IntegrationError>,
     {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2704,11 +2704,11 @@ impl MerchantAuthentication {
                 None,
                 common_enums::CallConnectorAction::Trigger,
                 test_context,
-            api_tag,
-        ),
-    )
-    .await
-    .into_grpc_status()?;
+                api_tag,
+            ),
+        )
+        .await
+        .into_grpc_status()?;
 
         match response.response {
             Ok(session_response) => {
@@ -3582,7 +3582,10 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<
+    RecurringPaymentServiceRevokeResponse,
+    error_stack::Report<ConnectorResponseTransformationError>,
+> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data

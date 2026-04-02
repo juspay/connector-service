@@ -111,9 +111,7 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
             | IntegrationError::CurrencyNotSupported { .. }
             | IntegrationError::AmountConversionFailed { .. }
             | IntegrationError::MandatePaymentDataMismatch { .. }
-            | IntegrationError::MissingApplePayTokenData { .. } => {
-                Status::invalid_argument(msg)
-            }
+            | IntegrationError::MissingApplePayTokenData { .. } => Status::invalid_argument(msg),
             IntegrationError::FlowNotSupported { .. }
             | IntegrationError::NotSupported { .. }
             | IntegrationError::CaptureMethodNotSupported { .. }
@@ -172,9 +170,7 @@ impl IntoGrpcStatus for error_stack::Report<ConnectorFlowError> {
             ConnectorFlowError::Request(e) => {
                 error_stack::Report::new(e.clone()).into_grpc_status()
             }
-            ConnectorFlowError::Client(e) => {
-                error_stack::Report::new(e.clone()).into_grpc_status()
-            }
+            ConnectorFlowError::Client(e) => error_stack::Report::new(e.clone()).into_grpc_status(),
             ConnectorFlowError::Response(e) => {
                 error_stack::Report::new(e.clone()).into_grpc_status()
             }

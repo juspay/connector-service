@@ -12,9 +12,7 @@ use common_utils::{
     superposition_config::{get_connector_urls, ConnectorUrls, SuperpositionConfig},
 };
 use domain_types::{
-    connector_types,
-    errors::IntegrationError,
-    router_data::ConnectorSpecificConfig,
+    connector_types, errors::IntegrationError, router_data::ConnectorSpecificConfig,
 };
 use error_stack::Report;
 use http::request::Request;
@@ -77,7 +75,7 @@ pub fn get_resolved_connectors(
     connector_config: &ConnectorSpecificConfig,
     environment: Option<&str>,
 ) -> CustomResult<domain_types::types::Connectors, IntegrationError> {
-    use domain_types::errors::{IntegrationErrorContext};
+    use domain_types::errors::IntegrationErrorContext;
     match environment {
         Some(env) => {
             validate_environment(env).map_err(|e| {
@@ -97,13 +95,16 @@ pub fn get_resolved_connectors(
             ) {
                 Some(urls) => {
                     tracing::info!("resolved URLs from superposition for environment: {}", env);
-                    let patched_connectors =
-                        config.connectors.patch_connector_urls(connector, &urls)
-                            .map_err(|e| Report::new(IntegrationError::ConfigurationError {
+                    let patched_connectors = config
+                        .connectors
+                        .patch_connector_urls(connector, &urls)
+                        .map_err(|e| {
+                            Report::new(IntegrationError::ConfigurationError {
                                 code: "URL_PATCHING_FAILED".to_string(),
                                 message: format!("URL patching failed: {e}"),
                                 context: IntegrationErrorContext::default(),
-                            }))?;
+                            })
+                        })?;
                     connectors_with_connector_config_overrides_on_connectors(
                         connector_config,
                         patched_connectors,

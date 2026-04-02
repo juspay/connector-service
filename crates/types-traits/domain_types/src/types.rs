@@ -537,7 +537,7 @@ impl Connectors {
             }
             _ => {
                 // Connector not supported for URL patching - return error
-                return Err(IntegrationError::InvalidDataFormat { 
+                return Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector", 
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
