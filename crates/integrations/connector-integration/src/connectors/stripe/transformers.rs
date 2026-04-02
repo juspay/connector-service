@@ -5424,9 +5424,11 @@ impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = item.response.0;
 
-        let client_secret = response
-            .client_secret
-            .ok_or(ConnectorResponseTransformationError::ResponseDeserializationFailed { context: Default::default() })?;
+        let client_secret = response.client_secret.ok_or(
+            ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                context: Default::default(),
+            },
+        )?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Stripe(

@@ -760,8 +760,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // Note: This method should not be used for OAuth-based connectors like Airwallex
         // Use build_payment_headers or build_refund_headers instead for OAuth flows
         // This method is only used for ServerAuthenticationToken flow
-        let auth = airwallex::AirwallexAuthType::try_from(auth_type)
-            .change_context(IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
+        let auth = airwallex::AirwallexAuthType::try_from(auth_type).change_context(
+            IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![
             (
                 "x-api-key".to_string(),

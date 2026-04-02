@@ -2315,7 +2315,10 @@ pub(crate) fn get_apple_pay_session(
                         apple_pay_init_result.total.amount.clone(),
                         apple_pay_init_result.currency_code,
                     )
-                    .change_context(IntegrationError::InvalidDataFormat { field_name: "amount", context: Default::default() })?,
+                    .change_context(IntegrationError::InvalidDataFormat {
+                        field_name: "amount",
+                        context: Default::default(),
+                    })?,
                     total_type: None,
                 },
                 merchant_identifier: None,
