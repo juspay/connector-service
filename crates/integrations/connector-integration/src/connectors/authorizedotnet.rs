@@ -83,6 +83,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
+macros::macro_connector_payout_implementation!(
+    connector: Authorizedotnet,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorServiceTrait<T> for Authorizedotnet<T>
 {
@@ -278,6 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }

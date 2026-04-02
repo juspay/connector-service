@@ -235,3 +235,6 @@ pub use self::finix::Finix;
 
 pub mod trustly;
 pub use self::trustly::Trustly;
+
+pub mod itaubank;
+pub use self::itaubank::Itaubank;
