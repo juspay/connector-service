@@ -6,11 +6,12 @@ use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::request::Method;
 use common_utils::types::StringMinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, ServerAuthenticationToken, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     },
     errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{
@@ -179,10 +180,10 @@ pub struct GlobalpayAccessTokenRequest {
 impl
     TryFrom<
         &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     > for GlobalpayAccessTokenRequest
 {
@@ -190,10 +191,10 @@ impl
 
     fn try_from(
         item: &RouterDataV2<
-            CreateAccessToken,
+            ServerAuthenticationToken,
             PaymentFlowData,
-            AccessTokenRequestData,
-            AccessTokenResponseData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Globalpay {
@@ -240,7 +241,7 @@ pub struct GlobalpayAccessTokenResponse {
 }
 
 impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+    for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
@@ -248,7 +249,7 @@ impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
         item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            response: Ok(AccessTokenResponseData {
+            response: Ok(ServerAuthenticationTokenResponseData {
                 access_token: item.response.token.into(),
                 token_type: Some(item.response.type_),
                 expires_in: Some(item.response.seconds_to_expire),

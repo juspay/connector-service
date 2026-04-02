@@ -112,7 +112,7 @@ The SDK provides specialized clients for different service domains:
 | `PaymentClient` | Core payment operations | `authorize()`, `capture()`, `refund()`, `void()` |
 | `CustomerClient` | Customer management | `create()` |
 | `PaymentMethodClient` | Secure tokenization | `tokenize()` |
-| `MerchantAuthenticationClient` | Auth token management | `createAccessToken()`, `createSessionToken()` |
+| `MerchantAuthenticationClient` | Auth token management | `createServerAuthenticationToken()`, `createServerSessionAuthenticationToken()`, `createClientAuthenticationToken()` |
 | `EventClient` | Webhook processing | `handleEvent()` |
 | `RecurringPaymentClient` | Subscription billing | `charge()` |
 | `PaymentMethodAuthenticationClient` | 3DS authentication | `preAuthenticate()`, `authenticate()`, `postAuthenticate()` |
@@ -252,7 +252,7 @@ const config = ConnectorConfig.create({
 
 // Step 1: Get access token
 const authClient = new MerchantAuthenticationClient(config);
-const tokenResponse = await authClient.createAccessToken({
+const tokenResponse = await authClient.createServerAuthenticationToken({
   merchantAccessTokenId: 'token_001',
   connector: Connector.PAYPAL,
   testMode: true,

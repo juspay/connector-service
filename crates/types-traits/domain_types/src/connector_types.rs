@@ -437,7 +437,7 @@ pub struct PaymentFlowData {
     pub minor_amount_captured: Option<MinorUnit>,
     pub minor_amount_capturable: Option<MinorUnit>,
     pub amount: Option<Money>,
-    pub access_token: Option<AccessTokenResponseData>,
+    pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
     pub payment_method_token: Option<PaymentMethodToken>,
@@ -647,13 +647,16 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+    pub fn get_access_token_data(&self) -> Result<ServerAuthenticationTokenResponseData, Error> {
         self.access_token
             .clone()
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
+    pub fn set_access_token(
+        mut self,
+        access_token: Option<ServerAuthenticationTokenResponseData>,
+    ) -> Self {
         self.access_token = access_token;
         self
     }
@@ -942,7 +945,7 @@ impl PaymentFlowData {
 
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
         if let (Some(token_id), None) = (access_token_id, &self.access_token) {
-            self.access_token = Some(AccessTokenResponseData {
+            self.access_token = Some(ServerAuthenticationTokenResponseData {
                 access_token: token_id.into(),
                 token_type: None,
                 expires_in: None,
@@ -1110,7 +1113,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
-    pub access_token: Option<AccessTokenResponseData>,
+    pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub enrolled_for_3ds: Option<bool>,
     pub related_transaction_id: Option<String>,
@@ -1348,7 +1351,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
-        self.access_token = access_token.map(|token| AccessTokenResponseData {
+        self.access_token = access_token.map(|token| ServerAuthenticationTokenResponseData {
             access_token: token.into(),
             token_type: None,
             expires_in: None,
@@ -1398,8 +1401,8 @@ pub enum PaymentsResponseData {
         incremental_authorization_allowed: Option<bool>,
         status_code: u16,
     },
-    SdkSessionTokenResponse {
-        session_token: SessionToken,
+    ClientAuthenticationTokenResponse {
+        session_data: ClientAuthenticationTokenData,
         status_code: u16,
     },
     PreAuthenticateResponse {
@@ -1486,8 +1489,8 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
-    /// Optional session token for wallet flows (Apple Pay, Google Pay)
-    pub session_token: Option<SessionToken>,
+    /// Optional SDK session data for wallet flows (Apple Pay, Google Pay) and other SDK types
+    pub session_data: Option<ClientAuthenticationTokenData>,
 }
 
 #[derive(Debug, Clone)]
@@ -1601,7 +1604,7 @@ pub struct PaymentsIncrementalAuthorizationData {
 }
 
 #[derive(Debug, Clone)]
-pub struct PaymentsSdkSessionTokenData {
+pub struct ClientAuthenticationTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub country: Option<common_enums::CountryAlpha2>,
@@ -1682,13 +1685,13 @@ pub struct ContinueRedirectionResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct SessionTokenRequestData {
+pub struct ServerSessionAuthenticationTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub browser_info: Option<BrowserInformation>,
 }
 
-impl SessionTokenRequestData {
+impl ServerSessionAuthenticationTokenRequestData {
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
         self.browser_info
             .clone()
@@ -1697,17 +1700,17 @@ impl SessionTokenRequestData {
 }
 
 #[derive(Debug, Clone)]
-pub struct SessionTokenResponseData {
+pub struct ServerSessionAuthenticationTokenResponseData {
     pub session_token: String,
 }
 
 #[derive(Debug, Clone)]
-pub struct AccessTokenRequestData {
+pub struct ServerAuthenticationTokenRequestData {
     pub grant_type: String,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct AccessTokenResponseData {
+pub struct ServerAuthenticationTokenResponseData {
     pub access_token: Secret<String>,
     pub token_type: Option<String>,
     pub expires_in: Option<i64>,
@@ -1782,7 +1785,7 @@ pub struct RefundFlowData {
     pub raw_connector_response: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
-    pub access_token: Option<AccessTokenResponseData>,
+    pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub connector_feature_data: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
     pub payment_method: Option<PaymentMethod>,
@@ -1824,13 +1827,16 @@ impl RefundFlowData {
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+    pub fn get_access_token_data(&self) -> Result<ServerAuthenticationTokenResponseData, Error> {
         self.access_token
             .clone()
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
+    pub fn set_access_token(
+        mut self,
+        access_token: Option<ServerAuthenticationTokenResponseData>,
+    ) -> Self {
         self.access_token = access_token;
         self
     }
@@ -3406,20 +3412,37 @@ pub struct SecretInfoToInitiateSdk {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "wallet_name")]
+#[serde(tag = "sdk_type")]
 #[serde(rename_all = "snake_case")]
-pub enum SessionToken {
+pub enum ClientAuthenticationTokenData {
     /// The session response structure for Google Pay
-    GooglePay(Box<GpaySessionTokenResponse>),
+    GooglePay(Box<GpayClientAuthenticationResponse>),
     /// The session response structure for PayPal
-    Paypal(Box<PaypalSessionTokenResponse>),
+    Paypal(Box<PaypalClientAuthenticationResponse>),
     /// The session response structure for Apple Pay
-    ApplePay(Box<ApplepaySessionTokenResponse>),
+    ApplePay(Box<ApplepayClientAuthenticationResponse>),
+    /// Generic connector-specific SDK initialization data
+    ConnectorSpecific(Box<ConnectorSpecificClientAuthenticationResponse>),
+}
+
+/// Per-connector SDK initialization data — discriminated by connector
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "connector")]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectorSpecificClientAuthenticationResponse {
+    /// Stripe SDK initialization data
+    Stripe(StripeClientAuthenticationResponse),
+}
+
+/// Stripe's client_secret for browser-side stripe.confirmPayment()
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StripeClientAuthenticationResponse {
+    pub client_secret: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum GpaySessionTokenResponse {
+pub enum GpayClientAuthenticationResponse {
     /// Google pay session response for non third party sdk
     GooglePaySession(GooglePaySessionResponse),
 }
@@ -3558,11 +3581,11 @@ pub struct GpaySessionTokenData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub struct ApplepaySessionTokenResponse {
+pub struct ApplepayClientAuthenticationResponse {
     /// Session object for Apple Pay
-    /// The session_token_data will be null for iOS devices because the Apple Pay session call is skipped, as there is no web domain involved
+    /// The session_response will be null for iOS devices because the Apple Pay session call is skipped, as there is no web domain involved
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_token_data: Option<ApplePaySessionResponse>,
+    pub session_response: Option<ApplePaySessionResponse>,
     /// Payment request object for Apple Pay
     pub payment_request_data: Option<ApplePayPaymentRequest>,
     /// The session token is w.r.t this connector
@@ -3686,7 +3709,7 @@ pub struct AmountInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub struct PaypalSessionTokenResponse {
+pub struct PaypalClientAuthenticationResponse {
     /// Name of the connector
     pub connector: String,
     /// The session token for PayPal
@@ -3721,7 +3744,7 @@ pub struct PaypalSdkMetaData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaypalSdkSessionTokenData {
+pub struct PaypalClientAuthenticationTokenData {
     #[serde(rename = "paypal_sdk")]
     pub data: PaypalSdkMetaData,
 }

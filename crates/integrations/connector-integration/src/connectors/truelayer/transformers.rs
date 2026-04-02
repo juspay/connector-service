@@ -2,11 +2,14 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use common_enums::{self, AttemptStatus, CountryAlpha2, Currency};
 use common_utils::{consts, pii, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, RSync, Refund, VerifyWebhookSource, Void},
+    connector_flow::{
+        Authorize, RSync, Refund, ServerAuthenticationToken, VerifyWebhookSource, Void,
+    },
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, VerifyWebhookSourceFlowData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        VerifyWebhookSourceFlowData,
     },
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -48,7 +51,7 @@ pub struct TruelayerAuthType {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
-pub struct TruelayerAccessTokenRequestData {
+pub struct TruelayerServerAuthenticationTokenRequestData {
     grant_type: String,
     client_id: Secret<String>,
     client_secret: Secret<String>,
@@ -109,23 +112,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         TruelayerRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
-    > for TruelayerAccessTokenRequestData
+    > for TruelayerServerAuthenticationTokenRequestData
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: TruelayerRouterData<
             RouterDataV2<
-                CreateAccessToken,
+                ServerAuthenticationToken,
                 PaymentFlowData,
-                AccessTokenRequestData,
-                AccessTokenResponseData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -141,21 +144,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TruelayerAccessTokenResponseData {
+pub struct TruelayerServerAuthenticationTokenResponseData {
     access_token: Secret<String>,
     expires_in: i64,
     token_type: Option<String>,
 }
 
-impl<F, T> TryFrom<ResponseRouterData<TruelayerAccessTokenResponseData, Self>>
-    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+impl<F, T> TryFrom<ResponseRouterData<TruelayerServerAuthenticationTokenResponseData, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
-        item: ResponseRouterData<TruelayerAccessTokenResponseData, Self>,
+        item: ResponseRouterData<TruelayerServerAuthenticationTokenResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            response: Ok(AccessTokenResponseData {
+            response: Ok(ServerAuthenticationTokenResponseData {
                 access_token: item.response.access_token,
                 expires_in: Some(item.response.expires_in),
                 token_type: item.response.token_type,

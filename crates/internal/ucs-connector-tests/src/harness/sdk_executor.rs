@@ -23,7 +23,9 @@ type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>;
 pub fn supports_sdk_suite(suite: &str) -> bool {
     matches!(
         suite,
-        "create_access_token"
+        "server_authentication_token"
+            | "server_session_authentication_token"
+            | "client_authentication_token"
             | "create_customer"
             | "authorize"
             | "capture"
@@ -57,17 +59,41 @@ pub fn execute_sdk_request_from_payload(
     let options_bytes = options.encode_to_vec();
 
     match suite {
-        "create_access_token" => execute_sdk_flow::<
-            payments::MerchantAuthenticationServiceCreateAccessTokenRequest,
-            payments::MerchantAuthenticationServiceCreateAccessTokenResponse,
+        "server_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
         >(
             suite,
             scenario,
             connector,
             grpc_req,
             &options_bytes,
-            ffi_bindings::create_access_token_req_transformer,
-            ffi_bindings::create_access_token_res_transformer,
+            ffi_bindings::create_server_authentication_token_req_transformer,
+            ffi_bindings::create_server_authentication_token_res_transformer,
+        ),
+        "server_session_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::create_server_session_authentication_token_req_transformer,
+            ffi_bindings::create_server_session_authentication_token_res_transformer,
+        ),
+        "client_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::create_client_authentication_token_req_transformer,
+            ffi_bindings::create_client_authentication_token_res_transformer,
         ),
         "create_customer" => execute_sdk_flow::<
             payments::CustomerServiceCreateRequest,
@@ -494,7 +520,7 @@ mod tests {
         assert!(!supports_sdk_connector("adyen"));
 
         assert!(supports_sdk_suite("authorize"));
-        assert!(supports_sdk_suite("create_access_token"));
+        assert!(supports_sdk_suite("server_authentication_token"));
         assert!(!supports_sdk_suite("refund_sync"));
     }
 

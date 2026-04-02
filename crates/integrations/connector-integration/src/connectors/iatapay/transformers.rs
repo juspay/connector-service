@@ -710,10 +710,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -724,10 +724,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateAccessToken,
+                domain_types::connector_flow::ServerAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::AccessTokenRequestData,
-                domain_types::connector_types::AccessTokenResponseData,
+                domain_types::connector_types::ServerAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -738,10 +738,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::CreateAccessToken,
+        domain_types::connector_flow::ServerAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::AccessTokenRequestData,
-        domain_types::connector_types::AccessTokenResponseData,
+        domain_types::connector_types::ServerAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerAuthenticationTokenResponseData,
     >
 {
     type Error = Report<ConnectorResponseTransformationError>;
@@ -752,11 +752,13 @@ impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
         let response = item.response;
         let mut router_data = item.router_data;
 
-        router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
-            access_token: response.access_token,
-            token_type: Some("Bearer".to_string()),
-            expires_in: Some(response.expires_in),
-        });
+        router_data.response = Ok(
+            domain_types::connector_types::ServerAuthenticationTokenResponseData {
+                access_token: response.access_token,
+                token_type: Some("Bearer".to_string()),
+                expires_in: Some(response.expires_in),
+            },
+        );
 
         Ok(router_data)
     }
