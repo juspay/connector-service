@@ -356,6 +356,11 @@ pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
 }
 
 impl ConnectorResponseTransformationError {
+    /// Machine-readable error code (SCREAMING_SNAKE_CASE from variant name).
+    pub fn error_code(&self) -> &str {
+        self.as_ref()
+    }
+
     /// HTTP status code from the connector response (`None` when not applicable).
     pub fn http_status_code(&self) -> Option<u16> {
         match self {
