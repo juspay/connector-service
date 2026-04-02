@@ -34,9 +34,8 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_create_order_response,
-        generate_payment_authenticate_response, generate_payment_capture_response,
-        generate_payment_incremental_authorization_response,
+        generate_create_order_response, generate_payment_authenticate_response,
+        generate_payment_capture_response, generate_payment_incremental_authorization_response,
         generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response,
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
