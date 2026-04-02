@@ -1846,6 +1846,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
                 base_url: fiservcommercehub.base_url,
             }),
+            AuthType::Ppro(ppro) => Ok(Self::Ppro {
+                api_key: ppro.api_key.ok_or_else(err)?,
+                merchant_id: Secret::new(ppro.merchant_id),
+                base_url: ppro.base_url,
+            }),
         }
     }
 }

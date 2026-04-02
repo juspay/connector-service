@@ -3807,6 +3807,12 @@ message PeachpaymentsConfig {
   optional SecretString merchant_payment_method_route_id = 52;
 }
 
+message PproConfig {
+  SecretString api_key = 1 [json_name = "apiKey"];
+  string merchant_id = 2 [json_name = "merchantId"];
+  optional string base_url = 50 [json_name = "baseUrl"];
+}
+
 message PaypalConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4057,5 +4063,8 @@ message ConnectorSpecificConfig {
 
     // FISERVCOMMERCEHUB = 114
     FiservcommercehubConfig fiservcommercehub = 112;
+
+    // PPRO = 113
+    PproConfig ppro = 113;
   }
 }
