@@ -382,18 +382,10 @@ fn build_gateway_info<T: PaymentMethodDataTypes>(
         (Type::Direct, PaymentMethodData::Card(card_data)) => {
             // Build gateway_info with card details
             // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
-            let card_exp_year_str = card_data.card_exp_year.peek();
-            let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
-                &card_exp_year_str[2..]
-            } else {
-                card_exp_year_str
-            };
-
-            let card_expiry_str = format!(
-                "{}{}",
-                card_exp_year_2digit,
-                card_data.card_exp_month.peek()
-            );
+            let card_expiry_str = card_data
+                .get_card_expiry_year_month_2_digit_with_delimiter(String::new())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?
+                .expose();
 
             let card_expiry_date: i64 = card_expiry_str
                 .parse::<i64>()
