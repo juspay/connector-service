@@ -1,5 +1,4 @@
 use crate::{connectors::mollie::MollieRouterData, types::ResponseRouterData};
-use common_enums::CountryAlpha2;
 use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
@@ -870,7 +869,7 @@ pub struct MollieOrderAddress {
     pub region: Option<String>,
     pub postal_code: String,
     pub country: common_enums::CountryAlpha2,
-    pub email: String,
+    pub email: Email,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
 }
@@ -1022,7 +1021,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
 
                 // Get email from billing address email field if available
-                let email = billing.email.as_ref()?.peek().to_string();
+                let email = billing.email.clone()?;
 
                 Some(MollieOrderAddress {
                     title: None,
@@ -1052,7 +1051,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     region: None,
                     postal_code: "1234AB".to_string(),
                     country: common_enums::CountryAlpha2::NL,
-                    email: "test@example.com".to_string(),
+                    email: Email::try_from("test@example.com".to_string()).unwrap(),
                     phone: None,
                 }
             });
