@@ -3721,6 +3721,12 @@ message FiservcommercehubConfig {
   optional string base_url = 50;
 }
 
+message ItaubankConfig {
+  SecretString client_secret = 1;
+  SecretString client_id = 2;
+  optional string base_url = 50;
+}
+
 message GigadatConfig {
   SecretString campaign_id = 1;
   SecretString access_token = 2;
@@ -4100,6 +4106,9 @@ message ConnectorSpecificConfig {
 
     // FISERVCOMMERCEHUB = 114
     FiservcommercehubConfig fiservcommercehub = 112;
+
+    // ITAUBANKCONFIG = 115
+    ItaubankConfig itaubank = 113;
   }
 }
 
