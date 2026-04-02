@@ -311,7 +311,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 }
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustly,
     curl_request: Json(TrustlyPaymentRequest),
     curl_response: TrustlyPaymentsResponse,
@@ -337,19 +337,11 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             Ok(base_url)
         }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
-        }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustly,
     curl_request: Json(TrustlyRefundRequest),
     curl_response: TrustlyRefundResponse,
@@ -373,14 +365,6 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(req.resource_common_data.connectors.trustly.base_url.clone())
-        }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-            self.build_error_response(res, event_builder)
         }
     }
 );
