@@ -848,6 +848,7 @@ enum PaymentMethodType {
   INSTANT_BANK_TRANSFER_POLAND = 101;
   SATISPAY = 102;
   WERO = 103;
+  NETWORK_TOKEN = 104;
 }
 
 // Product type enumeration
@@ -1213,6 +1214,9 @@ message RedirectForm {
 
     // Mifinity-specific redirection data for SDK-based flows.
     MifinityData mifinity = 5;
+
+    // NMI-specific redirection data for 3DS flows.
+    NmiData nmi = 6;
   }
 }
 
@@ -1259,6 +1263,24 @@ message BraintreeData {
 message MifinityData {
   // Initialization token for Mifinity SDK initialization
   string initialization_token = 1;
+}
+
+// Represents NMI-specific redirection data for 3DS flows
+message NmiData {
+  // Transaction amount
+  Money amount = 1;
+
+  // NMI public key for 3DS
+  SecretString public_key = 2;
+
+  // Customer vault ID for the tokenized card
+  string customer_vault_id = 3;
+
+  // Order ID for the transaction
+  string order_id = 4;
+
+  // URL to redirect to after 3DS completion
+  string continue_redirection_url = 5;
 }
 
 // Details of an HTTP request, typically for incoming webhooks
@@ -1312,7 +1334,7 @@ message EventServiceHandleResponse {
   WebhookEventType event_type = 1;
 
   // Content
-  EventResponse event_response = 2;
+  EventContent event_content = 2;
 
   // Verification
   bool source_verified = 3;
@@ -1321,11 +1343,21 @@ message EventServiceHandleResponse {
   optional string merchant_event_id = 4;
 
   // Event Status
-  WebhookEventStatus event_status = 5;
+  EventStatus event_status = 5;
+
+  // Suggested HTTP response to send back to the connector for webhook acknowledgement
+  optional EventAckResponse event_ack_response = 6;
 }
 
-// Content of a Event
-message EventResponse {
+// Suggested HTTP response for webhook acknowledgement (status, headers, body).
+message EventAckResponse {
+  uint32 status_code = 1;
+  map<string, string> headers = 2;
+  bytes body = 3;
+}
+
+// Content of an event
+message EventContent {
   oneof content {
     // Content if the event is for a payment synchronization.
     PaymentServiceGetResponse payments_response = 1;
@@ -1338,6 +1370,7 @@ message EventResponse {
     IncompleteTransformationResponse incomplete_transformation = 4;
   }
 }
+
 
 // Data for a multiple capture request
 message MultipleCaptureRequestData {
@@ -1461,6 +1494,25 @@ message ConnectorResponseData {
       extended_authorization_response_data = 2;
   // Whether overcapture is enabled
   optional bool is_overcapture_enabled = 3;
+}
+
+// Payment method update information extracted from a connector response or webhook.
+// This is intended to be used by integrators to update stored payment method details
+// (e.g., expiry/last4 updates from network account updater programs).
+message PaymentMethodUpdate {
+  oneof payment_method_update_data {
+    CardDetailUpdate card = 1;
+  }
+}
+
+message CardDetailUpdate {
+  optional string card_exp_month = 1;
+  optional string card_exp_year = 2;
+  optional string last4_digits = 3;
+  optional string issuer_country = 4;
+  optional string card_issuer = 5;
+  optional string card_network = 6;
+  optional string card_holder_name = 7;
 }
 
 // ============================================================================
@@ -1904,6 +1956,8 @@ message PaymentServiceGetResponse {
 
   // Capability Flags
   optional bool incremental_authorization_allowed = 27;
+  // Payment method updates
+  optional PaymentMethodUpdate payment_method_update = 29; // Updated payment method details, if present
 }
 
 // Request message for voiding a payment
@@ -2785,6 +2839,9 @@ message PaymentMethodAuthenticationServicePostAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 14;
+  
+  // Capture Settings
+  optional CaptureMethod capture_method = 15;
 }
 
 // Response message for post-authentication step
@@ -2866,11 +2923,11 @@ message EventServiceHandleRequest {
   optional ConnectorState state = 4;
 }
 
-// Status of webhook Event process
-enum WebhookEventStatus {
-  WEBHOOK_EVENT_STATUS_UNSPECIFIED = 0;
-  WEBHOOK_EVENT_STATUS_COMPLETE = 1;
-  WEBHOOK_EVENT_STATUS_INCOMPLETE = 2;
+// Status of event processing
+enum EventStatus {
+  EVENT_STATUS_UNSPECIFIED = 0;
+  EVENT_STATUS_COMPLETE = 1;
+  EVENT_STATUS_INCOMPLETE = 2;
 }
 
 // Request message for VerifyRedirectResponse
@@ -4026,3 +4083,106 @@ message ConnectorSpecificConfig {
     FiservcommercehubConfig fiservcommercehub = 112;
   }
 }
+
+// ============================================================================
+// NON-PCI SDK CLIENTS - TOKENIZED AND PROXY PAYMENT MESSAGES
+// ============================================================================
+// These messages are used for tokenized and proxied payment methods
+// for merchants who do not hold raw card data.
+// ============================================================================
+
+message PaymentServiceTokenAuthorizeRequest {
+  optional string merchant_transaction_id = 1;
+  Money amount = 2;
+  // Connector-issued token. Replaces PaymentMethod entirely.
+  // Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+  SecretString connector_token = 3;
+  optional Customer customer = 4;
+  PaymentAddress address = 5;
+  optional CaptureMethod capture_method = 6;
+  optional string return_url = 7;
+  optional string webhook_url = 8;
+  optional SecretString metadata = 9;
+  optional SecretString connector_feature_data = 10;
+  optional FutureUsage setup_future_usage = 11;
+  optional BrowserInformation browser_info = 12;
+  optional ConnectorState state = 13;
+  optional BillingDescriptor billing_descriptor = 14;
+  optional string merchant_order_id = 15;
+  optional L2L3Data l2_l3_data = 16;
+  optional CustomerAcceptance customer_acceptance = 17;
+  optional PaymentExperience payment_experience = 18;
+  optional string description = 19;
+  optional PaymentChannel payment_channel = 20;
+  optional bool test_mode = 21;
+  // auth_type intentionally absent: PSP tokens cannot drive external 3DS.
+  // Use connector_feature_data to pass connector-specific delegated-3DS flags.
+}
+
+message PaymentServiceTokenSetupRecurringRequest {
+  string merchant_recurring_payment_id = 1;
+  Money amount = 2;
+  SecretString connector_token = 3;
+  optional Customer customer = 4;
+  PaymentAddress address = 5;
+  optional string return_url = 6;
+  optional string webhook_url = 7;
+  optional SecretString metadata = 8;
+  optional SecretString connector_feature_data = 9;
+  optional ConnectorState state = 10;
+  optional CustomerAcceptance customer_acceptance = 11;
+  optional SetupMandateDetails setup_mandate_details = 12;
+  optional BillingDescriptor billing_descriptor = 13;
+  optional string locale = 14;
+  optional FutureUsage setup_future_usage = 15;
+}
+
+// ── ProxiedPaymentService messages ──────────────────────────────────────────────
+
+message PaymentServiceProxyAuthorizeRequest {
+  optional string merchant_transaction_id = 1;
+  Money amount = 2;
+  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly).
+  // Real card values are substituted by the proxy before reaching the connector.
+  CardDetails card_proxy = 3;
+  optional Customer customer = 4;
+  PaymentAddress address = 5;
+  optional CaptureMethod capture_method = 6;
+  AuthenticationType auth_type = 7;
+  optional AuthenticationData authentication_data = 8;
+  optional string return_url = 9;
+  optional string webhook_url = 10;
+  optional SecretString metadata = 11;
+  optional SecretString connector_feature_data = 12;
+  optional FutureUsage setup_future_usage = 13;
+  optional BrowserInformation browser_info = 14;
+  optional ConnectorState state = 15;
+  optional SetupMandateDetails setup_mandate_details = 16;
+  optional BillingDescriptor billing_descriptor = 17;
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 18;
+  optional RedirectionResponse redirection_response = 19;
+  optional L2L3Data l2_l3_data = 20;
+  optional CustomerAcceptance customer_acceptance = 21;
+  optional string merchant_order_id = 22;
+  optional bool test_mode = 23;
+}
+
+message PaymentServiceProxySetupRecurringRequest {
+  string merchant_recurring_payment_id = 1;
+  Money amount = 2;
+  // Card proxy for vault-aliased payments.
+  CardDetails card_proxy = 3;
+  optional Customer customer = 4;
+  PaymentAddress address = 5;
+  optional string return_url = 6;
+  optional string webhook_url = 7;
+  optional SecretString metadata = 8;
+  optional ConnectorState state = 9;
+  optional SetupMandateDetails setup_mandate_details = 10;
+  optional CustomerAcceptance customer_acceptance = 11;
+  AuthenticationType auth_type = 12;
+  optional AuthenticationData authentication_data = 13;
+  optional FutureUsage setup_future_usage = 14;
+  optional BrowserInformation browser_info = 15;
+}
+

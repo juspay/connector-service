@@ -14,7 +14,7 @@ use common_utils::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
+use strum::{Display, EnumIter, EnumString};
 use time::PrimitiveDateTime;
 
 use crate::{
@@ -43,7 +43,17 @@ use url::Url;
 
 // snake case for enum variants
 #[derive(
-    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Display,
+    EnumIter,
+    EnumString,
+    serde::Deserialize,
+    Eq,
+    Hash,
+    PartialEq,
+    Serialize,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
@@ -126,6 +136,7 @@ pub enum ConnectorEnum {
     Truelayer,
     Peachpayments,
     Finix,
+    Itaubank,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -211,6 +222,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Peachpayments => Ok(Self::Peachpayments),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
+            grpc_api_types::payments::Connector::Itaubank => Ok(Self::Itaubank),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1410,6 +1422,22 @@ pub struct MandateReference {
     pub connector_mandate_request_reference_id: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub enum PaymentMethodUpdate {
+    Card(CardDetailUpdate),
+}
+
+#[derive(Debug, Clone)]
+pub struct CardDetailUpdate {
+    pub card_exp_month: Option<String>,
+    pub card_exp_year: Option<String>,
+    pub last4_digits: Option<String>,
+    pub issuer_country: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_network: Option<String>,
+    pub card_holder_name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CaptureSyncResponse {
     Success {
@@ -1588,6 +1616,35 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+}
+
+impl<T: PaymentMethodDataTypes> PaymentsPostAuthenticateData<T> {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(ConnectorError::CaptureMethodNotSupported.into())
+            }
+        }
+    }
+    pub fn get_redirect_response_payload(
+        &self,
+    ) -> Result<common_utils::pii::SecretSerdeValue, Error> {
+        self.redirect_response
+            .as_ref()
+            .and_then(|res| res.payload.to_owned())
+            .ok_or(
+                ConnectorError::MissingConnectorRedirectionPayload {
+                    field_name: "request.redirect_response.payload",
+                }
+                .into(),
+            )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1780,6 +1837,7 @@ pub struct WebhookDetailsResponse {
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
+    pub payment_method_update: Option<PaymentMethodUpdate>,
 }
 
 #[derive(Debug, Clone)]
@@ -2941,6 +2999,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 Self::CardDetailsForNetworkTransactionId
             }
             PaymentMethodData::NetworkToken(_) => Self::NetworkToken,
+            PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
+                Self::NetworkToken
+            }
             PaymentMethodData::MobilePayment(mobile_payment_data) => match mobile_payment_data {
                 payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => {
                     Self::DirectCarrierBilling

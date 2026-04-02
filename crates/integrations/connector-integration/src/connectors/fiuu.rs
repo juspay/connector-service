@@ -210,6 +210,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::macro_connector_payout_implementation!(
+    connector: Fiuu,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Fiuu,
     generic_type: T,
@@ -912,6 +918,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+            payment_method_update: None,
             transformation_status: common_enums::WebhookTransformationStatus::Incomplete,
         })
     }
