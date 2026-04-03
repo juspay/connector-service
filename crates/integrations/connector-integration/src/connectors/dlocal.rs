@@ -30,7 +30,7 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -404,7 +404,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            Ok(format!("{}secure_payments", self.connector_base_url_payments(req)))
+            let base_url = self.connector_base_url_payments(req);
+            match &req.request.payment_method_data {
+                PaymentMethodData::Card(_) => {
+                    Ok(format!("{base_url}secure_payments"))
+                }
+                _ => Ok(format!("{base_url}payments")),
+            }
         }
     }
 );
