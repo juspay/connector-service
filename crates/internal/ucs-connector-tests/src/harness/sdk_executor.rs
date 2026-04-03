@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest,
-    FfiConnectorHttpResponse, FfiOptions, RequestError, ResponseError,
+    self, connector_specific_config, ConnectorResponseTransformationError, ConnectorSpecificConfig,
+    Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -23,7 +23,9 @@ type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>;
 pub fn supports_sdk_suite(suite: &str) -> bool {
     matches!(
         suite,
-        "create_access_token"
+        "server_authentication_token"
+            | "server_session_authentication_token"
+            | "client_authentication_token"
             | "create_customer"
             | "authorize"
             | "capture"
@@ -57,17 +59,41 @@ pub fn execute_sdk_request_from_payload(
     let options_bytes = options.encode_to_vec();
 
     match suite {
-        "create_access_token" => execute_sdk_flow::<
-            payments::MerchantAuthenticationServiceCreateAccessTokenRequest,
-            payments::MerchantAuthenticationServiceCreateAccessTokenResponse,
+        "server_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
         >(
             suite,
             scenario,
             connector,
             grpc_req,
             &options_bytes,
-            ffi_bindings::create_access_token_req_transformer,
-            ffi_bindings::create_access_token_res_transformer,
+            ffi_bindings::create_server_authentication_token_req_transformer,
+            ffi_bindings::create_server_authentication_token_res_transformer,
+        ),
+        "server_session_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::create_server_session_authentication_token_req_transformer,
+            ffi_bindings::create_server_session_authentication_token_res_transformer,
+        ),
+        "client_authentication_token" => execute_sdk_flow::<
+            payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+            payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::create_client_authentication_token_req_transformer,
+            ffi_bindings::create_client_authentication_token_res_transformer,
         ),
         "create_customer" => execute_sdk_flow::<
             payments::CustomerServiceCreateRequest,
@@ -196,8 +222,15 @@ where
 
     let ffi_http_request = FfiConnectorHttpRequest::decode(ffi_http_request_bytes.as_slice())
         .map_err(|decode_error| {
-            if let Ok(request_error) = RequestError::decode(ffi_http_request_bytes.as_slice()) {
-                return map_request_error("request transformer", suite, scenario, request_error);
+            if let Ok(integration_error) =
+                IntegrationError::decode(ffi_http_request_bytes.as_slice())
+            {
+                return map_integration_error(
+                    "request transformer",
+                    suite,
+                    scenario,
+                    integration_error,
+                );
             }
 
             ScenarioError::SdkExecution {
@@ -218,8 +251,15 @@ where
     );
 
     let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|decode_error| {
-        if let Ok(response_error) = ResponseError::decode(proto_response_bytes.as_slice()) {
-            return map_response_error("response transformer", suite, scenario, response_error);
+        if let Ok(response_transformation_error) =
+            ConnectorResponseTransformationError::decode(proto_response_bytes.as_slice())
+        {
+            return map_response_transformation_error(
+                "response transformer",
+                suite,
+                scenario,
+                response_transformation_error,
+            );
         }
 
         ScenarioError::SdkExecution {
@@ -405,28 +445,21 @@ fn ffi_environment() -> Environment {
     }
 }
 
-fn map_request_error(
+fn map_integration_error(
     stage: &str,
     suite: &str,
     scenario: &str,
-    error: RequestError,
+    error: IntegrationError,
 ) -> ScenarioError {
     let mut details = Vec::new();
-    if let Some(message) = error.error_message.filter(|msg| !msg.is_empty()) {
-        details.push(message);
-    }
-    if let Some(code) = error.error_code.filter(|code| !code.is_empty()) {
-        details.push(format!("code={code}"));
-    }
-    if let Some(status_code) = error.status_code {
-        details.push(format!("status_code={status_code}"));
+    details.push(error.error_message);
+    details.push(format!("code={}", error.error_code));
+
+    if let Some(suggested_action) = error.suggested_action.filter(|msg| !msg.is_empty()) {
+        details.push(format!("suggested_action={}", suggested_action));
     }
 
-    let detail_text = if details.is_empty() {
-        "unknown ffi request error".to_string()
-    } else {
-        details.join(", ")
-    };
+    let detail_text = details.join(", ");
 
     ScenarioError::SdkExecution {
         message: format!(
@@ -436,28 +469,21 @@ fn map_request_error(
     }
 }
 
-fn map_response_error(
+fn map_response_transformation_error(
     stage: &str,
     suite: &str,
     scenario: &str,
-    error: ResponseError,
+    error: ConnectorResponseTransformationError,
 ) -> ScenarioError {
     let mut details = Vec::new();
-    if let Some(message) = error.error_message.filter(|msg| !msg.is_empty()) {
-        details.push(message);
-    }
-    if let Some(code) = error.error_code.filter(|code| !code.is_empty()) {
-        details.push(format!("code={code}"));
-    }
-    if let Some(status_code) = error.status_code {
-        details.push(format!("status_code={status_code}"));
+    details.push(error.error_message);
+    details.push(format!("code={}", error.error_code));
+
+    if let Some(http_status_code) = error.http_status_code {
+        details.push(format!("http_status_code={}", http_status_code));
     }
 
-    let detail_text = if details.is_empty() {
-        "unknown ffi response error".to_string()
-    } else {
-        details.join(", ")
-    };
+    let detail_text = details.join(", ");
 
     ScenarioError::SdkExecution {
         message: format!(
@@ -494,7 +520,7 @@ mod tests {
         assert!(!supports_sdk_connector("adyen"));
 
         assert!(supports_sdk_suite("authorize"));
-        assert!(supports_sdk_suite("create_access_token"));
+        assert!(supports_sdk_suite("server_authentication_token"));
         assert!(!supports_sdk_suite("refund_sync"));
     }
 
