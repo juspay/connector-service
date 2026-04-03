@@ -11,7 +11,6 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
-    errors,
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -26,6 +25,7 @@ use url::Url;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::Shift4RouterData;
+use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
 
 #[derive(Debug, Clone)]
 pub struct Shift4AuthType {
@@ -33,7 +33,7 @@ pub struct Shift4AuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for Shift4AuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -41,7 +41,9 @@ impl TryFrom<&ConnectorSpecificConfig> for Shift4AuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                IntegrationError::FailedToObtainAuthType {
+                    context: Default::default()
+                }
             )),
         }
     }
@@ -207,7 +209,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for Shift4BankRedirectMethod
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         router_data: &RouterDataV2<
@@ -222,19 +224,21 @@ impl<T: PaymentMethodDataTypes>
                 BankRedirectData::Ideal { .. } => "ideal",
                 BankRedirectData::Eps { .. } => "eps",
                 _ => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    return Err(error_stack::report!(IntegrationError::NotSupported {
                         message: format!(
                             "BankRedirect type {:?} is not supported by Shift4",
                             bank_redirect_data
                         ),
                         connector: "Shift4",
+                        context: Default::default()
                     }))
                 }
             },
             _ => {
-                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
                     message: "Non-bank redirect payment method".to_string(),
                     connector: "Shift4",
+                    context: Default::default()
                 }))
             }
         };
@@ -284,7 +288,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for Shift4PaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -294,10 +298,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let captured = item
-            .request
-            .is_auto_capture()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let captured = item.request.is_auto_capture();
 
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -314,8 +315,9 @@ impl<T: PaymentMethodDataTypes>
                             .map(|name| Secret::new(name.clone()))
                     })
                     .ok_or_else(|| {
-                        error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                            field_name: "billing_address.first_name"
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "billing_address.first_name",
+                            context: Default::default()
                         })
                     })?;
 
@@ -331,8 +333,9 @@ impl<T: PaymentMethodDataTypes>
             PaymentMethodData::BankRedirect(_bank_redirect_data) => {
                 let bank_redirect_method = Shift4BankRedirectMethod::try_from(item)?;
                 let return_url = item.request.get_router_return_url().change_context(
-                    errors::ConnectorError::MissingRequiredField {
+                    IntegrationError::MissingRequiredField {
                         field_name: "return_url",
+                        context: Default::default(),
                     },
                 )?;
 
@@ -342,9 +345,10 @@ impl<T: PaymentMethodDataTypes>
                 })
             }
             _ => {
-                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
                     message: "Payment method".to_string(),
                     connector: "Shift4",
+                    context: Default::default()
                 }))
             }
         };
@@ -403,7 +407,7 @@ pub enum Shift4PaymentStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -469,7 +473,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
 impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -523,7 +527,7 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -585,7 +589,7 @@ pub struct Shift4RefundRequest {
 impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for Shift4RefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -617,7 +621,7 @@ pub enum Shift4RefundStatus {
 impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response
@@ -643,7 +647,7 @@ impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
 impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response
@@ -687,7 +691,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4PSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: Shift4RouterData<
@@ -708,7 +712,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4RSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: Shift4RouterData<
@@ -734,7 +738,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4PaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: Shift4RouterData<
@@ -766,7 +770,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4CaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: Shift4RouterData<
@@ -784,7 +788,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Shift4RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for Shift4RefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: Shift4RouterData<
