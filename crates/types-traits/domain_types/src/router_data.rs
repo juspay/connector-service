@@ -1875,6 +1875,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 client_id: itaubank.client_id.ok_or_else(err)?,
                 base_url: itaubank.base_url,
             }),
+            AuthType::Ppro(ppro) => Ok(Self::Ppro {
+                api_key: ppro.api_key.ok_or_else(err)?,
+                merchant_id: ppro.merchant_id.ok_or_else(err)?,
+                base_url: ppro.base_url,
+            }),
         }
     }
 }
