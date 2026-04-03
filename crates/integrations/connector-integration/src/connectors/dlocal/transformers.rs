@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::ConnectorError,
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -95,7 +95,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DlocalPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: DlocalRouterData<
             RouterDataV2<
@@ -209,7 +209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
+                Err(IntegrationError::not_implemented(
                     crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
                 ))?
             }
@@ -238,7 +238,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DlocalPaymentsCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: DlocalRouterData<
             RouterDataV2<
@@ -262,7 +262,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(ConnectorError::MissingConnectorTransactionID)?,
+                    .change_context(IntegrationError::MissingConnectorTransactionID {
+                        context: Default::default(),
+                    })?,
             ),
             amount,
             currency: item.router_data.request.currency.to_string(),
@@ -282,7 +284,7 @@ pub struct DlocalAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for DlocalAuthType {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Dlocal {
             x_login,
@@ -297,7 +299,10 @@ impl TryFrom<&ConnectorSpecificConfig> for DlocalAuthType {
                 secret: secret.to_owned(),
             })
         } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+            Err(IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into())
         }
     }
 }
@@ -341,7 +346,7 @@ pub struct DlocalPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -384,7 +389,7 @@ pub struct DlocalPaymentsSyncResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -418,7 +423,7 @@ pub struct DlocalPaymentsCaptureResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -450,7 +455,7 @@ pub struct DlocalPaymentsCancelResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCancelResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsCancelResponse, Self>,
@@ -488,7 +493,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<DlocalRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for DlocalRefundRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: DlocalRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -540,7 +545,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = common_enums::RefundStatus::from(item.response.status);
         Ok(Self {
@@ -557,7 +562,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = common_enums::RefundStatus::from(item.response.status);
         Ok(Self {
@@ -592,7 +597,7 @@ pub struct DlocalErrorResponse {
 fn get_bank_debit_payment_method_id(
     bank_debit_data: &payment_method_data::BankDebitData,
     country: common_enums::CountryAlpha2,
-) -> Result<(PaymentMethodId, Option<String>), error_stack::Report<ConnectorError>> {
+) -> Result<(PaymentMethodId, Option<String>), error_stack::Report<IntegrationError>> {
     match bank_debit_data {
         payment_method_data::BankDebitData::SepaBankDebit { .. }
         | payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. }
@@ -602,7 +607,7 @@ fn get_bank_debit_payment_method_id(
         }
         payment_method_data::BankDebitData::BecsBankDebit { .. }
         | payment_method_data::BankDebitData::BacsBankDebit { .. } => {
-            Err(ConnectorError::NotImplemented(
+            Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
             ))?
         }
@@ -612,7 +617,7 @@ fn get_bank_debit_payment_method_id(
 /// Returns a well-known bank transfer payment_method_id for the given country.
 fn get_bank_transfer_method_id_for_country(
     country: common_enums::CountryAlpha2,
-) -> Result<String, error_stack::Report<ConnectorError>> {
+) -> Result<String, error_stack::Report<IntegrationError>> {
     match country {
         common_enums::CountryAlpha2::BR => Ok("IO".to_string()), // Bank Transfer
         common_enums::CountryAlpha2::AR => Ok("IO".to_string()), // Bank Transfer
@@ -620,9 +625,10 @@ fn get_bank_transfer_method_id_for_country(
         common_enums::CountryAlpha2::CL => Ok("WP".to_string()), // Webpay
         common_enums::CountryAlpha2::CO => Ok("PC".to_string()), // PSE
         common_enums::CountryAlpha2::PE => Ok("BC".to_string()), // BCP
-        _ => Err(ConnectorError::NotSupported {
+        _ => Err(IntegrationError::NotSupported {
             message: format!("Bank debit is not supported for country: {country}"),
             connector: "Dlocal",
+            context: Default::default(),
         }
         .into()),
     }
