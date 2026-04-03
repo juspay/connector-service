@@ -724,6 +724,153 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+// ===== REPEAT PAYMENT (MIT) STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4RepeatPaymentRequest {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+    pub captured: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+    pub card: Shift4StoredCard,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4StoredCard {
+    pub id: String,
+}
+
+fn extract_mandate_id(
+    mandate_reference: &domain_types::connector_types::MandateReferenceId,
+) -> Result<String, error_stack::Report<IntegrationError>> {
+    match mandate_reference {
+        domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
+            connector_mandate_ref,
+        ) => connector_mandate_ref
+            .get_connector_mandate_id()
+            .ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                    context: Default::default(),
+                })
+            }),
+        domain_types::connector_types::MandateReferenceId::NetworkMandateId(
+            network_transaction_id,
+        ) => Ok(network_transaction_id.clone()),
+        domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: "NetworkTokenWithNTI not supported for Shift4 repeat payments".to_string(),
+                connector: "shift4",
+                context: Default::default(),
+            }))
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        Shift4RouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for Shift4RepeatPaymentRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: Shift4RouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let captured = item.router_data.request.is_auto_capture();
+
+        // Extract card token from mandate_reference
+        let card_id = extract_mandate_id(&item.router_data.request.mandate_reference)?;
+
+        Ok(Self {
+            amount: item.router_data.request.minor_amount,
+            currency: item.router_data.request.currency,
+            captured,
+            description: item.router_data.request.merchant_order_id.clone(),
+            metadata: item.router_data.request.metadata.clone().expose_option(),
+            card: Shift4StoredCard { id: card_id },
+        })
+    }
+}
+
+// MIT uses the same response structure as regular payments
+pub type Shift4RepeatPaymentResponse = Shift4PaymentsResponse;
+
+// RepeatPayment response transformation
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4RepeatPaymentResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<Shift4RepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Match Hyperswitch status mapping logic exactly
+        let status = match item.response.status {
+            Shift4PaymentStatus::Successful => {
+                if item.response.captured {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Authorized
+                }
+            }
+            Shift4PaymentStatus::Failed => AttemptStatus::Failure,
+            Shift4PaymentStatus::Pending => {
+                match item
+                    .response
+                    .flow
+                    .as_ref()
+                    .and_then(|flow| flow.next_action.as_ref())
+                {
+                    Some(NextAction::Redirect) => AttemptStatus::AuthenticationPending,
+                    Some(NextAction::Wait) | Some(NextAction::None) | None => {
+                        AttemptStatus::Pending
+                    }
+                }
+            }
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // Authorize Request - delegates to existing implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
