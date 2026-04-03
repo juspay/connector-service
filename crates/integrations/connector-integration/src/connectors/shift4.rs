@@ -45,11 +45,13 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    Shift4AuthType, Shift4CaptureRequest, Shift4ErrorResponse, Shift4PSyncRequest,
-    Shift4PaymentsRequest, Shift4PaymentsResponse as Shift4AuthorizeResponse,
+    Shift4AuthType, Shift4CaptureRequest, Shift4CreateCustomerRequest,
+    Shift4CreateCustomerResponse, Shift4ErrorResponse, Shift4PSyncRequest, Shift4PaymentsRequest,
+    Shift4PaymentsResponse as Shift4AuthorizeResponse,
     Shift4PaymentsResponse as Shift4CaptureResponse, Shift4PaymentsResponse as Shift4PSyncResponse,
     Shift4RSyncRequest, Shift4RefundRequest, Shift4RefundResponse,
-    Shift4RefundResponse as Shift4RSyncResponse,
+    Shift4RefundResponse as Shift4RSyncResponse, Shift4RepeatPaymentRequest,
+    Shift4RepeatPaymentResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorResponseTransformationError;
@@ -231,6 +233,18 @@ macros::create_all_prerequisites!(
             request_body: Shift4RSyncRequest,
             response_body: Shift4RSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: Shift4RepeatPaymentRequest<T>,
+            response_body: Shift4RepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: Shift4CreateCustomerRequest,
+            response_body: Shift4CreateCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [],
@@ -429,6 +443,38 @@ macros::macro_connector_implementation!(
     }
 );
 
+// RepeatPayment Flow (MIT - Merchant Initiated Transaction)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Shift4,
+    curl_request: Json(Shift4RepeatPaymentRequest<T>),
+    curl_response: Shift4RepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let base_url = self.connector_base_url_payments(req);
+            // MIT/RepeatPayment uses the same /charges endpoint as Authorize
+            Ok(format!("{base_url}/charges"))
+        }
+    }
+);
+
 // ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
 
 // ===== TRAIT IMPLEMENTATIONS FOR SUPPORTED FLOWS =====
@@ -603,22 +649,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Repeat Payment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Shift4<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Shift4<T>
-{
-}
-
 // Accept Dispute
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
@@ -667,15 +697,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Create Connector Customer
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Shift4<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Shift4,
+    curl_request: Json(Shift4CreateCustomerRequest),
+    curl_response: Shift4CreateCustomerResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, IntegrationError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/customers"))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -694,6 +744,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     > for Shift4<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Shift4<T>
 {
 }
 
