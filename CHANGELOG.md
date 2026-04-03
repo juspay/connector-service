@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.03.0
+
+### Features
+
+- **connector:** Add config specific to Itaubank ([#864](https://github.com/juspay/connector-service/pull/864)) ([`7ccb6df`](https://github.com/juspay/connector-service/commit/7ccb6df05b27af25c200566454e55e8ea5f97f69))
+- Split connectorerror to connectorrequesterror and connectorresponseerror ([#765](https://github.com/juspay/connector-service/pull/765)) ([`d201c67`](https://github.com/juspay/connector-service/commit/d201c67049e7254d188cdc548474101fd6174543))
+
+### Refactors
+
+- **auth:** Rename authentication token abstractions + implement Stripe ClientAuthentication ([#855](https://github.com/juspay/connector-service/pull/855)) ([`c9e1025`](https://github.com/juspay/connector-service/commit/c9e1025e325e83362915cdbe2b65e6bbb5f2867d))
+
+**Full Changelog:** [`2026.04.02.0...2026.04.03.0`](https://github.com/juspay/connector-service/compare/2026.04.02.0...2026.04.03.0)
+
+- - -
+
 ## 2026.04.02.0
 
 ### Features
