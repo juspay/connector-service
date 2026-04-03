@@ -1468,7 +1468,7 @@ impl<
                 // ============================================================================
                 // INDONESIAN BANK TRANSFERS - Doku Integration
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Pix(pix_data) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::PixQr(pix_data) => {
                     // Parse expiry_date from ISO 8601 string if provided
                     let expiry_date = pix_data
                         .expiry_date
@@ -1482,7 +1482,7 @@ impl<
                         });
 
                     Ok(Self::BankTransfer(Box::new(
-                        payment_method_data::BankTransferData::Pix {
+                        payment_method_data::BankTransferData::PixQr {
                             pix_key: pix_data.pix_key,
                             cpf: pix_data.cpf,
                             cnpj: pix_data.cnpj,
@@ -2021,7 +2021,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 // INDONESIAN BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Pix(_) => Ok(Some(PaymentMethodType::Pix)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PixQr(_) => Ok(Some(PaymentMethodType::PixQr)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PermataBankTransfer(_) => Ok(Some(PaymentMethodType::PermataBankTransfer)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BcaBankTransfer(_) => Ok(Some(PaymentMethodType::BcaBankTransfer)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BniVaBankTransfer(_) => Ok(Some(PaymentMethodType::BniVa)),
@@ -4482,7 +4482,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Pix(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PixQr(_)),
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -8328,7 +8328,7 @@ pub enum PaymentMethodDataType {
     CimbVaBankTransfer,
     DanamonVaBankTransfer,
     MandiriVaBankTransfer,
-    Pix,
+    PixQr,
     Pse,
     Crypto,
     MandatePayment,
