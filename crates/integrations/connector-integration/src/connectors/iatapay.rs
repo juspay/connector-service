@@ -26,7 +26,6 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -48,6 +47,8 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
+use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -268,7 +269,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers_for_payments(
             &self,
             req: &RouterDataV2<impl Debug, PaymentFlowData, impl Debug, impl Debug>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -277,7 +278,7 @@ macros::create_all_prerequisites!(
             // Use access_token if available (for OAuth-enabled flows)
             let access_token = req.resource_common_data.access_token
                 .as_ref()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+                .ok_or(IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let auth_header = (
                 headers::AUTHORIZATION.to_string(),
@@ -290,7 +291,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers_for_refunds(
             &self,
             req: &RouterDataV2<impl Debug, RefundFlowData, impl Debug, impl Debug>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -307,7 +308,7 @@ macros::create_all_prerequisites!(
                         This connector requires OAuth tokens for both payments and refunds. \
                         UCS currently only auto-acquires tokens for payment flows."
                     );
-                    errors::ConnectorError::FailedToObtainAuthType
+                    IntegrationError::FailedToObtainAuthType { context: Default::default() }
                 })?;
 
             let auth_header = (
@@ -353,9 +354,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = transformers::IatapayAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+        let auth = transformers::IatapayAuthType::try_from(auth_type).change_context(
+            IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.client_id.into_masked(),
@@ -366,11 +370,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         let response: IatapayErrorResponse = res
             .response
             .parse_struct("IatapayErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(
+                crate::utils::response_deserialization_fail(
+                    res.status_code,
+                "iatapay: response body did not match the expected format; confirm API version and connector documentation."),
+            )?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response);
@@ -409,14 +417,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers_for_payments(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/payments/", self.connector_base_url_payments(req)))
         }
     }
@@ -440,16 +448,16 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers_for_payments(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             // Extract merchant_id from auth credentials
             let auth = transformers::IatapayAuthType::try_from(&req.connector_config)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                .change_context(IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
             let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
@@ -507,13 +515,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers_for_refunds(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
                 "{}/payments/{}/refund",
@@ -540,13 +548,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers_for_refunds(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             // Use connector_refund_id from RefundSyncData
             let refund_id = &req.request.connector_refund_id;
 
@@ -576,10 +584,10 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             // For OAuth, extract client_id and client_secret from IatapayAuthType
             let auth = transformers::IatapayAuthType::try_from(&req.connector_config)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                .change_context(IntegrationError::FailedToObtainAuthType { context: Default::default() })?;
 
             let client_id = auth.client_id.peek();
             let client_secret = auth.client_secret.peek();
@@ -607,7 +615,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             Ok(format!("{}/oauth/token", self.connector_base_url_payments(req)))
         }
     }

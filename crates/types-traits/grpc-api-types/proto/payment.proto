@@ -3857,6 +3857,12 @@ message PeachpaymentsConfig {
   optional SecretString merchant_payment_method_route_id = 52;
 }
 
+message PproConfig {
+  SecretString api_key = 1;
+  SecretString merchant_id = 2;
+  optional string base_url = 50;
+}
+
 message PaypalConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4110,6 +4116,9 @@ message ConnectorSpecificConfig {
 
     // ITAUBANKCONFIG = 115
     ItaubankConfig itaubank = 113;
+
+    // PPRO = 113
+    PproConfig ppro = 114;
   }
 }
 

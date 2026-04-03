@@ -2678,12 +2678,9 @@ impl<
         let amount = match value.amount {
             Some(amount) => amount,
             None => {
-                return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_AMOUNT".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Amount is required".to_owned(),
-                    error_object: None,
-                })));
+                return Err(report!(ApplicationErrorResponse::BadRequest(
+                    ApiError::missing_amount("Amount is required")
+                )));
             }
         };
         let email: Option<Email> = match value.customer.clone().and_then(|customer| customer.email)
@@ -4657,14 +4654,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         value: grpc_api_types::payments::PaymentServiceGetRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let capture_method = Some(CaptureMethod::foreign_try_from(value.capture_method())?);
-        let amount = value
-            .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required".to_owned(),
-                error_object: None,
-            }))?;
+        let amount = value.amount.ok_or(ApplicationErrorResponse::BadRequest(
+            ApiError::missing_amount("Amount is required"),
+        ))?;
         let currency = common_enums::Currency::foreign_try_from(amount.currency())?;
         // Create ResponseId from resource_id
         let connector_transaction_id =
@@ -5431,7 +5423,6 @@ impl
             .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             connector_request_reference_id: extract_connector_request_reference_id(
@@ -6297,14 +6288,9 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
                 error_object: None,
             }))?;
 
-        let amount = value
-            .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required".to_owned(),
-                error_object: None,
-            }))?;
+        let amount = value.amount.ok_or(ApplicationErrorResponse::BadRequest(
+            ApiError::missing_amount("Amount is required"),
+        ))?;
 
         Ok(Self {
             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -6496,12 +6482,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let refund_amount = value
             .refund_amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Refund amount is required".to_owned(),
-                error_object: None,
-            }))?;
+            .ok_or(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Refund amount is required"),
+            ))?;
 
         let minor_refund_amount = common_utils::types::MinorUnit::new(refund_amount.minor_amount);
 
@@ -6813,12 +6796,9 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for SDK session".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
 
         let payment_method_type =
@@ -6900,12 +6880,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
 
         Ok(Self {
@@ -7568,12 +7545,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
 
         let setup_future_usage = value.setup_future_usage();
@@ -8478,12 +8452,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
         let webhook_url = value.webhook_url.clone();
         let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
@@ -8848,18 +8819,15 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest>
     fn foreign_try_from(
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = match value.amount {
-            Some(amount) => Ok(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
-            }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
-        }?;
+        let amount = value.amount.ok_or_else(|| {
+            report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))
+        })?;
+        let amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+        };
         Ok(Self {
             amount: amount.amount,
             currency: amount.currency,
@@ -9008,12 +8976,9 @@ impl
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for connector session creation".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for connector session creation")
+            ))),
         }?;
 
         Ok(Self {
@@ -9159,12 +9124,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for payment method tokenization".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for payment method tokenization")
+            ))),
         }?;
         let currency = money.currency;
 
@@ -9214,7 +9176,6 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
         // For payment method token creation, address is optional
         let address = value
             .address
@@ -9590,12 +9551,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
 
         Ok(Self {
@@ -10510,12 +10468,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
         let return_url = value.return_url;
         let enrolled_for_3ds = value.enrolled_for_3ds;
@@ -10617,12 +10572,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
         let return_url = value.return_url;
 
@@ -10741,12 +10693,9 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(
+                ApiError::missing_amount("Amount is required for repeat payments")
+            ))),
         }?;
         let return_url = value.return_url;
 
