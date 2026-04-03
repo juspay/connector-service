@@ -6866,8 +6866,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577487,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -6888,13 +6888,13 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:46:52 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29634\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:46:52 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29634\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577488,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -6915,8 +6915,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:46:53 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29633\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:46:53 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29633\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577490,
@@ -6931,7 +6931,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_c55227206d8f42c4aa18747b6173f611",
@@ -7110,7 +7110,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_fd9ade7918c540a4a705b0c124b782c8",
@@ -7289,7 +7289,7 @@
       "response_status": null,
       "error": "assertion failed for field 'error': expected field to exist",
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_367d94564ab24dd093eefe1beea07c3b",
@@ -7468,7 +7468,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_6b7424609fd142d1aadbdccd83618710",
@@ -7647,7 +7647,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_7f71c843a4254cada5b9baf0d0e7ab31",
@@ -7815,8 +7815,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577495,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -7837,8 +7837,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:07 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29619\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:07 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29619\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577497,
@@ -7853,7 +7853,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_66d069ef2cb047f082b2579c842f5f67",
@@ -8032,7 +8032,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -8091,8 +8091,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577499,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -8113,8 +8113,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:13 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29613\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:13 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29613\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577500,
@@ -8129,7 +8129,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_49e95dadd214486583525f476a5f9935",
@@ -8308,7 +8308,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -8367,8 +8367,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577501,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -8389,8 +8389,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:19 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29607\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:19 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29607\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577508,
@@ -8405,7 +8405,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_463324bba2fb498fb2d3b5e08d40c495",
@@ -8584,7 +8584,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -8644,8 +8644,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577509,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -8666,8 +8666,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:24 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29602\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:24 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29602\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577511,
@@ -8682,7 +8682,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_89d4e663cf0b4d6baf15ac3339088e91",
@@ -8861,7 +8861,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -8913,8 +8913,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577511,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -8935,8 +8935,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:29 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29598\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:29 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29598\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577515,
@@ -8951,7 +8951,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_7327c733df5c4b28bca52e89fd0239cd",
@@ -9130,7 +9130,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -9187,8 +9187,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577515,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -9209,8 +9209,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:33 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29593\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:33 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29593\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577520,
@@ -9225,7 +9225,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_367fa2fdbf7b42129ab88a17b34554cc",
@@ -9404,7 +9404,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_manual_capture_credit_card)"
       ],
       "req_body": {
@@ -9455,8 +9455,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577520,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -9477,8 +9477,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:38 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29588\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:38 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29588\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577522,
@@ -9493,7 +9493,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_6139bd4531ac4220a3ed148f9c86ba05",
@@ -9672,7 +9672,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -9727,8 +9727,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577523,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -9749,8 +9749,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:44 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29582\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:44 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29582\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577524,
@@ -9765,7 +9765,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_f5722a99117a4799b923743f1d998fea",
@@ -9944,7 +9944,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -9999,8 +9999,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577525,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -10021,8 +10021,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:50 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29576\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:50 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29576\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577531,
@@ -10037,7 +10037,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_13b5161d14e043c9bf73b9173184929d",
@@ -10216,7 +10216,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -10272,8 +10272,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577533,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -10294,8 +10294,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:56 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29570\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:47:56 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29570\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577536,
@@ -10310,7 +10310,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_41aa51bf9a5b4ad8a0bb1c211c2ed260",
@@ -10489,7 +10489,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -10545,8 +10545,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577537,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -10567,8 +10567,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:00 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29566\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:00 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29566\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577538,
@@ -10583,7 +10583,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_fb3da7c00cc148e4b3741e678a817568",
@@ -10762,7 +10762,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -10818,8 +10818,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577538,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -10840,8 +10840,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:05 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29562\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:05 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29562\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577543,
@@ -10856,7 +10856,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_b678a826e026410f99d1c46685128499",
@@ -11035,7 +11035,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -11101,7 +11101,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)",
         "refund(refund_full_amount)"
       ],
@@ -11153,8 +11153,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577545,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -11175,8 +11175,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:11 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29555\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:11 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29555\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577550,
@@ -11191,7 +11191,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_transaction_id": "mti_8a7aed3efe0a4660968fef77ec0ef040",
@@ -11370,7 +11370,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)"
       ],
       "req_body": {
@@ -11436,7 +11436,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "authorize(no3ds_auto_capture_credit_card)",
         "refund(refund_full_amount)"
       ],
@@ -11489,8 +11489,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577551,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -11511,8 +11511,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:17 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29549\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:17 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29549\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577552,
@@ -11527,7 +11527,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_recurring_payment_id": "mrpi_ae4ef17307ba43f39f0fe8183cee59ec",
@@ -11660,7 +11660,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_recurring_payment_id": "mrpi_404f6c63dd8542689e786e934b7bb5a4",
@@ -11799,7 +11799,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_recurring_payment_id": "mrpi_be1b9375b4d74fe2981911fcf8b3ac04",
@@ -11923,8 +11923,8 @@
     },
     {
       "run_at_epoch_ms": 1773384577554,
-      "suite": "create_access_token",
-      "scenario": "create_access_token",
+      "suite": "server_authentication_token",
+      "scenario": "server_authentication_token",
       "connector": "paypal",
       "pm": null,
       "pmt": null,
@@ -11945,8 +11945,8 @@
         "status": "OPERATION_STATUS_SUCCESS",
         "statusCode": 200
       },
-      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: create_access_token_create_access_token_req\" \\\n  -H \"x-connector-request-reference-id: create_access_token_create_access_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
-      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: create_access_token_create_access_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: create_access_token_create_access_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:21 GMT\nx-request-id: create_access_token_create_access_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29545\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
+      "grpc_request": "grpcurl -plaintext \\\n  -H \"x-connector: paypal\" \\\n  -H \"x-merchant-id: test_merchant\" \\\n  -H \"x-tenant-id: default\" \\\n  -H \"x-request-id: server_authentication_token_server_authentication_token_req\" \\\n  -H \"x-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\" \\\n  -H \"x-auth: ***MASKED***\" \\\n  -H \"x-api-key: ***MASKED***\" \\\n  -H \"x-key1: ***MASKED***\" \\\n  -d @ localhost:8000 types.MerchantAuthenticationService/CreateServerAuthenticationToken <<'JSON'\n{\n  \"merchant_access_token_id\": ***MASKED***\"\n  \"connector\": \"STRIPE\",\n  \"test_mode\": true\n}\nJSON",
+      "grpc_response": "Resolved method descriptor:\n// Generate short-lived connector authentication token. Provides secure\n// credentials for connector API access without storing secrets client-side.\nrpc CreateServerAuthenticationToken ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse );\n\nRequest metadata to send:\nx-api-key: ***MASKED***\nx-auth: ***MASKED***\nx-connector: paypal\nx-connector-request-reference-id: server_authentication_token_server_authentication_token_ref\nx-key1: ***MASKED***\nx-merchant-id: test_merchant\nx-request-id: server_authentication_token_server_authentication_token_req\nx-tenant-id: default\n\nResponse headers received:\ncontent-type: application/grpc\ndate: Fri, 13 Mar 2026 06:48:21 GMT\nx-request-id: server_authentication_token_server_authentication_token_req\n\nResponse contents:\n{\n  \"accessToken\": ***MASKED***\n    \"value\": \"A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ\"\n  },\n  \"expiresInSeconds\": \"29545\",\n  \"status\": \"OPERATION_STATUS_SUCCESS\",\n  \"statusCode\": 200\n}\n\nResponse trailers received:\n(empty)\nSent 1 request and received 1 response"
     },
     {
       "run_at_epoch_ms": 1773384577555,
@@ -11961,7 +11961,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)"
+        "server_authentication_token(server_authentication_token)"
       ],
       "req_body": {
         "merchant_recurring_payment_id": "mrpi_06a8066828784d73a5fb404b730efc7e",
@@ -12094,7 +12094,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "setup_recurring(setup_recurring)"
       ],
       "req_body": {
@@ -12172,7 +12172,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "setup_recurring(setup_recurring)"
       ],
       "req_body": {
@@ -12250,7 +12250,7 @@
       "response_status": null,
       "error": null,
       "dependency": [
-        "create_access_token(create_access_token)",
+        "server_authentication_token(server_authentication_token)",
         "setup_recurring(setup_recurring)"
       ],
       "req_body": {
