@@ -438,9 +438,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }))
                 }
                 BankDebitData::SepaBankDebit { iban, .. } => {
-                    let first_name = router_data
-                        .resource_common_data
-                        .get_billing_first_name()?;
+                    let first_name = router_data.resource_common_data.get_billing_first_name()?;
 
                     let last_name = router_data
                         .resource_common_data
