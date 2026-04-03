@@ -30,6 +30,7 @@ pub use requests::{
     BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,
     BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,
     BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,
+    BluesnapSepaAuthorizeRequest, BluesnapSepaDirectDebitTransaction, BluesnapSepaPayerInfo,
     BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,
     RequestMetadata, TransactionFraudInfo,
 };
@@ -97,10 +98,10 @@ fn map_ecp_account_type(
 ) -> String {
     match (bank_holder_type, bank_type) {
         (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Checking)) => {
-            "BUSINESS_CHECKING"
+            "CORPORATE_CHECKING"
         }
         (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Savings)) => {
-            "BUSINESS_SAVINGS"
+            "CORPORATE_SAVINGS"
         }
         (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Savings))
         | (None, Some(common_enums::BankType::Savings)) => "CONSUMER_SAVINGS",
@@ -436,8 +437,55 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         transaction_fraud_info,
                     }))
                 }
+                BankDebitData::SepaBankDebit { iban, .. } => {
+                    let first_name = router_data.resource_common_data.get_billing_first_name()?;
+
+                    let last_name = router_data
+                        .resource_common_data
+                        .get_billing_last_name()
+                        .unwrap_or_else(|_| first_name.clone());
+
+                    // Extract country from billing address
+                    let country = billing_address
+                        .and_then(|addr| addr.address.as_ref())
+                        .and_then(|details| details.country.as_ref())
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "de".to_string()); // Default to DE for SEPA
+
+                    let amount = super::BluesnapAmountConvertor::convert(
+                        router_data.request.minor_amount,
+                        router_data.request.currency,
+                    )?;
+
+                    let transaction_fraud_info = Some(TransactionFraudInfo {
+                        fraud_session_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    });
+
+                    Ok(Self::Sepa(BluesnapSepaAuthorizeRequest {
+                        amount,
+                        currency: router_data.request.currency.to_string(),
+                        authorized_by_shopper: true,
+                        payer_info: BluesnapSepaPayerInfo {
+                            first_name,
+                            last_name,
+                            country: country.to_lowercase(),
+                        },
+                        sepa_direct_debit_transaction: BluesnapSepaDirectDebitTransaction {
+                            iban: iban.clone(),
+                        },
+                        merchant_transaction_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        soft_descriptor: None,
+                        transaction_fraud_info,
+                    }))
+                }
                 _ => Err(IntegrationError::not_implemented(
-                    "Only ACH Bank Debit is supported".to_string(),
+                    "Only ACH and SEPA Bank Debit are supported".to_string(),
                 ))?,
             },
             _ => Err(IntegrationError::not_implemented(
@@ -568,6 +616,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
             item.response.processing_info.processing_status.clone(),
         );
 
+        // When card_transaction_type is absent, it's a bank debit (ACH/SEPA) response.
+        // Store this hint so PSync can route to the alt-transactions endpoint.
+        let connector_metadata = if item.response.card_transaction_type.is_none() {
+            Some(serde_json::json!({"is_alt_transaction": true}))
+        } else {
+            None
+        };
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
@@ -575,7 +631,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
                 ),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
