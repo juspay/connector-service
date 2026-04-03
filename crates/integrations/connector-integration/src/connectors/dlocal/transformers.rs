@@ -306,7 +306,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DlocalRepeatPaymentRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: DlocalRouterData<
             RouterDataV2<
@@ -324,15 +324,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_id = match &router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
                 .get_connector_mandate_id()
-                .ok_or(ConnectorError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id",
+                    context: Default::default(),
                 })?,
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(ConnectorError::NotImplemented(
+                Err(IntegrationError::not_implemented(
                     "Network mandate ID not supported for repeat payments in dlocal".to_string(),
-                )
-                .into());
+                ))?
             }
         };
 
