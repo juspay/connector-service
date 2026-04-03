@@ -89,7 +89,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4CreateCustomerRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: Shift4RouterData<
@@ -112,7 +112,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F, T> TryFrom<ResponseRouterData<Shift4CreateCustomerResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, ConnectorCustomerResponse>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4CreateCustomerResponse, Self>,
@@ -852,7 +852,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
     > for Shift4RepeatPaymentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -887,24 +887,23 @@ impl<T: PaymentMethodDataTypes>
                         connector_mandate_ref
                             .get_connector_mandate_id()
                             .ok_or_else(|| {
-                                error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                                error_stack::report!(IntegrationError::MissingRequiredField {
                                     field_name: "connector_mandate_id (card token)",
+                                    context: Default::default(),
                                 })
                             })?
                     }
                     MandateReferenceId::NetworkMandateId(_) => {
-                        return Err(error_stack::report!(
-                            errors::ConnectorError::NotImplemented(
-                                "NetworkMandateId is not supported for Shift4 MIT".to_string()
-                            )
-                        ));
+                        return Err(error_stack::report!(IntegrationError::NotImplemented(
+                            "NetworkMandateId is not supported for Shift4 MIT".to_string(),
+                            Default::default(),
+                        )));
                     }
                     MandateReferenceId::NetworkTokenWithNTI(_) => {
-                        return Err(error_stack::report!(
-                            errors::ConnectorError::NotImplemented(
-                                "NetworkTokenWithNTI is not supported for Shift4 MIT".to_string()
-                            )
-                        ));
+                        return Err(error_stack::report!(IntegrationError::NotImplemented(
+                            "NetworkTokenWithNTI is not supported for Shift4 MIT".to_string(),
+                            Default::default(),
+                        )));
                     }
                 };
                 (
@@ -921,10 +920,7 @@ impl<T: PaymentMethodDataTypes>
             _ => Shift4TransactionType::MerchantInitiated,
         };
 
-        let captured = item
-            .request
-            .is_auto_capture()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let captured = item.request.is_auto_capture();
 
         Ok(Self {
             amount: item.request.minor_amount,
@@ -953,7 +949,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for Shift4RepeatPaymentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: Shift4RouterData<
@@ -975,7 +971,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4RepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4RepeatPaymentResponse, Self>,
