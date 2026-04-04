@@ -702,6 +702,7 @@ pub enum PaymentSourceItem<
 > {
     Card(CardRequest<T>),
     Paypal(PaypalRedirectionRequest),
+    #[serde(rename = "google_pay")]
     GooglePay(GooglePayRequest),
     IDeal(RedirectRequest),
     Eps(RedirectRequest),
@@ -1155,15 +1156,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ),
                             number: gpay_token.payment_method_details.pan.clone(),
                             expiry: Secret::new(format!(
-                                "{:02}/{}",
+                                "{}-{:02}",
                                 gpay_token
                                     .payment_method_details
-                                    .card_exp_month
+                                    .card_exp_year
                                     .parse::<i32>()
                                     .unwrap_or_default(),
                                 gpay_token
                                     .payment_method_details
-                                    .card_exp_year
+                                    .card_exp_month
                                     .parse::<i32>()
                                     .unwrap_or_default()
                             )),
