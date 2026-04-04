@@ -15,7 +15,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -272,9 +273,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method_id = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(_)
             | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::Wallet(
-                domain_types::payment_method_data::WalletData::GooglePay(_),
-            ) => {
+            | PaymentMethodData::Wallet(WalletData::GooglePay(_)) => {
                 if let Ok(pm_token) = item
                     .router_data
                     .resource_common_data
@@ -875,7 +874,8 @@ pub struct StaxCardTokenizeData<T: PaymentMethodDataTypes> {
     pub person_name: Secret<String>,
     pub card_number: RawCardNumber<T>, // Generic card number type (auto-masked)
     pub card_exp: Secret<String>,      // MMYY format (e.g., "1225")
-    pub card_cvv: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_cvv: Option<Secret<String>>,
     pub customer_id: Secret<String>, // From CreateConnectorCustomer
 }
 
@@ -996,7 +996,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     person_name,
                     card_number: card_data.card_number.clone(),
                     card_exp,
-                    card_cvv: card_data.card_cvc.clone(),
+                    card_cvv: Some(card_data.card_cvc.clone()),
                     customer_id: Secret::new(customer_id),
                 }))
             }
@@ -1048,6 +1048,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     customer_id: Secret::new(customer_id),
                 }))
             }
+            PaymentMethodData::Wallet(WalletData::GooglePay(gpay_data)) => {
+                // GooglePay decrypted data contains card PAN + expiry, tokenize as card
+                match &gpay_data.tokenization_data {
+                    GpayTokenizationData::Decrypted(decrypt_data) => {
+                        let card_exp = decrypt_data.get_expiry_date_as_mmyy()
+                            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+                        // Build RawCardNumber from the GooglePay PAN via serde round-trip
+                        let pan_json = serde_json::to_value(
+                            &decrypt_data.application_primary_account_number,
+                        )
+                        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                        let card_number: RawCardNumber<T> = serde_json::from_value(pan_json)
+                            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+                        // GooglePay does not have a traditional CVV; omit it from the tokenization request
+                        let card_cvv = None;
+
+                        // Get person name from billing address
+                        let person_name = item
+                            .router_data
+                            .resource_common_data
+                            .address
+                            .get_payment_method_billing()
+                            .and_then(|billing| {
+                                let first = billing.get_optional_first_name()?;
+                                let last = billing.get_optional_last_name();
+                                match last {
+                                    Some(last) => Some(Secret::new(format!(
+                                        "{} {}",
+                                        first.peek(),
+                                        last.peek()
+                                    ))),
+                                    None => Some(first),
+                                }
+                            })
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "billing.first_name (required by Stax for GooglePay payment method tokenization)",
+                            })?;
+
+                        Ok(Self::Card(StaxCardTokenizeData {
+                            person_name,
+                            card_number,
+                            card_exp,
+                            card_cvv,
+                            customer_id: Secret::new(customer_id),
+                        }))
+                    }
+                    GpayTokenizationData::Encrypted(_) => {
+                        Err(errors::ConnectorError::NotImplemented(
+                            "Encrypted GooglePay tokenization is not supported for Stax; decrypted card data is required".to_string(),
+                        ))?
+                    }
+                }
+            }
             PaymentMethodData::BankDebit(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
@@ -1067,7 +1122,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(errors::ConnectorError::NotImplemented(
-                    "Only card and ACH bank debit tokenization are supported for Stax".to_string(),
+                    "Only card, ACH bank debit, and GooglePay wallet tokenization are supported for Stax".to_string(),
                 ))?
             }
         }
