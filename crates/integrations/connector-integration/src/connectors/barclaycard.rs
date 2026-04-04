@@ -9,13 +9,14 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, Method};
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, RepeatPayment, Void,
+        Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId,
+        ResponseId, SetupMandateRequestData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -36,12 +37,12 @@ use transformers::{self as barclaycard};
 
 use requests::{
     BarclaycardCaptureRequest, BarclaycardPaymentsRequest, BarclaycardRefundRequest,
-    BarclaycardRepeatPaymentRequest, BarclaycardVoidRequest,
+    BarclaycardRepeatPaymentRequest, BarclaycardSetupMandateRequest, BarclaycardVoidRequest,
 };
 use responses::{
     BarclaycardAuthorizeResponse, BarclaycardCaptureResponse, BarclaycardRefundResponse,
-    BarclaycardRepeatPaymentResponse, BarclaycardRsyncResponse, BarclaycardTransactionResponse,
-    BarclaycardVoidResponse,
+    BarclaycardRepeatPaymentResponse, BarclaycardRsyncResponse, BarclaycardSetupMandateResponse,
+    BarclaycardTransactionResponse, BarclaycardVoidResponse,
 };
 
 use super::macros;
@@ -280,15 +281,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::SetupMandate,
-        PaymentFlowData,
-        domain_types::connector_types::SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Barclaycard<T>
-{
-}
+// SetupMandate implementation is below using macro_connector_implementation!
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -413,6 +406,12 @@ macros::create_all_prerequisites!(
             request_body: BarclaycardRepeatPaymentRequest,
             response_body: BarclaycardRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: BarclaycardSetupMandateRequest<T>,
+            response_body: BarclaycardSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -768,6 +767,35 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/pts/v2/payments/", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Barclaycard,
+    curl_request: Json(BarclaycardSetupMandateRequest<T>),
+    curl_response: BarclaycardSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/pts/v2/payments/", self.connector_base_url_payments(req)))
         }
