@@ -166,10 +166,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     fn should_do_payment_method_token(
         &self,
-        _payment_method: PaymentMethod,
+        payment_method: PaymentMethod,
         _payment_method_type: Option<PaymentMethodType>,
     ) -> bool {
-        true
+        // Only tokenize card payments - BankDebit (SEPA SDD) sends IBAN directly
+        matches!(payment_method, PaymentMethod::Card)
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

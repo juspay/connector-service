@@ -389,21 +389,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | payment_method_data::BankDebitData::BecsBankDebit { .. }
                     | payment_method_data::BankDebitData::BacsBankDebit { .. }
                     | payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
-                        return Err(errors::ConnectorError::NotImplemented(
-                            "BankDebit variant not supported by HiPay".to_string(),
+                        return Err(error_stack::report!(
+                            errors::ConnectorError::NotImplemented(
+                                "Only SEPA Direct Debit is supported for BankDebit on HiPay"
+                                    .to_string(),
+                            )
                         ))
-                        .change_context(
-                            errors::ConnectorError::NotImplemented("Payment method".to_string()),
-                        )
                     }
                 }
             }
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string(),
-                ))
-                .change_context(errors::ConnectorError::NotImplemented(
-                    "Payment method".to_string(),
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented(
+                        "Payment method not supported by HiPay".to_string(),
+                    )
                 ))
             }
         };
