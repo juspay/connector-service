@@ -631,7 +631,7 @@ pub enum UsageType {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(untagged)]
+#[serde(rename_all = "lowercase")]
 pub enum PaymentSourceItem<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
@@ -641,6 +641,7 @@ pub enum PaymentSourceItem<
     Eps(RedirectRequest),
     Giropay(RedirectRequest),
     Sofort(RedirectRequest),
+    #[serde(rename = "google_pay")]
     GooglePay(GooglePayRequest),
 }
 
@@ -666,9 +667,10 @@ pub enum GooglePayPaymentMethod {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
 pub enum GooglePayAuthMethod {
+    #[serde(rename = "PAN_ONLY")]
     PanOnly,
+    #[serde(rename = "CRYPTOGRAM_3DS")]
     Cryptogram3ds,
 }
 
@@ -1731,9 +1733,12 @@ pub enum AuthenticationStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaypalOrdersResponse {
     id: String,
-    intent: PaypalPaymentIntent,
+    #[serde(default)]
+    intent: Option<PaypalPaymentIntent>,
     status: PaypalOrderStatus,
+    #[serde(default)]
     purchase_units: Vec<PurchaseUnitItem>,
+    #[serde(default)]
     payment_source: Option<PaymentSourceItemResponse>,
 }
 
@@ -1868,20 +1873,62 @@ where
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<PaypalOrdersResponse, Self>) -> Result<Self, Self::Error> {
+        // Handle Google Pay direct completion: PayPal may return a minimal response
+        // with only id, status, and links (no intent or purchase_units) when the
+        // order is completed immediately via Google Pay decrypted token.
+        let intent = match &item.response.intent {
+            Some(intent) => intent.clone(),
+            None => {
+                // No intent means direct completion (e.g., Google Pay).
+                // Treat as a capture flow and use the order ID as the transaction ID.
+                let status = get_order_status(
+                    item.response.status.clone(),
+                    PaypalPaymentIntent::Capture,
+                );
+                let connector_meta = serde_json::json!(PaypalMeta {
+                    authorize_id: None,
+                    capture_id: None,
+                    incremental_authorization_id: None,
+                    psync_flow: PaypalPaymentIntent::Capture,
+                    next_action: None,
+                    order_id: Some(item.response.id.clone()),
+                });
+                return Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            item.response.id.clone(),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: Some(connector_meta),
+                        network_txn_id: None,
+                        connector_response_reference_id: Some(item.response.id.clone()),
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                });
+            }
+        };
+
         let purchase_units = item
             .response
             .purchase_units
             .first()
             .ok_or(ConnectorError::MissingConnectorTransactionID)?;
 
-        let id = get_id_based_on_intent(&item.response.intent, purchase_units)?;
-        let (connector_meta, order_id) = match item.response.intent.clone() {
+        let id = get_id_based_on_intent(&intent, purchase_units)?;
+        let (connector_meta, order_id) = match intent.clone() {
             PaypalPaymentIntent::Capture => (
                 serde_json::json!(PaypalMeta {
                     authorize_id: None,
                     capture_id: Some(id),
                     incremental_authorization_id: None,
-                    psync_flow: item.response.intent.clone(),
+                    psync_flow: intent.clone(),
                     next_action: None,
                     order_id: None,
                 }),
@@ -1895,7 +1942,7 @@ where
                     incremental_authorization_id: extract_incremental_authorization_id(
                         &item.response
                     ),
-                    psync_flow: item.response.intent.clone(),
+                    psync_flow: intent.clone(),
                     next_action: None,
                     order_id: None,
                 }),
@@ -2172,6 +2219,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<PaypalThreeDsResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        // Handle direct completion (e.g., Google Pay) where status is COMPLETED
+        // and there is no payer-action redirect URL.
+        if item.response.status == PaypalOrderStatus::Completed {
+            let status = get_order_status(
+                item.response.status.clone(),
+                PaypalPaymentIntent::Capture,
+            );
+            let connector_meta = serde_json::json!(PaypalMeta {
+                authorize_id: None,
+                capture_id: None,
+                incremental_authorization_id: None,
+                psync_flow: PaypalPaymentIntent::Capture,
+                next_action: None,
+                order_id: Some(item.response.id.clone()),
+            });
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data
+                },
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        item.response.id.clone(),
+                    ),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: Some(connector_meta),
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(item.response.id.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                ..item.router_data
+            });
+        }
+
         let connector_meta = serde_json::json!(PaypalMeta {
             authorize_id: None,
             capture_id: None,
