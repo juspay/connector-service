@@ -607,9 +607,8 @@ impl From<Option<common_enums::MitCategory>> for RapydInitiationType {
         match mit_category {
             Some(common_enums::MitCategory::Recurring) => Self::Recurring,
             Some(common_enums::MitCategory::Installment) => Self::Installment,
-            Some(common_enums::MitCategory::Unscheduled) | Some(common_enums::MitCategory::Resubmission) => {
-                Self::Unscheduled
-            }
+            Some(common_enums::MitCategory::Unscheduled)
+            | Some(common_enums::MitCategory::Resubmission) => Self::Unscheduled,
             // Default to recurring for MIT when no category specified
             None => Self::Recurring,
         }
@@ -652,7 +651,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 context: Default::default(),
             })?;
 
-        let initiation_type = RapydInitiationType::from(item.router_data.request.mit_category.clone());
+        let initiation_type =
+            RapydInitiationType::from(item.router_data.request.mit_category.clone());
 
         let capture = Some(item.router_data.request.is_auto_capture());
 

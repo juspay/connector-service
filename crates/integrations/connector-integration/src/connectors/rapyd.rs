@@ -41,13 +41,12 @@ use ring::hmac;
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    CaptureRequest, RapydAuthType, RapydPaymentsRequest, RapydRepeatPaymentRequest,
+    CaptureRequest, RapydAuthType, RapydPaymentsRequest,
     RapydPaymentsResponse as RapydCaptureResponse, RapydPaymentsResponse as RapydPSyncResponse,
     RapydPaymentsResponse, RapydPaymentsResponse as RapydVoidResponse,
     RapydPaymentsResponse as RapydAuthorizeResponse,
-    RapydPaymentsResponse as RapydRepeatPaymentResponse,
-    RapydRefundRequest, RefundResponse,
-    RefundResponse as RapydRSyncResponse,
+    RapydPaymentsResponse as RapydRepeatPaymentResponse, RapydRefundRequest,
+    RapydRepeatPaymentRequest, RefundResponse, RefundResponse as RapydRSyncResponse,
 };
 
 use super::macros;
