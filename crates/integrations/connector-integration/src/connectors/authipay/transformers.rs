@@ -9,11 +9,12 @@ use common_utils::{
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -1059,6 +1060,349 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
     }
 }
 
+// ===== STORED CREDENTIALS STRUCTURES (MIT) =====
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StoredCredentialSequence {
+    First,
+    Subsequent,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StoredCredentialInitiator {
+    Cardholder,
+    Merchant,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredCredentials {
+    pub sequence: StoredCredentialSequence,
+    pub scheduled: bool,
+    pub initiator: StoredCredentialInitiator,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referenced_scheme_transaction_id: Option<String>,
+}
+
+// ===== SETUP MANDATE REQUEST (CIT - First Transaction) =====
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipaySetupMandateRequest<T: PaymentMethodDataTypes> {
+    pub request_type: AuthipayRequestType,
+    pub transaction_amount: TransactionAmount,
+    pub payment_method: PaymentMethod<T>,
+    pub stored_credentials: StoredCredentials,
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    > for AuthipaySetupMandateRequest<T>
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // SetupMandate uses zero amount for verification
+        let converter = FloatMajorUnitForConnector;
+        let zero_amount = common_utils::types::MinorUnit::new(0);
+        let amount_major = converter
+            .convert(zero_amount, item.request.currency)
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
+        let transaction_amount = TransactionAmount {
+            total: amount_major,
+            currency: item.request.currency,
+        };
+
+        // Extract card payment method data
+        let payment_method = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let year_yy = card_data.get_card_expiry_year_2_digit()?;
+                let payment_card = PaymentCard {
+                    number: card_data.card_number.clone(),
+                    expiry_date: ExpiryDate {
+                        month: Secret::new(card_data.card_exp_month.peek().clone()),
+                        year: year_yy,
+                    },
+                    security_code: Some(card_data.card_cvc.clone()),
+                    holder: item.request.customer_name.clone().map(Secret::new),
+                };
+                PaymentMethod { payment_card }
+            }
+            _ => {
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Only card payments are supported for SetupMandate".to_string()
+                )))
+            }
+        };
+
+        // CIT: First transaction, cardholder-initiated
+        let stored_credentials = StoredCredentials {
+            sequence: StoredCredentialSequence::First,
+            scheduled: false,
+            initiator: StoredCredentialInitiator::Cardholder,
+            referenced_scheme_transaction_id: None,
+        };
+
+        Ok(Self {
+            request_type: AuthipayRequestType::PaymentCardPreAuthTransaction,
+            transaction_amount,
+            payment_method,
+            stored_credentials,
+        })
+    }
+}
+
+// ===== SETUP MANDATE RESPONSE TRANSFORMATION =====
+
+pub type AuthipaySetupMandateResponse = AuthipayPaymentsResponse;
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_state.clone(),
+            item.response.transaction_type.clone(),
+        );
+
+        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
+        let (network_txn_id, _network_decline_code, _network_error_message) =
+            extract_network_fields(item.response.processor.as_ref());
+
+        // Extract schemeTransactionId as the mandate reference for future MIT transactions
+        // The schemeTransactionId is the network transaction ID needed for subsequent merchant-initiated transactions
+        let mandate_reference =
+            item.response
+                .scheme_transaction_id
+                .as_ref()
+                .map(|scheme_txn_id| {
+                    Box::new(MandateReference {
+                        connector_mandate_id: Some(scheme_txn_id.clone()),
+                        payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
+                    })
+                });
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference,
+                connector_metadata,
+                network_txn_id: network_txn_id
+                    .or(item.response.scheme_transaction_id.clone())
+                    .or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: item.response.client_request_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== REPEAT PAYMENT REQUEST (MIT - Subsequent Transaction) =====
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayRepeatPaymentRequest<T: PaymentMethodDataTypes> {
+    pub request_type: AuthipayRequestType,
+    pub transaction_amount: TransactionAmount,
+    pub payment_method: PaymentMethod<T>,
+    pub stored_credentials: StoredCredentials,
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+    > for AuthipayRepeatPaymentRequest<T>
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let converter = FloatMajorUnitForConnector;
+        let amount_major = converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
+        let transaction_amount = TransactionAmount {
+            total: amount_major,
+            currency: item.request.currency,
+        };
+
+        // Extract card data from payment_method_data for repeat payment
+        let payment_method = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let year_yy = card_data.get_card_expiry_year_2_digit()?;
+                let payment_card = PaymentCard {
+                    number: card_data.card_number.clone(),
+                    expiry_date: ExpiryDate {
+                        month: Secret::new(card_data.card_exp_month.peek().clone()),
+                        year: year_yy,
+                    },
+                    // Security code may not be available for MIT
+                    security_code: Some(card_data.card_cvc.clone()),
+                    holder: None,
+                };
+                PaymentMethod { payment_card }
+            }
+            _ => {
+                return Err(error_stack::report!(IntegrationError::not_implemented(
+                    "Only card payments are supported for RepeatPayment".to_string()
+                )))
+            }
+        };
+
+        // Extract the referenced scheme transaction ID from mandate reference
+        let referenced_scheme_transaction_id = match &item.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
+                connector_mandate_ref.get_connector_mandate_id().ok_or_else(|| {
+                    error_stack::report!(IntegrationError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                        context: Default::default(),
+                    })
+                })?
+            }
+            MandateReferenceId::NetworkMandateId(network_txn_id) => network_txn_id.clone(),
+            MandateReferenceId::NetworkTokenWithNTI(nti_ref) => {
+                nti_ref.network_transaction_id.clone()
+            }
+        };
+
+        // Determine capture method
+        let is_manual_capture = item
+            .request
+            .capture_method
+            .map(|cm| matches!(cm, common_enums::CaptureMethod::Manual))
+            .unwrap_or(false);
+
+        // MIT: Subsequent transaction, merchant-initiated
+        let stored_credentials = StoredCredentials {
+            sequence: StoredCredentialSequence::Subsequent,
+            scheduled: false,
+            initiator: StoredCredentialInitiator::Merchant,
+            referenced_scheme_transaction_id: Some(referenced_scheme_transaction_id),
+        };
+
+        let request_type = if is_manual_capture {
+            AuthipayRequestType::PaymentCardPreAuthTransaction
+        } else {
+            AuthipayRequestType::PaymentCardSaleTransaction
+        };
+
+        Ok(Self {
+            request_type,
+            transaction_amount,
+            payment_method,
+            stored_credentials,
+        })
+    }
+}
+
+// ===== REPEAT PAYMENT RESPONSE TRANSFORMATION =====
+
+pub type AuthipayRepeatPaymentResponse = AuthipayPaymentsResponse;
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_state.clone(),
+            item.response.transaction_type.clone(),
+        );
+
+        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
+        let (network_txn_id, _network_decline_code, _network_error_message) =
+            extract_network_fields(item.response.processor.as_ref());
+
+        // Extract schemeTransactionId as mandate reference for potential future MIT
+        let mandate_reference =
+            item.response
+                .scheme_transaction_id
+                .as_ref()
+                .map(|scheme_txn_id| {
+                    Box::new(MandateReference {
+                        connector_mandate_id: Some(scheme_txn_id.clone()),
+                        payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
+                    })
+                });
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference,
+                connector_metadata,
+                network_txn_id: network_txn_id
+                    .or(item.response.scheme_transaction_id.clone())
+                    .or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: item.response.client_request_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // ===== TYPE ALIASES FOR MACRO COMPATIBILITY =====
 // Each flow needs its own response type for the macro system
 // Even though they all use the same underlying AuthipayPaymentsResponse struct
@@ -1158,6 +1502,66 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: AuthipayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AuthipaySetupMandateRequest<T>
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: AuthipayRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AuthipayRepeatPaymentRequest<T>
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: AuthipayRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
