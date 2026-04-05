@@ -399,14 +399,10 @@ mod tests {
                 let scenario =
                     load_scenario(&suite, scenario_name).expect("scenario should be loadable");
 
-                // Webhook suites (handle_event) have no inline grpc_req — the
-                // request is assembled at runtime from connector payload files.
-                if suite != "handle_event" {
-                    assert!(
-                        scenario.grpc_req.is_object(),
-                        "scenario '{scenario_name}' in suite '{suite}' should have object grpc_req"
-                    );
-                }
+                assert!(
+                    scenario.grpc_req.is_object(),
+                    "scenario '{scenario_name}' in suite '{suite}' should have object grpc_req"
+                );
 
                 assert!(
                     !scenario.assert_rules.is_empty(),
@@ -430,13 +426,10 @@ mod tests {
                 let assertions = get_the_assertion(&suite, scenario_name)
                     .expect("assertions should be available for scenario");
 
-                // Webhook suites use runtime assembly; grpc_req is Null here.
-                if suite != "handle_event" {
-                    assert!(
-                        req.is_object(),
-                        "grpc_req should be object for '{suite}/{scenario_name}'"
-                    );
-                }
+                assert!(
+                    req.is_object(),
+                    "grpc_req should be object for '{suite}/{scenario_name}'"
+                );
 
                 assert!(
                     !assertions.is_empty(),

@@ -1,8 +1,14 @@
 {
   "payment_succeeded": {
     "description": "Webhook event for successful payment/authorization",
-    "event_category": "payment",
-    "expected_outcome": "success",
+    "grpc_req": {
+      "request_details": {
+        "method": "HTTP_METHOD_POST",
+        "headers": {},
+        "body": ""
+      },
+      "merchant_event_id": ""
+    },
     "assert": {
       "source_verified": {
         "equals": true
@@ -24,8 +30,14 @@
   },
   "payment_failed": {
     "description": "Webhook event for failed payment due to decline or error",
-    "event_category": "payment",
-    "expected_outcome": "failure",
+    "grpc_req": {
+      "request_details": {
+        "method": "HTTP_METHOD_POST",
+        "headers": {},
+        "body": ""
+      },
+      "merchant_event_id": ""
+    },
     "assert": {
       "source_verified": {
         "equals": true
@@ -45,8 +57,14 @@
   },
   "refund_succeeded": {
     "description": "Webhook event for successful refund",
-    "event_category": "refund",
-    "expected_outcome": "success",
+    "grpc_req": {
+      "request_details": {
+        "method": "HTTP_METHOD_POST",
+        "headers": {},
+        "body": ""
+      },
+      "merchant_event_id": ""
+    },
     "assert": {
       "source_verified": {
         "equals": true
@@ -66,9 +84,14 @@
   },
   "invalid_signature": {
     "description": "Webhook with invalid signature should fail verification",
-    "event_category": "security",
-    "expected_outcome": "signature_failure",
-    "signature_override": "invalid_signature_00000000",
+    "grpc_req": {
+      "request_details": {
+        "method": "HTTP_METHOD_POST",
+        "headers": {},
+        "body": ""
+      },
+      "merchant_event_id": ""
+    },
     "assert": {
       "source_verified": {
         "must_not_exist": true

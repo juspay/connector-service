@@ -18,4 +18,3 @@ pub mod scenario_loader;
 pub mod scenario_types;
 pub mod sdk_executor;
 pub mod server;
-pub mod webhook_assembly;

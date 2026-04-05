@@ -64,6 +64,60 @@ pub fn load_scenario_override_patch(
     Ok(None)
 }
 
+/// Path to `<connector>/webhook_payload.json` under connector override root.
+pub fn connector_webhook_payload_file_path(connector: &str) -> PathBuf {
+    connector_override_root()
+        .join(connector)
+        .join("webhook_payload.json")
+}
+
+/// Loads the webhook payload override for a specific connector/scenario.
+///
+/// The `webhook_payload.json` file uses the same structure as a single suite
+/// section inside `override.json`: scenario names as keys, each containing a
+/// `grpc_req` patch.  An optional `_webhook_config` key holds connector-level
+/// webhook metadata (signature header, algorithm, etc.) and is returned
+/// separately so callers can use it for post-merge transforms.
+///
+/// This function is only relevant for the `handle_event` suite; other suites
+/// should not call it.
+pub fn load_webhook_payload_patch(
+    connector: &str,
+    scenario: &str,
+) -> Result<Option<(ScenarioOverridePatch, Option<Value>)>, ScenarioError> {
+    let path = connector_webhook_payload_file_path(connector);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content =
+        fs::read_to_string(&path).map_err(|source| ScenarioError::ConnectorOverrideRead {
+            path: path.clone(),
+            source,
+        })?;
+
+    let parsed: Value =
+        serde_json::from_str(&content).map_err(|source| ScenarioError::ConnectorOverrideParse {
+            path: path.clone(),
+            source,
+        })?;
+
+    let webhook_config = parsed.get("_webhook_config").cloned();
+
+    let Some(scenario_value) = parsed.get(scenario) else {
+        return Ok(None);
+    };
+
+    let patch = serde_json::from_value::<ScenarioOverridePatch>(scenario_value.clone()).map_err(
+        |source| ScenarioError::ConnectorOverrideParse {
+            path: path.clone(),
+            source,
+        },
+    )?;
+
+    Ok(Some((patch, webhook_config)))
+}
+
 /// Loads and parses the unified connector override file if present.
 fn load_connector_override_file(
     connector: &str,
