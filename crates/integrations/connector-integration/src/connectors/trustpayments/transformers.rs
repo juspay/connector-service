@@ -1527,14 +1527,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Get the connector_mandate_id which stores the parent transactionreference
-        let parent_transaction_reference =
-            router_data
-                .request
-                .connector_mandate_id()
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "connector_mandate_id",
-                    context: Default::default(),
-                })?;
+        let parent_transaction_reference = router_data.request.connector_mandate_id().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "connector_mandate_id",
+                context: Default::default(),
+            },
+        )?;
 
         // Get amount from connector's amount_converter
         let amount = item
@@ -1584,12 +1582,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ===== REPEAT PAYMENT RESPONSE TRANSFORMER =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<TrustpaymentsRepeatPaymentResponse, Self>>
-    for RouterDataV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
