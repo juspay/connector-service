@@ -1,7 +1,9 @@
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::pii::SecretSerdeValue;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, RepeatPayment, ServerAuthenticationToken, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, Refund, RepeatPayment, ServerAuthenticationToken, SetupMandate, Void,
+    },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
@@ -709,29 +711,26 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
 fn build_jpmorgan_merchant(auth: &JpmorganAuthType) -> Result<requests::JpmorganMerchant, Error> {
     Ok(requests::JpmorganMerchant {
         merchant_software: requests::JpmorganMerchantSoftware {
-            company_name: auth
-                .company_name
-                .clone()
-                .ok_or(IntegrationError::MissingRequiredField {
+            company_name: auth.company_name.clone().ok_or(
+                IntegrationError::MissingRequiredField {
                     field_name: "company_name",
                     context: Default::default(),
-                })?,
-            product_name: auth
-                .product_name
-                .clone()
-                .ok_or(IntegrationError::MissingRequiredField {
+                },
+            )?,
+            product_name: auth.product_name.clone().ok_or(
+                IntegrationError::MissingRequiredField {
                     field_name: "product_name",
                     context: Default::default(),
-                })?,
+                },
+            )?,
         },
         soft_merchant: requests::JpmorganSoftMerchant {
-            merchant_purchase_description: auth
-                .merchant_purchase_description
-                .clone()
-                .ok_or(IntegrationError::MissingRequiredField {
+            merchant_purchase_description: auth.merchant_purchase_description.clone().ok_or(
+                IntegrationError::MissingRequiredField {
                     field_name: "merchant_purchase_description",
                     context: Default::default(),
-                })?,
+                },
+            )?,
         },
     })
 }
@@ -796,9 +795,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     original_network_transaction_id: None,
                 };
 
-                let payment_method_type = requests::JpmorganMitPaymentMethodType {
-                    card: Some(card),
-                };
+                let payment_method_type =
+                    requests::JpmorganMitPaymentMethodType { card: Some(card) };
 
                 // Use payment_id or mandate_id as agreement_id
                 let agreement_id = router_data
@@ -809,9 +807,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = router_data
                     .request
                     .minor_amount
-                    .map(|a| {
-                        JpmorganAmountConvertor::convert(a, router_data.request.currency)
-                    })
+                    .map(|a| JpmorganAmountConvertor::convert(a, router_data.request.currency))
                     .transpose()?
                     .unwrap_or(common_utils::types::MinorUnit::new(0));
 
@@ -833,10 +829,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     is_amount_final: true,
                 })
             }
-            _ => Err(
-                IntegrationError::not_implemented("Only Card payment method is supported for SetupMandate".to_string())
-                    .into(),
-            ),
+            _ => Err(IntegrationError::not_implemented(
+                "Only Card payment method is supported for SetupMandate".to_string(),
+            )
+            .into()),
         }
     }
 }
@@ -844,7 +840,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // SetupMandate response transformer
 impl<T: PaymentMethodDataTypes>
     TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = ResponseError;
     fn try_from(
@@ -927,9 +928,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     original_network_transaction_id: network_transaction_id,
                 };
 
-                let payment_method_type = requests::JpmorganMitPaymentMethodType {
-                    card: Some(card),
-                };
+                let payment_method_type =
+                    requests::JpmorganMitPaymentMethodType { card: Some(card) };
 
                 // Use connector_request_reference_id as agreement_id
                 let agreement_id = router_data
@@ -1004,10 +1004,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     is_amount_final: true,
                 })
             }
-            _ => Err(
-                IntegrationError::not_implemented("Only Card and MandatePayment are supported for RepeatPayment".to_string())
-                    .into(),
-            ),
+            _ => Err(IntegrationError::not_implemented(
+                "Only Card and MandatePayment are supported for RepeatPayment".to_string(),
+            )
+            .into()),
         }
     }
 }
