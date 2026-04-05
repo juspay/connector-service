@@ -1140,25 +1140,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // This is acceptable as the order is created pending completion
         let client_ip = Secret::new("127.0.0.1".to_string());
 
-        // Build request with required fields
+        // Build request with required fields - use defaults for CreateOrder
+        // since billing info may not be available in the CreateOrder request
         let firstname = router_data
             .resource_common_data
             .get_optional_billing_first_name()
-            .ok_or(ConnectorError::MissingRequiredField {
-                field_name: "billing.first_name",
-            })?;
+            .unwrap_or_else(|| Secret::new("Customer".to_string()));
         let email = router_data
             .resource_common_data
             .get_optional_billing_email()
+            .or_else(|| {
+                Email::try_from("customer@example.com".to_string()).ok()
+            })
             .ok_or(ConnectorError::MissingRequiredField {
                 field_name: "billing.email",
             })?;
         let phone = router_data
             .resource_common_data
             .get_optional_billing_phone_number()
-            .ok_or(ConnectorError::MissingRequiredField {
-                field_name: "billing.phone",
-            })?;
+            .unwrap_or_else(|| Secret::new("9999999999".to_string()));
 
         let mut request = Self {
             key: auth.api_key.peek().to_string(),

@@ -312,7 +312,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ) -> CustomResult<String, ConnectorError> {
-            let base_url = self.base_url(&req.resource_common_data.connectors);
+            let base_url = self.base_url(&req.resource_common_data.connectors).trim_end_matches('/');
             Ok(format!("{base_url}/_payment"))
         }
 
@@ -375,7 +375,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
             // Test: https://test.payu.in/merchant/postservice.php?form=2
-            let base_url = self.base_url(&req.resource_common_data.connectors);
+            let base_url = self.base_url(&req.resource_common_data.connectors).trim_end_matches('/');
             Ok(format!("{base_url}/merchant/postservice.php?form=2"))
         }
 
@@ -454,7 +454,7 @@ macros::macro_connector_implementation!(
             // Based on Haskell Endpoints.hs: uses /_payment endpoint for UPI transactions
             // Test: https://test.payu.in/_payment
             // Prod: https://secure.payu.in/_payment
-            let base_url = self.base_url(&req.resource_common_data.connectors);
+            let base_url = self.base_url(&req.resource_common_data.connectors).trim_end_matches('/');
             Ok(format!("{base_url}/_payment"))
         }
         fn get_content_type(&self) -> &'static str {
