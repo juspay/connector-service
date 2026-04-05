@@ -2209,6 +2209,9 @@ pub enum MandateStatus {
     Inactive,
     Pending,
     Revoked,
+    Created,
+    Failed,
+    Paused,
 }
 
 /// The type of tokenization to use for the payment method
