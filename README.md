@@ -3,9 +3,13 @@
 
 # Hyperswitch Prism
 
-
 **One integration. Any payment processor. Zero lock-in.**
+**Switch processors with few lines of code.**
 
+<p align="center">
+  <img src="./routing_demo.gif" alt="Switch processors with few lines of code" />
+  <br/>
+</p>
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 

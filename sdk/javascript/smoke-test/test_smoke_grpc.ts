@@ -98,13 +98,13 @@ const FLOW_META: [string, FlowMeta][] = [
   ["tokenize",                 { field: "paymentMethod",    method: "tokenize",              builder: "_buildTokenizeRequest",             arg: "none"      }],
   ["setup_recurring",          { field: "payment",          method: "setupRecurring",        builder: "_buildSetupRecurringRequest",       arg: "none"      }],
   ["recurring_charge",         { field: "recurringPayment", method: "charge",                builder: "_buildRecurringChargeRequest",      arg: "mandateId" }],
-  ["pre_authenticate",         { field: "payment",          method: "preAuthenticate",       builder: "_buildPreAuthenticateRequest",      arg: "none"      }],
-  ["authenticate",             { field: "payment",          method: "authenticate",          builder: "_buildAuthenticateRequest",         arg: "none"      }],
-  ["post_authenticate",        { field: "payment",          method: "postAuthenticate",      builder: "_buildPostAuthenticateRequest",     arg: "none"      }],
-  ["handle_event",             { field: "payment",          method: "handleEvent",           builder: "_buildHandleEventRequest",          arg: "none"      }],
-  ["create_access_token",      { field: "payment",          method: "createAccessToken",     builder: "_buildCreateAccessTokenRequest",    arg: "none"      }],
-  ["create_session_token",     { field: "payment",          method: "createSessionToken",    builder: "_buildCreateSessionTokenRequest",   arg: "none"      }],
-  ["create_sdk_session_token", { field: "payment",          method: "createSdkSessionToken", builder: "_buildCreateSdkSessionTokenRequest", arg: "none"    }],
+  ["pre_authenticate",         { field: "paymentMethodAuthentication", method: "preAuthenticate",  builder: "_buildPreAuthenticateRequest",      arg: "none"      }],
+  ["authenticate",             { field: "paymentMethodAuthentication", method: "authenticate",   builder: "_buildAuthenticateRequest",         arg: "none"      }],
+  ["post_authenticate",        { field: "paymentMethodAuthentication", method: "postAuthenticate", builder: "_buildPostAuthenticateRequest",    arg: "none"      }],
+  ["handle_event",             { field: "event",            method: "handleEvent",           builder: "_buildHandleEventRequest",          arg: "none"      }],
+  ["create_server_authentication_token",      { field: "merchantAuthentication", method: "createServerAuthenticationToken",  builder: "_buildCreateServerAuthenticationTokenRequest",    arg: "none"      }],
+  ["create_server_session_authentication_token",     { field: "merchantAuthentication", method: "createServerSessionAuthenticationToken", builder: "_buildCreateServerSessionAuthenticationTokenRequest",   arg: "none"      }],
+  ["create_client_authentication_token", { field: "merchantAuthentication", method: "createClientAuthenticationToken", builder: "_buildCreateClientAuthenticationTokenRequest", arg: "none"    }],
 ];
 const FLOW_META_MAP = new Map<string, FlowMeta>(FLOW_META);
 

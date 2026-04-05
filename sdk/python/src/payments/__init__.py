@@ -7,9 +7,9 @@
 
 from payments._generated_service_clients import (
     CustomerClient,
+    PaymentClient,
     DisputeClient,
     MerchantAuthenticationClient,
-    PaymentClient,
     PaymentMethodAuthenticationClient,
     PaymentMethodClient,
     RecurringPaymentClient,
