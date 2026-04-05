@@ -198,11 +198,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or(ConnectorError::MissingRequiredField {
                         field_name: "card_holder_name",
                     })?;
-                let trace_id = item
+                let connector_request_reference_id = item
                     .router_data
                     .resource_common_data
                     .connector_request_reference_id
                     .clone();
+                let trace_id = if connector_request_reference_id.is_empty() {
+                    item.router_data
+                        .resource_common_data
+                        .payment_id
+                        .clone()
+                } else {
+                    connector_request_reference_id
+                };
                 let card_holder_email = item
                     .router_data
                     .resource_common_data
@@ -229,9 +237,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // card_number needs to be converted from RawCardNumber<T> to Secret<String>
                 let card_number_str = Secret::new(card.card_number.peek().to_string());
 
+                // MiFinity requires description to be between 1 and 25 characters
+                let description = if trace_id.len() > 25 {
+                    Some(trace_id[..25].to_string())
+                } else {
+                    Some(trace_id.clone())
+                };
                 Ok(Self::Card(Box::new(MifinityPacRequest {
                     money,
-                    description: Some(trace_id.clone()),
+                    description,
                     expiry_date,
                     source_account,
                     trace_id,
