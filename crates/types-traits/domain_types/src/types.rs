@@ -11170,6 +11170,7 @@ impl
             connector_feature_data: None,
             amount_captured: None,
             minor_amount_captured: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,

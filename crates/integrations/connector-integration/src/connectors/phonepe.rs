@@ -694,7 +694,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateStatusCheckRequestData,
             MandateStatusCheckResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = phonepe::PhonepeAuthType::try_from(&req.connector_config)?;
         let mandate_id = req.request.connector_mandate_id.peek();
 
@@ -729,7 +729,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateStatusCheckRequestData,
             MandateStatusCheckResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         // Use recurring base URL (secondary_base_url), NOT the regular PhonePe base URL
         let recurring_base_url = req
             .resource_common_data
@@ -737,7 +737,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .phonepe
             .secondary_base_url
             .as_deref()
-            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            .ok_or(IntegrationError::FailedToObtainIntegrationUrl {
+                context: Default::default(),
+            })?;
 
         let auth = phonepe::PhonepeAuthType::try_from(&req.connector_config)?;
         let merchant_id = auth.merchant_id.peek();
@@ -769,7 +771,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateStatusCheckRequestData,
             MandateStatusCheckResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         // Handle empty response body (HTTP 204) — treat as subscription not found
         if res.response.is_empty() {
@@ -788,7 +790,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: PhonepeMandateStatusCheckResponse = res
             .response
             .parse_struct("PhonepeMandateStatusCheckResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                context: Default::default(),
+            })?;
 
         with_response_body!(event_builder, response);
 
@@ -843,7 +847,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -851,7 +855,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }
