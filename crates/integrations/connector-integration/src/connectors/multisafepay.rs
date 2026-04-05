@@ -42,9 +42,9 @@ use serde::Serialize;
 use transformers::{
     self as multisafepay, MultisafepayPaymentsRequest, MultisafepayPaymentsResponse,
     MultisafepayPaymentsSyncResponse, MultisafepayRefundRequest, MultisafepayRefundResponse,
-    MultisafepayRefundSyncResponse, MultisafepaySetupMandateRequest,
-    MultisafepaySetupMandateResponse, MultisafepayRepeatPaymentRequest,
-    MultisafepayRepeatPaymentResponse,
+    MultisafepayRefundSyncResponse, MultisafepayRepeatPaymentRequest,
+    MultisafepayRepeatPaymentResponse, MultisafepaySetupMandateRequest,
+    MultisafepaySetupMandateResponse,
 };
 
 use super::macros;

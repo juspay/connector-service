@@ -1215,7 +1215,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // SetupMandate response transformer
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepaySetupMandateResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
@@ -1237,16 +1242,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepaySetupMand
 
         // The recurring_id (customer reference) is the mandate reference for MultiSafepay
         // It's used to identify the stored token for subsequent MIT payments
-        let mandate_reference = response_data
-            .order_id
-            .as_ref()
-            .map(|order_id| {
-                Box::new(connector_types::MandateReference {
-                    connector_mandate_id: Some(order_id.clone()),
-                    payment_method_id: None,
-                    connector_mandate_request_reference_id: None,
-                })
-            });
+        let mandate_reference = response_data.order_id.as_ref().map(|order_id| {
+            Box::new(connector_types::MandateReference {
+                connector_mandate_id: Some(order_id.clone()),
+                payment_method_id: None,
+                connector_mandate_request_reference_id: None,
+            })
+        });
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
