@@ -301,7 +301,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             Ok(vec![
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
                 ("Accept".to_string(), "application/json".into()),
@@ -311,7 +311,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url = self.base_url(&req.resource_common_data.connectors).trim_end_matches('/');
             Ok(format!("{base_url}/_payment"))
         }
@@ -324,11 +324,11 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
             let response: PayuCreateOrderResponse = res
                 .response
                 .parse_struct("PayU CreateOrder ErrorResponse")
-                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                .change_context(crate::utils::response_handling_fail_for_connector(res.status_code, "payu"))?;
 
             Ok(ErrorResponse {
                 status_code: res.status_code,

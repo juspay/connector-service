@@ -104,11 +104,11 @@ impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
 #[derive(Debug, Serialize)]
 pub struct PayuPaymentRequest {
     // Core payment fields
-    pub key: String,                                  // Merchant key
-    pub txnid: String,                                // Transaction ID
+    pub key: String,                    // Merchant key
+    pub txnid: String,                  // Transaction ID
     pub amount: types::StringMajorUnit, // Amount in string major units
-    pub currency: Currency,                           // Currency code
-    pub productinfo: String,                          // Product description
+    pub currency: Currency,             // Currency code
+    pub productinfo: String,            // Product description
 
     // Customer information
     pub firstname: Secret<String>,
@@ -1102,7 +1102,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PayuCreateOrderRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::PayuRouterData<
@@ -1122,13 +1122,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(router_data.request.amount, router_data.request.currency)
-            .change_context(ConnectorError::AmountConversionFailed)?;
+            .change_context(IntegrationError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
 
         // Extract authentication
         let auth = PayuAuthType::try_from(&router_data.connector_config)?;
 
         // Generate UDF fields
-        let udf_fields = generate_createorder_udf_fields(&router_data);
+        let udf_fields = generate_createorder_udf_fields(router_data);
 
         // Get return URL from PaymentFlowData
         let return_url = router_data
@@ -1149,11 +1151,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let email = router_data
             .resource_common_data
             .get_optional_billing_email()
-            .or_else(|| {
-                Email::try_from("customer@example.com".to_string()).ok()
-            })
-            .ok_or(ConnectorError::MissingRequiredField {
+            .or_else(|| Email::try_from("customer@example.com".to_string()).ok())
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing.email",
+                context: Default::default(),
             })?;
         let phone = router_data
             .resource_common_data
@@ -1243,7 +1244,7 @@ fn generate_createorder_udf_fields<T>(
 fn generate_payu_createorder_hash(
     request: &PayuCreateOrderRequest,
     merchant_salt: &Secret<String>,
-) -> Result<String, ConnectorError> {
+) -> Result<String, IntegrationError> {
     use sha2::{Digest, Sha512};
 
     let hash_fields = vec![
@@ -1283,7 +1284,7 @@ impl TryFrom<ResponseRouterData<PayuCreateOrderResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<PayuCreateOrderResponse, Self>,
@@ -1339,7 +1340,7 @@ impl TryFrom<ResponseRouterData<PayuCreateOrderResponse, Self>>
         Ok(Self {
             response: Ok(PaymentCreateOrderResponse {
                 order_id,
-                session_token: None,
+                session_data: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
