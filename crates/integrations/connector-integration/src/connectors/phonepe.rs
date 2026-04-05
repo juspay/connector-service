@@ -728,7 +728,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             TriggerOtpForWalletData,
             TriggerOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
     where
         Self: ConnectorIntegrationV2<
             TriggerOtpForWallet,
@@ -756,7 +756,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             TriggerOtpForWalletData,
             TriggerOtpForWalletResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         let base_url = self.connector_base_url(req);
         Ok(format!(
             "{}{}",
@@ -773,7 +773,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             TriggerOtpForWalletData,
             TriggerOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let connector_req = PhonepeTriggerOtpRequest::try_from(req)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -795,12 +795,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             TriggerOtpForWalletData,
             TriggerOtpForWalletResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         let response: PhonepeTriggerOtpResponse = res
             .response
             .parse_struct("PhonepeTriggerOtpResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
 
         with_response_body!(event_builder, response);
 
@@ -809,7 +813,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+        .change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(router_data)
     }
@@ -818,7 +826,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -841,7 +849,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             VerifyOtpForWalletData,
             VerifyOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
     where
         Self: ConnectorIntegrationV2<
             VerifyOtpForWallet,
@@ -869,7 +877,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             VerifyOtpForWalletData,
             VerifyOtpForWalletResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         let base_url = self.connector_base_url(req);
         Ok(format!(
             "{}{}",
@@ -886,7 +894,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             VerifyOtpForWalletData,
             VerifyOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let connector_req = PhonepeVerifyOtpRequest::try_from(req)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -908,12 +916,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             VerifyOtpForWalletData,
             VerifyOtpForWalletResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         let response: PhonepeVerifyOtpResponse = res
             .response
             .parse_struct("PhonepeVerifyOtpResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
 
         with_response_body!(event_builder, response);
 
@@ -922,7 +934,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+        .change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         Ok(router_data)
     }
@@ -931,7 +947,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }

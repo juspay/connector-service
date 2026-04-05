@@ -1723,7 +1723,7 @@ impl
         >,
     > for RazorpayResendOtpRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: &RouterDataV2<
@@ -1750,7 +1750,7 @@ impl ForeignTryFrom<(RazorpayResendOtpResponse, Self, u16)>
         ResendOtpForWalletResponseData,
     >
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorResponseTransformationError;
 
     fn foreign_try_from(
         (response, data, http_code): (RazorpayResendOtpResponse, Self, u16),

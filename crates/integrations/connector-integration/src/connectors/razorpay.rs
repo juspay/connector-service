@@ -38,8 +38,8 @@ use domain_types::{
         RequestDetails, ResendOtpForWalletData, ResendOtpForWalletResponseData, ResponseId,
         ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
     },
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -1384,7 +1384,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResendOtpForWalletData,
             ResendOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
     where
         Self: ConnectorIntegrationV2<
             ResendOtpForWallet,
@@ -1410,13 +1410,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResendOtpForWalletData,
             ResendOtpForWalletResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
-        let connector_transaction_id = req
-            .request
-            .connector_transaction_id
-            .as_deref()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_transaction_id = req.request.connector_transaction_id.as_deref().ok_or(
+            IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )?;
         Ok(format!(
             "{base_url}v1/payments/{connector_transaction_id}/otp/resend"
         ))
@@ -1430,7 +1430,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResendOtpForWalletData,
             ResendOtpForWalletResponseData,
         >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let connector_req = razorpay::RazorpayResendOtpRequest::try_from(req)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -1452,28 +1452,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResendOtpForWalletData,
             ResendOtpForWalletResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         let response: razorpay::RazorpayResendOtpResponse = res
             .response
             .parse_struct("RazorpayResendOtpResponse")
             .map_err(|err| {
-                report!(errors::ConnectorError::ResponseDeserializationFailed).attach_printable(
-                    format!("Failed to parse RazorpayResendOtpResponse: {err:?}"),
+                report!(
+                    ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                        context: Default::default()
+                    }
                 )
+                .attach_printable(format!(
+                    "Failed to parse RazorpayResendOtpResponse: {err:?}"
+                ))
             })?;
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1481,7 +1489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }

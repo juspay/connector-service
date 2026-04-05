@@ -1219,11 +1219,14 @@ impl
     ) -> Result<Self, Self::Error> {
         let auth = PhonepeAuthType::try_from(&req.connector_config)?;
 
-        let phone_number = req.request.phone_number.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "phone_number",
-            },
-        )?;
+        let phone_number =
+            req.request
+                .phone_number
+                .clone()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "phone_number",
+                    context: Default::default(),
+                })?;
 
         let inner = PhonepeTriggerOtpInnerRequest {
             merchant_id: auth.merchant_id.peek().to_string(),
@@ -1233,8 +1236,11 @@ impl
             short_name: None,
         };
 
-        let json_payload = Encode::encode_to_string_of_json(&inner)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let json_payload = Encode::encode_to_string_of_json(&inner).change_context(
+            IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
@@ -1358,14 +1364,18 @@ impl
             .request
             .otp
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "otp" })?;
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "otp",
+                context: Default::default(),
+            })?;
 
         let otp_token =
             req.request
                 .otp_token
                 .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "otp_token",
+                    context: Default::default(),
                 })?;
 
         let inner = PhonepeVerifyOtpInnerRequest {
@@ -1374,8 +1384,11 @@ impl
             otp,
         };
 
-        let json_payload = Encode::encode_to_string_of_json(&inner)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let json_payload = Encode::encode_to_string_of_json(&inner).change_context(
+            IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            },
+        )?;
 
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
