@@ -65,5 +65,12 @@
     "https://developer.peachpayments.com/docs/dashboard-response-codes",
     "https://developer.peachpayments.com/docs/reference-webhooks",
     "https://peachpayments.docs.oppwa.com/reference/parameters"
+  ],
+  "Razorpay V2": [
+    "https://razorpay.com/docs/api/payments/recurring-payments/",
+    "https://razorpay.com/docs/api/payments/recurring-payments/cards/create-subsequent-payments/",
+    "https://razorpay.com/docs/api/payments/recurring-payments/custom/",
+    "https://razorpay.com/docs/payments/payment-gateway/s2s-integration/recurring-payments/",
+    "https://razorpay.com/docs/api/"
   ]
 }
