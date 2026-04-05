@@ -13,9 +13,9 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
         CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
-        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync,
-        Refund, RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
@@ -53,8 +53,8 @@ pub mod transformers;
 use transformers::{
     FiservCaptureRequest, FiservCaptureResponse, FiservPaymentsRequest, FiservPaymentsResponse,
     FiservRefundRequest, FiservRefundResponse, FiservRefundSyncRequest, FiservRefundSyncResponse,
-    FiservRepeatPaymentRequest, FiservRepeatPaymentResponse, FiservSyncRequest,
-    FiservSyncResponse, FiservVoidRequest, FiservVoidResponse,
+    FiservRepeatPaymentRequest, FiservRepeatPaymentResponse, FiservSyncRequest, FiservSyncResponse,
+    FiservVoidRequest, FiservVoidResponse,
 };
 
 use super::macros;

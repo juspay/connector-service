@@ -495,14 +495,12 @@ fn extract_network_transaction_id(
         }
         domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
             connector_mandate,
-        ) => connector_mandate
-            .get_connector_mandate_id()
-            .ok_or_else(|| {
-                report!(IntegrationError::MissingRequiredField {
-                    field_name: "connector_mandate_id",
-                    context: Default::default(),
-                })
-            }),
+        ) => connector_mandate.get_connector_mandate_id().ok_or_else(|| {
+            report!(IntegrationError::MissingRequiredField {
+                field_name: "connector_mandate_id",
+                context: Default::default(),
+            })
+        }),
         domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(nti_ref) => {
             Ok(nti_ref.network_transaction_id.clone())
         }
@@ -1311,7 +1309,12 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         FiservRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for FiservRepeatPaymentRequest<T>
@@ -1320,7 +1323,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
