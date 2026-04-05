@@ -1224,7 +1224,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxSetupMandateResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = Report<ConnectorResponseTransformationError>;
 
@@ -1390,8 +1395,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Use a placeholder expiration date
         let expiration_date = Secret::new("0000".to_string());
 
-        let transaction_type =
-            get_subscriber_transaction_type(router_data.request.capture_method);
+        let transaction_type = get_subscriber_transaction_type(router_data.request.capture_method);
 
         Ok(Self {
             version: VERSION_PAYBOX.to_string(),
