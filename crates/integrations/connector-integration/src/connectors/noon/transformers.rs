@@ -75,13 +75,17 @@ pub struct NoonBilling {
 #[serde(rename_all = "camelCase")]
 pub struct NoonOrder {
     amount: StringMajorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
     currency: Option<enums::Currency>,
     channel: NoonChannels,
+    #[serde(skip_serializing_if = "Option::is_none")]
     category: Option<String>,
     reference: String,
     //Short description of the order.
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     nvp: Option<NoonOrderNvp>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ip_address: Option<Secret<String, pii::IpAddress>>,
 }
 
