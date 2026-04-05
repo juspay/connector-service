@@ -1,76 +1,37 @@
 {
-  "card_eligibility": {
+  "check_card_eligibility": {
     "grpc_req": {
-      "merchant_payout_id": "auto_generate",
       "amount": {
-        "minor_amount": 10000,
+        "minor_amount": 6000,
         "currency": "USD"
       },
-      "destination_currency": "USD",
-      "payout_method_data": {
-        "card": {
-          "card_number": {
-            "value": "4111111111111111"
-          },
-          "card_exp_month": {
-            "value": "08"
-          },
-          "card_exp_year": {
-            "value": "30"
-          },
-          "card_holder_name": {
-            "value": "auto_generate"
-          }
-        }
-      },
-      "access_token": {
-        "value": ""
-      }
+      "payment_method_type": "CARD",
+      "country_code": "US",
+      "currency": "USD"
     },
     "assert": {
-      "error": {
-        "must_not_exist": true
+      "eligible": {
+        "equals": true
       }
     },
     "is_default": true,
-    "display_name": "Payment Method Eligibility | Card"
+    "display_name": "Card Eligibility | USD | US"
   },
-  "card_eligibility_ineligible": {
+  "check_wallet_eligibility": {
     "grpc_req": {
-      "merchant_payout_id": "auto_generate",
       "amount": {
-        "minor_amount": 10000,
+        "minor_amount": 6000,
         "currency": "USD"
       },
-      "destination_currency": "USD",
-      "payout_method_data": {
-        "card": {
-          "card_number": {
-            "value": "4000000000000002"
-          },
-          "card_exp_month": {
-            "value": "08"
-          },
-          "card_exp_year": {
-            "value": "30"
-          },
-          "card_holder_name": {
-            "value": "auto_generate"
-          }
-        }
-      },
-      "access_token": {
-        "value": ""
-      }
+      "payment_method_type": "WALLET",
+      "country_code": "US",
+      "currency": "USD"
     },
     "assert": {
-      "payout_status": {
-        "one_of": [
-          "INELIGIBLE",
-          "FAILED"
-        ]
+      "eligible": {
+        "must_exist": true
       }
     },
-    "display_name": "Payment Method Eligibility | Card Ineligible"
+    "display_name": "Wallet Eligibility | USD | US"
   }
 }

@@ -56,30 +56,34 @@ const IGNORE_SERVICES: &[&str] = &["PayoutService", "DisputeService"];
 /// to the suite name(s) it corresponds to in `connector_specs/<connector>/specs.json`.
 ///
 /// Flows that have no corresponding integration-test suite (e.g. payout flows,
-/// dispute flows, server-authentication flows, incremental auth) are mapped to
-/// `None` and are silently skipped.
+/// dispute flows) are mapped to `None` and are silently skipped.
 fn flow_to_suites(flow: &str) -> Option<&'static [&'static str]> {
     match flow {
+        // Core payment flows
         "Authorize" => Some(&["authorize"]),
         "PSync" => Some(&["get"]),
         "Capture" => Some(&["capture"]),
         "Void" => Some(&["void"]),
         "Refund" => Some(&["refund"]),
         "RSync" => Some(&["refund_sync"]),
+        // Recurring/mandate flows
         "SetupMandate" => Some(&["setup_recurring"]),
         "RepeatPayment" => Some(&["recurring_charge"]),
+        "MandateRevoke" => Some(&["revoke_mandate"]),
+        // Customer/token flows
         "CreateConnectorCustomer" => Some(&["create_customer"]),
         "PaymentMethodToken" => Some(&["tokenize_payment_method"]),
-        "MandateRevoke" => Some(&["revoke_mandate"]),
+        // Authentication flows (now have test suites!)
+        "ServerAuthenticationToken" => Some(&["server_authentication_token"]),
         "ClientAuthenticationToken" => Some(&["create_sdk_session_token"]),
         "ServerSessionAuthenticationToken" => Some(&["create_session_token"]),
-        // Flows below have no dedicated integration-test suite — skip them.
-        "ServerAuthenticationToken" => None,
-        "PreAuthenticate" => None,
-        "Authenticate" => None,
-        "PostAuthenticate" => None,
-        "CreateOrder" => None,
-        "IncrementalAuthorization" => None,
+        "PreAuthenticate" => Some(&["pre_authenticate"]),
+        "Authenticate" => Some(&["authenticate"]),
+        "PostAuthenticate" => Some(&["post_authenticate"]),
+        // Advanced flows (now have test suites!)
+        "CreateOrder" => Some(&["create_order"]),
+        "IncrementalAuthorization" => Some(&["incremental_authorization"]),
+        // Dispute flows — out of scope (no test suites yet).
         "Accept" => None,
         "DefendDispute" => None,
         "SubmitEvidence" => None,

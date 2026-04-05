@@ -1,9 +1,4 @@
 {
   "suite": "payment_method_eligibility",
-  "suite_type": "dependent",
-  "depends_on": [
-    "server_authentication_token"
-  ],
-  "dependency_scope": "scenario",
-  "strict_dependencies": false
+  "suite_type": "independent"
 }
