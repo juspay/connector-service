@@ -87,5 +87,63 @@
     "https://developer.elavon.com/products/xml-api/v1/api-reference",
     "https://developer.elavon.com/docs/converge/1.0.0/integration-guide/api-reference/-endpoints",
     "https://developer.elavon.com/docs/converge/1.0.0/integration-guide/api-introduction"
+  ],
+  "hipay": [
+    "https://developer.hipay.com/online-payments/features/recurring-payments-card-on-file-and-network-tokens",
+    "https://developer.hipay.com/api-explorer/api-online-payments",
+    "https://developer.hipay.com/online-payments/payment/api-only",
+    "https://developer.hipay.com/api-explorer/api-gateway",
+    "https://raw.githubusercontent.com/hipay/openapi-hipay/master/enterprise/gateway.yaml"
+  ],
+  "Fiserv": [
+    "https://docs.fiserv.dev/public/docs/merchant-initiated-transactions-mit-1",
+    "https://docs.fiserv.dev/public/docs/recurring-payments",
+    "https://docs.fiserv.dev/public/docs/payments-api-quickstart",
+    "https://docs.fiserv.dev/public/reference/apis",
+    "https://docs.fiserv.dev/public/docs/message-signature",
+    "https://docs.fiserv.dev/public/docs/response-codes",
+    "https://docs.fiserv.dev/public/docs/webhooks-and-status-updates-checkout",
+    "https://docs.fiserv.dev/public/docs/payment-scenarios-overview-global"
+  ],
+  "Nexinets": [
+    "https://dev-api.dibspayment.eu/docs/v1/swagger.json",
+    "https://developer.nexigroup.com/nexi-checkout/en-EU/api/payment-v1/",
+    "https://developer.nexigroup.com/nexi-checkout/en-EU/docs/support-subscriptions/",
+    "https://developer.nexigroup.com/nexi-checkout/en-EU/docs/manage-subscriptions/",
+    "https://developer.nexigroup.com/nexi-checkout/en-EU/docs/unscheduled-subscriptions-ucof/",
+    "https://developer.nexigroup.com/nexi-checkout/en-EU/api/webhooks/"
+  ],
+  "Multisafepay": [
+    "https://docs.multisafepay.com/docs/recurring-payments",
+    "https://docs.multisafepay.com/reference/createorder",
+    "https://docs.multisafepay.com/reference/introduction",
+    "https://docs.multisafepay.com/reference/authentication",
+    "https://docs.multisafepay.com/reference/environments",
+    "https://docs.multisafepay.com/docs/payment-statuses",
+    "https://docs.multisafepay.com/docs/testing",
+    "https://docs.multisafepay.com/reference/listtokens",
+    "https://docs.multisafepay.com/reference/gettoken"
+  ],
+  "trustpayments": [
+    "https://help.trustpayments.com/hc/en-us/articles/4402755159569-AUTH",
+    "https://help.trustpayments.com/hc/en-us/articles/12799013413137-Merchant-Initiated-Transactions-MIT",
+    "https://help.trustpayments.com/hc/en-us/articles/4404601907473-Credentials-on-File",
+    "https://help.trustpayments.com/hc/en-us/articles/4409939976977-Scheme-reference-data",
+    "https://help.trustpayments.com/hc/en-us/articles/4402754655761-Getting-started-with-Webservices-API",
+    "https://help.trustpayments.com/hc/en-us/articles/4402772396817-Recurring-payments"
+  ],
+  "globalpay": [
+    "https://developer.globalpayments.com/docs/payments/recurring/credentials-on-file",
+    "https://developer.globalpayments.com/docs/payments/recurring/recurring-payments-guide",
+    "https://developer.globalpayments.com/api/getting-started",
+    "https://developer.globalpayments.com/api/card-payments",
+    "https://developer.globalpayments.com/api/overview"
+  ],
+  "Rapyd": [
+    "https://docs.rapyd.net/en/card-payments-and-merchant-initiated-transactions.html",
+    "https://docs.rapyd.net/en/create-payment.html",
+    "https://docs.rapyd.net/en/api-reference.html",
+    "https://docs.rapyd.net/en/merchant-api-reference.html",
+    "https://docs.rapyd.net/en/testing-for-payment-api.html"
   ]
 }
