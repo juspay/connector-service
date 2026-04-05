@@ -1,17 +1,11 @@
 {
   "connector": "forte",
   "supported_suites": [
-    "authenticate",
     "authorize",
     "capture",
-    "create_customer",
     "get",
-    "post_authenticate",
-    "pre_authenticate",
     "refund",
     "refund_sync",
-    "revoke_mandate",
-    "setup_recurring",
     "void"
   ]
 }

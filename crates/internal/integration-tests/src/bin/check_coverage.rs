@@ -85,21 +85,27 @@ fn extract_suite_mappings(scenario_api: &PathBuf) -> HashMap<String, String> {
     let content = fs::read_to_string(scenario_api).expect("Failed to read scenario_api.rs");
     let mut mappings = HashMap::new();
 
-    // Find the grpc_method_for_suite function
-    let func_re =
-        Regex::new(r"fn grpc_method_for_suite.*?let method = match suite \{(.*?)\};").unwrap();
+    // Find the grpc_method_for_suite function - use multiline matching with (?s)
+    let func_re = Regex::new(
+        r#"(?s)fn grpc_method_for_suite.*?let method = match suite \{(.*?)_ => \{"#,
+    )
+    .unwrap();
 
     if let Some(caps) = func_re.captures(&content) {
         let match_block = &caps[1];
 
-        // Handle both single-line and multi-line formats
-        let normalized = match_block
-            .replace("{\n", "{ ")
-            .replace("\n        }", " }");
+        // Match both single-line and block formats
+        // "suite_name" => "types.Service/Method"
+        // or
+        // "suite_name" => {
+        //     "types.Service/Method"
+        // }
+        let case_re = Regex::new(
+            r#""([^"]+)"\s*=>\s*(?:\{[^"]*)?["\s]*types\.(\w+)/(\w+)"#,
+        )
+        .unwrap();
 
-        let case_re = Regex::new(r#""([^"]+)"\s*=>\s*\{?\s*"?types\.(\w+)/(\w+)"?\s*\}?"#).unwrap();
-
-        for line in normalized.lines() {
+        for line in match_block.lines() {
             if let Some(caps) = case_re.captures(line) {
                 let suite = caps[1].to_string();
                 let service = caps[2].to_string();

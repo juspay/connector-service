@@ -6,7 +6,6 @@
     "void",
     "refund",
     "get",
-    "refund_sync",
     "tokenize_payment_method"
   ]
 }

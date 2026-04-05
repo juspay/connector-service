@@ -7,7 +7,6 @@
     "recurring_charge",
     "refund",
     "refund_sync",
-    "setup_recurring",
-    "void"
+    "setup_recurring"
   ]
 }

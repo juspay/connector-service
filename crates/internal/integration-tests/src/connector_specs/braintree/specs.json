@@ -1,7 +1,6 @@
 {
   "connector": "braintree",
   "supported_suites": [
-    "authorize",
     "capture",
     "create_sdk_session_token",
     "get",
