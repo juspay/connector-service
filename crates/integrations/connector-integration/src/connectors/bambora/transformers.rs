@@ -969,7 +969,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // SetupMandate Request - direct TryFrom for RouterDataV2
 impl<T: PaymentMethodDataTypes>
     TryFrom<
-        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
     > for BamboraSetupMandateRequest<T>
 {
     type Error = error_stack::Report<IntegrationError>;
@@ -1107,7 +1112,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // SetupMandate Response
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
@@ -1177,18 +1187,19 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         // Get the series_id from connector_mandate_id
         let connector_mandate_id =
-            item.request.connector_mandate_id().ok_or(
-                IntegrationError::MissingRequiredField {
+            item.request
+                .connector_mandate_id()
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id",
                     context: Default::default(),
-                },
-            )?;
+                })?;
 
-        let series_id: i64 = connector_mandate_id
-            .parse()
-            .map_err(|_| IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
-            })?;
+        let series_id: i64 =
+            connector_mandate_id
+                .parse()
+                .map_err(|_| IntegrationError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?;
 
         // Convert amount
         let converter = FloatMajorUnitForConnector;
@@ -1288,12 +1299,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsRespon
                 BamboraPaymentType::PreAuthCompletion => AttemptStatus::Charged,
                 _ => AttemptStatus::Pending,
             }
+        } else if item.router_data.request.is_auto_capture() {
+            AttemptStatus::Failure
         } else {
-            if item.router_data.request.is_auto_capture() {
-                AttemptStatus::Failure
-            } else {
-                AttemptStatus::AuthorizationFailed
-            }
+            AttemptStatus::AuthorizationFailed
         };
 
         Ok(Self {
