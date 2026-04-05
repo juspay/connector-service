@@ -11,7 +11,9 @@ use common_utils::{
     ext_traits::{ByteSliceExt, StringExt},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        self, Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::*,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -28,8 +30,7 @@ use interfaces::{
 };
 use requests::{
     PeachpaymentsAuthorizeRequest, PeachpaymentsCaptureRequest, PeachpaymentsRefundRequest,
-    PeachpaymentsRepeatPaymentRequest, PeachpaymentsSetupMandateRequest,
-    PeachpaymentsVoidRequest,
+    PeachpaymentsRepeatPaymentRequest, PeachpaymentsSetupMandateRequest, PeachpaymentsVoidRequest,
 };
 use responses::{
     PeachpaymentsCaptureResponse, PeachpaymentsPaymentsResponse, PeachpaymentsRefundResponse,
