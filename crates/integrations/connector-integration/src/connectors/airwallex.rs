@@ -45,8 +45,8 @@ use transformers::{
     AirwallexCaptureRequest, AirwallexCaptureResponse, AirwallexIntentRequest,
     AirwallexIntentResponse, AirwallexPaymentRequest, AirwallexPaymentsResponse,
     AirwallexRefundRequest, AirwallexRefundResponse, AirwallexRefundSyncResponse,
-    AirwallexRepeatPaymentRequest, AirwallexRepeatPaymentResponse,
-    AirwallexSyncResponse, AirwallexVoidRequest, AirwallexVoidResponse,
+    AirwallexRepeatPaymentRequest, AirwallexRepeatPaymentResponse, AirwallexSyncResponse,
+    AirwallexVoidRequest, AirwallexVoidResponse,
 };
 
 use super::macros;

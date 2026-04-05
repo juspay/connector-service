@@ -1451,7 +1451,12 @@ pub type AirwallexRepeatPaymentResponse = AirwallexPaymentsResponse;
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::AirwallexRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AirwallexRepeatPaymentRequest
@@ -1460,19 +1465,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::AirwallexRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract the stored payment method ID from connector_mandate_id
-        let payment_method_id = item
-            .router_data
-            .request
-            .connector_mandate_id()
-            .ok_or(IntegrationError::MissingRequiredField {
+        let payment_method_id = item.router_data.request.connector_mandate_id().ok_or(
+            IntegrationError::MissingRequiredField {
                 field_name: "connector_mandate_id",
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         let auto_capture = matches!(
             item.router_data.request.capture_method,
