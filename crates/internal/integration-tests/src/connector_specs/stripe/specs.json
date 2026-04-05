@@ -7,6 +7,7 @@
     "create_customer",
     "create_sdk_session_token",
     "get",
+    "handle_event",
     "incremental_authorization",
     "proxy_authorize",
     "proxy_setup_recurring",

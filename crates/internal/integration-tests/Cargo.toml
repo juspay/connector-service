@@ -25,6 +25,9 @@ proptest = "1.9.0"
 uuid = { version = "1.18.1", features = ["v4"] }
 inquire = "0.7"
 regex = "1"
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
 
 [dev-dependencies]
 serde_ignored = "0.1"

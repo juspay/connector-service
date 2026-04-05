@@ -9,6 +9,7 @@
     "get",
     "refund_sync",
     "setup_recurring",
-    "recurring_charge"
+    "recurring_charge",
+    "handle_event"
   ]
 }

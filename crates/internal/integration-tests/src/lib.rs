@@ -11,3 +11,4 @@
 //! wire CLI argument parsing and reporting around these reusable primitives.
 
 pub mod harness;
+pub mod webhook_signatures;

@@ -4291,6 +4291,7 @@ fn grpc_method_for_suite(suite: &str, spec: Option<&SuiteSpec>) -> Result<String
         "proxy_authorize" => "types.PaymentService/ProxyAuthorize",
         "proxy_setup_recurring" => "types.PaymentService/ProxySetupRecurring",
         "payment_method_eligibility" => "types.PaymentMethodService/Eligibility",
+        "handle_event" => "types.EventService/HandleEvent",
         _ => {
             return Err(ScenarioError::UnsupportedSuite {
                 suite: suite.to_string(),
@@ -4321,6 +4322,7 @@ pub fn all_known_suites() -> &'static [&'static str] {
         "create_sdk_session_token",
         "create_session_token",
         "get",
+        "handle_event",
         "incremental_authorization",
         "payment_method_eligibility",
         "post_authenticate",
