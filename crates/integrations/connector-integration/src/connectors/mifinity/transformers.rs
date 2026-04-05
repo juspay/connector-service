@@ -528,7 +528,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for MifinityRepeatPaymentRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: MifinityRouterData<
             RouterDataV2<
@@ -546,8 +546,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_feature_data
                 .clone(),
         )
-        .change_context(ConnectorError::InvalidConnectorConfig {
+        .change_context(IntegrationError::InvalidConnectorConfig {
             config: "merchant_connector_account.metadata",
+            context: Default::default(),
         })?;
 
         // Extract mandate reference - for repeat payments, we need the source account number
@@ -579,8 +580,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             nationality: billing_country,
             email_address,
             dob: Secret::new(
-                Date::from_calendar_date(1990, time::Month::January, 1)
-                    .map_err(|_| ConnectorError::RequestEncodingFailed)?,
+                Date::from_calendar_date(1990, time::Month::January, 1).map_err(|_| {
+                    IntegrationError::RequestEncodingFailed {
+                        context: Default::default(),
+                    }
+                })?,
             ),
         };
 
@@ -592,7 +596,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorError::RequestEncodingFailed)?,
+                .change_context(IntegrationError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?,
             currency: item.router_data.request.currency,
         };
 
@@ -670,7 +676,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<MifinityRepeatPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<MifinityRepeatPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -723,19 +729,21 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 // Helper function to extract mandate reference
 fn extract_mandate_reference(
     mandate_reference: &MandateReferenceId,
-) -> Result<String, error_stack::Report<ConnectorError>> {
+) -> Result<String, error_stack::Report<IntegrationError>> {
     match mandate_reference {
         MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
             .get_connector_mandate_id()
             .ok_or_else(|| {
-                error_stack::Report::new(ConnectorError::MissingRequiredField {
+                error_stack::Report::new(IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id",
+                    context: Default::default(),
                 })
             }),
         MandateReferenceId::NetworkMandateId(network_txn_id) => Ok(network_txn_id.clone()),
         MandateReferenceId::NetworkTokenWithNTI(_) => {
-            Err(error_stack::Report::new(ConnectorError::NotImplemented(
+            Err(error_stack::Report::new(IntegrationError::NotImplemented(
                 "Network token with NTI not supported for Mifinity".to_string(),
+                Default::default(),
             )))
         }
     }
