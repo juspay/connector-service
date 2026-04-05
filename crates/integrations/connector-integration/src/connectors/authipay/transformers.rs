@@ -495,7 +495,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
                 mandate_reference: None,
                 connector_metadata,
                 // Use scheme_transaction_id from response, falling back to network from processor
-                network_txn_id: item.response.scheme_transaction_id.clone().or(network_txn_id),
+                network_txn_id: item
+                    .response
+                    .scheme_transaction_id
+                    .clone()
+                    .or(network_txn_id),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
