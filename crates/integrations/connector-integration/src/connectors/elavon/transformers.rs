@@ -1499,7 +1499,12 @@ pub struct ElavonRepeatPaymentRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for ElavonRepeatPaymentRequest
@@ -1508,7 +1513,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: ElavonRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1525,40 +1535,44 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         //   and the ssl_token comes from PaymentFlowData.payment_method_token
         let (ssl_token, network_txn_id) = match &request_data.mandate_reference {
             MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
-                let token = connector_mandate_ref.get_connector_mandate_id().ok_or_else(|| {
-                    report!(IntegrationError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                        context: Default::default()
-                    })
-                })?;
+                let token = connector_mandate_ref
+                    .get_connector_mandate_id()
+                    .ok_or_else(|| {
+                        report!(IntegrationError::MissingRequiredField {
+                            field_name: "connector_mandate_id",
+                            context: Default::default()
+                        })
+                    })?;
                 // For ConnectorMandateId, there's no separate network txn id
                 (Secret::new(token), None)
             }
             MandateReferenceId::NetworkMandateId(network_txn_id) => {
                 // Get the ssl_token from payment_method_token on the resource_common_data
-                let pmt = router_data.resource_common_data.payment_method_token.clone()
+                let pmt = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .clone()
                     .ok_or_else(|| {
                         report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
                             context: Default::default()
                         })
                     })?;
-                let token = match pmt {
-                    PaymentMethodToken::Token(t) => t,
-                };
+                let PaymentMethodToken::Token(token) = pmt;
                 (token, Some(network_txn_id.clone()))
             }
             MandateReferenceId::NetworkTokenWithNTI(nti_ref) => {
-                let pmt = router_data.resource_common_data.payment_method_token.clone()
+                let pmt = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .clone()
                     .ok_or_else(|| {
                         report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
                             context: Default::default()
                         })
                     })?;
-                let token = match pmt {
-                    PaymentMethodToken::Token(t) => t,
-                };
+                let PaymentMethodToken::Token(token) = pmt;
                 (token, Some(nti_ref.network_transaction_id.clone()))
             }
         };
@@ -1617,7 +1631,12 @@ pub struct XMLRepeatPaymentRequest(pub HashMap<String, Secret<String, WithoutTyp
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ElavonRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for XMLRepeatPaymentRequest
@@ -1626,7 +1645,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         data: ElavonRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1747,10 +1771,8 @@ impl<'de> Deserialize<'de> for ElavonRepeatPaymentResponse {
 }
 
 // Response transformation for RepeatPayment flow
-impl<
-        F,
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    > TryFrom<ResponseRouterData<ElavonRepeatPaymentResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<ElavonRepeatPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;

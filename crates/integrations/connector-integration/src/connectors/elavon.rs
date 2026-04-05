@@ -40,9 +40,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
-    ElavonRSyncResponse, ElavonRefundResponse, ElavonRepeatPaymentResponse,
-    XMLCaptureRequest, XMLElavonRequest, XMLPSyncRequest, XMLRSyncRequest,
-    XMLRefundRequest, XMLRepeatPaymentRequest,
+    ElavonRSyncResponse, ElavonRefundResponse, ElavonRepeatPaymentResponse, XMLCaptureRequest,
+    XMLElavonRequest, XMLPSyncRequest, XMLRSyncRequest, XMLRefundRequest, XMLRepeatPaymentRequest,
 };
 
 use super::macros;
