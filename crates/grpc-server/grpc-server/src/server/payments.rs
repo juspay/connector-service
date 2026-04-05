@@ -39,8 +39,7 @@ use domain_types::{
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response, AuthorizationRequest, PaymentMethodDataAction,
-        proxied_authorize_to_base, proxied_setup_recurring_to_base, SetupRecurringRequest,
+        generate_setup_mandate_response, AuthorizationRequest, PaymentMethodDataAction, SetupRecurringRequest,
         tokenized_authorize_to_base, tokenized_setup_recurring_to_base,
     },
     utils::ForeignTryFrom,
@@ -1361,7 +1360,7 @@ impl Payments {
 
         let connectors = utils::connectors_with_connector_config_overrides(
             &metadata_payload.connector_config,
-            &config,
+            config,
         )
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
             tracing::error!("Failed to resolve connector overrides: {:?}", e);
@@ -1424,7 +1423,7 @@ impl Payments {
         );
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(&request_id).map_err(|e| {
+        let test_context = config.test.create_test_context(request_id).map_err(|e| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Test mode configuration error: {e}")),
@@ -1435,11 +1434,11 @@ impl Payments {
 
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
-            service_name: &service_name,
+            service_name,
             service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::SetupMandate,
             event_config: &config.events,
-            request_id: &request_id,
+            request_id,
             lineage_ids: &metadata_payload.lineage_ids,
             reference_id: &metadata_payload.reference_id,
             resource_id: &metadata_payload.resource_id,
@@ -2521,7 +2520,7 @@ impl PaymentService for Payments {
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
 
-                    self.handle_setup_recurring_internal::<VaultTokenHolder>(
+                    Box::pin(self.handle_setup_recurring_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2532,7 +2531,7 @@ impl PaymentService for Payments {
                         request_id,
                         Some(token_data),
                         payment_method_data,
-                        )
+                        ))
                         .await
 
                     },
@@ -2542,7 +2541,7 @@ impl PaymentService for Payments {
                             tracing::error!("SETUP_RECURRING_FLOW: failed to get payment method data action - error: {:?}", err);
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
-                        self.handle_setup_recurring_internal::<DefaultPCIHolder>(
+                        Box::pin(self.handle_setup_recurring_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2550,10 +2549,10 @@ impl PaymentService for Payments {
                         &request_data.masked_metadata,
                         &metadata_payload,
                         &service_name,
-                        &request_id,
+                        request_id,
                         None,
                         payment_method_data,
-                        ).await
+                        )).await
                     },
                     PaymentMethodDataAction::Default => {
                         let payment_method_data = payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(proto_payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
@@ -2561,7 +2560,7 @@ impl PaymentService for Payments {
                                 tracing::error!("Failed to convert payment method data: {:?}", err);
                                 tonic::Status::invalid_argument("Invalid payment method data")
                             })?;
-                        self.handle_setup_recurring_internal::<DefaultPCIHolder>(
+                        Box::pin(self.handle_setup_recurring_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2569,10 +2568,10 @@ impl PaymentService for Payments {
                         &request_data.masked_metadata,
                         &metadata_payload,
                         &service_name,
-                        &request_id,
+                        request_id,
                         None,
                         payment_method_data,
-                        ).await
+                        )).await
                     }
                 };
                 
@@ -2801,7 +2800,6 @@ impl PaymentService for Payments {
                     
                     // Extract ProxyCardDetails from the payment_method
                     let proxy_card_details = proto_payload.card_proxy
-                        .and_then(|pm| Some(pm))
                         .ok_or_else(|| tonic::Status::invalid_argument("Missing proxy_card_details in payment_method"))?;
                     
                     // Convert ProxyCardDetails to PaymentMethodData
@@ -2912,7 +2910,7 @@ impl PaymentService for Payments {
                     );
                     
                     // Call handle_setup_recurring_internal directly with intermediate type
-                    let setup_mandate_response = self.handle_setup_recurring_internal::<VaultTokenHolder>(
+                    let setup_mandate_response = Box::pin(self.handle_setup_recurring_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2923,7 +2921,7 @@ impl PaymentService for Payments {
                         request_id,
                         Some(token_data),
                         payment_method_data,
-                    )
+                    ))
                     .await;
                     
                     match setup_mandate_response {
@@ -3032,7 +3030,7 @@ impl PaymentMethodService for PaymentMethod {
                         &request_data.masked_metadata,
                         &metadata_payload,
                         &service_name,
-                        &request_id,
+                        request_id,
                         None,
                         payment_method_data,
                         ).await
@@ -3051,7 +3049,7 @@ impl PaymentMethodService for PaymentMethod {
                         &request_data.masked_metadata,
                         &metadata_payload,
                         &service_name,
-                        &request_id,
+                        request_id,
                         None,
                         payment_method_data,
                         ).await
@@ -3078,6 +3076,7 @@ impl PaymentMethodService for PaymentMethod {
 }
 
 impl PaymentMethod {
+    #[allow(clippy::too_many_arguments)]
     pub async fn handle_tokenize_internal<
         T: PaymentMethodDataTypes
             + Default
@@ -3115,7 +3114,7 @@ impl PaymentMethod {
         > = connector_data.connector.get_connector_integration_v2();
 
         let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, &config).map_err(
+            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
                 |e: error_stack::Report<ApplicationErrorResponse>| {
                     tracing::error!("Failed to resolve connector overrides: {:?}", e);
                     let api_error = e.current_context().get_api_error();
@@ -3174,7 +3173,7 @@ impl PaymentMethod {
         let api_tag = config.api_tags.get_tag(FlowName::PaymentMethodToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(&request_id).map_err(|e| {
+        let test_context = config.test.create_test_context(request_id).map_err(|e| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Test mode configuration error: {e}")),
@@ -3186,7 +3185,7 @@ impl PaymentMethod {
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
-            service_name: &service_name,
+            service_name,
             service_type: utils::service_type_str(&config.server.type_),
             flow_name: FlowName::PaymentMethodToken,
             event_config: &config.events,

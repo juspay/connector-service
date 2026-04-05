@@ -140,6 +140,7 @@ pub(crate) fn base_create_order_request() -> PaymentServiceCreateOrderRequest {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     PaymentServiceSetupRecurringRequest {
         amount: Some(usd_money(0)),
@@ -162,6 +163,7 @@ pub(crate) fn base_setup_recurring_request() -> PaymentServiceSetupRecurringRequ
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     RecurringPaymentServiceChargeRequest {
         amount: Some(usd_money(1000)),
@@ -202,6 +204,7 @@ pub(crate) fn base_create_customer_request() -> CustomerServiceCreateRequest {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
     PaymentMethodServiceTokenizeRequest {
         amount: Some(usd_money(1000)),
@@ -229,6 +232,7 @@ pub(crate) fn base_create_session_token_request(
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_pre_authenticate_request(
 ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
     PaymentMethodAuthenticationServicePreAuthenticateRequest {
@@ -244,6 +248,7 @@ pub(crate) fn base_pre_authenticate_request(
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_authenticate_request() -> PaymentMethodAuthenticationServiceAuthenticateRequest {
     PaymentMethodAuthenticationServiceAuthenticateRequest {
         payment_method: Some(card_payment_method()),
@@ -258,6 +263,7 @@ pub(crate) fn base_authenticate_request() -> PaymentMethodAuthenticationServiceA
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_post_authenticate_request(
 ) -> PaymentMethodAuthenticationServicePostAuthenticateRequest {
     PaymentMethodAuthenticationServicePostAuthenticateRequest {
@@ -307,6 +313,7 @@ pub(crate) fn base_defend_dispute_request() -> DisputeServiceDefendRequest {
 
 // ── Non-PCI (Tokenized / Proxy) request builders ──────────────────────────────
 
+#[allow(dead_code)]
 fn base_card_proxy() -> ProxyCardDetails {
     ProxyCardDetails {
         card_number: Some(Secret::new("4111111111111111".to_string())),
@@ -318,6 +325,7 @@ fn base_card_proxy() -> ProxyCardDetails {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_tokenized_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
     PaymentServiceTokenAuthorizeRequest {
         merchant_transaction_id: Some("probe_tokenized_txn_001".to_string()),
@@ -333,6 +341,7 @@ pub(crate) fn base_tokenized_authorize_request() -> PaymentServiceTokenAuthorize
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_tokenized_setup_recurring_request() -> PaymentServiceTokenSetupRecurringRequest {
     PaymentServiceTokenSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_tokenized_mandate_001".to_string(),
@@ -368,6 +377,7 @@ pub(crate) fn base_tokenized_setup_recurring_request() -> PaymentServiceTokenSet
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_proxied_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
     PaymentServiceProxyAuthorizeRequest {
         merchant_transaction_id: Some("probe_proxy_txn_001".to_string()),
@@ -384,6 +394,7 @@ pub(crate) fn base_proxied_authorize_request() -> PaymentServiceProxyAuthorizeRe
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn base_proxied_setup_recurring_request() -> PaymentServiceProxySetupRecurringRequest {
     PaymentServiceProxySetupRecurringRequest {
         merchant_recurring_payment_id: "probe_proxy_mandate_001".to_string(),

@@ -2383,7 +2383,6 @@ impl PaymentMethodDataAction {
 /// These types serve as unified inputs to the core authorization flows.
 /// They accept both CardDetails (for PCI-compliant merchants) and ProxyCardDetails
 /// (for non-PCI merchants using vault tokens), while maintaining security boundaries.
-
 /// Intermediate authorization request that accepts both CardDetails and ProxyCardDetails.
 /// This type serves as the unified input to AuthorizeCore.
 #[derive(Debug, Clone)]
@@ -2479,24 +2478,20 @@ pub struct SetupRecurringRequest {
 /// ============================================================================
 /// CONVERSION IMPLEMENTATIONS FOR INTERMEDIATE TYPES
 /// ============================================================================
-
 impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationRequest {
     fn from(req: grpc_payment_types::PaymentServiceAuthorizeRequest) -> Self {
-        let tokenization_strategy = match req.tokenization_strategy{
-            None => None,
-            Some(_) => Some(req.tokenization_strategy()),
-        };
+let tokenization_strategy = req.tokenization_strategy.map(|_| req.tokenization_strategy());
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
-            amount: req.amount.clone(),
-            order_tax_amount: req.order_tax_amount.clone(),
-            shipping_cost: req.shipping_cost.clone(),
+amount: req.amount,
+order_tax_amount: req.order_tax_amount,
+shipping_cost: req.shipping_cost,
             payment_method: req.payment_method.clone(),
             capture_method: req.capture_method(),
             customer: req.customer.clone(),
             address: req.address.clone(),
-            auth_type: req.auth_type.clone(),
-            enrolled_for_3ds: req.enrolled_for_3ds.clone(),
+auth_type: req.auth_type,
+enrolled_for_3ds: req.enrolled_for_3ds,
             authentication_data: req.authentication_data.clone(),
             metadata: req.metadata.clone(),
             connector_feature_data: req.connector_feature_data.clone(),
@@ -2507,10 +2502,10 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             order_category: req.order_category.clone(),
             merchant_order_id: req.merchant_order_id.clone(),
             setup_future_usage: req.setup_future_usage(),
-            off_session: req.off_session.clone(),
-            request_incremental_authorization: req.request_incremental_authorization.clone(),
-            request_extended_authorization: req.request_extended_authorization.clone(),
-            enable_partial_authorization: req.enable_partial_authorization.clone(),
+off_session: req.off_session,
+request_incremental_authorization: req.request_incremental_authorization,
+request_extended_authorization: req.request_extended_authorization,
+enable_partial_authorization: req.enable_partial_authorization,
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info.clone(),
             billing_descriptor: req.billing_descriptor.clone(),
@@ -2548,7 +2543,7 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
 
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
-            amount: req.amount.clone(),
+            amount: req.amount,
             order_tax_amount: None,
             shipping_cost: None,
             payment_method,
@@ -3015,7 +3010,7 @@ impl<
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let shipping_cost = value.shipping_cost.map(|shipping_cost|common_utils::types::MinorUnit::new(shipping_cost));
+        let shipping_cost = value.shipping_cost.map(common_utils::types::MinorUnit::new);
         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
@@ -3147,232 +3142,6 @@ impl<
     }
 }
 
-/// ============================================================================
-/// FOREIGN TRY FROM IMPLEMENTATIONS FOR INTERMEDIATE TYPES
-/// ============================================================================
-
-// //reuse the authorize fn
-// impl<
-//         T: PaymentMethodDataTypes
-//             + Default
-//             + Debug
-//             + Send
-//             + Eq
-//             + PartialEq
-//             + Serialize
-//             + serde::de::DeserializeOwned
-//             + Clone,
-//     > ForeignTryFrom<(AuthorizationRequest, PaymentMethodData<T>)> for PaymentsAuthorizeData<T>
-// {
-//     type Error = ApplicationErrorResponse;
-
-//     fn foreign_try_from(
-//         (value, payment_method_data): (AuthorizationRequest, PaymentMethodData<T>),
-//     ) -> Result<Self, error_stack::Report<Self::Error>> {
-//         let amount = match value.amount {
-//             Some(amount) => amount,
-//             None => {
-//                 return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-//                     sub_code: "MISSING_AMOUNT".to_owned(),
-//                     error_identifier: 400,
-//                     error_message: "Amount is required".to_owned(),
-//                     error_object: None,
-//                 })));
-//             }
-//         };
-//         let email: Option<Email> = match value.customer.clone().and_then(|customer| customer.email)
-//         {
-//             Some(ref email_str) => {
-//                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-//                     error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-//                         sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-//                         error_identifier: 400,
-
-//                         error_message: "Invalid email".to_owned(),
-//                         error_object: None,
-//                     }))
-//                 })?)
-//             }
-//             None => None,
-//         };
-//         let merchant_config_currency = common_enums::Currency::foreign_try_from(amount.currency())?;
-
-//         let connector_feature_data = value
-//             .clone()
-//             .connector_feature_data
-//             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
-//             .transpose()?;
-//         let merchant_account_id = connector_feature_data
-//             .as_ref()
-//             .and_then(|m: &SecretSerdeValue| m.peek().get("merchant_account_id"))
-//             .and_then(|v| v.as_str())
-//             .map(str::to_string);
-
-//         let setup_future_usage = match value.setup_future_usage {
-//             None => None,
-//             Some(future_usage_i32) => {
-//                 let future_usage = grpc_payment_types::FutureUsage::try_from(future_usage_i32)
-//                     .map_err(|_| {
-//                         ApplicationErrorResponse::BadRequest(ApiError {
-//                             sub_code: "INVALID_FUTURE_USAGE".to_owned(),
-//                             error_identifier: 400,
-//                             error_message: "Invalid future usage value".to_owned(),
-//                             error_object: None,
-//                         })
-//                     })?;
-//                 match future_usage {
-//                     grpc_payment_types::FutureUsage::Unspecified => None,
-//                     _ => Some(FutureUsage::foreign_try_from(future_usage)?),
-//                 }
-//             }
-//         };
-
-//         let customer_acceptance = value.customer_acceptance.clone();
-//         let authentication_data = value
-//             .authentication_data
-//             .clone()
-//             .map(router_request_types::AuthenticationData::try_from)
-//             .transpose()?;
-
-//         let access_token = value
-//             .state
-//             .as_ref()
-//             .and_then(|state| state.access_token.as_ref())
-//             .map(AccessTokenResponseData::foreign_try_from)
-//             .transpose()?;
-
-//         let shipping_cost = value.shipping_cost.map(common_utils::types::MinorUnit::new);
-//         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
-//         // For now, set to None as Hyperswitch needs to be updated to send this data properly
-//         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
-
-//         let billing_descriptor = value.billing_descriptor.as_ref().map(|descriptor| {
-//             BillingDescriptor::from((
-//                 descriptor, None, // statement_descriptor_name not in intermediate type
-//                 None, // statement_descriptor_suffix not in intermediate type
-//             ))
-//         });
-
-//         let payment_channel = match value.payment_channel {
-//             None => None,
-//             Some(channel_i32) => {
-//                 let channel =
-//                     grpc_payment_types::PaymentChannel::try_from(channel_i32).map_err(|_| {
-//                         ApplicationErrorResponse::BadRequest(ApiError {
-//                             sub_code: "INVALID_PAYMENT_CHANNEL".to_owned(),
-//                             error_identifier: 400,
-//                             error_message: "Invalid payment channel value".to_owned(),
-//                             error_object: None,
-//                         })
-//                     })?;
-//                 match channel {
-//                     grpc_payment_types::PaymentChannel::Unspecified => None,
-//                     _ => Some(common_enums::PaymentChannel::foreign_try_from(channel)?),
-//                 }
-//             }
-//         };
-
-//         let capture_method = match value.capture_method {
-//             None => None,
-//             Some(capture_method_i32) => {
-//                 let capture_method = grpc_payment_types::CaptureMethod::try_from(
-//                     capture_method_i32,
-//                 )
-//                 .map_err(|_| {
-//                     ApplicationErrorResponse::BadRequest(ApiError {
-//                         sub_code: "INVALID_CAPTURE_METHOD".to_owned(),
-//                         error_identifier: 400,
-//                         error_message: "Invalid capture method value".to_owned(),
-//                         error_object: None,
-//                     })
-//                 })?;
-//                 Some(CaptureMethod::foreign_try_from(capture_method)?)
-//             }
-//         };
-
-//         Ok(Self {
-//             authentication_data,
-//             capture_method,
-//             payment_method_data,
-//             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-//             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
-//             confirm: true,
-//             webhook_url: value.webhook_url.clone(),
-//             browser_info: value
-//                 .browser_info
-//                 .as_ref()
-//                 .cloned()
-//                 .map(BrowserInformation::foreign_try_from)
-//                 .transpose()?,
-//             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
-//                 value.payment_method.clone().ok_or_else(|| {
-//                     ApplicationErrorResponse::BadRequest(ApiError {
-//                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-//                         error_identifier: 400,
-//                         error_message: "Payment method data is required".to_owned(),
-//                         error_object: None,
-//                     })
-//                 })?,
-//             )?,
-//             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-//             email,
-//             customer_name: None,
-//             billing_descriptor,
-//             router_return_url: value.return_url.clone(),
-//             complete_authorize_url: value.complete_authorize_url,
-//             setup_future_usage,
-//             mandate_id: None,
-//             off_session: value.off_session,
-//             order_category: value.order_category,
-//             session_token: None,
-//             access_token,
-//             customer_acceptance: customer_acceptance
-//                 .map(mandates::CustomerAcceptance::foreign_try_from)
-//                 .transpose()?,
-//             enrolled_for_3ds: value.enrolled_for_3ds,
-//             related_transaction_id: None,
-//             payment_experience: None,
-//             customer_id: value
-//                 .customer
-//                 .and_then(|customer| customer.connector_customer_id)
-//                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-//                 .transpose()
-//                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-//                     sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-//                     error_identifier: 400,
-//                     error_message: "Failed to parse Customer Id".to_owned(),
-//                     error_object: None,
-//                 }))?,
-//             request_incremental_authorization: value.request_incremental_authorization,
-//             metadata: value
-//                 .metadata
-//                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
-//                 .transpose()?,
-//             merchant_order_id: value.merchant_order_id,
-//             order_tax_amount: value
-//                 .order_tax_amount
-//                 .map(common_utils::types::MinorUnit::new),
-//             shipping_cost,
-//             merchant_account_id,
-//             integrity_object: None,
-//             merchant_config_currency: Some(merchant_config_currency),
-//             all_keys_required: None, // Field not available in new proto structure
-//             split_payments: None,
-//             enable_overcapture: None,
-//             setup_mandate_details: None, // Not in intermediate type
-//             request_extended_authorization: value.request_extended_authorization,
-//             connector_feature_data,
-//             connector_testing_data,
-//             payment_channel,
-//             enable_partial_authorization: value.enable_partial_authorization,
-//             locale: value.locale.clone(),
-//             continue_redirection_url: None,
-//             redirect_response: None,
-//             threeds_method_comp_ind: None,
-//             tokenization: None,
-//         })
-//     }
-// }
 
 impl<
         T: PaymentMethodDataTypes

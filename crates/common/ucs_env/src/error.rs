@@ -339,7 +339,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
 impl From<PaymentAuthorizationError> for grpc_api_types::payments::PaymentServiceSetupRecurringResponse {
     fn from(error: PaymentAuthorizationError) -> Self {
         Self {
-            status: error.status as i32,
+            status: error.status.into(),
             error: Some(grpc_api_types::payments::ErrorInfo {
                 unified_details: None,
                 connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
