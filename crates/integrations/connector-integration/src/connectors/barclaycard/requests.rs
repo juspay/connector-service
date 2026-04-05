@@ -129,8 +129,9 @@ pub struct BarclaycardRefundRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BarclaycardSetupMandateRequest<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize>
-{
+pub struct BarclaycardSetupMandateRequest<
+    T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize,
+> {
     pub processing_information: SetupMandateProcessingInformation,
     pub payment_information: PaymentInformation<T>,
     pub order_information: OrderInformationWithBill,

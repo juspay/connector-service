@@ -901,7 +901,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardSetupMandateRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BarclaycardRouterData<
@@ -925,8 +925,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .address
             .get_payment_method_billing()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing",
+                context: Default::default(),
             })?;
 
         let bill_to = build_bill_to(billing, email)?;
@@ -941,7 +942,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(IntegrationError::not_implemented(
                 "Only card payments are supported for mandate setup".to_string(),
             )),
         }?;
@@ -1007,7 +1008,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardSetupMandateResponse, Self>,
@@ -1021,9 +1022,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .map(|token_info| MandateReference {
                             connector_mandate_id: token_info
                                 .payment_instrument
-                                .map(|payment_instrument| {
-                                    payment_instrument.id.expose()
-                                }),
+                                .map(|payment_instrument| payment_instrument.id.expose()),
                             payment_method_id: None,
                             connector_mandate_request_reference_id: None,
                         });
@@ -1052,20 +1051,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            info_response.id.clone(),
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
                         redirection_data: None,
                         mandate_reference: mandate_reference.map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: info_response
-                            .processor_information
-                            .as_ref()
-                            .and_then(|pi| {
+                        network_txn_id: info_response.processor_information.as_ref().and_then(
+                            |pi| {
                                 pi.network_transaction_id
                                     .as_ref()
                                     .map(|ntid| ntid.clone().expose())
-                            }),
+                            },
+                        ),
                         connector_response_reference_id: Some(
                             info_response
                                 .client_reference_information
@@ -1151,7 +1147,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardRepeatPaymentRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: BarclaycardRouterData<
@@ -1170,145 +1166,144 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let (commerce_indicator, authorization_options, payment_information) =
-            match &router_data.request.mandate_reference {
-                MandateReferenceId::ConnectorMandateId(_) => {
-                    let mandate_id = router_data.request.connector_mandate_id().ok_or(
-                        errors::ConnectorError::MissingRequiredField {
-                            field_name: "connector_mandate_id",
-                        },
-                    )?;
-                    let original_authorized_amount = router_data
-                        .request
-                        .recurring_mandate_payment_data
-                        .as_ref()
-                        .and_then(|data| {
-                            data.original_payment_authorized_amount
-                                .as_ref()
-                                .map(|oa| (oa.amount, oa.currency))
-                        });
+        let (commerce_indicator, authorization_options, payment_information) = match &router_data
+            .request
+            .mandate_reference
+        {
+            MandateReferenceId::ConnectorMandateId(_) => {
+                let mandate_id = router_data.request.connector_mandate_id().ok_or(
+                    IntegrationError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                        context: Default::default(),
+                    },
+                )?;
+                let original_authorized_amount = router_data
+                    .request
+                    .recurring_mandate_payment_data
+                    .as_ref()
+                    .and_then(|data| {
+                        data.original_payment_authorized_amount
+                            .as_ref()
+                            .map(|oa| (oa.amount, oa.currency))
+                    });
 
-                    let original_authorized_amount = match original_authorized_amount {
-                        Some((original_amount, original_currency)) => {
-                            Some(domain_types::utils::get_amount_as_string(
-                                &common_enums::CurrencyUnit::Base,
-                                original_amount,
-                                original_currency,
-                            )?)
-                        }
-                        None => None,
-                    };
+                let original_authorized_amount = match original_authorized_amount {
+                    Some((original_amount, original_currency)) => {
+                        Some(domain_types::utils::get_amount_as_string(
+                            &common_enums::CurrencyUnit::Base,
+                            original_amount,
+                            original_currency,
+                        )?)
+                    }
+                    None => None,
+                };
 
-                    let payment_instrument = requests::PaymentInstrument {
-                        id: mandate_id.into(),
-                    };
+                let payment_instrument = requests::PaymentInstrument {
+                    id: mandate_id.into(),
+                };
 
-                    let mandate_card = match router_data.request.payment_method_type {
-                        Some(common_enums::PaymentMethodType::Card) => {
-                            Some(requests::MandateCard {
-                                type_selection_indicator: Some("1".to_owned()),
-                            })
-                        }
-                        _ => None,
-                    };
+                let mandate_card = match router_data.request.payment_method_type {
+                    Some(common_enums::PaymentMethodType::Card) => Some(requests::MandateCard {
+                        type_selection_indicator: Some("1".to_owned()),
+                    }),
+                    _ => None,
+                };
 
-                    let pi = requests::RepeatPaymentInformation::MandatePayment(Box::new(
-                        requests::MandatePaymentInformation {
-                            payment_instrument,
-                            card: mandate_card,
-                        },
-                    ));
+                let pi = requests::RepeatPaymentInformation::MandatePayment(Box::new(
+                    requests::MandatePaymentInformation {
+                        payment_instrument,
+                        card: mandate_card,
+                    },
+                ));
 
-                    (
-                        "internet".to_string(),
-                        Some(requests::AuthorizationOptions {
-                            initiator: None,
-                            merchant_initiated_transaction: Some(
-                                requests::MerchantInitiatedTransaction {
-                                    reason: None,
-                                    original_authorized_amount,
-                                    previous_transaction_id: None,
-                                },
-                            ),
-                        }),
-                        pi,
-                    )
-                }
-                MandateReferenceId::NetworkMandateId(network_transaction_id) => {
-                    let original_authorized_amount = router_data
-                        .request
-                        .recurring_mandate_payment_data
-                        .as_ref()
-                        .and_then(|data| {
-                            data.original_payment_authorized_amount
-                                .as_ref()
-                                .map(|oa| (oa.amount, oa.currency))
-                        });
-
-                    let original_authorized_amount = match original_authorized_amount {
-                        Some((original_amount, original_currency)) => {
-                            Some(domain_types::utils::get_amount_as_string(
-                                &common_enums::CurrencyUnit::Base,
-                                original_amount,
-                                original_currency,
-                            )?)
-                        }
-                        None => None,
-                    };
-
-                    let ccard = match &router_data.request.payment_method_data {
-                        PaymentMethodData::CardDetailsForNetworkTransactionId(card) => Ok(card),
-                        _ => Err(errors::ConnectorError::MissingRequiredField {
-                            field_name: "card details for network mandate MIT",
-                        }),
-                    }?;
-
-                    let card_type = ccard
-                        .card_network
-                        .clone()
-                        .and_then(get_barclaycard_card_type)
-                        .map(|s| s.to_string());
-
-                    let pi = requests::RepeatPaymentInformation::Cards(Box::new(
-                        requests::CardWithNtiPaymentInformation {
-                            card: requests::CardWithNti {
-                                number: ccard.card_number.clone(),
-                                expiration_month: ccard.card_exp_month.clone(),
-                                expiration_year: ccard.card_exp_year.clone(),
-                                security_code: None,
-                                card_type,
-                                type_selection_indicator: Some("1".to_owned()),
+                (
+                    "internet".to_string(),
+                    Some(requests::AuthorizationOptions {
+                        initiator: None,
+                        merchant_initiated_transaction: Some(
+                            requests::MerchantInitiatedTransaction {
+                                reason: None,
+                                original_authorized_amount,
+                                previous_transaction_id: None,
                             },
-                        },
-                    ));
+                        ),
+                    }),
+                    pi,
+                )
+            }
+            MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                let original_authorized_amount = router_data
+                    .request
+                    .recurring_mandate_payment_data
+                    .as_ref()
+                    .and_then(|data| {
+                        data.original_payment_authorized_amount
+                            .as_ref()
+                            .map(|oa| (oa.amount, oa.currency))
+                    });
 
-                    (
-                        "recurring".to_string(),
-                        Some(requests::AuthorizationOptions {
-                            initiator: Some(requests::PaymentInitiator {
-                                initiator_type: Some("merchant".to_string()),
-                                stored_credential_used: Some(true),
-                            }),
-                            merchant_initiated_transaction: Some(
-                                requests::MerchantInitiatedTransaction {
-                                    reason: Some("7".to_string()),
-                                    original_authorized_amount,
-                                    previous_transaction_id: Some(Secret::new(
-                                        network_transaction_id.clone(),
-                                    )),
-                                },
-                            ),
+                let original_authorized_amount = match original_authorized_amount {
+                    Some((original_amount, original_currency)) => {
+                        Some(domain_types::utils::get_amount_as_string(
+                            &common_enums::CurrencyUnit::Base,
+                            original_amount,
+                            original_currency,
+                        )?)
+                    }
+                    None => None,
+                };
+
+                let ccard = match &router_data.request.payment_method_data {
+                    PaymentMethodData::CardDetailsForNetworkTransactionId(card) => Ok(card),
+                    _ => Err(IntegrationError::MissingRequiredField {
+                        field_name: "card details for network mandate MIT",
+                        context: Default::default(),
+                    }),
+                }?;
+
+                let card_type = ccard
+                    .card_network
+                    .clone()
+                    .and_then(get_barclaycard_card_type)
+                    .map(|s| s.to_string());
+
+                let pi = requests::RepeatPaymentInformation::Cards(Box::new(
+                    requests::CardWithNtiPaymentInformation {
+                        card: requests::CardWithNti {
+                            number: ccard.card_number.clone(),
+                            expiration_month: ccard.card_exp_month.clone(),
+                            expiration_year: ccard.card_exp_year.clone(),
+                            security_code: None,
+                            card_type,
+                            type_selection_indicator: Some("1".to_owned()),
+                        },
+                    },
+                ));
+
+                (
+                    "recurring".to_string(),
+                    Some(requests::AuthorizationOptions {
+                        initiator: Some(requests::PaymentInitiator {
+                            initiator_type: Some("merchant".to_string()),
+                            stored_credential_used: Some(true),
                         }),
-                        pi,
-                    )
-                }
-                MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    Err(errors::ConnectorError::NotImplemented(
-                        "Network token with NTI based MIT is not supported for Barclaycard"
-                            .to_string(),
-                    ))?
-                }
-            };
+                        merchant_initiated_transaction: Some(
+                            requests::MerchantInitiatedTransaction {
+                                reason: Some("7".to_string()),
+                                original_authorized_amount,
+                                previous_transaction_id: Some(Secret::new(
+                                    network_transaction_id.clone(),
+                                )),
+                            },
+                        ),
+                    }),
+                    pi,
+                )
+            }
+            MandateReferenceId::NetworkTokenWithNTI(_) => Err(IntegrationError::not_implemented(
+                "Network token with NTI based MIT is not supported for Barclaycard".to_string(),
+            ))?,
+        };
 
         let processing_information = requests::RepeatPaymentProcessingInformation {
             commerce_indicator,
@@ -1366,7 +1361,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<responses::BarclaycardRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardRepeatPaymentResponse, Self>,
