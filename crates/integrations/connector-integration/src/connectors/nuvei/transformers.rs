@@ -1,4 +1,4 @@
-use common_utils::{pii, types::StringMajorUnit};
+use common_utils::{pii, request::Method, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -8,14 +8,16 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
@@ -123,6 +125,8 @@ pub struct NuveiPaymentRequest<
     pub device_details: NuveiDeviceDetails,
     pub billing_address: NuveiBillingAddress,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_address: Option<NuveiShippingAddress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url_details: Option<NuveiUrlDetails>,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
@@ -152,15 +156,15 @@ pub struct NuveiCard<
     pub cvv: Secret<String>,
 }
 
-// ACH Bank Transfer specific structures
+// Alternative Payment Method structures
 #[derive(Debug, Serialize)]
 pub struct NuveiAlternativePaymentMethod {
     #[serde(rename = "paymentMethod")]
     pub payment_method: String,
-    #[serde(rename = "AccountNumber")]
-    pub account_number: Secret<String>,
-    #[serde(rename = "RoutingNumber")]
-    pub routing_number: Secret<String>,
+    #[serde(rename = "AccountNumber", skip_serializing_if = "Option::is_none")]
+    pub account_number: Option<Secret<String>>,
+    #[serde(rename = "RoutingNumber", skip_serializing_if = "Option::is_none")]
+    pub routing_number: Option<Secret<String>>,
     #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
     pub sec_code: Option<String>,
 }
@@ -198,6 +202,14 @@ pub struct NuveiBillingAddress {
     pub state: Option<Secret<String>>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiShippingAddress {
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub country: Option<String>,
+}
+
 // Payment Response
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -217,6 +229,7 @@ pub struct NuveiPaymentResponse {
     pub client_unique_id: Option<String>,
     pub client_request_id: Option<String>,
     pub internal_request_id: Option<i64>,
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -699,9 +712,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             card: None,
                             alternative_payment_method: Some(NuveiAlternativePaymentMethod {
                                 payment_method: "apmgw_ACH".to_string(),
-                                account_number: Secret::new(account_number.to_string()),
-                                routing_number: Secret::new(routing_number.to_string()),
+                                account_number: Some(Secret::new(account_number.to_string())),
+                                routing_number: Some(Secret::new(routing_number.to_string())),
                                 sec_code,
+                            }),
+                        }
+                    }
+                    other => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
+                }
+            }
+            PaymentMethodData::PayLater(pay_later_data) => {
+                match pay_later_data {
+                    PayLaterData::KlarnaRedirect { .. } => {
+                        // For Klarna, Nuvei requires the payment method "apmgw_Klarna"
+                        // No additional fields are required for Klarna
+                        NuveiPaymentOption {
+                            card: None,
+                            alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                                payment_method: "apmgw_Klarna".to_string(),
+                                account_number: None,
+                                routing_number: None,
+                                sec_code: None,
                             }),
                         }
                     }
@@ -763,8 +800,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let billing_address = NuveiBillingAddress {
             email,
-            first_name,
-            last_name,
+            first_name: first_name.clone(),
+            last_name: last_name.clone(),
             country: country.to_string(),
             phone: router_data
                 .resource_common_data
@@ -780,6 +817,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             zip: router_data.resource_common_data.get_optional_billing_zip(),
             state,
         };
+
+        // Build shipping address - use shipping if available, otherwise use billing
+        let shipping_address = router_data
+            .resource_common_data
+            .get_optional_shipping()
+            .and_then(|shipping| {
+                shipping.address.as_ref().and_then(|addr| {
+                    addr.country.map(|country_code| NuveiShippingAddress {
+                        first_name: addr.first_name.clone(),
+                        last_name: addr.last_name.clone(),
+                        country: Some(country_code.to_string()),
+                    })
+                })
+            })
+            .or_else(|| {
+                // Fallback to billing address for shipping
+                Some(NuveiShippingAddress {
+                    first_name,
+                    last_name,
+                    country: Some(country.to_string()),
+                })
+            });
 
         // Get device details - ipAddress is required by Nuvei
         let ip_address = router_data
@@ -870,6 +929,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_type,
             device_details,
             billing_address,
+            shipping_address,
             url_details,
             time_stamp,
             checksum,
@@ -948,9 +1008,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(response.order_id.clone())
             .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
 
+        // Build redirection data if the transaction status is REDIRECT
+        let redirection_data = if matches!(
+            response.transaction_status,
+            Some(NuveiTransactionStatus::Redirect)
+        ) {
+            response.redirect_url.as_ref().and_then(|url_str| {
+                Url::parse(url_str)
+                    .ok()
+                    .map(|url| Box::new(RedirectForm::from((url, Method::Get))))
+            })
+        } else {
+            None
+        };
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-            redirection_data: None,
+            redirection_data,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
