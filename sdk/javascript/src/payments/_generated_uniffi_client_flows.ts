@@ -106,21 +106,21 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('create', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for create_access_token flow. */
-  createAccessTokenReq(
+  /** Build connector HTTP request for create_client_authentication_token flow. */
+  createClientAuthenticationTokenReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('create_access_token', requestBytes, optionsBytes);
+    return this.callReq('create_client_authentication_token', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for create_access_token flow. */
-  createAccessTokenRes(
+  /** Parse connector HTTP response for create_client_authentication_token flow. */
+  createClientAuthenticationTokenRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('create_access_token', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('create_client_authentication_token', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for create_order flow. */
@@ -140,21 +140,38 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('create_order', responseBytes, requestBytes, optionsBytes);
   }
 
-  /** Build connector HTTP request for create_session_token flow. */
-  createSessionTokenReq(
+  /** Build connector HTTP request for create_server_authentication_token flow. */
+  createServerAuthenticationTokenReq(
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callReq('create_session_token', requestBytes, optionsBytes);
+    return this.callReq('create_server_authentication_token', requestBytes, optionsBytes);
   }
 
-  /** Parse connector HTTP response for create_session_token flow. */
-  createSessionTokenRes(
+  /** Parse connector HTTP response for create_server_authentication_token flow. */
+  createServerAuthenticationTokenRes(
     responseBytes: Buffer | Uint8Array,
     requestBytes: Buffer | Uint8Array,
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
-    return this.callRes('create_session_token', responseBytes, requestBytes, optionsBytes);
+    return this.callRes('create_server_authentication_token', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for create_server_session_authentication_token flow. */
+  createServerSessionAuthenticationTokenReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create_server_session_authentication_token', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create_server_session_authentication_token flow. */
+  createServerSessionAuthenticationTokenRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create_server_session_authentication_token', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for defend flow. */
@@ -191,6 +208,142 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('get', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for payout_create flow. */
+  payoutCreateReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_create', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_create flow. */
+  payoutCreateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_create', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_create_link flow. */
+  payoutCreateLinkReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_create_link', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_create_link flow. */
+  payoutCreateLinkRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_create_link', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_create_recipient flow. */
+  payoutCreateRecipientReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_create_recipient', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_create_recipient flow. */
+  payoutCreateRecipientRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_create_recipient', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_enroll_disburse_account flow. */
+  payoutEnrollDisburseAccountReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_enroll_disburse_account', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_enroll_disburse_account flow. */
+  payoutEnrollDisburseAccountRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_enroll_disburse_account', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_get flow. */
+  payoutGetReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_get', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_get flow. */
+  payoutGetRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_get', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_stage flow. */
+  payoutStageReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_stage', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_stage flow. */
+  payoutStageRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_stage', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_transfer flow. */
+  payoutTransferReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_transfer', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_transfer flow. */
+  payoutTransferRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_transfer', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for payout_void flow. */
+  payoutVoidReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('payout_void', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for payout_void flow. */
+  payoutVoidRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('payout_void', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for post_authenticate flow. */
   postAuthenticateReq(
     requestBytes: Buffer | Uint8Array,
@@ -223,6 +376,40 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('pre_authenticate', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_authorize flow. */
+  proxyAuthorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_authorize', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_authorize flow. */
+  proxyAuthorizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_authorize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_setup_recurring flow. */
+  proxySetupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_setup_recurring', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_setup_recurring flow. */
+  proxySetupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for refund flow. */
@@ -291,6 +478,40 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('submit_evidence', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for token_authorize flow. */
+  tokenAuthorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('token_authorize', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for token_authorize flow. */
+  tokenAuthorizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('token_authorize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for token_setup_recurring flow. */
+  tokenSetupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('token_setup_recurring', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for token_setup_recurring flow. */
+  tokenSetupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('token_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for tokenize flow. */
