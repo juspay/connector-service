@@ -1,1 +1,88 @@
-{}
+{
+  "recurring_charge": {
+    "recurring_charge": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "EUR"
+        },
+        "address": {
+          "billing_address": {
+            "first_name": {"value": "auto_generate"},
+            "last_name": {"value": "auto_generate"},
+            "line1": {"value": "auto_generate"},
+            "city": {"value": "auto_generate"},
+            "country_alpha2_code": "GB",
+            "email": {"value": "auto_generate"},
+            "phone_number": {"value": "auto_generate"},
+            "phone_country_code": "+44"
+          }
+        },
+        "customer": {
+          "name": "auto_generate",
+          "email": {"value": "auto_generate"},
+          "id": "auto_generate"
+        },
+        "connector_feature_data": {"value": "{\"brand_id\":\"100\",\"destination_account_number\":\"MW10000001\"}"},
+        "return_url": "https://example.com/payment/return",
+        "connector_customer_id": null
+      }
+    },
+    "recurring_charge_low_amount": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 1000,
+          "currency": "EUR"
+        },
+        "address": {
+          "billing_address": {
+            "first_name": {"value": "auto_generate"},
+            "last_name": {"value": "auto_generate"},
+            "line1": {"value": "auto_generate"},
+            "city": {"value": "auto_generate"},
+            "country_alpha2_code": "GB",
+            "email": {"value": "auto_generate"},
+            "phone_number": {"value": "auto_generate"},
+            "phone_country_code": "+44"
+          }
+        },
+        "customer": {
+          "name": "auto_generate",
+          "email": {"value": "auto_generate"},
+          "id": "auto_generate"
+        },
+        "connector_feature_data": {"value": "{\"brand_id\":\"100\",\"destination_account_number\":\"MW10000001\"}"},
+        "return_url": "https://example.com/payment/return",
+        "connector_customer_id": null
+      }
+    },
+    "recurring_charge_with_order_context": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 2500,
+          "currency": "EUR"
+        },
+        "address": {
+          "billing_address": {
+            "first_name": {"value": "auto_generate"},
+            "last_name": {"value": "auto_generate"},
+            "line1": {"value": "auto_generate"},
+            "city": {"value": "auto_generate"},
+            "country_alpha2_code": "GB",
+            "email": {"value": "auto_generate"},
+            "phone_number": {"value": "auto_generate"},
+            "phone_country_code": "+44"
+          }
+        },
+        "customer": {
+          "name": "auto_generate",
+          "email": {"value": "auto_generate"},
+          "id": "auto_generate"
+        },
+        "connector_feature_data": {"value": "{\"brand_id\":\"100\",\"destination_account_number\":\"MW10000001\"}"},
+        "return_url": "https://example.com/payment/return",
+        "connector_customer_id": null
+      }
+    }
+  }
+}

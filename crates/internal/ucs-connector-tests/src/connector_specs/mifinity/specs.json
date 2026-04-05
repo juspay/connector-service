@@ -2,6 +2,7 @@
   "connector": "mifinity",
   "supported_suites": [
     "authorize",
-    "get"
+    "get",
+    "recurring_charge"
   ]
 }
