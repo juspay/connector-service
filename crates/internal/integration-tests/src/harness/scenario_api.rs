@@ -56,14 +56,41 @@ pub fn get_the_assertion(
 }
 
 /// Loads scenario and applies connector-specific request/assertion patches.
+///
+/// For webhook suites (`handle_event`) where the generic scenario.json lacks
+/// `grpc_req`, this function dynamically assembles the gRPC request from
+/// the connector's payload file via [`webhook_assembly::assemble_webhook_grpc_req`].
 fn load_effective_scenario_for_connector(
     suite: &str,
     scenario: &str,
     connector: &str,
 ) -> Result<(Value, BTreeMap<String, FieldAssert>), ScenarioError> {
+    use crate::harness::webhook_assembly;
+
     let base_scenario = load_scenario(suite, scenario)?;
     let mut grpc_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
+
+    // When the scenario has no grpc_req (Null) and this is a webhook suite,
+    // assemble the request dynamically from the connector's payload file.
+    if grpc_req.is_null() && webhook_assembly::is_webhook_suite(suite) {
+        match webhook_assembly::assemble_webhook_grpc_req(connector, scenario) {
+            Ok(assembled) => grpc_req = assembled,
+            Err(ScenarioError::ScenarioNotFound { .. })
+            | Err(ScenarioError::ScenarioFileRead { .. }) => {
+                // Connector payload file is missing or doesn't have this
+                // scenario — skip rather than failing.  Not every connector
+                // implements every webhook event type.
+                return Err(ScenarioError::Skipped {
+                    reason: format!(
+                        "webhook scenario '{scenario}' not available for {connector}"
+                    ),
+                });
+            }
+            Err(other) => return Err(other),
+        }
+    }
+
     apply_connector_overrides(connector, suite, scenario, &mut grpc_req, &mut assertions)?;
     Ok((grpc_req, assertions))
 }
@@ -4367,7 +4394,7 @@ mod tests {
         connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
         load_supported_suites_for_connector,
     };
-    use crate::harness::scenario_types::{ContextMap, FieldAssert};
+    use crate::harness::scenario_types::{ContextMap, FieldAssert, ScenarioError};
 
     fn validate_tonic_payload_shape<T: DeserializeOwned>(
         connector: &str,
@@ -4485,6 +4512,13 @@ mod tests {
             "verify_redirect_response" => validate_tonic_payload_shape::<
                 payments::PaymentServiceVerifyRedirectResponseRequest,
             >(connector, suite, scenario, grpc_req),
+            "handle_event" => {
+                // Webhook requests use base64 for the proto `bytes body` field,
+                // which grpcurl interprets correctly but tonic serde expects a
+                // byte array.  Skip tonic-level shape validation; the runtime
+                // grpcurl path is the authoritative check.
+                Ok(())
+            }
             "token_authorize" => validate_tonic_payload_shape::<
                 payments::PaymentServiceTokenAuthorizeRequest,
             >(connector, suite, scenario, grpc_req),
@@ -5399,6 +5433,11 @@ grpc-status: 0
                         &suite, &scenario, connector,
                     ) {
                         Ok(req) => req,
+                        Err(ScenarioError::Skipped { .. }) => {
+                            // Webhook suites skip scenarios not present in the
+                            // connector payload file — this is expected.
+                            continue;
+                        }
                         Err(error) => {
                             failures.push(format!(
                                 "{connector}/{suite}/{scenario}: failed to build effective request: {error}"

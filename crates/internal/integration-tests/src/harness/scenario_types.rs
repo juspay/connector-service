@@ -18,6 +18,12 @@ pub type ContextMap = HashMap<String, String>;
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScenarioDef {
     /// Request payload template for the suite/scenario.
+    ///
+    /// For most suites this is required and contains the full gRPC request JSON.
+    /// For webhook (`handle_event`) suites this is `Null` — the actual request
+    /// is assembled at runtime from connector-specific payload files under
+    /// `handle_event_suite/payloads/{connector}.json`.
+    #[serde(default)]
     pub grpc_req: Value,
     /// Assertion rules evaluated against response JSON.
     #[serde(rename = "assert")]

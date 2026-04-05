@@ -92,5 +92,28 @@
         "error": null
       }
     }
+  },
+  "handle_event": {
+    "payment_succeeded": {
+      "assert": {
+        "source_verified": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "payment_failed": {
+      "assert": {
+        "source_verified": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "refund_succeeded": {
+      "assert": {
+        "source_verified": {
+          "must_not_exist": true
+        }
+      }
+    }
   }
 }
