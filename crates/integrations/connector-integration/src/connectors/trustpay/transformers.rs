@@ -1891,10 +1891,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
-            .change_context(IntegrationError::FailedToObtainAuthType {
+        let auth = TrustpayAuthType::try_from(&item.router_data.connector_config).change_context(
+            IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         let return_url = item.router_data.request.get_router_return_url()?;
 
