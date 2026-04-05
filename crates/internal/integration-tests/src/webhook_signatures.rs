@@ -37,10 +37,13 @@ fn generate_stripe_signature(
 ) -> Result<String, String> {
     // Use current timestamp if not provided
     let timestamp = timestamp.unwrap_or_else(|| {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64
+        i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        )
+        .unwrap_or(0)
     });
 
     // Stripe's signed_payload = timestamp.body
@@ -64,7 +67,7 @@ fn generate_stripe_signature(
     let mut hex_signature = String::with_capacity(signature_bytes.len() * 2);
     for byte in signature_bytes {
         write!(&mut hex_signature, "{:02x}", byte)
-            .expect("writing to String should never fail");
+            .map_err(|e| format!("Failed to write hex: {}", e))?;
     }
 
     // Stripe format: t=timestamp,v1=signature
@@ -87,10 +90,7 @@ fn generate_adyen_signature() -> Result<String, String> {
 ///
 /// Authorize.Net uses HMAC-SHA512 with lowercase hex encoding
 /// Header: X-ANET-Signature: sha512=<signature>
-fn generate_authorizedotnet_signature(
-    payload: &[u8],
-    secret: &str,
-) -> Result<String, String> {
+fn generate_authorizedotnet_signature(payload: &[u8], secret: &str) -> Result<String, String> {
     use hmac::{Hmac, Mac};
     use sha2::Sha512;
 
@@ -105,7 +105,7 @@ fn generate_authorizedotnet_signature(
     let mut hex_signature = String::with_capacity(signature_bytes.len() * 2);
     for byte in signature_bytes {
         write!(&mut hex_signature, "{:02x}", byte)
-            .expect("writing to String should never fail");
+            .map_err(|e| format!("Failed to write hex: {}", e))?;
     }
 
     Ok(format!("sha512={}", hex_signature))
@@ -127,7 +127,7 @@ fn generate_paypal_signature(payload: &[u8], secret: &str) -> Result<String, Str
 
     // Base64 encode
     use base64::{engine::general_purpose::STANDARD, Engine};
-    let signature_b64 = STANDARD.encode(&signature_bytes);
+    let signature_b64 = STANDARD.encode(signature_bytes);
 
     Ok(signature_b64)
 }

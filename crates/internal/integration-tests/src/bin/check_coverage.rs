@@ -86,10 +86,9 @@ fn extract_suite_mappings(scenario_api: &PathBuf) -> HashMap<String, String> {
     let mut mappings = HashMap::new();
 
     // Find the grpc_method_for_suite function - use multiline matching with (?s)
-    let func_re = Regex::new(
-        r#"(?s)fn grpc_method_for_suite.*?let method = match suite \{(.*?)_ => \{"#,
-    )
-    .unwrap();
+    let func_re =
+        Regex::new(r#"(?s)fn grpc_method_for_suite.*?let method = match suite \{(.*?)_ => \{"#)
+            .unwrap();
 
     if let Some(caps) = func_re.captures(&content) {
         let match_block = &caps[1];
@@ -100,10 +99,8 @@ fn extract_suite_mappings(scenario_api: &PathBuf) -> HashMap<String, String> {
         // "suite_name" => {
         //     "types.Service/Method"
         // }
-        let case_re = Regex::new(
-            r#""([^"]+)"\s*=>\s*(?:\{[^"]*)?["\s]*types\.(\w+)/(\w+)"#,
-        )
-        .unwrap();
+        let case_re =
+            Regex::new(r#""([^"]+)"\s*=>\s*(?:\{[^"]*)?["\s]*types\.(\w+)/(\w+)"#).unwrap();
 
         for line in match_block.lines() {
             if let Some(caps) = case_re.captures(line) {
