@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, SetupMandateRequestData,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
@@ -19,6 +19,10 @@ use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+// Constants for Apple Pay
+pub const APPLE_PAY_FLUID_DATA_DESCRIPTOR: &str = "RklEPUNPTU1PTi5BUFBMRS5JTkFQUC5QQVlNRU5U";
+pub const APPLE_PAY_TRANSACTION_TYPE: &str = "1";
 
 // Re-export from common utils for use in this connector
 pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};
@@ -65,6 +69,8 @@ pub struct ProcessingInformation {
 #[serde(untagged)]
 pub enum PaymentInformation<T: PaymentMethodDataTypes> {
     Cards(Box<CardPaymentInformation<T>>),
+    ApplePay(Box<ApplePayPaymentInformation>),
+    ApplePayToken(Box<ApplePayTokenPaymentInformation>),
 }
 
 #[derive(Debug, Serialize)]
@@ -82,6 +88,44 @@ pub struct Card<T: PaymentMethodDataTypes> {
     security_code: Option<Secret<String>>,
     #[serde(rename = "type")]
     card_type: Option<String>,
+}
+
+// APPLE PAY STRUCTURES
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayPaymentInformation {
+    tokenized_card: TokenizedCard,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizedCard {
+    number: Secret<String>,
+    expiration_month: Secret<String>,
+    expiration_year: Secret<String>,
+    cryptogram: Secret<String>,
+    transaction_type: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTokenPaymentInformation {
+    fluid_data: FluidData,
+    tokenized_card: ApplePayTokenizedCard,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidData {
+    value: Secret<String>,
+    descriptor: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTokenizedCard {
+    transaction_type: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -551,7 +595,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let common_data = &router_data.resource_common_data;
 
         // Get payment method data
-        let payment_information = match &request.payment_method_data {
+        let (payment_information, payment_solution) = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Use get_card_issuer for robust card type detection
                 let card_issuer =
@@ -570,11 +614,70 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     security_code: Some(card_data.card_cvc.clone()),
                     card_type: Some(card_type),
                 };
-                PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
+                (PaymentInformation::Cards(Box::new(CardPaymentInformation { card })), None)
             }
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                WalletData::ApplePay(apple_pay_data) => {
+                    // Check for pre-decrypted Apple Pay data
+                    match apple_pay_data.payment_data.get_decrypted_apple_pay_payment_data_optional() {
+                        Some(decrypt_data) => {
+                            // Decrypted flow: use decrypt_data fields directly
+                            let expiration_month = decrypt_data.get_expiry_month();
+                            let expiration_year = decrypt_data.get_four_digit_expiry_year();
+
+                            let tokenized_card = TokenizedCard {
+                                number: Secret::new(decrypt_data.application_primary_account_number.peek().to_string()),
+                                expiration_month,
+                                expiration_year,
+                                cryptogram: decrypt_data.payment_data.online_payment_cryptogram.clone(),
+                                transaction_type: APPLE_PAY_TRANSACTION_TYPE.to_string(),
+                            };
+
+                            (
+                                PaymentInformation::ApplePay(Box::new(ApplePayPaymentInformation {
+                                    tokenized_card,
+                                })),
+                                Some("001".to_string()), // Apple Pay payment solution code
+                            )
+                        }
+                        None => {
+                            // Encrypted token flow: extract encrypted payment data
+                            let encrypted_data = apple_pay_data
+                                .payment_data
+                                .get_encrypted_apple_pay_payment_data_mandatory()
+                                .change_context(IntegrationError::MissingRequiredField {
+                                    field_name: "apple_pay.payment_data",
+                                    context: Default::default(),
+                                })
+                                .attach_printable("Unable to get encrypted Apple Pay payment data")?;
+
+                            let fluid_data = FluidData {
+                                value: Secret::new(encrypted_data.to_string()),
+                                descriptor: Some(APPLE_PAY_FLUID_DATA_DESCRIPTOR.to_string()),
+                            };
+
+                            let tokenized_card = ApplePayTokenizedCard {
+                                transaction_type: APPLE_PAY_TRANSACTION_TYPE.to_string(),
+                            };
+
+                            (
+                                PaymentInformation::ApplePayToken(Box::new(ApplePayTokenPaymentInformation {
+                                    fluid_data,
+                                    tokenized_card,
+                                })),
+                                Some("001".to_string()), // Apple Pay payment solution code
+                            )
+                        }
+                    }
+                }
+                _ => Err(IntegrationError::NotSupported {
+                    message: "Wallet type not supported".to_string(),
+                    connector: "Wellsfargo",
+                    context: Default::default(),
+                })?,
+            },
             // Connector supports these but not yet implemented
-            PaymentMethodData::Wallet(_)
-            | PaymentMethodData::CardToken(_)
+            PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_) => Err(IntegrationError::not_implemented(
                 "Payment method supported by connector but not yet implemented".to_string(),
             ))?,
@@ -692,7 +795,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             action_token_types: None,
             authorization_options: None,
             capture_options: None,
-            payment_solution: None,
+            payment_solution,
         };
 
         // Client reference - use payment_id from common data
