@@ -647,7 +647,7 @@ pub struct CashfreeCancelRecurringRequest {
 }
 
 impl TryFrom<&CancelRecurringData> for CashfreeCancelRecurringRequest {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(data: &CancelRecurringData) -> Result<Self, Self::Error> {
         Ok(Self {

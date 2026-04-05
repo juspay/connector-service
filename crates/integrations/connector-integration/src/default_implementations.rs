@@ -192,6 +192,7 @@ default_impl_cancel_recurring_v2!(
     Hipay,
     Hyperpg,
     Iatapay,
+    Itaubank,
     Jpmorgan,
     Loonio,
     Mifinity,

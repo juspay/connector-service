@@ -9,8 +9,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, CancelRecurringData, ClientAuthenticationTokenRequestData,
-    ConnectorCustomerData,
-    DisputeDefendData, MandateRevokeRequestData, PaymentCreateOrderData,
+    ConnectorCustomerData, DisputeDefendData, MandateRevokeRequestData, PaymentCreateOrderData,
     PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
     PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
     PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
