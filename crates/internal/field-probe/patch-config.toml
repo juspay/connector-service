@@ -72,12 +72,17 @@ type = "secret_string"
 value = "123 Main St"
 
 ["address.billing_address.phone_number"]
-aliases = ["payment_method_data.billing.phone", "contact"]
+aliases = [
+  "payment_method_data.billing.phone",
+  "contact",
+  "phone",
+  "billing.phone",
+]
 type = "secret_string"
 value = "4155552671"
 
 ["address.billing_address.phone_country_code"]
-aliases = ["billing.phone.country_code"]
+aliases = ["billing.phone.country_code", "phone.country_code"]
 type = "secret_string"
 value = "+1"
 
@@ -249,6 +254,21 @@ aliases = ["mandate_metadata"]
 type = "secret_string"
 value = "{\"mandate_metadata\":{\"mandate_type\":\"single_use\"}}"
 
+[merchant_account_id]
+aliases = ["merchant_account_id"]
+type = "secret_string"
+value = "probe_merchant_account"
+
+["authorize.merchant_account_id"]
+aliases = ["merchant_account_id"]
+type = "secret_string"
+value = "probe_merchant_account"
+
+[client_merchant_reference_id]
+aliases = ["client_merchant_reference_id"]
+type = "string"
+value = "probe_merchant_ref_001"
+
 [merchant_order_id]
 aliases = [
   "merchant_order_id",
@@ -268,9 +288,10 @@ aliases = [
   "connector_request_id",
   "connector_transaction_id",
   "metadata",
+  "Invalid Configuration",
 ]
 type = "secret_string"
-value = "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\"}"
+value = "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\",\"site\":\"probe_site\"}"
 
 [order_category]
 aliases = ["order_category", "order_category in metadata"]
@@ -314,9 +335,35 @@ aliases = ["webhook_url"]
 type = "string"
 value = "https://example.com/webhook"
 
+[authentication_data]
+aliases = [
+  "authentication_data",
+  "authentication_data (must be present for 3DS flow)",
+  "authentication_data.threeds_server_transaction_id",
+]
+type = "string"
+value = "probe_auth_data"
+
+[redirect_response]
+aliases = ["redirect_response"]
+type = "redirection_response"
+
 ["payment_method.payment_method.ideal.bank_name"]
 aliases = ["ideal.bank_name"]
 type = "bank_names_ing"
+
+["payment_method.payment_method.eps.bank_name"]
+aliases = ["eps.bank_name"]
+type = "bank_names_ing"
+
+["proxy_setup_recurring.customer.id"]
+aliases = ["customer_id", "customer.id"]
+type = "string"
+value = "probe_customer_001"
+
+["proxy_setup_recurring.browser_info"]
+aliases = ["browser_info", "browser_info.ip_address", "ip_address"]
+type = "full_browser_info"
 
 
 # ── capture flow ───────────────────────────────────────────────────────────────
@@ -410,6 +457,11 @@ value = "https://example.com/webhook"
 aliases = ["connector_feature_data"]
 type = "secret_string"
 value = "{}"
+
+["refund.merchant_account_id"]
+aliases = ["merchant_account_id"]
+type = "string"
+value = "probe_merchant_account"
 
 ["refund.customer_id"]
 aliases = ["customer_id"]

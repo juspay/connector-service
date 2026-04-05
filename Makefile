@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method test-grpc
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method review-pr test-grpc
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -125,10 +125,19 @@ validate-pre-push-fix:
 	@echo "▶ Running pre-push validation with auto-fix..."
 	@./scripts/validation/pre-push.sh --fix
 
-## Generate connector docs from source code (all connectors)
-docs: field-probe
+## Generate connector docs (default: stripe only; use CONNECTORS=all for all connectors)
+## Skips field-probe if data/field_probe already exists; use CONNECTORS=all to re-probe all connectors.
+docs:
 	@echo "▶ Generating connector docs…"
-	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+	@if [ "$(CONNECTORS)" = "all" ]; then \
+		$(MAKE) field-probe; \
+		python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe; \
+	else \
+		if [ ! -d data/field_probe ] || [ -z "$$(ls -A data/field_probe 2>/dev/null)" ]; then \
+			$(MAKE) field-probe; \
+		fi; \
+		python3 scripts/generators/docs/generate.py stripe --probe-path data/field_probe; \
+	fi
 
 ## Generate the all-connectors coverage document
 all-connectors-doc: field-probe
@@ -174,15 +183,15 @@ endef
 
 # Launch editor with a specific skill
 # Usage: $(call LAUNCH_SKILL,skill-name)
-# - claude: "query" as positional arg with /skill-name slash command
+# - claude: /skill-name slash command as positional arg
 # - opencode: --prompt flag (skills auto-invoke, prompt hints the agent)
-# - codex: $skill-name mention syntax as positional arg
+# - codex: plain prompt that loads the skill and asks for required inputs
 # - cursor/windsurf: open project (skills auto-load as rules)
 define LAUNCH_SKILL
 	case $$choice in \
 		claude)   exec claude "/$(1)" ;; \
 		opencode) exec opencode --prompt "Use the $(1) skill" ;; \
-		codex)    exec codex '$$$(1)' ;; \
+		codex)    exec codex "Use the $(1) skill. Ask the user for any required inputs before starting." ;; \
 		cursor)   echo "Skill '$(1)' available as a rule in Cursor"; exec cursor . ;; \
 		windsurf) echo "Skill '$(1)' available as a rule in Windsurf"; exec windsurf . ;; \
 	esac
@@ -216,6 +225,11 @@ add-payment-method:
 	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,add-payment-method)
 
+## Review a PR using the pr-reviewer skill
+review-pr:
+	@$(AI_AGENT); \
+	$(call LAUNCH_SKILL,pr-reviewer)
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -245,7 +259,7 @@ help:
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
 	@echo "Docs Targets:"
-	@echo "  docs         Regenerate all connector docs from source"
+	@echo "  docs         Regenerate connector docs (default: stripe; CONNECTORS=all for all)"
 	@echo "  docs-check   Report which connectors are missing annotation files"
 	@echo "Certification Targets:"
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"
@@ -256,6 +270,7 @@ help:
 	@echo "  new-connector      Implement a new connector from scratch"
 	@echo "  add-flow           Add payment flow(s) to an existing connector"
 	@echo "  add-payment-method Add payment method support to an existing connector"
+	@echo "  review-pr          Review a PR using the pr-reviewer skill"
 	@echo
 	@echo "Other Targets:"
 	@echo "  test-grpc              Run gRPC smoke tests for all SDKs (Rust + JS + Python)"
