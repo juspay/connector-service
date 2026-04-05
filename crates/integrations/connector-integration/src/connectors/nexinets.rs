@@ -41,9 +41,10 @@ use transformers::{
     NexinetsCaptureOrVoidRequest as NexinetsVoidRequest, NexinetsErrorResponse,
     NexinetsPaymentResponse as NexinetsCaptureResponse, NexinetsPaymentResponse,
     NexinetsPaymentResponse as NexinetsVoidResponse, NexinetsPaymentsRequest,
-    NexinetsPreAuthOrDebitResponse, NexinetsRefundRequest, NexinetsRefundResponse,
-    NexinetsRefundResponse as RefundSyncResponse, NexinetsRepeatPaymentRequest,
-    NexinetsPreAuthOrDebitResponse as NexinetsRepeatPaymentResponse,
+    NexinetsPreAuthOrDebitResponse,
+    NexinetsPreAuthOrDebitResponse as NexinetsRepeatPaymentResponse, NexinetsRefundRequest,
+    NexinetsRefundResponse, NexinetsRefundResponse as RefundSyncResponse,
+    NexinetsRepeatPaymentRequest,
 };
 
 use super::macros;
