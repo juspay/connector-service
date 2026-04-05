@@ -1123,15 +1123,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let encrypted_token = gpay_data
                         .tokenization_data
                         .get_encrypted_google_pay_token()
-                        .change_context(ConnectorError::InvalidWalletToken {
+                        .change_context(IntegrationError::InvalidWalletToken {
                             wallet_name: "Google Pay".to_string(),
+                            context: Default::default(),
                         })?;
 
                     // Parse the encrypted token to extract payment method details
                     let gpay_token: GpayEncryptedPaymentToken = encrypted_token
                         .parse_struct("GpayEncryptedPaymentToken")
-                        .change_context(ConnectorError::InvalidWalletToken {
+                        .change_context(IntegrationError::InvalidWalletToken {
                             wallet_name: "Google Pay".to_string(),
+                            context: Default::default(),
                         })?;
 
                     let payment_source = Some(PaymentSourceItem::GooglePay(GooglePayRequest {
