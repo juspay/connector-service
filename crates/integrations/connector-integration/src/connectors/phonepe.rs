@@ -790,9 +790,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: PhonepeMandateStatusCheckResponse = res
             .response
             .parse_struct("PhonepeMandateStatusCheckResponse")
-            .change_context(ConnectorResponseTransformationError::ResponseDeserializationFailed {
-                context: Default::default(),
-            })?;
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
 
         with_response_body!(event_builder, response);
 
