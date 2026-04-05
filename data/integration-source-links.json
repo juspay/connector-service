@@ -81,5 +81,11 @@
     "https://developer.spreedly.com/docs/redsys-gateway-guide",
     "https://documentation.ixopay.com/adapters/redsys",
     "https://github.com/CommerceRedsys/sermepa/blob/master/src/Sermepa.php"
+  ],
+  "Elavon": [
+    "https://developer-uat.elavon.com/products/converge/v1/merchant-managed-card-tokens",
+    "https://developer.elavon.com/products/xml-api/v1/api-reference",
+    "https://developer.elavon.com/docs/converge/1.0.0/integration-guide/api-reference/-endpoints",
+    "https://developer.elavon.com/docs/converge/1.0.0/integration-guide/api-introduction"
   ]
 }
