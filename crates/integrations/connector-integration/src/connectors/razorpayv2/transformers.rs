@@ -533,13 +533,12 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })),
         }?;
 
-        let order_id =
-            item.order_id
-                .as_ref()
-                .ok_or(error_stack::report!(IntegrationError::MissingRequiredField {
-                    field_name: "order_id",
-                    context: Default::default(),
-                }))?;
+        let order_id = item.order_id.as_ref().ok_or(error_stack::report!(
+            IntegrationError::MissingRequiredField {
+                field_name: "order_id",
+                context: Default::default(),
+            }
+        ))?;
 
         let card_holder_name = card_data
             .card_holder_name
@@ -549,10 +548,12 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .get_optional_billing_full_name()
             })
-            .ok_or(error_stack::report!(IntegrationError::MissingRequiredField {
-                field_name: "card_holder_name",
-                context: Default::default(),
-            }))?;
+            .ok_or(error_stack::report!(
+                IntegrationError::MissingRequiredField {
+                    field_name: "card_holder_name",
+                    context: Default::default(),
+                }
+            ))?;
 
         let card_details = RazorpayV2CardDetails {
             number: card_data.card_number.clone(),
@@ -579,10 +580,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount: item.amount,
             currency: item.router_data.request.currency,
             order_id: order_id.to_string(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_billing_email()?,
+            email: item.router_data.resource_common_data.get_billing_email()?,
             contact: Secret::new(contact),
             method: "card".to_string(),
             card: card_details,
@@ -615,7 +613,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let has_next_actions = response
             .next
             .as_ref()
-            .map_or(false, |actions| !actions.is_empty());
+            .is_some_and(|actions| !actions.is_empty());
 
         let redirection_data = if has_next_actions {
             // If there are next actions, find a redirect or otp_generate action
