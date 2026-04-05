@@ -592,9 +592,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, IntegrationError> {
         let base_url = self.connector_base_url(req);
         let subscription_id = &req.request.subscription_id;
-        let payment_id = &req.request.payment_id;
         Ok(format!(
-            "{base_url}pg/subscriptions/{subscription_id}/payments/{payment_id}/manage"
+            "{base_url}pg/subscriptions/{subscription_id}/manage"
         ))
     }
 
@@ -644,9 +643,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         with_response_body!(event_builder, response);
 
         let cancel_response = CancelRecurringResponseData {
-            payment_status: response.payment_status.clone(),
+            payment_status: response.subscription_status.clone().unwrap_or_default(),
             subscription_id: response.subscription_id.clone().unwrap_or_default(),
-            payment_id: response.cf_payment_id.clone().unwrap_or_default(),
+            payment_id: response.cf_subscription_id.clone().unwrap_or_default(),
             status_code: res.status_code,
         };
 

@@ -642,7 +642,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #[derive(Debug, Serialize)]
 pub struct CashfreeCancelRecurringRequest {
-    pub payment_id: String,
+    pub subscription_id: String,
     pub action: String,
 }
 
@@ -651,7 +651,7 @@ impl TryFrom<&CancelRecurringData> for CashfreeCancelRecurringRequest {
 
     fn try_from(data: &CancelRecurringData) -> Result<Self, Self::Error> {
         Ok(Self {
-            payment_id: data.payment_id.clone(),
+            subscription_id: data.subscription_id.clone(),
             action: "CANCEL".to_string(),
         })
     }
@@ -659,16 +659,7 @@ impl TryFrom<&CancelRecurringData> for CashfreeCancelRecurringRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CashfreeCancelRecurringResponse {
-    pub payment_status: String,
+    pub subscription_status: Option<String>,
     pub subscription_id: Option<String>,
-    pub cf_payment_id: Option<String>,
-    pub payment_id: Option<String>,
-    pub payment_amount: Option<f64>,
-    pub payment_type: Option<String>,
-    pub payment_method: Option<String>,
-    pub payment_time: Option<String>,
-    pub currency: Option<String>,
     pub cf_subscription_id: Option<String>,
-    pub retry_attempts: Option<i32>,
-    pub failure_details: Option<serde_json::Value>,
 }
