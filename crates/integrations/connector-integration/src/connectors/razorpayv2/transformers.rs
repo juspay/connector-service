@@ -889,13 +889,13 @@ pub struct RazorpayV2SetupMandateResponse {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ForeignTryFrom<(
-        RazorpayV2SetupMandateResponse,
-        Self,
-        u16,
-        Vec<u8>,
-    )>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    ForeignTryFrom<(RazorpayV2SetupMandateResponse, Self, u16, Vec<u8>)>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = ConnectorResponseTransformationError;
 
@@ -1018,14 +1018,12 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         // Get the connector_mandate_id (token) from the mandate reference
-        let connector_mandate_id =
-            item.router_data
-                .request
-                .connector_mandate_id()
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "connector_mandate_id",
-                    context: Default::default(),
-                })?;
+        let connector_mandate_id = item.router_data.request.connector_mandate_id().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "connector_mandate_id",
+                context: Default::default(),
+            },
+        )?;
 
         // Get customer_id from the resource_common_data
         let customer_id = item
@@ -1037,18 +1035,14 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or_default();
 
         Ok(Self {
-            email: item
-                .router_data
-                .request
-                .get_email()
-                .or_else(|_| {
-                    Email::from_str("customer@example.com").map_err(|_| {
-                        error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                            field_name: "email",
-                            context: Default::default(),
-                        })
+            email: item.router_data.request.get_email().or_else(|_| {
+                Email::from_str("customer@example.com").map_err(|_| {
+                    error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                        field_name: "email",
+                        context: Default::default(),
                     })
-                })?,
+                })
+            })?,
             contact: Secret::new(
                 item.router_data
                     .resource_common_data
@@ -1093,12 +1087,7 @@ pub struct RazorpayV2RepeatPaymentResponse {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ForeignTryFrom<(
-        RazorpayV2RepeatPaymentResponse,
-        Self,
-        u16,
-        Vec<u8>,
-    )>
+    ForeignTryFrom<(RazorpayV2RepeatPaymentResponse, Self, u16, Vec<u8>)>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = ConnectorResponseTransformationError;

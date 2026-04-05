@@ -875,10 +875,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?
             .clone();
-        let amount = req
-            .request
-            .minor_amount
-            .unwrap_or(MinorUnit::new(0));
+        let amount = req.request.minor_amount.unwrap_or(MinorUnit::new(0));
         let converted_amount = self
             .amount_converter
             .convert(amount, req.request.currency)
@@ -910,7 +907,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
         ConnectorResponseTransformationError,
     > {
         let response: razorpayv2::RazorpayV2SetupMandateResponse = res
