@@ -101,6 +101,8 @@ fn parse_rule_key(key: &str) -> (&str, Option<&str>) {
         "setup_recurring",
         "tokenize",
         "recurring_charge",
+        "proxy_authorize",
+        "proxy_setup_recurring",
     ];
     for flow in FLOWS {
         if let Some(rest) = key.strip_prefix(&format!("{}.", flow)) {

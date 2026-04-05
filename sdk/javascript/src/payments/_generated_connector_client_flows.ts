@@ -55,20 +55,28 @@ export class EventClient extends _ConnectorClientBase {
 }
 
 export class MerchantAuthenticationClient extends _ConnectorClientBase {
-  /** MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
-  async createAccessToken(
-    requestMsg: types.IMerchantAuthenticationServiceCreateAccessTokenRequest,
+  /** MerchantAuthenticationService.CreateClientAuthenticationToken — Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. Returns structured data the client SDK needs to render payment/verification UI. */
+  async createClientAuthenticationToken(
+    requestMsg: types.IMerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
     options?: types.IRequestConfig | null
-  ): Promise<types.MerchantAuthenticationServiceCreateAccessTokenResponse> {
-    return this._executeFlow('create_access_token', requestMsg, options, 'MerchantAuthenticationServiceCreateAccessTokenRequest', 'MerchantAuthenticationServiceCreateAccessTokenResponse') as Promise<types.MerchantAuthenticationServiceCreateAccessTokenResponse>;
+  ): Promise<types.MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse> {
+    return this._executeFlow('create_client_authentication_token', requestMsg, options, 'MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest', 'MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse') as Promise<types.MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse>;
   }
 
-  /** MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking. */
-  async createSessionToken(
-    requestMsg: types.IMerchantAuthenticationServiceCreateSessionTokenRequest,
+  /** MerchantAuthenticationService.CreateServerAuthenticationToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
+  async createServerAuthenticationToken(
+    requestMsg: types.IMerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
     options?: types.IRequestConfig | null
-  ): Promise<types.MerchantAuthenticationServiceCreateSessionTokenResponse> {
-    return this._executeFlow('create_session_token', requestMsg, options, 'MerchantAuthenticationServiceCreateSessionTokenRequest', 'MerchantAuthenticationServiceCreateSessionTokenResponse') as Promise<types.MerchantAuthenticationServiceCreateSessionTokenResponse>;
+  ): Promise<types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse> {
+    return this._executeFlow('create_server_authentication_token', requestMsg, options, 'MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest', 'MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse') as Promise<types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>;
+  }
+
+  /** MerchantAuthenticationService.CreateServerSessionAuthenticationToken — Create a server-side session with the connector. Establishes session state for multi-step operations like 3DS verification or wallet authorization. */
+  async createServerSessionAuthenticationToken(
+    requestMsg: types.IMerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse> {
+    return this._executeFlow('create_server_session_authentication_token', requestMsg, options, 'MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest', 'MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse') as Promise<types.MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse>;
   }
 
 }
@@ -120,7 +128,7 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('authorize', requestMsg, options, 'PaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
   }
 
-  /** PaymentService.Capture — Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle. */
+  /** PaymentService.Capture — Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account. */
   async capture(
     requestMsg: types.IPaymentServiceCaptureRequest,
     options?: types.IRequestConfig | null
@@ -128,7 +136,7 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('capture', requestMsg, options, 'PaymentServiceCaptureRequest', 'PaymentServiceCaptureResponse') as Promise<types.PaymentServiceCaptureResponse>;
   }
 
-  /** PaymentService.CreateOrder — Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates. */
+  /** PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls. */
   async createOrder(
     requestMsg: types.IPaymentServiceCreateOrderRequest,
     options?: types.IRequestConfig | null
@@ -144,7 +152,23 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('get', requestMsg, options, 'PaymentServiceGetRequest', 'PaymentServiceGetResponse') as Promise<types.PaymentServiceGetResponse>;
   }
 
-  /** PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment. */
+  /** PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
+  async proxyAuthorize(
+    requestMsg: types.IPaymentServiceProxyAuthorizeRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceAuthorizeResponse> {
+    return this._executeFlow('proxy_authorize', requestMsg, options, 'PaymentServiceProxyAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
+  }
+
+  /** PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data. */
+  async proxySetupRecurring(
+    requestMsg: types.IPaymentServiceProxySetupRecurringRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceSetupRecurringResponse> {
+    return this._executeFlow('proxy_setup_recurring', requestMsg, options, 'PaymentServiceProxySetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
+  }
+
+  /** PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled. */
   async refund(
     requestMsg: types.IPaymentServiceRefundRequest,
     options?: types.IRequestConfig | null
@@ -152,7 +176,7 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('refund', requestMsg, options, 'PaymentServiceRefundRequest', 'RefundResponse') as Promise<types.RefundResponse>;
   }
 
-  /** PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations. */
+  /** PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization. */
   async reverse(
     requestMsg: types.IPaymentServiceReverseRequest,
     options?: types.IRequestConfig | null
@@ -160,7 +184,7 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('reverse', requestMsg, options, 'PaymentServiceReverseRequest', 'PaymentServiceReverseResponse') as Promise<types.PaymentServiceReverseResponse>;
   }
 
-  /** PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases. */
+  /** PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges. */
   async setupRecurring(
     requestMsg: types.IPaymentServiceSetupRecurringRequest,
     options?: types.IRequestConfig | null
@@ -168,7 +192,23 @@ export class PaymentClient extends _ConnectorClientBase {
     return this._executeFlow('setup_recurring', requestMsg, options, 'PaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
   }
 
-  /** PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned. */
+  /** PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token. */
+  async tokenAuthorize(
+    requestMsg: types.IPaymentServiceTokenAuthorizeRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceAuthorizeResponse> {
+    return this._executeFlow('token_authorize', requestMsg, options, 'PaymentServiceTokenAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
+  }
+
+  /** PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token. */
+  async tokenSetupRecurring(
+    requestMsg: types.IPaymentServiceTokenSetupRecurringRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceSetupRecurringResponse> {
+    return this._executeFlow('token_setup_recurring', requestMsg, options, 'PaymentServiceTokenSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
+  }
+
+  /** PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed. */
   async void(
     requestMsg: types.IPaymentServiceVoidRequest,
     options?: types.IRequestConfig | null
