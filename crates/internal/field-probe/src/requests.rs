@@ -17,10 +17,9 @@
 //   it belongs in patch_get_request or patch-config.toml [get] section.
 // ─────────────────────────────────────────────────────────────────────────────
 
-use cards::CardNumber;
 use grpc_api_types::payments::{
     self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
-    AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails,
+    AcceptanceType, Address, AuthenticationType, CaptureMethod,
     ConnectorMandateReferenceId, CustomerAcceptance, CustomerServiceCreateRequest,
     DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
     EvidenceDocument, EvidenceType, MandateReference,
@@ -34,10 +33,9 @@ use grpc_api_types::payments::{
     PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
     PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
-    PaymentServiceVoidRequest, RecurringPaymentServiceChargeRequest,
+    PaymentServiceVoidRequest, ProxyCardDetails, RecurringPaymentServiceChargeRequest,
 };
 use hyperswitch_masking::Secret;
-use std::str::FromStr;
 
 use crate::sample_data::{card_payment_method, usd_money};
 
@@ -309,9 +307,9 @@ pub(crate) fn base_defend_dispute_request() -> DisputeServiceDefendRequest {
 
 // ── Non-PCI (Tokenized / Proxy) request builders ──────────────────────────────
 
-fn base_card_proxy() -> CardDetails {
-    CardDetails {
-        card_number: Some(CardNumber::from_str("4111111111111111").unwrap()),
+fn base_card_proxy() -> ProxyCardDetails {
+    ProxyCardDetails {
+        card_number: Some(Secret::new("4111111111111111".to_string())),
         card_exp_month: Some(Secret::new("03".to_string())),
         card_exp_year: Some(Secret::new("2030".to_string())),
         card_cvc: Some(Secret::new("123".to_string())),

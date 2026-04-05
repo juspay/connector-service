@@ -2482,6 +2482,10 @@ pub struct SetupRecurringRequest {
 
 impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationRequest {
     fn from(req: grpc_payment_types::PaymentServiceAuthorizeRequest) -> Self {
+        let tokenization_strategy = match req.tokenization_strategy{
+            None => None,
+            Some(_) => Some(req.tokenization_strategy()),
+        };
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
             amount: req.amount.clone(),
@@ -2515,7 +2519,7 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             payment_channel: req.payment_channel(),
             locale: req.locale.clone(),
             state: req.state.clone(),
-            tokenization_strategy: Some(req.tokenization_strategy()),
+            tokenization_strategy,
             threeds_completion_indicator: Some(req.threeds_completion_indicator()),
             redirection_response: req.redirection_response,
             continue_redirection_url: req.continue_redirection_url,
@@ -3410,7 +3414,6 @@ impl<
                 error_object: None,
             })
         })?;
-        let merchant_config_currency = common_enums::Currency::foreign_try_from(amount.currency())?;
 
         let setup_future_usage = match value.setup_future_usage {
             None => None,
