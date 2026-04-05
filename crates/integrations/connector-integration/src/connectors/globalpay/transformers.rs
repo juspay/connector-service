@@ -375,6 +375,16 @@ pub struct GlobalpayPaymentToken {
     pub signed_message: String,
 }
 
+/// Helper struct to parse the Google Pay encrypted token JSON.
+/// The token string contains these fields at the top level.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GooglePayTokenFields {
+    pub signature: String,
+    pub protocol_version: String,
+    pub signed_message: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
@@ -476,6 +486,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 };
 
+                // The token field contains a JSON string with signature, protocolVersion,
+                // and signedMessage fields. Parse it to extract individual fields for
+                // GlobalPay's digital_wallet.payment_token structure.
+                let parsed_token: GooglePayTokenFields =
+                    serde_json::from_str(&encrypted_token.token)
+                        .map_err(|_| errors::ConnectorError::InvalidWalletToken {
+                            wallet_name: "Google Pay".to_string(),
+                        })?;
+
                 GlobalpayPaymentMethod {
                     name: item.request.customer_name.clone().map(Secret::new),
                     entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
@@ -484,9 +503,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     digital_wallet: Some(GlobalpayDigitalWallet {
                         provider: GlobalpayDigitalWalletProvider::PayByGoogle,
                         payment_token: GlobalpayPaymentToken {
-                            signature: "".to_string(), // GlobalPay uses encrypted token as signed_message
-                            protocol_version: encrypted_token.token_type.clone(),
-                            signed_message: encrypted_token.token.clone(),
+                            signature: parsed_token.signature,
+                            protocol_version: parsed_token.protocol_version,
+                            signed_message: parsed_token.signed_message,
                         },
                     }),
                 }
