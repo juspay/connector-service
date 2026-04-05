@@ -922,10 +922,12 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Mifinity
             | common_enums::PaymentMethodType::Satispay
             | common_enums::PaymentMethodType::Wero
-            | common_enums::PaymentMethodType::Netbanking => Err(IntegrationError::not_implemented(
-                get_unimplemented_payment_method_error_message("stripe"),
-            )
-            .into()),
+            | common_enums::PaymentMethodType::Netbanking => {
+                Err(IntegrationError::not_implemented(
+                    get_unimplemented_payment_method_error_message("stripe"),
+                )
+                .into())
+            }
         }
     }
 }
