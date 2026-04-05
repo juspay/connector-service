@@ -453,7 +453,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.mandate_id.clone(),
         );
 
-        Ok(WorldpayAuthorizeRequest::Card(WorldpayCardPaymentRequest {
+        Ok(Self::Card(Box::new(WorldpayCardPaymentRequest {
             instruction: Instruction {
                 settlement: get_settlement_info(
                     &item.router_data,
@@ -489,7 +489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
             customer: None,
-        }))
+        })))
     }
 }
 
@@ -571,41 +571,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => None,
         };
 
-        Ok(WorldpayRepeatPaymentRequest::Card(
-            WorldpayCardPaymentRequest {
-                instruction: Instruction {
-                    settlement,
-                    method: PaymentMethod::Card, // RepeatPayment is always card-based
-                    payment_instrument,
-                    narrative: InstructionNarrative {
-                        line1: merchant_name.expose(),
-                    },
-                    value: PaymentValue {
-                        amount: item.router_data.request.minor_amount,
-                        currency: item.router_data.request.currency,
-                    },
-                    debt_repayment: None,
-                    three_ds: None,       // MIT transactions don't require 3DS
-                    token_creation: None, // No new token creation for repeat payments
-                    customer_agreement: Some(CustomerAgreement {
-                        agreement_type: CustomerAgreementType::Subscription,
-                        stored_card_usage: Some(StoredCardUsageType::Subsequent), // CRITICAL: MIT indicator
-                        scheme_reference: None,
-                    }),
+        Ok(Self::Card(Box::new(WorldpayCardPaymentRequest {
+            instruction: Instruction {
+                settlement,
+                method: PaymentMethod::Card, // RepeatPayment is always card-based
+                payment_instrument,
+                narrative: InstructionNarrative {
+                    line1: merchant_name.expose(),
                 },
-                merchant: Merchant {
-                    entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?
-                        .entity_id,
-                    ..Default::default()
+                value: PaymentValue {
+                    amount: item.router_data.request.minor_amount,
+                    currency: item.router_data.request.currency,
                 },
-                transaction_reference: item
-                    .router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-                customer: None,
+                debt_repayment: None,
+                three_ds: None,       // MIT transactions don't require 3DS
+                token_creation: None, // No new token creation for repeat payments
+                customer_agreement: Some(CustomerAgreement {
+                    agreement_type: CustomerAgreementType::Subscription,
+                    stored_card_usage: Some(StoredCardUsageType::Subsequent), // CRITICAL: MIT indicator
+                    scheme_reference: None,
+                }),
             },
-        ))
+            merchant: Merchant {
+                entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?.entity_id,
+                ..Default::default()
+            },
+            transaction_reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            customer: None,
+        })))
     }
 }
 
@@ -752,29 +749,31 @@ fn build_apm_request<
         }
     };
 
-    Ok(WorldpayAuthorizeRequest::Apm(WorldpayApmPaymentRequest {
-        transaction_reference: router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone(),
-        order_reference: None,
-        merchant: ApmMerchant {
-            entity: auth.entity_id,
-        },
-        instruction: ApmInstruction {
-            method,
-            value: PaymentValue {
-                amount: router_data.request.minor_amount,
-                currency: router_data.request.currency,
+    Ok(WorldpayAuthorizeRequest::Apm(Box::new(
+        WorldpayApmPaymentRequest {
+            transaction_reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            order_reference: None,
+            merchant: ApmMerchant {
+                entity: auth.entity_id,
             },
-            narrative: InstructionNarrative {
-                line1: narrative_line1,
+            instruction: ApmInstruction {
+                method,
+                value: PaymentValue {
+                    amount: router_data.request.minor_amount,
+                    currency: router_data.request.currency,
+                },
+                narrative: InstructionNarrative {
+                    line1: narrative_line1,
+                },
+                payment_instrument,
+                customer,
+                customer_agreement,
             },
-            payment_instrument,
-            customer,
-            customer_agreement,
         },
-    }))
+    )))
 }
 
 pub struct WorldpayAuthType {

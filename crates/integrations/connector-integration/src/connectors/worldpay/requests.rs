@@ -15,9 +15,9 @@ pub enum WorldpayAuthorizeRequest<
         + Serialize,
 > {
     /// Standard card payment request
-    Card(WorldpayCardPaymentRequest<T>),
+    Card(Box<WorldpayCardPaymentRequest<T>>),
     /// APM bank debit payment request (ACH, SEPA, EFT)
-    Apm(WorldpayApmPaymentRequest),
+    Apm(Box<WorldpayApmPaymentRequest>),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
