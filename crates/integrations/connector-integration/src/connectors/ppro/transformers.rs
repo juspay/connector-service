@@ -1,6 +1,6 @@
 use common_enums;
 use common_utils::consts;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
@@ -67,7 +67,7 @@ pub struct PproPaymentsRequest {
 pub struct PproPaymentInstrument {
     pub r#type: PproPaymentInstrumentType,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub card: Option<PproCardDetails>,
+    pub details: Option<PproCardDetails>,
 }
 
 #[derive(Debug, Serialize)]
@@ -83,8 +83,8 @@ pub struct PproCardDetails {
     pub number: Secret<String>,
     pub cvv: Secret<String>,
     pub holder_name: Option<Secret<String>>,
-    pub expiry_month: Secret<String>,
-    pub expiry_year: Secret<String>,
+    pub expiry_month: u32,
+    pub expiry_year: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub brand: Option<String>,
 }
@@ -165,14 +165,28 @@ where
                     .card_network
                     .as_ref()
                     .map(|n| n.to_string().to_uppercase());
+                let expiry_month: u32 = card_data
+                    .card_exp_month
+                    .peek()
+                    .parse()
+                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                        field_name: "card_exp_month",
+                    })?;
+                let expiry_year: u32 = card_data
+                    .card_exp_year
+                    .peek()
+                    .parse()
+                    .map_err(|_| errors::ConnectorError::MissingRequiredField {
+                        field_name: "card_exp_year",
+                    })?;
                 let instrument = PproPaymentInstrument {
                     r#type: PproPaymentInstrumentType::RawCard,
-                    card: Some(PproCardDetails {
+                    details: Some(PproCardDetails {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         cvv: card_data.card_cvc.clone(),
                         holder_name: card_data.card_holder_name.clone(),
-                        expiry_month: card_data.card_exp_month.clone(),
-                        expiry_year: card_data.card_exp_year.clone(),
+                        expiry_month,
+                        expiry_year,
                         brand,
                     }),
                 };
