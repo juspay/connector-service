@@ -6,7 +6,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors::{ConnectorResponseTransformationError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthoriseIntegrityObject,
@@ -31,6 +31,12 @@ pub mod constants {
     pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
     pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
     pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
+
+    // Payu Wallet specific constants
+    pub const WALLET_PG: &str = "wallet"; // Wallet payment gateway
+    pub const WALLET_TYPE: &str = "PBL"; // Wallet type identifier
+    pub const APPLE_PAY_BANKCODE: &str = "jp"; // Apple Pay bank code (lowercase)
+    pub const GOOGLE_PAY_BANKCODE: &str = "ap"; // Google Pay bank code (lowercase)
 
     // Payu PSync specific constants
     pub const COMMAND: &str = "verify_payment";
@@ -652,6 +658,7 @@ fn determine_upi_app_name<
 }
 
 // PayU flow determination based on Haskell getTxnS2SType implementation
+// Now also supports Wallet payments (Apple Pay, Google Pay)
 #[allow(clippy::type_complexity)]
 fn determine_upi_flow<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
@@ -696,8 +703,35 @@ fn determine_upi_flow<
                 }
             }
         }
+        PaymentMethodData::Wallet(wallet_data) => {
+            match wallet_data {
+                WalletData::ApplePay(_) => {
+                    // Apple Pay flow - uses wallet pg with "jp" bankcode
+                    Ok((
+                        Some(constants::WALLET_PG.to_string()),
+                        Some(constants::APPLE_PAY_BANKCODE.to_string()),
+                        None, // No VPA for wallet payments
+                        constants::UPI_S2S_FLOW.to_string(), // Reuse S2S flow for wallets
+                    ))
+                }
+                WalletData::GooglePay(_) => {
+                    // Google Pay flow - uses wallet pg with "ap" bankcode
+                    Ok((
+                        Some(constants::WALLET_PG.to_string()),
+                        Some(constants::GOOGLE_PAY_BANKCODE.to_string()),
+                        None, // No VPA for wallet payments
+                        constants::UPI_S2S_FLOW.to_string(), // Reuse S2S flow for wallets
+                    ))
+                }
+                _ => Err(IntegrationError::NotSupported {
+                    message: "Wallet type not supported by PayU".to_string(),
+                    connector: "PayU",
+                    context: Default::default(),
+                }),
+            }
+        }
         _ => Err(IntegrationError::NotSupported {
-            message: "Payment method not supported by PayU. Only UPI payments are supported"
+            message: "Payment method not supported by PayU. Only UPI and Wallet payments are supported"
                 .to_string(),
             connector: "PayU",
             context: Default::default(),
