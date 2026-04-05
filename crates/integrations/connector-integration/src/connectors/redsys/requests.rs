@@ -9,6 +9,8 @@ pub type RedsysAuthorizeRequest = super::transformers::RedsysTransaction;
 pub type RedsysCaptureRequest = super::transformers::RedsysTransaction;
 pub type RedsysVoidRequest = super::transformers::RedsysTransaction;
 pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
+pub type RedsysSetupMandateRequest = super::transformers::RedsysTransaction;
+pub type RedsysRepeatPaymentRequestType = super::transformers::RedsysTransaction;
 
 /// Main payment request structure for Redsys API
 #[derive(Debug, Serialize)]
@@ -257,6 +259,82 @@ pub struct RedsysMonitorRequest {
     pub ds_terminal: Secret<String>,
     #[serde(rename = "Ds_Order")]
     pub ds_order: String,
+}
+
+/// COF (Credential on File) initial flag
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RedsysCofIni {
+    /// S = Initial COF operation (Si/Yes)
+    #[serde(rename = "S")]
+    Yes,
+    /// N = Subsequent COF operation (No)
+    #[serde(rename = "N")]
+    No,
+}
+
+/// COF type indicating the nature of the recurring relationship
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RedsysCofType {
+    /// R = Recurring (fixed schedule, variable/fixed amount)
+    #[serde(rename = "R")]
+    Recurring,
+    /// I = Installment (fixed schedule, fixed amount)
+    #[serde(rename = "I")]
+    Installment,
+    /// C = Others / Card on file
+    #[serde(rename = "C")]
+    Others,
+}
+
+/// SCA exemption types for PSD2
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RedsysExcepSca {
+    /// MIT = Merchant Initiated Transaction
+    #[serde(rename = "MIT")]
+    Mit,
+}
+
+/// SetupMandate (CIT initial) payment request - stores credentials and requests tokenization
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct RedsysSetupMandatePaymentRequest {
+    pub ds_merchant_amount: StringMinorUnit,
+    pub ds_merchant_currency: String,
+    pub ds_merchant_cvv2: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ds_merchant_emv3ds: Option<RedsysEmvThreeDsRequestData>,
+    pub ds_merchant_expirydate: Secret<String>,
+    pub ds_merchant_merchantcode: Secret<String>,
+    pub ds_merchant_order: String,
+    pub ds_merchant_pan: cards::CardNumber,
+    pub ds_merchant_terminal: Secret<String>,
+    pub ds_merchant_transactiontype: RedsysTransactionType,
+    pub ds_merchant_cof_ini: RedsysCofIni,
+    pub ds_merchant_cof_type: RedsysCofType,
+    /// Set to "REQUIRED" to request tokenization
+    pub ds_merchant_identifier: String,
+}
+
+/// RepeatPayment (MIT subsequent) request - uses stored token, no 3DS/CVV required
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct RedsysRepeatPaymentRequest {
+    pub ds_merchant_amount: StringMinorUnit,
+    pub ds_merchant_currency: String,
+    pub ds_merchant_merchantcode: Secret<String>,
+    pub ds_merchant_order: String,
+    pub ds_merchant_terminal: Secret<String>,
+    pub ds_merchant_transactiontype: RedsysTransactionType,
+    pub ds_merchant_cof_ini: RedsysCofIni,
+    pub ds_merchant_cof_type: RedsysCofType,
+    /// COF transaction ID from the initial CIT response
+    pub ds_merchant_cof_txnid: String,
+    /// Card token (Ds_Merchant_Identifier) from the initial CIT response
+    pub ds_merchant_identifier: String,
+    /// SCA exemption for merchant-initiated transactions
+    pub ds_merchant_excep_sca: RedsysExcepSca,
+    /// Bypass 3DS authentication
+    pub ds_merchant_directpayment: String,
 }
 
 /// Request for invoking 3DS method redirect

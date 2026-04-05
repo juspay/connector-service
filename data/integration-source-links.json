@@ -72,5 +72,14 @@
     "https://razorpay.com/docs/api/payments/recurring-payments/custom/",
     "https://razorpay.com/docs/payments/payment-gateway/s2s-integration/recurring-payments/",
     "https://razorpay.com/docs/api/"
+  ],
+  "Redsys": [
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-tipos-de-integracion/desarrolladores-rest/",
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-funcionalidades-avanzadas/tokenizacion/tokenizacion-mit/",
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-funcionalidades-avanzadas/tokenizacion/",
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-operativa/autorizacion/",
+    "https://developer.spreedly.com/docs/redsys-gateway-guide",
+    "https://documentation.ixopay.com/adapters/redsys",
+    "https://github.com/CommerceRedsys/sermepa/blob/master/src/Sermepa.php"
   ]
 }
