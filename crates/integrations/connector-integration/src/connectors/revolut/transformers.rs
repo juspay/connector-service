@@ -2,9 +2,9 @@ use crate::connectors::revolut::RevolutRouterData;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund, RepeatPayment},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, WebhookDetailsResponse,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, WebhookDetailsResponse,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
