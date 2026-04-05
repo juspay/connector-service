@@ -1051,11 +1051,11 @@ pub struct PayuRepeatPaymentRequest {
     pub user_token: String, // Card/mandate token from previous transaction (connector_mandate_id)
 
     // S2S fields
-    pub txn_s2s_flow: String,                 // S2S flow type
+    pub txn_s2s_flow: String,                     // S2S flow type
     pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
-    pub s2s_device_info: String,              // Device info
+    pub s2s_device_info: String,                  // Device info
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub api_version: Option<String>,          // API version
+    pub api_version: Option<String>, // API version
 
     // Security
     pub hash: String, // SHA-512 signature
@@ -1210,8 +1210,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = PayuAuthType::try_from(&router_data.connector_config)?;
 
         // Extract mandate token (user_token) from mandate reference
-        let user_token =
-            extract_connector_mandate_id(&router_data.request.mandate_reference)?;
+        let user_token = extract_connector_mandate_id(&router_data.request.mandate_reference)?;
 
         // Extract metadata for UDF fields
         let metadata = router_data.request.metadata.as_ref();
