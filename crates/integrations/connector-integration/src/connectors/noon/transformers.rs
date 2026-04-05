@@ -1724,7 +1724,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NoonCreateOrderRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         data: NoonRouterData<
@@ -1743,7 +1743,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(item.request.amount, item.request.currency)
-            .change_context(ConnectorError::ParsingFailed)?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let currency = Some(item.request.currency);
 
@@ -1812,7 +1814,7 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<NoonCreateOrderResponse, Self>,
@@ -1827,7 +1829,7 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
             },
             response: Ok(PaymentCreateOrderResponse {
                 order_id: order.id.to_string(),
-                session_token: None,
+                session_data: None,
             }),
             ..item.router_data
         })
