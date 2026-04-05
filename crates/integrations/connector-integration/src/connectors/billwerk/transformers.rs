@@ -17,13 +17,14 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorResponseTransformationError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
     },
     router_data_v2::RouterDataV2,
 };
 
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 
 use serde::{Deserialize, Serialize};
@@ -85,6 +86,8 @@ pub struct BillwerkPaymentsRequest {
     settle: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     recurring: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    googlepay_token: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -276,10 +279,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .into());
         };
-        let PaymentMethodTokenFlow::Token(source) = item
-            .router_data
-            .resource_common_data
-            .get_payment_method_token()?;
+
+        // Determine source and googlepay_token based on payment method
+        let (source, googlepay_token) = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
+                // For GooglePay, set source to "googlepay" and pass the encrypted
+                // token in the googlepay_token field
+                let encrypted_token = google_pay_data
+                    .tokenization_data
+                    .get_encrypted_google_pay_token()
+                    .change_context(IntegrationError::InvalidWalletToken {
+                        wallet_name: "Google Pay".to_string(),
+                        context: Default::default(),
+                    })?;
+                (
+                    Secret::new("googlepay".to_string()),
+                    Some(Secret::new(encrypted_token)),
+                )
+            }
+            _ => {
+                // For cards, use the payment method token from tokenization flow
+                let PaymentMethodTokenFlow::Token(token) = item
+                    .router_data
+                    .resource_common_data
+                    .get_payment_method_token()?;
+                (token, None)
+            }
+        };
+
         let recurring = if item.router_data.request.setup_future_usage.is_some() {
             Some(true)
         } else {
@@ -325,6 +352,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             metadata: item.router_data.request.metadata.clone(),
             settle: item.router_data.request.is_auto_capture(),
             recurring,
+            googlepay_token,
         })
     }
 }
