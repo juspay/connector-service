@@ -153,14 +153,7 @@ pub enum UpiFlowType {
 
 // PaytmInitiateTxnRequest TryFrom ServerSessionAuthenticationToken RouterData
 // Using the macro-generated PaytmRouterData type from the paytm module
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MacroPaytmRouterData<
             RouterDataV2<
@@ -410,14 +403,7 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
 // ================================
 
 // PaytmAuthorizeRequest TryFrom Authorize RouterData
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MacroPaytmRouterData<
             RouterDataV2<
@@ -529,14 +515,8 @@ impl<
 }
 
 // Authorize response transformation
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<PaytmProcessTxnResponse, Self>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaytmProcessTxnResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
@@ -670,14 +650,7 @@ impl<
 // ================================
 
 // PaytmTransactionStatusRequest TryFrom PSync RouterData
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MacroPaytmRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -806,7 +779,7 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
     }
 }
 
-pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+pub fn determine_upi_flow<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
 ) -> CustomResult<UpiFlowType, IntegrationError> {
     match payment_method_data {
@@ -837,7 +810,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
 }
 
 // Helper function for UPI VPA extraction
-pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+pub fn extract_upi_vpa<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
 ) -> CustomResult<Option<String>, IntegrationError> {
     match payment_method_data {
@@ -1143,28 +1116,22 @@ fn extract_paytm_mandate_id(
                 })
             }),
         MandateReferenceId::NetworkMandateId(_) => {
-            Err(error_stack::report!(
-                IntegrationError::NotImplemented(
-                    "Network mandate ID not supported for repeat payments in paytm".to_string(),
-                    Default::default(),
-                )
-            ))
+            Err(error_stack::report!(IntegrationError::NotImplemented(
+                "Network mandate ID not supported for repeat payments in paytm".to_string(),
+                Default::default(),
+            )))
         }
         MandateReferenceId::NetworkTokenWithNTI(_) => {
-            Err(error_stack::report!(
-                IntegrationError::NotImplemented(
-                    "Network token with NTI not supported for repeat payments in paytm".to_string(),
-                    Default::default(),
-                )
-            ))
+            Err(error_stack::report!(IntegrationError::NotImplemented(
+                "Network token with NTI not supported for repeat payments in paytm".to_string(),
+                Default::default(),
+            )))
         }
     }
 }
 
 // PaytmRepeatPaymentRequest TryFrom RepeatPayment RouterData
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MacroPaytmRouterData<
             RouterDataV2<
@@ -1228,9 +1195,8 @@ impl<
 }
 
 // RepeatPayment response transformation
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-    > TryFrom<ResponseRouterData<PaytmRepeatPaymentResponse, Self>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaytmRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorResponseTransformationError>;
