@@ -14,8 +14,7 @@ use domain_types::{
         Authenticate, Authorize, CancelRecurring, Capture, ClientAuthenticationToken,
         CreateConnectorCustomer, CreateOrder, IncrementalAuthorization, MandateRevoke, PSync,
         PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
-        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate,
-        VerifyWebhookSource, Void, VoidPC,
+        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         CancelRecurringData, CancelRecurringResponseData, ClientAuthenticationTokenRequestData,
@@ -30,7 +29,6 @@ use domain_types::{
         RepeatPaymentData, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
         ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData,
-        VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
