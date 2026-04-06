@@ -1,4 +1,4 @@
-#![allow(clippy::print_stderr, clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
 //! Core orchestration layer for UCS scenario execution.
 //!
@@ -3279,9 +3279,10 @@ pub fn run_scenario_test_with_options(
             }
         }
         Err(ScenarioError::Skipped { reason }) => {
-            eprintln!(
-                "[test_ucs] assertion result for '{}': SKIP ({})",
-                scenario, reason
+            tracing::info!(
+                scenario,
+                %reason,
+                "assertion result: SKIP"
             );
             results.push(SuiteScenarioResult {
                 suite: suite.to_string(),
@@ -3377,9 +3378,10 @@ pub fn run_all_connectors_with_options(
         match load_connector_config(&connector) {
             Ok(_) => runnable_connectors.push(connector),
             Err(error) => {
-                eprintln!(
-                    "[suite_run_test] skipping connector '{}' due to missing/invalid credentials: {}",
-                    connector, error
+                tracing::warn!(
+                    connector,
+                    %error,
+                    "skipping connector due to missing/invalid credentials"
                 );
             }
         }
@@ -3900,9 +3902,11 @@ fn execute_dependency_chain(
             }
             Err(ScenarioError::Skipped { reason }) => {
                 // A dependency that skips: treat as non-fatal, skip the whole chain entry
-                eprintln!(
-                    "[test_ucs] dependency '{}/{}' skipped: {}",
-                    dependency_suite, dependency_scenario, reason
+                tracing::info!(
+                    suite = dependency_suite,
+                    scenario = dependency_scenario,
+                    %reason,
+                    "dependency skipped"
                 );
                 results.push(SuiteScenarioResult {
                     suite: dependency_suite.to_string(),

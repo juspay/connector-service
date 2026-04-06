@@ -1,5 +1,3 @@
-#![allow(clippy::print_stderr)]
-
 //! Report persistence and markdown rendering for harness runs.
 //!
 //! This module appends `ReportEntry` rows into `report.json` and regenerates
@@ -171,7 +169,7 @@ pub fn append_report_batch(entries: Vec<ReportEntry>) -> Result<(), String> {
 
     // Auto-generate markdown after every write
     if let Err(e) = generate_md(&path, &report) {
-        eprintln!("[report] failed to generate markdown: {e}");
+        tracing::warn!(%e, "failed to generate markdown report");
     }
 
     Ok(())
@@ -202,14 +200,14 @@ pub fn regenerate_markdown_from_disk() -> Result<PathBuf, String> {
 /// bubbling them.
 pub fn append_report_best_effort(entry: ReportEntry) {
     if let Err(e) = append_report(entry) {
-        eprintln!("[report] write failed: {e}");
+        tracing::warn!(%e, "report write failed");
     }
 }
 
 /// Best-effort wrapper around `append_report_batch`.
 pub fn append_report_batch_best_effort(entries: Vec<ReportEntry>) {
     if let Err(e) = append_report_batch(entries) {
-        eprintln!("[report] batch write failed: {e}");
+        tracing::warn!(%e, "report batch write failed");
     }
 }
 
