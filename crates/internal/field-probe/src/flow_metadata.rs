@@ -67,6 +67,7 @@ fn get_category_for_service(service_name: &str) -> String {
         "PaymentMethodAuthenticationService" => "Authentication".to_string(),
         "DisputeService" => "Disputes".to_string(),
         "EventService" => "Events".to_string(),
+        "FraudService" => "Fraud".to_string(),
         _ => "Other".to_string(),
     }
 }
@@ -147,6 +148,28 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         (("DisputeService", "Accept"), "dispute_accept"),
         // EventService
         (("EventService", "HandleEvent"), "handle_event"),
+        // FraudService
+        (
+            ("FraudService", "EvaluatePreAuthorization"),
+            "fraud_evaluate_pre_authorization",
+        ),
+        (
+            ("FraudService", "EvaluatePostAuthorization"),
+            "fraud_evaluate_post_authorization",
+        ),
+        (
+            ("FraudService", "RecordTransactionData"),
+            "fraud_record_transaction_data",
+        ),
+        (
+            ("FraudService", "RecordFulfillmentData"),
+            "fraud_record_fulfillment_data",
+        ),
+        (
+            ("FraudService", "RecordReturnData"),
+            "fraud_record_return_data",
+        ),
+        (("FraudService", "Get"), "fraud_get"),
     ]
     .iter()
     .cloned()

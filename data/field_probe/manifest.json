@@ -269,6 +269,66 @@
       "category": "Authentication",
       "grpc_request": "PaymentMethodAuthenticationServicePostAuthenticateRequest",
       "grpc_response": "PaymentMethodAuthenticationServicePostAuthenticateResponse"
+    },
+    {
+      "flow_key": "fraud_evaluate_pre_authorization",
+      "service_rpc": "FraudService.EvaluatePreAuthorization",
+      "description": "Assesses transaction risk using payment data and device fingerprinting before authorization. Enables merchants to block suspicious transactions before submitting to payment processors.",
+      "service_name": "FraudService",
+      "rpc_name": "EvaluatePreAuthorization",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceEvaluatePreAuthorizationRequest",
+      "grpc_response": "FraudServiceEvaluatePreAuthorizationResponse"
+    },
+    {
+      "flow_key": "fraud_evaluate_post_authorization",
+      "service_rpc": "FraudService.EvaluatePostAuthorization",
+      "description": "Re-evaluates risk after authorization using approval/decline results and 3DS outcomes. Allows merchants to flag high-risk approvals for manual review or additional verification.",
+      "service_name": "FraudService",
+      "rpc_name": "EvaluatePostAuthorization",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceEvaluatePostAuthorizationRequest",
+      "grpc_response": "FraudServiceEvaluatePostAuthorizationResponse"
+    },
+    {
+      "flow_key": "fraud_record_transaction_data",
+      "service_rpc": "FraudService.RecordTransactionData",
+      "description": "Records transaction completion data including settlement status and final amounts. Feeds transaction outcomes back into fraud models to improve future risk detection.",
+      "service_name": "FraudService",
+      "rpc_name": "RecordTransactionData",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceRecordTransactionDataRequest",
+      "grpc_response": "FraudServiceRecordTransactionDataResponse"
+    },
+    {
+      "flow_key": "fraud_record_fulfillment_data",
+      "service_rpc": "FraudService.RecordFulfillmentData",
+      "description": "Records order fulfillment status with shipping carrier and tracking information. Provides delivery confirmation to dispute chargebacks claiming non-receipt of goods.",
+      "service_name": "FraudService",
+      "rpc_name": "RecordFulfillmentData",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceRecordFulfillmentDataRequest",
+      "grpc_response": "FraudServiceRecordFulfillmentDataResponse"
+    },
+    {
+      "flow_key": "fraud_record_return_data",
+      "service_rpc": "FraudService.RecordReturnData",
+      "description": "Records product returns and refund details for completed transactions. Enables fraud systems to identify return fraud patterns and repeat abusers.",
+      "service_name": "FraudService",
+      "rpc_name": "RecordReturnData",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceRecordReturnDataRequest",
+      "grpc_response": "FraudServiceRecordReturnDataResponse"
+    },
+    {
+      "flow_key": "fraud_get",
+      "service_rpc": "FraudService.Get",
+      "description": "Retrieves fraud decision history and risk scores for a specific transaction. Supports customer service investigations and chargeback dispute preparation.",
+      "service_name": "FraudService",
+      "rpc_name": "Get",
+      "category": "Fraud",
+      "grpc_request": "FraudServiceGetRequest",
+      "grpc_response": "FraudServiceGetResponse"
     }
   ],
   "connectors": [
