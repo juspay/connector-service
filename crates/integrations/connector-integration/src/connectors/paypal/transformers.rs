@@ -549,6 +549,30 @@ pub struct ContextStruct {
     shipping_preference: ShippingPreference,
 }
 
+#[derive(Debug, Serialize)]
+pub struct GooglePayRequest {
+    pub decrypted_token: GooglePayDecryptedToken,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayDecryptedToken {
+    pub message_id: String,
+    pub message_expiration: String,
+    pub payment_method: String,
+    pub authentication_method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci_indicator: Option<String>,
+    pub card: GooglePayDecryptedCard,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GooglePayDecryptedCard {
+    pub number: Secret<String>,
+    pub expiry: Secret<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum UserAction {
     #[serde(rename = "PAY_NOW")]
@@ -631,64 +655,37 @@ pub enum UsageType {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(untagged)]
+#[serde(rename_all = "lowercase")]
 pub enum PaymentSourceItem<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardRequest<T>),
     Paypal(PaypalRedirectionRequest),
+    #[serde(rename = "google_pay")]
+    GooglePay(GooglePayRequest),
     IDeal(RedirectRequest),
     Eps(RedirectRequest),
     Giropay(RedirectRequest),
     Sofort(RedirectRequest),
-    GooglePay(GooglePayRequest),
-}
-
-#[derive(Debug, Serialize)]
-pub struct GooglePayRequest {
-    pub decrypted_token: GooglePayDecryptedToken,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GooglePayDecryptedToken {
-    pub message_id: String,
-    #[serde(rename = "payment_method")]
-    pub payment_method: GooglePayPaymentMethod,
-    pub card: GooglePayCard,
-    pub authentication_method: GooglePayAuthMethod,
-    pub cryptogram: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum GooglePayPaymentMethod {
-    Card,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum GooglePayAuthMethod {
-    PanOnly,
-    Cryptogram3ds,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GooglePayCard {
-    pub name: Option<String>,
-    pub number: String,
-    pub expiry: String,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CardVaultResponse {
     attributes: Option<AttributeResponse>,
 }
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
+pub struct GooglePaySourceResponse {
+    card: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum PaymentSourceItemResponse {
     Card(CardVaultResponse),
     Paypal(PaypalRedirectionResponse),
     Eps(EpsRedirectionResponse),
     Ideal(IdealRedirectionResponse),
+    GooglePay(GooglePaySourceResponse),
 }
 
 #[derive(Debug, Serialize)]
@@ -1087,62 +1084,55 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         payment_source,
                     })
                 }
-                WalletData::GooglePay(google_pay_data) => {
-                    // Extract decrypted card data from Google Pay token
-                    let decrypted_data = match &google_pay_data.tokenization_data {
-                        GpayTokenizationData::Decrypted(decrypted) => decrypted,
-                        GpayTokenizationData::Encrypted(_) => {
-                            return Err(ConnectorError::InvalidWalletToken {
+                WalletData::GooglePay(gpay_data) => match &gpay_data.tokenization_data {
+                    GpayTokenizationData::Decrypted(decrypted_data) => {
+                        let four_digit_year = decrypted_data
+                            .get_four_digit_expiry_year()
+                            .change_context(ConnectorError::InvalidWalletToken {
                                 wallet_name: "Google Pay".to_string(),
-                            }
-                            .into())
-                        }
-                    };
-
-                    let card_number = decrypted_data
-                        .application_primary_account_number
-                        .peek()
-                        .to_string();
-                    let expiry_month = decrypted_data.card_exp_month.peek();
-                    let expiry_year = decrypted_data
-                        .get_four_digit_expiry_year()
-                        .map_err(|_| ConnectorError::RequestEncodingFailed)?
-                        .peek()
-                        .clone();
-
-                    let message_id = item
-                        .router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone();
-
-                    let payment_source = Some(PaymentSourceItem::GooglePay(GooglePayRequest {
-                        decrypted_token: GooglePayDecryptedToken {
-                            message_id,
-                            payment_method: GooglePayPaymentMethod::Card,
-                            card: GooglePayCard {
-                                name: None,
-                                number: card_number,
-                                expiry: format!("{}-{}", expiry_year, expiry_month),
+                            })?;
+                        let expiry = Secret::new(format!(
+                            "{}-{:0>2}",
+                            four_digit_year.peek(),
+                            decrypted_data.card_exp_month.peek()
+                        ));
+                        let authentication_method = if decrypted_data.cryptogram.is_some() {
+                            "CRYPTOGRAM_3DS".to_string()
+                        } else {
+                            "PAN_ONLY".to_string()
+                        };
+                        let payment_source = Some(PaymentSourceItem::GooglePay(GooglePayRequest {
+                            decrypted_token: GooglePayDecryptedToken {
+                                message_id: uuid::Uuid::new_v4().to_string(),
+                                // TODO: message_expiration is hardcoded because HS does not currently
+                                // forward this field from the decrypted GPay payload through the gRPC
+                                // interface. Tracked in https://github.com/juspay/hyperswitch/issues/11684
+                                message_expiration: "9999999999999".to_string(),
+                                payment_method: "CARD".to_string(),
+                                authentication_method,
+                                cryptogram: decrypted_data.cryptogram.clone(),
+                                eci_indicator: decrypted_data.eci_indicator.clone(),
+                                card: GooglePayDecryptedCard {
+                                    number: Secret::new(
+                                        decrypted_data
+                                            .application_primary_account_number
+                                            .get_card_no(),
+                                    ),
+                                    expiry,
+                                },
                             },
-                            authentication_method: if decrypted_data.cryptogram.is_some() {
-                                GooglePayAuthMethod::Cryptogram3ds
-                            } else {
-                                GooglePayAuthMethod::PanOnly
-                            },
-                            cryptogram: decrypted_data
-                                .cryptogram
-                                .as_ref()
-                                .map(|s| s.peek().clone()),
-                        },
-                    }));
-
-                    Ok(Self {
-                        intent,
-                        purchase_units,
-                        payment_source,
-                    })
-                }
+                        }));
+                        Ok(Self {
+                            intent,
+                            purchase_units,
+                            payment_source,
+                        })
+                    }
+                    GpayTokenizationData::Encrypted(_) => Err(ConnectorError::NotImplemented(
+                        "PayPal GooglePay encrypted flow".to_string(),
+                    )
+                    .into()),
+                },
                 WalletData::AliPayQr(_)
                 | WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
@@ -1219,6 +1209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
                 Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Paypal"),
@@ -1978,7 +1969,8 @@ where
                                     card.attributes.map(|attr| attr.vault.id)
                                 }
                                 PaymentSourceItemResponse::Eps(_)
-                                | PaymentSourceItemResponse::Ideal(_) => None,
+                                | PaymentSourceItemResponse::Ideal(_)
+                                | PaymentSourceItemResponse::GooglePay(_) => None,
                             },
                             None => None,
                         },
@@ -2624,6 +2616,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::MobilePayment(_) => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Paypal"),
             ))?,
