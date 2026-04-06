@@ -805,7 +805,7 @@ pub fn verify_webhook_signature(
 
     let signature_bytes = general_purpose::STANDARD
         .decode(signature_b64)
-        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
     let mut verifier = Verifier::new(algorithm.message_digest(), &public_key)
         .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
