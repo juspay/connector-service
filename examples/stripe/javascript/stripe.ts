@@ -21,44 +21,44 @@ const _defaultConfig: ConnectorConfig = {
 
 function _buildAuthorizeRequest(captureMethod: CaptureMethod): PaymentServiceAuthorizeRequest {
     return {
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "merchantTransactionId": "probe_txn_001",  // Identification.
+        "amount": {  // The amount for the payment.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+        "paymentMethod": {  // Payment method to be used.
+            "card": {  // Generic card payment.
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
                 "cardExpMonth": {"value": "03"},
                 "cardExpYear": {"value": "2030"},
                 "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
             }
         },
-        "captureMethod": captureMethod,  // Method for capturing the payment
-        "address": {  // Address Information
+        "captureMethod": captureMethod,  // Method for capturing the payment.
+        "address": {  // Address Information.
             "billingAddress": {
             }
         },
-        "authType": AuthenticationType.NO_THREE_DS,  // Authentication Details
-        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
+        "authType": AuthenticationType.NO_THREE_DS,  // Authentication Details.
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks.
     };
 }
 
 function _buildCaptureRequest(connectorTransactionId: string): PaymentServiceCaptureRequest {
     return {
-        "merchantCaptureId": "probe_capture_001",  // Identification
+        "merchantCaptureId": "probe_capture_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
-        "amountToCapture": {  // Capture Details
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "amountToCapture": {  // Capture Details.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     };
 }
 
 function _buildCreateClientAuthenticationTokenRequest(): MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
     return {
-        "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure
+        "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure.
         "domainContext": {
             "minorAmount": 1000,
             "currency": "USD"
@@ -68,75 +68,126 @@ function _buildCreateClientAuthenticationTokenRequest(): MerchantAuthenticationS
 
 function _buildCreateCustomerRequest(): CustomerServiceCreateRequest {
     return {
-        "merchantCustomerId": "cust_probe_123",  // Identification
-        "customerName": "John Doe",  // Name of the customer
-        "email": {"value": "test@example.com"},  // Email address of the customer
-        "phoneNumber": "4155552671"  // Phone number of the customer
+        "merchantCustomerId": "cust_probe_123",  // Identification.
+        "customerName": "John Doe",  // Name of the customer.
+        "email": {"value": "test@example.com"},  // Email address of the customer.
+        "phoneNumber": "4155552671"  // Phone number of the customer.
     };
 }
 
 function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequest {
     return {
-        "merchantTransactionId": "probe_merchant_txn_001",  // Identification
+        "merchantTransactionId": "probe_merchant_txn_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "amount": {  // Amount Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     };
 }
 
 function _buildIncrementalAuthorizationRequest(): PaymentServiceIncrementalAuthorizationRequest {
     return {
-        "merchantAuthorizationId": "probe_auth_001",  // Identification
+        "merchantAuthorizationId": "probe_auth_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {  // new amount to be authorized (in minor currency units)
-            "minorAmount": 1100,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "amount": {  // new amount to be authorized (in minor currency units).
+            "minorAmount": 1100,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
-        "reason": "incremental_auth_probe"  // Optional Fields
+        "reason": "incremental_auth_probe"  // Optional Fields.
+    };
+}
+
+function _buildProxyAuthorizeRequest(): PaymentServiceProxyAuthorizeRequest {
+    return {
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "cardProxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+            "cardExpMonth": {"value": "03"},
+            "cardExpYear": {"value": "2030"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "captureMethod": CaptureMethod.AUTOMATIC,
+        "authType": AuthenticationType.NO_THREE_DS,
+        "returnUrl": "https://example.com/return"
+    };
+}
+
+function _buildProxySetupRecurringRequest(): PaymentServiceProxySetupRecurringRequest {
+    return {
+        "merchantRecurringPaymentId": "probe_proxy_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "cardProxy": {  // Card proxy for vault-aliased payments.
+            "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+            "cardExpMonth": {"value": "03"},
+            "cardExpYear": {"value": "2030"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "customerAcceptance": {
+            "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        },
+        "authType": AuthenticationType.NO_THREE_DS,
+        "setupFutureUsage": FutureUsage.OFF_SESSION
     };
 }
 
 function _buildRecurringChargeRequest(): RecurringPaymentServiceChargeRequest {
     return {
-        "connectorRecurringPaymentId": {  // Reference to existing mandate
-            "connectorMandateId": {  // mandate_id sent by the connector
+        "connectorRecurringPaymentId": {  // Reference to existing mandate.
+            "connectorMandateId": {  // mandate_id sent by the connector.
                 "connectorMandateId": "probe-mandate-123"
             }
         },
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "amount": {  // Amount Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
-        "paymentMethod": {  // Optional payment Method Information (for network transaction flows)
-            "token": {  // Payment tokens
+        "paymentMethod": {  // Optional payment Method Information (for network transaction flows).
+            "token": {  // Payment tokens.
                 "token": {"value": "probe_pm_token"}  // The token string representing a payment method.
             }
         },
         "returnUrl": "https://example.com/recurring-return",
         "connectorCustomerId": "cust_probe_123",
         "paymentMethodType": PaymentMethodType.PAY_PAL,
-        "offSession": true  // Behavioral Flags and Preferences
+        "offSession": true  // Behavioral Flags and Preferences.
     };
 }
 
 function _buildRefundRequest(connectorTransactionId: string): PaymentServiceRefundRequest {
     return {
-        "merchantRefundId": "probe_refund_001",  // Identification
+        "merchantRefundId": "probe_refund_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
-        "paymentAmount": 1000,  // Amount Information
+        "paymentAmount": 1000,  // Amount Information.
         "refundAmount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
-        "reason": "customer_request"  // Reason for the refund
+        "reason": "customer_request"  // Reason for the refund.
     };
 }
 
 function _buildRefundGetRequest(): RefundServiceGetRequest {
     return {
-        "merchantRefundId": "probe_refund_001",  // Identification
+        "merchantRefundId": "probe_refund_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
         "refundId": "probe_refund_id_001"
     };
@@ -144,30 +195,30 @@ function _buildRefundGetRequest(): RefundServiceGetRequest {
 
 function _buildSetupRecurringRequest(): PaymentServiceSetupRecurringRequest {
     return {
-        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification
-        "amount": {  // Mandate Details
-            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification.
+        "amount": {  // Mandate Details.
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "paymentMethod": {
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+            "card": {  // Generic card payment.
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
                 "cardExpMonth": {"value": "03"},
                 "cardExpYear": {"value": "2030"},
                 "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
             }
         },
-        "address": {  // Address Information
+        "address": {  // Address Information.
             "billingAddress": {
             }
         },
-        "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used
-        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure
-        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
-        "setupFutureUsage": FutureUsage.OFF_SESSION,  // Indicates future usage intention
-        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested
-        "customerAcceptance": {  // Details of customer acceptance
+        "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used.
+        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure.
+        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup.
+        "setupFutureUsage": FutureUsage.OFF_SESSION,  // Indicates future usage intention.
+        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested.
+        "customerAcceptance": {  // Details of customer acceptance.
             "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
         }
@@ -176,20 +227,20 @@ function _buildSetupRecurringRequest(): PaymentServiceSetupRecurringRequest {
 
 function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
     return {
-        "amount": {  // Payment Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "amount": {  // Payment Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "paymentMethod": {
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+            "card": {  // Generic card payment.
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
                 "cardExpMonth": {"value": "03"},
                 "cardExpYear": {"value": "2030"},
                 "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
             }
         },
-        "address": {  // Address Information
+        "address": {  // Address Information.
             "billingAddress": {
             }
         }
@@ -198,7 +249,7 @@ function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
 
 function _buildVoidRequest(connectorTransactionId: string): PaymentServiceVoidRequest {
     return {
-        "merchantVoidId": "probe_void_001",  // Identification
+        "merchantVoidId": "probe_void_001",  // Identification.
         "connectorTransactionId": connectorTransactionId
     };
 }
@@ -375,56 +426,19 @@ async function incrementalAuthorization(merchantTransactionId: string, config: C
 }
 
 // Flow: PaymentService.ProxyAuthorize
-async function proxyAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: proxy_authorize
-    const proxyResponse = await paymentClient.proxyAuthorize({
-        "merchantTransactionId": "probe_proxy_txn_001",
-        "amount": {
-            "minorAmount": 1000,
-            "currency": "USD"
-        },
-        "cardProxy": {
-            "cardNumber": "4111111111111111",
-            "cardExpMonth": "03",
-            "cardExpYear": "2030",
-            "cardCvc": "123",
-            "cardHolderName": "John Doe"
-        },
-        "address": {
-        },
-        "captureMethod": "AUTOMATIC",
-        "authType": "NO_THREE_DS",
-        "returnUrl": "https://example.com/return"
-    });
+async function proxyAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const proxyResponse = await paymentClient.proxyAuthorize(_buildProxyAuthorizeRequest());
 
     return { status: proxyResponse.status };
 }
 
 // Flow: PaymentService.ProxySetupRecurring
-async function proxySetupRecurring(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: proxy_setup_recurring
-    const proxyResponse = await paymentClient.proxySetupRecurring({
-        "merchantRecurringPaymentId": "probe_proxy_mandate_001",
-        "amount": {
-            "minorAmount": 0,
-            "currency": "USD"
-        },
-        "cardProxy": {
-            "cardNumber": "4111111111111111",
-            "cardExpMonth": "03",
-            "cardExpYear": "2030",
-            "cardCvc": "123",
-            "cardHolderName": "John Doe"
-        },
-        "address": {
-        },
-        "customerAcceptance": {
-            "acceptanceType": "OFFLINE",
-            "acceptedAt": 0
-        },
-        "authType": "NO_THREE_DS",
-        "setupFutureUsage": "OFF_SESSION"
-    });
+async function proxySetupRecurring(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceSetupRecurringResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const proxyResponse = await paymentClient.proxySetupRecurring(_buildProxySetupRecurringRequest());
 
     return { status: proxyResponse.status };
 }
@@ -486,7 +500,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildIncrementalAuthorizationRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildIncrementalAuthorizationRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest
 };
 
 // CLI runner

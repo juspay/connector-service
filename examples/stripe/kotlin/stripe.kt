@@ -21,6 +21,8 @@ import payments.PaymentServiceGetRequest
 import payments.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest
 import payments.CustomerServiceCreateRequest
 import payments.PaymentServiceIncrementalAuthorizationRequest
+import payments.PaymentServiceProxyAuthorizeRequest
+import payments.PaymentServiceProxySetupRecurringRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.RefundServiceGetRequest
 import payments.PaymentServiceSetupRecurringRequest
@@ -38,68 +40,68 @@ import payments.Environment
 
 private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
     return PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        merchantTransactionId = "probe_txn_001"  // Identification.
+        amountBuilder.apply {  // The amount for the payment.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+        paymentMethodBuilder.apply {  // Payment method to be used.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
                 cardExpMonthBuilder.value = "03"
                 cardExpYearBuilder.value = "2030"
                 cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
             }
         }
-        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        addressBuilder.apply {  // Address Information
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
+        authType = AuthenticationType.NO_THREE_DS  // Authentication Details.
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks.
     }.build()
 }
 
 private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServiceCaptureRequest {
     return PaymentServiceCaptureRequest.newBuilder().apply {
-        merchantCaptureId = "probe_capture_001"  // Identification
+        merchantCaptureId = "probe_capture_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountToCaptureBuilder.apply {  // Capture Details
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountToCaptureBuilder.apply {  // Capture Details.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
 
 private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
     return PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
+        merchantRefundId = "probe_refund_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        paymentAmount = 1000L  // Amount Information
+        paymentAmount = 1000L  // Amount Information.
         refundAmountBuilder.apply {
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        reason = "customer_request"  // Reason for the refund
+        reason = "customer_request"  // Reason for the refund.
     }.build()
 }
 
 private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceVoidRequest {
     return PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification
+        merchantVoidId = "probe_void_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
     }.build()
 }
@@ -234,11 +236,11 @@ fun capture(txnId: String) {
 fun createClientAuthenticationToken(txnId: String) {
     val client = MerchantAuthenticationClient(_defaultConfig)
     val request = MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest.newBuilder().apply {
-        merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure
-        paymentBuilder.apply {
+        merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure.
+        paymentBuilder.apply {  // FrmClientAuthenticationContext frm = 5; // future: device fingerprinting PayoutClientAuthenticationContext payout = 6; // future: payout verification widget.
             amountBuilder.apply {
-                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
             }
         }
     }.build()
@@ -250,10 +252,10 @@ fun createClientAuthenticationToken(txnId: String) {
 fun createCustomer(txnId: String) {
     val client = CustomerClient(_defaultConfig)
     val request = CustomerServiceCreateRequest.newBuilder().apply {
-        merchantCustomerId = "cust_probe_123"  // Identification
-        customerName = "John Doe"  // Name of the customer
-        emailBuilder.value = "test@example.com"  // Email address of the customer
-        phoneNumber = "4155552671"  // Phone number of the customer
+        merchantCustomerId = "cust_probe_123"  // Identification.
+        customerName = "John Doe"  // Name of the customer.
+        emailBuilder.value = "test@example.com"  // Email address of the customer.
+        phoneNumber = "4155552671"  // Phone number of the customer.
     }.build()
     val response = client.create(request)
     println("Customer: ${response.connectorCustomerId}")
@@ -271,15 +273,74 @@ fun get(txnId: String) {
 fun incrementalAuthorization(txnId: String) {
     val client = PaymentClient(_defaultConfig)
     val request = PaymentServiceIncrementalAuthorizationRequest.newBuilder().apply {
-        merchantAuthorizationId = "probe_auth_001"  // Identification
+        merchantAuthorizationId = "probe_auth_001"  // Identification.
         connectorTransactionId = "probe_connector_txn_001"
-        amountBuilder.apply {  // new amount to be authorized (in minor currency units)
-            minorAmount = 1100L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // new amount to be authorized (in minor currency units).
+            minorAmount = 1100L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        reason = "incremental_auth_probe"  // Optional Fields
+        reason = "incremental_auth_probe"  // Optional Fields.
     }.build()
     val response = client.incremental_authorization(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: PaymentService.ProxyAuthorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceProxyAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        cardProxyBuilder.apply {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+            cardExpMonthBuilder.value = "03"
+            cardExpYearBuilder.value = "2030"
+            cardCvcBuilder.value = "123"
+            cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        returnUrl = "https://example.com/return"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: PaymentService.ProxySetupRecurring
+fun proxySetupRecurring(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceProxySetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_proxy_mandate_001"
+        amountBuilder.apply {
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        cardProxyBuilder.apply {  // Card proxy for vault-aliased payments.
+            cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+            cardExpMonthBuilder.value = "03"
+            cardExpYearBuilder.value = "2030"
+            cardCvcBuilder.value = "123"
+            cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        customerAcceptanceBuilder.apply {
+            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
+            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        }
+        authType = AuthenticationType.NO_THREE_DS
+        setupFutureUsage = FutureUsage.OFF_SESSION
+    }.build()
+    val response = client.proxy_setup_recurring(request)
     println("Status: ${response.status.name}")
 }
 
@@ -287,26 +348,26 @@ fun incrementalAuthorization(txnId: String) {
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
-        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
-            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
+        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate.
+            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector.
                 connectorMandateIdBuilder.apply {
                     connectorMandateId = "probe-mandate-123"
                 }
             }
         }
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
-            tokenBuilder.apply {  // Payment tokens
+        paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows).
+            tokenBuilder.apply {  // Payment tokens.
                 tokenBuilder.value = "probe_pm_token"  // The token string representing a payment method.
             }
         }
         returnUrl = "https://example.com/recurring-return"
         connectorCustomerId = "cust_probe_123"
         paymentMethodType = PaymentMethodType.PAY_PAL
-        offSession = true  // Behavioral Flags and Preferences
+        offSession = true  // Behavioral Flags and Preferences.
     }.build()
     val response = client.charge(request)
     if (response.status.name == "FAILED")
@@ -328,7 +389,7 @@ fun refund(txnId: String) {
 fun refundGet(txnId: String) {
     val client = RefundClient(_defaultConfig)
     val request = RefundServiceGetRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
+        merchantRefundId = "probe_refund_001"  // Identification.
         connectorTransactionId = "probe_connector_txn_001"
         refundId = "probe_refund_id_001"
     }.build()
@@ -340,30 +401,30 @@ fun refundGet(txnId: String) {
 fun setupRecurring(txnId: String) {
     val client = PaymentClient(_defaultConfig)
     val request = PaymentServiceSetupRecurringRequest.newBuilder().apply {
-        merchantRecurringPaymentId = "probe_mandate_001"  // Identification
-        amountBuilder.apply {  // Mandate Details
-            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        merchantRecurringPaymentId = "probe_mandate_001"  // Identification.
+        amountBuilder.apply {  // Mandate Details.
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
         paymentMethodBuilder.apply {
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
                 cardExpMonthBuilder.value = "03"
                 cardExpYearBuilder.value = "2030"
                 cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
             }
         }
-        addressBuilder.apply {  // Address Information
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
-        authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
-        returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
-        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
-        customerAcceptanceBuilder.apply {  // Details of customer acceptance
+        authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used.
+        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure.
+        returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup.
+        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention.
+        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested.
+        customerAcceptanceBuilder.apply {  // Details of customer acceptance.
             acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
             acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
         }
@@ -379,20 +440,20 @@ fun setupRecurring(txnId: String) {
 fun tokenize(txnId: String) {
     val client = PaymentMethodClient(_defaultConfig)
     val request = PaymentMethodServiceTokenizeRequest.newBuilder().apply {
-        amountBuilder.apply {  // Payment Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Payment Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
         paymentMethodBuilder.apply {
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
                 cardExpMonthBuilder.value = "03"
                 cardExpYearBuilder.value = "2030"
                 cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
             }
         }
-        addressBuilder.apply {  // Address Information
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
@@ -427,12 +488,14 @@ fun main(args: Array<String>) {
         "createCustomer" -> createCustomer(txnId)
         "get" -> get(txnId)
         "incrementalAuthorization" -> incrementalAuthorization(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
+        "proxySetupRecurring" -> proxySetupRecurring(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, recurringCharge, refund, refundGet, setupRecurring, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, void")
     }
 }
