@@ -195,7 +195,8 @@ async fn demo_full_round_trip(
     // 2. Optional RequestConfig defaults (http, vault)
     let defaults = RequestConfig::default();
 
-    let client = ConnectorClient::new(config, Some(defaults));
+    let client =
+        ConnectorClient::new(config, Some(defaults)).expect("Failed to create ConnectorClient");
 
     // 3. Call authorize
     match client.authorize(request, metadata, None).await {

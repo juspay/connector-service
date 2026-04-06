@@ -139,10 +139,20 @@ async fn run() -> RunnerOutput {
         ..Default::default()
     };
 
-    let client = HttpClient::new(options);
+    let client = match HttpClient::new(options) {
+        Ok(c) => c,
+        Err(e) => {
+            return RunnerOutput {
+                response: None,
+                error: Some(SdkError {
+                    code: e.error_code().to_string(),
+                    message: e.to_string(),
+                }),
+            };
+        }
+    };
 
-    let sdk_result: Result<_, hyperswitch_payments_client::http_client::NetworkError> =
-        client.execute(request, None).await;
+    let sdk_result = client.execute(request, None).await;
 
     match sdk_result {
         Ok(resp) => {

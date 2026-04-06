@@ -179,14 +179,15 @@ macro_rules! impl_flow_method {
 }
 
 impl ConnectorClient {
-    /// Initialize a new ConnectorClient. Infallible — consistent with Java, Python and TS SDKs
-    /// where client construction never throws. Configuration errors surface as
-    /// [`SdkError::NetworkError`] on the first flow call.
+    /// Initialize a new ConnectorClient.
+    ///
+    /// Returns `Err(SdkError::NetworkError)` if the HTTP client cannot be constructed
+    /// (e.g. invalid proxy URL or CA certificate).
     ///
     /// # Arguments
     /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
-    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Self {
+    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, SdkError> {
         let defaults = options.unwrap_or_default();
 
         let native_opts = match defaults.http.as_ref() {
@@ -194,10 +195,10 @@ impl ConnectorClient {
             None => NativeHttpOptions::default(),
         };
 
-        Self {
-            http_client: HttpClient::new(native_opts),
+        Ok(Self {
+            http_client: HttpClient::new(native_opts).map_err(SdkError::from)?,
             config,
-        }
+        })
     }
 
     /// Builds FfiOptions from config. Environment comes from SdkOptions (immutable).
