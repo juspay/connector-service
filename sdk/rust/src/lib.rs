@@ -1,3 +1,4 @@
+#[path = "_generated_connector_client.rs"]
 pub mod connector_client;
 #[path = "_generated_grpc_client.rs"]
 pub mod grpc_client;

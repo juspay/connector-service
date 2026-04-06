@@ -8,16 +8,21 @@
 package examples.stripe
 
 import payments.PaymentClient
+import payments.MerchantAuthenticationClient
 import payments.CustomerClient
 import payments.RecurringPaymentClient
+import payments.RefundClient
 import payments.PaymentMethodClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
+import payments.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest
 import payments.CustomerServiceCreateRequest
+import payments.PaymentServiceIncrementalAuthorizationRequest
 import payments.RecurringPaymentServiceChargeRequest
+import payments.RefundServiceGetRequest
 import payments.PaymentServiceSetupRecurringRequest
 import payments.PaymentMethodServiceTokenizeRequest
 import payments.AcceptanceType
@@ -225,6 +230,22 @@ fun capture(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+fun createClientAuthenticationToken(txnId: String) {
+    val client = MerchantAuthenticationClient(_defaultConfig)
+    val request = MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest.newBuilder().apply {
+        merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure
+        paymentBuilder.apply {
+            amountBuilder.apply {
+                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        }
+    }.build()
+    val response = client.create_client_authentication_token(request)
+    println("StatusCode: ${response.statusCode}")
+}
+
 // Flow: CustomerService.Create
 fun createCustomer(txnId: String) {
     val client = CustomerClient(_defaultConfig)
@@ -243,6 +264,22 @@ fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
     val request = buildGetRequest("probe_connector_txn_001")
     val response = client.get(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: PaymentService.IncrementalAuthorization
+fun incrementalAuthorization(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceIncrementalAuthorizationRequest.newBuilder().apply {
+        merchantAuthorizationId = "probe_auth_001"  // Identification
+        connectorTransactionId = "probe_connector_txn_001"
+        amountBuilder.apply {  // new amount to be authorized (in minor currency units)
+            minorAmount = 1100L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        reason = "incremental_auth_probe"  // Optional Fields
+    }.build()
+    val response = client.incremental_authorization(request)
     println("Status: ${response.status.name}")
 }
 
@@ -285,6 +322,18 @@ fun refund(txnId: String) {
     if (response.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
     println("Done: ${response.status.name}")
+}
+
+// Flow: RefundService.Get
+fun refundGet(txnId: String) {
+    val client = RefundClient(_defaultConfig)
+    val request = RefundServiceGetRequest.newBuilder().apply {
+        merchantRefundId = "probe_refund_001"  // Identification
+        connectorTransactionId = "probe_connector_txn_001"
+        refundId = "probe_refund_id_001"
+    }.build()
+    val response = client.refund_get(request)
+    println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.SetupRecurring
@@ -374,13 +423,16 @@ fun main(args: Array<String>) {
         "processGetPayment" -> processGetPayment(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
+        "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
         "createCustomer" -> createCustomer(txnId)
         "get" -> get(txnId)
+        "incrementalAuthorization" -> incrementalAuthorization(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
+        "refundGet" -> refundGet(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, recurringCharge, refund, refundGet, setupRecurring, tokenize, void")
     }
 }

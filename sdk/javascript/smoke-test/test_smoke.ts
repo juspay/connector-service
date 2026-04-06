@@ -130,7 +130,7 @@ async function testConnectorScenarios(
         return result;
     }
 
-    const consolidatedFile = path.join(connectorDir, `${connectorName}.js`);
+    const consolidatedFile = path.join(connectorDir, `${connectorName}.ts`);
     if (!fs.existsSync(consolidatedFile)) {
         result.status = "skipped";
         (result.scenarios as any) = { skipped: true, reason: "no_scenario_files" };
@@ -139,8 +139,8 @@ async function testConnectorScenarios(
 
     let mod: any;
     try {
-        delete require.cache[require.resolve(consolidatedFile)];
-        mod = require(consolidatedFile);
+        // Use dynamic import for TypeScript files (tsx handles transpilation)
+        mod = await import(consolidatedFile);
     } catch (e: any) {
         console.log(`    IMPORT ERROR: ${e.message}`);
         result.status = "failed";

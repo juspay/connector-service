@@ -57,9 +57,9 @@ sequenceDiagram
 
     Note over FE,PSP: Standard Mode - PSP handles card data
 
-        Note over FE,PSP: Step 1-2: Create Order & Get Session Token
+        Note over FE,PSP: Step 1-2: Create Client Authentication Token & Get Session Token
         FE->>BE: Request payment session
-        BE->>Prism: createOrder(amount, currency)
+        BE->>Prism: createClientAuthenticationToken(amount, currency)
         Prism->>PSP: Create payment session
         PSP-->>Prism: session_token (client_secret)
         Prism-->>BE: session_token
