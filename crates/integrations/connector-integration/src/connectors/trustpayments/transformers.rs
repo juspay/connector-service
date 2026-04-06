@@ -1291,18 +1291,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Extract payment method data
         let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                let card_number_json =
-                    serde_json::to_value(&card_data.card_number.0).map_err(|_| {
-                        IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        }
-                    })?;
-                let card_number_string = card_number_json
-                    .as_str()
-                    .ok_or(IntegrationError::RequestEncodingFailed {
-                        context: Default::default(),
-                    })?
-                    .to_string();
+                let card_number_string = card_data.card_number.peek().to_string();
 
                 let expiry_date =
                     card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
@@ -1313,9 +1302,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 })
             }
             _ => {
-                return Err(error_stack::report!(IntegrationError::not_implemented(
-                    "Payment method not supported for SetupMandate".to_string()
-                )))
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: "Payment method not supported for SetupMandate".to_string(),
+                    connector: "trustpayments",
+                    context: Default::default(),
+                }))
             }
         };
 
