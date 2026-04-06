@@ -224,8 +224,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            target/*/libconnector_service_ffi.so
-            target/*/libconnector_service_ffi.dylib
+            target/*/*/libconnector_service_ffi.so
+            target/*/*/libconnector_service_ffi.dylib
           key: ffi-lib-${{ runner.os }}-${{ hashFiles('crates/ffi/**/*.rs', 'crates/ffi/**/Cargo.toml', 'Cargo.lock') }}
           restore-keys: |
             ffi-lib-${{ runner.os }}-
@@ -254,11 +254,22 @@ jobs:
 
       - name: Build FFI library once  # OPTIMIZATION: Build FFI once and reuse
         run: |
-          if [ ! -f target/debug/libconnector_service_ffi.so ] && [ ! -f target/debug/libconnector_service_ffi.dylib ]; then
-            echo "Building FFI library (cache miss)..."
-            cargo build -p ffi
+          # Determine target triple (matches PLATFORM detection in common.mk)
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "aarch64" ]; then
+            PLATFORM="aarch64-unknown-linux-gnu"
           else
-            echo "Using cached FFI library"
+            PLATFORM="x86_64-unknown-linux-gnu"
+          fi
+          # PROFILE=dev maps to 'debug' output directory in Cargo
+          PROFILE_DIR="debug"
+          LIB_PATH="target/${PLATFORM}/${PROFILE_DIR}/libconnector_service_ffi.so"
+          if [ ! -f "$LIB_PATH" ]; then
+            echo "Building FFI library (cache miss)..."
+            cargo build -p ffi --no-default-features --features uniffi \
+              --profile dev --target "$PLATFORM"
+          else
+            echo "Using cached FFI library: $LIB_PATH"
           fi
 
       - name: Run SDK Tests
