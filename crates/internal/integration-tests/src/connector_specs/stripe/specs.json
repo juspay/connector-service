@@ -14,7 +14,6 @@
     "recurring_charge",
     "refund",
     "refund_sync",
-    "revoke_mandate",
     "setup_recurring",
     "token_authorize",
     "token_setup_recurring",
