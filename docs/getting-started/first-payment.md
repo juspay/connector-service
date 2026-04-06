@@ -53,14 +53,14 @@ async function createClientAuthenticationToken() {
         error.errorCode,
         error.message,
       );
-    } else if (error instanceof NetworkError) {
-      console.error("Network error:", error.errorCode, error.message);
     } else if (error instanceof ConnectorError) {
       console.error(
         "Connector error:",
         error.errorCode,
         error.message,
       );
+    } else if (error instanceof NetworkError) {
+      console.error("Network error:", error.errorCode, error.message);
     } else {
       console.error(
         "Client auth token creation failed:",
@@ -106,11 +106,11 @@ def create_client_authentication_token():
     except IntegrationError as error:
         print(f"Integration error: {error.error_code} - {error.error_message}")
         raise
-    except NetworkError as error:
-        print(f"Network error: {error.error_code} - {error}")
-        raise
     except ConnectorError as error:
         print(f"Connector error: {error.error_code} - {error.error_message}")
+        raise
+    except NetworkError as error:
+        print(f"Network error: {error.error_code} - {error}")
         raise
 ```
 
@@ -154,11 +154,11 @@ public String createClientAuthenticationToken() {
     } catch (IntegrationError error) {
         System.err.println("Integration error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
-    } catch (NetworkError error) {
-        System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
-        throw error;
     } catch (ConnectorError error) {
         System.err.println("Connector error: " + error.getErrorCode() + " - " + error.getMessage());
+        throw error;
+    } catch (NetworkError error) {
+        System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     }
 }
@@ -283,14 +283,14 @@ async function authorizePayment(paymentMethodId) {
         error.errorCode,
         error.message,
       );
-    } else if (error instanceof NetworkError) {
-      console.error("Network error:", error.errorCode, error.message);
     } else if (error instanceof ConnectorError) {
       console.error(
         "Connector error:",
         error.errorCode,
         error.message,
       );
+    } else if (error instanceof NetworkError) {
+      console.error("Network error:", error.errorCode, error.message);
     } else {
       console.error("Authorization failed:", error.message || error);
     }
@@ -335,11 +335,11 @@ def authorize_payment(payment_method_id):
     except IntegrationError as error:
         print(f"Integration error: {error.error_code} - {error.error_message}")
         raise
-    except NetworkError as error:
-        print(f"Network error: {error.error_code} - {error}")
-        raise
     except ConnectorError as error:
         print(f"Connector error: {error.error_code} - {error.error_message}")
+        raise
+    except NetworkError as error:
+        print(f"Network error: {error.error_code} - {error}")
         raise
 ```
 
@@ -381,11 +381,11 @@ public void authorizePayment(String paymentMethodId) {
     } catch (IntegrationError error) {
         System.err.println("Integration error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
-    } catch (NetworkError error) {
-        System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
-        throw error;
     } catch (ConnectorError error) {
         System.err.println("Connector error: " + error.getErrorCode() + " - " + error.getMessage());
+        throw error;
+    } catch (NetworkError error) {
+        System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     }
 }

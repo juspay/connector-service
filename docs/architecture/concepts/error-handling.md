@@ -6,7 +6,7 @@ Payment failures happen. Cards get declined. Networks time out. Prism gives you 
 
 Prism separates errors into two distinct categories based on how they reach you:
 
-- **SDK exceptions** (`IntegrationError`, `NetworkError`, `ConnectorError`) — thrown as exceptions. The call never returns a response object.
+- **SDK exceptions** (`IntegrationError`, `ConnectorError`, `NetworkError`) — thrown as exceptions. The call never returns a response object.
 - **Payment errors** — returned inside the response object as `response.error`. The call completes without throwing, but the connector returned HTTP 200 with a failure — a decline, insufficient funds, and so on.
 
 You need to handle both.
@@ -69,11 +69,10 @@ except IntegrationError as error:
 {% tab title="Java" %}
 
 ```java
-import com.juspay.hyperswitch.prism.PaymentClient;
-import com.juspay.hyperswitch.prism.errors.IntegrationError;
+import payments.IntegrationError;
 
 try {
-    AuthorizeResponse response = client.authorize(request);
+    PaymentServiceAuthorizeResponse response = client.authorize(request);
 } catch (IntegrationError e) {
     System.err.println(e.getErrorCode());
     System.err.println(e.getMessage());
@@ -175,10 +174,10 @@ except NetworkError as error:
 {% tab title="Java" %}
 
 ```java
-import com.juspay.hyperswitch.prism.errors.NetworkError;
+import payments.NetworkError;
 
 try {
-    AuthorizeResponse response = client.authorize(request);
+    PaymentServiceAuthorizeResponse response = client.authorize(request);
 } catch (NetworkError e) {
     System.err.println(e.getErrorCode());
     System.err.println(e.getMessage());
@@ -281,10 +280,10 @@ except ConnectorError as error:
 {% tab title="Java" %}
 
 ```java
-import com.juspay.hyperswitch.prism.errors.ConnectorError;
+import payments.ConnectorError;
 
 try {
-    AuthorizeResponse response = client.authorize(request);
+    PaymentServiceAuthorizeResponse response = client.authorize(request);
 } catch (ConnectorError e) {
     System.err.println(e.getErrorCode());
     System.err.println(e.getMessage());
@@ -437,32 +436,35 @@ else:
 {% tab title="Java" %}
 
 ```java
-import com.juspay.hyperswitch.prism.PaymentClient;
+import payments.PaymentServiceAuthorizeResponse;
 
-AuthorizeResponse response = client.authorize(request);
+PaymentServiceAuthorizeResponse response = client.authorize(request);
 
-if (response.getError() != null) {
-    UnifiedDetails unified = response.getError().getUnifiedDetails();
-    ConnectorDetails connector = response.getError().getConnectorDetails();
-    IssuerDetails issuer = response.getError().getIssuerDetails();
+if (response.hasError()) {
+    var error = response.getError();
 
-    if (unified != null) {
+    if (error.hasUnifiedDetails()) {
+        var unified = error.getUnifiedDetails();
         System.err.println(unified.getCode());
         System.err.println(unified.getMessage());
 
-        if (unified.getUserGuidanceMessage() != null) {
+        if (unified.hasUserGuidanceMessage()) {
             showErrorToUser(unified.getUserGuidanceMessage());
         }
     }
 
-    if (connector != null) {
+    if (error.hasConnectorDetails()) {
+        var connector = error.getConnectorDetails();
         System.err.println(connector.getCode());
         System.err.println(connector.getReason());
     }
 
-    if (issuer != null && issuer.getNetworkDetails() != null) {
-        System.err.println(issuer.getNetworkDetails().getDeclineCode());
-        System.err.println(issuer.getNetworkDetails().getAdviceCode());
+    if (error.hasIssuerDetails()) {
+        var issuer = error.getIssuerDetails();
+        if (issuer.hasNetworkDetails()) {
+            System.err.println(issuer.getNetworkDetails().getDeclineCode());
+            System.err.println(issuer.getNetworkDetails().getAdviceCode());
+        }
     }
 } else {
     System.out.println("Authorized: " + response.getConnectorTransactionId());
@@ -512,7 +514,7 @@ if ($response->getError()) {
 
 ---
 
-## Putting it all together
+## Complete example
 
 Here is a complete authorize call with all error types handled:
 
@@ -524,25 +526,28 @@ Here is a complete authorize call with all error types handled:
 const {
     PaymentClient,
     IntegrationError,
+    ConnectorError,
     NetworkError,
-    ConnectorError
 } = require('hyperswitch-prism');
 
 async function authorizePayment(client, request) {
-    let response;
-
     try {
-        response = await client.authorize(request);
+        const response = await client.authorize(request);
+
+        if (response.error) {
+            const unified = response.error.unifiedDetails;
+            console.error('Payment error:', unified?.code, unified?.message);
+            if (unified?.userGuidanceMessage) {
+                showErrorToUser(unified.userGuidanceMessage);
+            }
+            return null;
+        }
+
+        return response;
     } catch (error) {
         if (error instanceof IntegrationError) {
             // Request never sent — fix the input or config
             console.error('Integration error:', error.errorCode, error.message);
-            throw error;
-        }
-
-        if (error instanceof NetworkError) {
-            // Request may have been sent — do not retry without verifying
-            console.error('Network error:', error.errorCode, error.message);
             throw error;
         }
 
@@ -552,19 +557,14 @@ async function authorizePayment(client, request) {
             throw error;
         }
 
+        if (error instanceof NetworkError) {
+            // Request may have been sent — do not retry without verifying
+            console.error('Network error:', error.errorCode, error.message);
+            throw error;
+        }
+
         throw error;
     }
-
-    if (response.error) {
-        const unified = response.error.unifiedDetails;
-        console.error('Payment error:', unified?.code, unified?.message);
-        if (unified?.userGuidanceMessage) {
-            showErrorToUser(unified.userGuidanceMessage);
-        }
-        return null;
-    }
-
-    return response;
 }
 ```
 
@@ -576,34 +576,34 @@ async function authorizePayment(client, request) {
 from hyperswitch_prism import (
     PaymentClient,
     IntegrationError,
-    NetworkError,
     ConnectorError,
+    NetworkError,
 )
 
 async def authorize_payment(client, request):
     try:
         response = await client.authorize(request)
+
+        if response.error:
+            unified = response.error.unified_details
+            print(f'Payment error: {unified.code if unified else ""} {unified.message if unified else ""}')
+            if unified and unified.user_guidance_message:
+                show_error_to_user(unified.user_guidance_message)
+            return None
+
+        return response
     except IntegrationError as error:
         # Request never sent — fix the input or config
         print(f'Integration error: {error.error_code} {error.error_message}')
-        raise
-    except NetworkError as error:
-        # Request may have been sent — do not retry without verifying
-        print(f'Network error: {error.error_code} {str(error)}')
         raise
     except ConnectorError as error:
         # Payment may have been processed — investigate before retrying
         print(f'Connector error: {error.error_code} {error.error_message}')
         raise
-
-    if response.error:
-        unified = response.error.unified_details
-        print(f'Payment error: {unified.code if unified else ""} {unified.message if unified else ""}')
-        if unified and unified.user_guidance_message:
-            show_error_to_user(unified.user_guidance_message)
-        return None
-
-    return response
+    except NetworkError as error:
+        # Request may have been sent — do not retry without verifying
+        print(f'Network error: {error.error_code} {str(error)}')
+        raise
 ```
 
 {% endtab %}
@@ -611,38 +611,43 @@ async def authorize_payment(client, request):
 {% tab title="Java" %}
 
 ```java
-import com.juspay.hyperswitch.prism.PaymentClient;
-import com.juspay.hyperswitch.prism.errors.*;
+import payments.ConnectorError;
+import payments.IntegrationError;
+import payments.NetworkError;
+import payments.PaymentClient;
+import payments.PaymentServiceAuthorizeRequest;
+import payments.PaymentServiceAuthorizeResponse;
 
-public AuthorizeResponse authorizePayment(PaymentClient client, AuthorizeRequest request) throws Exception {
-    AuthorizeResponse response;
-
+public PaymentServiceAuthorizeResponse authorizePayment(PaymentClient client, PaymentServiceAuthorizeRequest request) throws Exception {
     try {
-        response = client.authorize(request);
+        PaymentServiceAuthorizeResponse response = client.authorize(request);
+
+        if (response.hasError()) {
+            var error = response.getError();
+            if (error.hasUnifiedDetails()) {
+                var unified = error.getUnifiedDetails();
+                System.err.println("Payment error: " + unified.getCode() + " " + unified.getMessage());
+                if (unified.hasUserGuidanceMessage()) {
+                    showErrorToUser(unified.getUserGuidanceMessage());
+                }
+            }
+            return null;
+        }
+
+        return response;
     } catch (IntegrationError e) {
         // Request never sent — fix the input or config
         System.err.println("Integration error: " + e.getErrorCode() + " " + e.getMessage());
-        throw e;
-    } catch (NetworkError e) {
-        // Request may have been sent — do not retry without verifying
-        System.err.println("Network error: " + e.getErrorCode() + " " + e.getMessage());
         throw e;
     } catch (ConnectorError e) {
         // Payment may have been processed — investigate before retrying
         System.err.println("Connector error: " + e.getErrorCode() + " " + e.getMessage());
         throw e;
+    } catch (NetworkError e) {
+        // Request may have been sent — do not retry without verifying
+        System.err.println("Network error: " + e.getErrorCode() + " " + e.getMessage());
+        throw e;
     }
-
-    if (response.getError() != null) {
-        UnifiedDetails unified = response.getError().getUnifiedDetails();
-        System.err.println("Payment error: " + unified.getCode() + " " + unified.getMessage());
-        if (unified.getUserGuidanceMessage() != null) {
-            showErrorToUser(unified.getUserGuidanceMessage());
-        }
-        return null;
-    }
-
-    return response;
 }
 ```
 
@@ -652,35 +657,35 @@ public AuthorizeResponse authorizePayment(PaymentClient client, AuthorizeRequest
 
 ```php
 use HyperswitchPrism\PaymentClient;
-use HyperswitchPrism\Errors\{IntegrationError, NetworkError, ConnectorError};
+use HyperswitchPrism\Errors\{IntegrationError, ConnectorError, NetworkError};
 
 function authorizePayment(PaymentClient $client, $request) {
     try {
         $response = $client->authorize($request);
+
+        if ($response->getError()) {
+            $unified = $response->getError()->getUnifiedDetails();
+            echo "Payment error: " . $unified->getCode() . " " . $unified->getMessage() . "\n";
+            if ($unified->getUserGuidanceMessage()) {
+                showErrorToUser($unified->getUserGuidanceMessage());
+            }
+            return null;
+        }
+
+        return $response;
     } catch (IntegrationError $e) {
         // Request never sent — fix the input or config
         echo "Integration error: " . $e->getErrorCode() . " " . $e->getErrorMessage() . "\n";
-        throw $e;
-    } catch (NetworkError $e) {
-        // Request may have been sent — do not retry without verifying
-        echo "Network error: " . $e->getErrorCode() . " " . $e->getMessage() . "\n";
         throw $e;
     } catch (ConnectorError $e) {
         // Payment may have been processed — investigate before retrying
         echo "Connector error: " . $e->getErrorCode() . " " . $e->getErrorMessage() . "\n";
         throw $e;
+    } catch (NetworkError $e) {
+        // Request may have been sent — do not retry without verifying
+        echo "Network error: " . $e->getErrorCode() . " " . $e->getMessage() . "\n";
+        throw $e;
     }
-
-    if ($response->getError()) {
-        $unified = $response->getError()->getUnifiedDetails();
-        echo "Payment error: " . $unified->getCode() . " " . $unified->getMessage() . "\n";
-        if ($unified->getUserGuidanceMessage()) {
-            showErrorToUser($unified->getUserGuidanceMessage());
-        }
-        return null;
-    }
-
-    return $response;
 }
 ```
 
