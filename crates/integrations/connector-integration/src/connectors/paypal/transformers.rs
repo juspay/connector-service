@@ -13,14 +13,18 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, ClientAuthenticationToken, PSync, PostAuthenticate, RepeatPayment,
+        VerifyWebhookSource,
     },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        ServerAuthenticationTokenResponseData, SetupMandateRequestData,
-        VerifyWebhookSourceFlowData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, MandateReference,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        PaypalClientAuthenticationResponse as PaypalClientAuthenticationResponseDomain,
+        PaypalFlow as PaypalFlowDomain, PaypalTransactionInfo as PaypalTransactionInfoDomain,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SdkNextAction, ServerAuthenticationTokenResponseData,
+        SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -3470,4 +3474,86 @@ fn get_paypal_error_message(error_code: &str) -> Option<&str> {
 pub struct PaypalAccessTokenErrorResponse {
     pub error: String,
     pub error_description: String,
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// PayPal client token request for SDK initialization.
+/// PayPal's v1/identity/generate-token endpoint accepts an empty JSON body
+/// (or optionally a customer_id) and returns a client_token for the JS SDK.
+#[derive(Debug, Serialize)]
+pub struct PaypalClientAuthTokenRequest {}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PaypalClientAuthTokenRequest
+{
+    type Error = Report<IntegrationError>;
+    fn try_from(
+        _item: PaypalRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
+/// PayPal client token response from v1/identity/generate-token.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaypalClientAuthTokenResponse {
+    pub client_token: String,
+}
+
+impl TryFrom<ResponseRouterData<PaypalClientAuthTokenResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalClientAuthTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data =
+            ClientAuthenticationTokenData::Paypal(Box::new(PaypalClientAuthenticationResponseDomain {
+                connector: "paypal".to_string(),
+                session_token: response.client_token.clone(),
+                sdk_next_action: SdkNextAction {
+                    next_action: domain_types::connector_types::NextActionCall::Confirm,
+                },
+                client_token: Some(response.client_token),
+                transaction_info: Some(PaypalTransactionInfoDomain {
+                    flow: PaypalFlowDomain::Checkout,
+                    currency_code: item.router_data.request.currency,
+                    total_price: item.router_data.request.amount,
+                }),
+            }));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }
