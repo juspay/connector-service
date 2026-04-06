@@ -21,13 +21,13 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
     "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
     })).unwrap_or_default()
 }
@@ -39,7 +39,6 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

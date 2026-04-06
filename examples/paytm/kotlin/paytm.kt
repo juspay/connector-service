@@ -10,7 +10,7 @@ package examples.paytm
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
 import payments.PaymentServiceAuthorizeRequest
-import payments.MerchantAuthenticationServiceCreateSessionTokenRequest
+import payments.MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest
 import payments.PaymentServiceGetRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
@@ -22,34 +22,34 @@ import payments.Environment
 
 private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
     return PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        merchantTransactionId = "probe_txn_001"  // Identification.
+        amountBuilder.apply {  // The amount for the payment.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            upiCollectBuilder.apply {  // UPI Collect
-                vpaIdBuilder.value = "test@upi"  // Virtual Payment Address
+        paymentMethodBuilder.apply {  // Payment method to be used.
+            upiCollectBuilder.apply {  // UPI Collect.
+                vpaIdBuilder.value = "test@upi"  // Virtual Payment Address.
             }
         }
-        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        addressBuilder.apply {  // Address Information
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        sessionToken = "probe_session_token"  // Session and Token Information
+        authType = AuthenticationType.NO_THREE_DS  // Authentication Details.
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks.
+        sessionToken = "probe_session_token"  // Session and Token Information.
     }.build()
 }
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
@@ -72,17 +72,19 @@ fun authorize(txnId: String) {
     }
 }
 
-// Flow: MerchantAuthenticationService.CreateSessionToken
-fun createSessionToken(txnId: String) {
+// Flow: MerchantAuthenticationService.CreateServerSessionAuthenticationToken
+fun createServerSessionAuthenticationToken(txnId: String) {
     val client = MerchantAuthenticationClient(_defaultConfig)
-    val request = MerchantAuthenticationServiceCreateSessionTokenRequest.newBuilder().apply {
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+    val request = MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest.newBuilder().apply {
+        paymentBuilder.apply {  // PayoutSessionContext payout = 6; // future FrmSessionContext frm = 7; // future.
+            amountBuilder.apply {
+                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            }
         }
     }.build()
-    val response = client.create_session_token(request)
-    println("Session token obtained (statusCode=${response.statusCode})")
+    val response = client.create_server_session_authentication_token(request)
+    println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.Get
@@ -99,8 +101,8 @@ fun main(args: Array<String>) {
     val flow = args.firstOrNull() ?: "authorize"
     when (flow) {
         "authorize" -> authorize(txnId)
-        "createSessionToken" -> createSessionToken(txnId)
+        "createServerSessionAuthenticationToken" -> createServerSessionAuthenticationToken(txnId)
         "get" -> get(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: authorize, createSessionToken, get")
+        else -> System.err.println("Unknown flow: $flow. Available: authorize, createServerSessionAuthenticationToken, get")
     }
 }

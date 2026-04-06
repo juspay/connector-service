@@ -10,6 +10,8 @@ import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
+from payments import EventClient
+from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -26,43 +28,43 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 def _build_authorize_request(capture_method: str):
     return ParseDict(
         {
-            "merchant_transaction_id": "probe_txn_001",  # Identification
-            "amount": {  # The amount for the payment
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "merchant_transaction_id": "probe_txn_001",  # Identification.
+            "amount": {  # The amount for the payment.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "payment_method": {  # Payment method to be used
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
+            "payment_method": {  # Payment method to be used.
+                "card": {  # Generic card payment.
+                    "card_number": {"value": "4111111111111111"},  # Card Identification.
                     "card_exp_month": {"value": "03"},
                     "card_exp_year": {"value": "2030"},
                     "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
                 }
             },
-            "capture_method": capture_method,  # Method for capturing the payment
-            "customer": {  # Customer Information
-                "email": {"value": "test@example.com"}  # Customer's email address
+            "capture_method": capture_method,  # Method for capturing the payment.
+            "customer": {  # Customer Information.
+                "email": {"value": "test@example.com"}  # Customer's email address.
             },
-            "address": {  # Address Information
+            "address": {  # Address Information.
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "line1": {"value": "123 Main St"},  # Address Details
+                    "first_name": {"value": "John"},  # Personal Information.
+                    "line1": {"value": "123 Main St"},  # Address Details.
                     "city": {"value": "Seattle"},
                     "zip_code": {"value": "98101"},
                     "country_alpha2_code": "US"
                 }
             },
-            "auth_type": "NO_THREE_DS",  # Authentication Details
-            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
+            "auth_type": "NO_THREE_DS",  # Authentication Details.
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks.
             "browser_info": {
                 "user_agent": "Mozilla/5.0 (probe-bot)",
-                "ip_address": "1.2.3.4"  # Device Information
+                "ip_address": "1.2.3.4"  # Device Information.
             },
-            "state": {  # State Information
-                "access_token": {  # Access token obtained from connector
+            "state": {  # State Information.
+                "access_token": {  # Access token obtained from connector.
                     "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
                     "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
                 }
             }
@@ -70,29 +72,146 @@ def _build_authorize_request(capture_method: str):
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
 
+def _build_create_order_request():
+    return ParseDict(
+        {
+            "merchant_order_id": "probe_order_001",  # Identification.
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "state": {  # State Information.
+                "access_token": {  # Access token obtained from connector.
+                    "token": {"value": "probe_access_token"},  # The token string.
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
+                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+                }
+            }
+        },
+        payment_pb2.PaymentServiceCreateOrderRequest(),
+    )
+
+def _build_create_server_authentication_token_request():
+    return ParseDict(
+        {
+        },
+        payment_pb2.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest(),
+    )
+
 def _build_get_request(connector_transaction_id: str):
     return ParseDict(
         {
-            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification
+            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification.
             "connector_transaction_id": connector_transaction_id,
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "state": {  # State Information
-                "access_token": {  # Access token obtained from connector
+            "state": {  # State Information.
+                "access_token": {  # Access token obtained from connector.
                     "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
                     "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
                 }
             }
         },
         payment_pb2.PaymentServiceGetRequest(),
     )
-async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Card Payment (Automatic Capture)
 
-    Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+def _build_handle_event_request():
+    return ParseDict(
+        {
+        },
+        payment_pb2.EventServiceHandleRequest(),
+    )
+
+def _build_proxy_authorize_request():
+    return ParseDict(
+        {
+            "merchant_transaction_id": "probe_proxy_txn_001",
+            "amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "card_proxy": {  # Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+                "card_number": {"value": "4111111111111111"},  # Card Identification.
+                "card_exp_month": {"value": "03"},
+                "card_exp_year": {"value": "2030"},
+                "card_cvc": {"value": "123"},
+                "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+            },
+            "customer": {
+                "email": {"value": "test@example.com"}  # Customer's email address.
+            },
+            "address": {
+                "billing_address": {
+                    "first_name": {"value": "John"},  # Personal Information.
+                    "line1": {"value": "123 Main St"},  # Address Details.
+                    "city": {"value": "Seattle"},
+                    "zip_code": {"value": "98101"},
+                    "country_alpha2_code": "US"
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "browser_info": {
+                "user_agent": "Mozilla/5.0 (probe-bot)",
+                "ip_address": "1.2.3.4"  # Device Information.
+            },
+            "state": {
+                "access_token": {  # Access token obtained from connector.
+                    "token": {"value": "probe_access_token"},  # The token string.
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
+                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+                }
+            }
+        },
+        payment_pb2.PaymentServiceProxyAuthorizeRequest(),
+    )
+
+def _build_refund_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification.
+            "connector_transaction_id": connector_transaction_id,
+            "payment_amount": 1000,  # Amount Information.
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "reason": "customer_request",  # Reason for the refund.
+            "state": {  # State data for access token storage and.
+                "access_token": {  # Access token obtained from connector.
+                    "token": {"value": "probe_access_token"},  # The token string.
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
+                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+                }
+            }
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    )
+
+def _build_refund_get_request():
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification.
+            "connector_transaction_id": "probe_connector_txn_001",
+            "refund_id": "probe_refund_id_001",
+            "state": {  # State Information.
+                "access_token": {  # Access token obtained from connector.
+                    "token": {"value": "probe_access_token"},  # The token string.
+                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
+                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+                }
+            }
+        },
+        payment_pb2.RefundServiceGetRequest(),
+    )
+async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """One-step Payment (Authorize + Capture)
+
+    Simple payment that authorizes and captures in one call. Use for immediate charges.
     """
     payment_client = PaymentClient(config)
 
@@ -109,9 +228,9 @@ async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk
 
 
 async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Refund a Payment
+    """Refund
 
-    Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+    Return funds to the customer for a completed payment.
     """
     payment_client = PaymentClient(config)
 
@@ -125,26 +244,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request",  # Reason for the refund
-            "state": {  # State data for access token storage and other connector-specific state
-                "access_token": {  # Access token obtained from connector
-                    "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-                }
-            }
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    ))
+    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -155,7 +255,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
 async def process_get_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Get Payment Status
 
-    Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+    Retrieve current payment status from the connector.
     """
     payment_client = PaymentClient(config)
 
@@ -183,43 +283,20 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
-async def create_access_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: MerchantAuthenticationService.CreateAccessToken"""
-    merchantauthentication_client = MerchantAuthenticationClient(config)
-
-    # Step 1: create_access_token
-    create_response = await merchantauthentication_client.create_access_token(ParseDict(
-        {
-            # No required fields
-        },
-        payment_pb2.MerchantAuthenticationServiceCreateAccessTokenRequest(),
-    ))
-
-    return {"status": create_response.status}
-
-
 async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.CreateOrder"""
     payment_client = PaymentClient(config)
 
-    # Step 1: create_order
-    create_response = await payment_client.create_order(ParseDict(
-        {
-            "merchant_order_id": "probe_order_001",  # Identification
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "state": {  # State Information
-                "access_token": {  # Access token obtained from connector
-                    "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-                }
-            }
-        },
-        payment_pb2.PaymentServiceCreateOrderRequest(),
-    ))
+    create_response = await payment_client.create_order(_build_create_order_request())
+
+    return {"status": create_response.status}
+
+
+async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: MerchantAuthenticationService.CreateServerAuthenticationToken"""
+    merchantauthentication_client = MerchantAuthenticationClient(config)
+
+    create_response = await merchantauthentication_client.create_server_authentication_token(_build_create_server_authentication_token_request())
 
     return {"status": create_response.status}
 
@@ -231,6 +308,42 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
+
+
+async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: EventService.HandleEvent"""
+    event_client = EventClient(config)
+
+    handle_response = await event_client.handle_event(_build_handle_event_request())
+
+    return {"status": handle_response.status}
+
+
+async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.ProxyAuthorize"""
+    payment_client = PaymentClient(config)
+
+    proxy_response = await payment_client.proxy_authorize(_build_proxy_authorize_request())
+
+    return {"status": proxy_response.status}
+
+
+async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Refund"""
+    payment_client = PaymentClient(config)
+
+    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+
+    return {"status": refund_response.status}
+
+
+async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: RefundService.Get"""
+    refund_client = RefundClient(config)
+
+    refund_response = await refund_client.refund_get(_build_refund_get_request())
+
+    return {"status": refund_response.status}
 
 if __name__ == "__main__":
     scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_autocapture"

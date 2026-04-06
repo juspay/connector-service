@@ -21,28 +21,29 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification
-    "amount": {  // The amount for the payment
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "merchant_transaction_id": "probe_txn_001",  // Identification.
+    "amount": {  // The amount for the payment.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "payment_method": {  // Payment method to be used
+    "payment_method": {  // Payment method to be used.
         "payment_method": {
-            "upi_collect": {  // UPI Collect
-                "vpa_id": "test@upi",  // Virtual Payment Address
+            "upi_collect": {  // UPI Collect.
+                "vpa_id": "test@upi",  // Virtual Payment Address.
             },
         }
     },
-    "capture_method": capture_method,  // Method for capturing the payment
-    "address": {  // Address Information
+    "capture_method": capture_method,  // Method for capturing the payment.
+    "address": {  // Address Information.
         "billing_address": {
         },
     },
-    "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
+    "auth_type": "NO_THREE_DS",  // Authentication Details.
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
     "merchant_order_id": "probe_order_001",
+    "order_details": []  // Order Details.
     })).unwrap_or_default()
 }
 
@@ -58,7 +59,6 @@ pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str)
         _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

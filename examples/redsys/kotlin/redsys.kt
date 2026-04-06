@@ -7,12 +7,15 @@
 
 package examples.redsys
 
-import payments.PaymentClient
 import payments.PaymentMethodAuthenticationClient
+import payments.PaymentClient
+import payments.RefundClient
+import payments.PaymentMethodAuthenticationServiceAuthenticateRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentMethodAuthenticationServicePreAuthenticateRequest
 import payments.PaymentServiceRefundRequest
+import payments.RefundServiceGetRequest
 import payments.PaymentServiceVoidRequest
 import payments.Currency
 import payments.ConnectorConfig
@@ -22,46 +25,46 @@ import payments.Environment
 
 private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServiceCaptureRequest {
     return PaymentServiceCaptureRequest.newBuilder().apply {
-        merchantCaptureId = "probe_capture_001"  // Identification
+        merchantCaptureId = "probe_capture_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountToCaptureBuilder.apply {  // Capture Details
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountToCaptureBuilder.apply {  // Capture Details.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
 
 private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
     return PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
+        merchantRefundId = "probe_refund_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        paymentAmount = 1000L  // Amount Information
+        paymentAmount = 1000L  // Amount Information.
         refundAmountBuilder.apply {
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        reason = "customer_request"  // Reason for the refund
+        reason = "customer_request"  // Reason for the refund.
     }.build()
 }
 
 private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceVoidRequest {
     return PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification
+        merchantVoidId = "probe_void_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
@@ -71,6 +74,54 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     // .setConnectorConfig(...) — set your connector config here
     .build()
 
+
+// Flow: PaymentMethodAuthenticationService.Authenticate
+fun authenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServiceAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            }
+        }
+        addressBuilder.apply {  // Address Information.
+            billingAddressBuilder.apply {
+            }
+        }
+        authenticationDataBuilder.apply {  // Authentication Details.
+            eci = "05"  // Electronic Commerce Indicator (ECI) from 3DS.
+            cavv = "AAAAAAAAAA=="  // Cardholder Authentication Verification Value (CAVV).
+            threedsServerTransactionId = "probe-3ds-txn-001"  // 3DS Server Transaction ID.
+            messageVersion = "2.1.0"  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
+            dsTransactionId = "probe-ds-txn-001"  // Directory Server Transaction ID (DS Trans ID).
+        }
+        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
+        continueRedirectionUrl = "https://example.com/3ds-continue"
+        browserInfoBuilder.apply {  // Contextual Information.
+            colorDepth = 24  // Display Information.
+            screenHeight = 900
+            screenWidth = 1440
+            javaEnabled = false  // Browser Settings.
+            javaScriptEnabled = true
+            language = "en-US"
+            timeZoneOffsetMinutes = -480
+            acceptHeader = "application/json"  // Browser Headers.
+            userAgent = "Mozilla/5.0 (probe-bot)"
+            acceptLanguage = "en-US,en;q=0.9"
+            ipAddress = "1.2.3.4"  // Device Information.
+        }
+    }.build()
+    val response = client.authenticate(request)
+    println("Status: ${response.status.name}")
+}
 
 // Flow: PaymentService.Capture
 fun capture(txnId: String) {
@@ -94,25 +145,25 @@ fun get(txnId: String) {
 fun preAuthenticate(txnId: String) {
     val client = PaymentMethodAuthenticationClient(_defaultConfig)
     val request = PaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        paymentMethodBuilder.apply {  // Payment Method
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
                 cardExpMonthBuilder.value = "03"
                 cardExpYearBuilder.value = "2030"
                 cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
             }
         }
-        addressBuilder.apply {  // Address Information
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
-        enrolledFor3Ds = false  // Authentication Details
-        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection
+        enrolledFor3Ds = false  // Authentication Details.
+        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
     }.build()
     val response = client.pre_authenticate(request)
     println("Status: ${response.status.name}")
@@ -128,6 +179,18 @@ fun refund(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
+// Flow: RefundService.Get
+fun refundGet(txnId: String) {
+    val client = RefundClient(_defaultConfig)
+    val request = RefundServiceGetRequest.newBuilder().apply {
+        merchantRefundId = "probe_refund_001"  // Identification.
+        connectorTransactionId = "probe_connector_txn_001"
+        refundId = "probe_refund_id_001"
+    }.build()
+    val response = client.refund_get(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Void
 fun void(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -141,13 +204,15 @@ fun void(txnId: String) {
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "capture"
+    val flow = args.firstOrNull() ?: "authenticate"
     when (flow) {
+        "authenticate" -> authenticate(txnId)
         "capture" -> capture(txnId)
         "get" -> get(txnId)
         "preAuthenticate" -> preAuthenticate(txnId)
         "refund" -> refund(txnId)
+        "refundGet" -> refundGet(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: capture, get, preAuthenticate, refund, void")
+        else -> System.err.println("Unknown flow: $flow. Available: authenticate, capture, get, preAuthenticate, refund, refundGet, void")
     }
 }
