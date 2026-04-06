@@ -1685,7 +1685,7 @@ pub struct RazorpaySplitSettlementRequest {
 }
 
 impl TryFrom<&SplitSettlementData> for RazorpaySplitSettlementRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(data: &SplitSettlementData) -> Result<Self, Self::Error> {
         let transfers = data
@@ -1731,7 +1731,7 @@ impl ForeignTryFrom<(RazorpaySplitSettlementResponse, Self, u16)>
         SplitSettlementResponseData,
     >
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorResponseTransformationError;
 
     fn foreign_try_from(
         (response, data, http_code): (RazorpaySplitSettlementResponse, Self, u16),

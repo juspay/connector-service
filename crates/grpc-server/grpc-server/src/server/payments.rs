@@ -1,5 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
+use super::events::EventServiceImpl;
 use crate::{
     implement_connector_operation,
     request::RequestData,
@@ -11,28 +12,24 @@ use connector_integration::types::ConnectorData;
 use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, ClientAuthenticationToken, CreateAccessToken,
-        CreateConnectorCustomer, CreateOrder, CreateSessionToken, IncrementalAuthorization,
-        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SdkSessionToken, ServerAuthenticationToken,
-        ServerSessionAuthenticationToken, SetupMandate, SplitSettlement, VerifyWebhookSource,
-        Void, VoidPC,
+        Authenticate, Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
+        CreateOrder, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, ServerAuthenticationToken,
+        ServerSessionAuthenticationToken, SetupMandate, SplitSettlement, Void, VoidPC,
     },
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, ClientAuthenticationTokenRequestData,
-        ConnectorCustomerData, ConnectorCustomerResponse, ConnectorResponseHeaders,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
+        ClientAuthenticationTokenRequestData, ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorResponseHeaders, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RawConnectorRequestResponse, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
-        ServerSessionAuthenticationTokenResponseData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SplitSettlementData,
-        SplitSettlementResponseData, VerifyWebhookSourceFlowData,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SplitSettlementData,
+        SplitSettlementResponseData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -55,10 +52,12 @@ use domain_types::{
 use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
     customer_service_server::CustomerService,
+    event_service_server::EventService as EventServiceTrait,
     merchant_authentication_service_server::MerchantAuthenticationService, payment_method,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
-    recurring_payment_service_server::RecurringPaymentService,
+    recurring_payment_service_server::RecurringPaymentService, EventServiceHandleRequest,
+    EventServiceHandleResponse,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
@@ -2691,6 +2690,13 @@ impl PaymentService for Payments {
             },
         )
         .await
+    }
+
+    async fn handle_event(
+        &self,
+        request: tonic::Request<EventServiceHandleRequest>,
+    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
+        EventServiceImpl.handle_event(request).await
     }
 }
 

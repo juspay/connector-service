@@ -19,11 +19,10 @@ use domain_types::errors::{IntegrationError, WebhookError};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
-        CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-        DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, SdkSessionToken,
-        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate,
-        SplitSettlement, SubmitEvidence, Void, VoidPC,
+        CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, SplitSettlement,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
@@ -34,14 +33,13 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId,
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
-        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SplitSettlementData, SplitSettlementResponseData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, ResponseId, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SplitSettlementData,
+        SplitSettlementResponseData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
     },
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -1389,7 +1387,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             SplitSettlementData,
             SplitSettlementResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let mut header = vec![
             (
                 headers::CONTENT_TYPE.to_string(),
@@ -1413,7 +1411,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             SplitSettlementData,
             SplitSettlementResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
         let payment_id = &req.request.payment_id;
         Ok(format!("{base_url}v1/payments/{payment_id}/transfers"))
@@ -1427,7 +1425,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             SplitSettlementData,
             SplitSettlementResponseData,
         >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         let connector_req = razorpay::RazorpaySplitSettlementRequest::try_from(&req.request)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -1449,24 +1447,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             SplitSettlementData,
             SplitSettlementResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         let response: razorpay::RazorpaySplitSettlementResponse = res
             .response
             .parse_struct("RazorpaySplitSettlementResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1474,7 +1479,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }

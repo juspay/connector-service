@@ -8,14 +8,13 @@ use domain_types::router_request_types::ClientAuthenticationTokenIntegrityObject
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, ClientAuthenticationTokenRequestData,
-    ConnectorCustomerData, DisputeDefendData, MandateRevokeRequestData, PaymentCreateOrderData,
+    AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
+    DisputeDefendData, MandateRevokeRequestData, PaymentCreateOrderData,
     PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
     PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
     PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-    PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundSyncData,
-    RefundsData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
-    ServerSessionAuthenticationTokenRequestData, SessionTokenRequestData,
+    PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
+    ServerAuthenticationTokenRequestData, ServerSessionAuthenticationTokenRequestData,
     SetupMandateRequestData, SplitSettlementData, SubmitEvidenceData,
 };
 use domain_types::payouts::payouts_types::{

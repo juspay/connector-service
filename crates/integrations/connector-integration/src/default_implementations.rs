@@ -191,6 +191,7 @@ default_impl_split_settlement_v2!(
     Hipay,
     Hyperpg,
     Iatapay,
+    Itaubank,
     Jpmorgan,
     Loonio,
     Mifinity,
