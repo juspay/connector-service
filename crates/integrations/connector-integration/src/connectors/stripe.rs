@@ -222,6 +222,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             )
     }
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Stripe<T>
+{
+}
+
 macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Stripe,
