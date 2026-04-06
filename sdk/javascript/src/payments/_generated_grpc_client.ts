@@ -115,6 +115,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   TaxInfo: ["customerTaxRegistrationId", "merchantTaxRegistrationId"],
   NmiData: ["publicKey"],
   CustomerInfo: ["customerName", "customerEmail", "customerPhoneNumber", "customerBankId", "customerBankName"],
+  StripeClientAuthenticationResponse: ["clientSecret"],
   GpayTokenParameters: ["publicKey"],
   SecretInfoToInitiateSdk: ["display", "payment"],
   PaymentServiceAuthorizeRequest: ["metadata", "connectorFeatureData", "paymentMethodToken"],
@@ -124,11 +125,13 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PaymentServiceVoidRequest: ["metadata", "connectorFeatureData"],
   PaymentServiceVoidResponse: ["rawConnectorRequest", "connectorFeatureData"],
   PaymentServiceReverseRequest: ["metadata", "connectorFeatureData"],
-  MerchantAuthenticationServiceCreateAccessTokenRequest: ["metadata", "connectorFeatureData"],
-  MerchantAuthenticationServiceCreateAccessTokenResponse: ["accessToken"],
-  MerchantAuthenticationServiceCreateSessionTokenRequest: ["metadata", "connectorFeatureData"],
-  MerchantAuthenticationServiceCreateSdkSessionTokenRequest: ["metadata", "connectorFeatureData"],
-  MerchantAuthenticationServiceCreateSdkSessionTokenResponse: ["rawConnectorResponse", "rawConnectorRequest"],
+  MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest: ["metadata", "connectorFeatureData"],
+  MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse: ["accessToken"],
+  MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest: ["connectorFeatureData"],
+  PaymentSessionContext: ["metadata"],
+  MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest: ["connectorFeatureData"],
+  PaymentClientAuthenticationContext: ["metadata"],
+  MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse: ["rawConnectorResponse", "rawConnectorRequest"],
   PaymentServiceCaptureRequest: ["metadata", "connectorFeatureData"],
   PaymentServiceCaptureResponse: ["rawConnectorRequest", "connectorFeatureData"],
   PaymentServiceCreateOrderRequest: ["metadata", "connectorFeatureData"],
@@ -233,6 +236,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   CoinbaseConfig: ["apiKey"],
   CoingateConfig: ["apiKey"],
   PeachpaymentsConfig: ["apiKey", "tenantId", "clientMerchantReferenceId", "merchantPaymentMethodRouteId"],
+  PproConfig: ["apiKey", "merchantId"],
   PaypalConfig: ["clientId", "clientSecret", "payerId"],
   TrustlyConfig: ["username", "password", "privateKey"],
   TruelayerConfig: ["clientId", "clientSecret", "merchantAccountId", "accountHolderName", "privateKey", "kid"],
@@ -300,18 +304,19 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   AdditionalPaymentMethodConnectorResponse: { "card": "CardConnectorResponse", "upi": "UpiConnectorResponse", "googlePay": "GooglePayConnectorResponse", "applePay": "ApplePayConnectorResponse", "bankRedirect": "BankRedirectConnectorResponse" },
   ConnectorResponseData: { "additionalPaymentMethodData": "AdditionalPaymentMethodConnectorResponse", "extendedAuthorizationResponseData": "ExtendedAuthorizationResponseData" },
   PaymentMethodUpdate: { "card": "CardDetailUpdate" },
-  SessionToken: { "googlePay": "GpaySessionTokenResponse", "paypal": "PaypalSessionTokenResponse", "applePay": "ApplepaySessionTokenResponse" },
-  GpaySessionTokenResponse: { "googlePaySession": "GooglePaySessionResponse" },
+  ClientAuthenticationTokenData: { "googlePay": "GpayClientAuthenticationResponse", "paypal": "PaypalClientAuthenticationResponse", "applePay": "ApplepayClientAuthenticationResponse", "connectorSpecific": "ConnectorSpecificClientAuthenticationResponse" },
+  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse" },
+  GpayClientAuthenticationResponse: { "googlePaySession": "GooglePaySessionResponse" },
   GooglePaySessionResponse: { "merchantInfo": "GpayMerchantInfo", "shippingAddressParameters": "GpayShippingAddressParameters", "allowedPaymentMethods": "GpayAllowedPaymentMethods", "transactionInfo": "GpayTransactionInfo", "secrets": "SecretInfoToInitiateSdk" },
   GpayAllowedPaymentMethods: { "parameters": "GpayAllowedMethodsParameters", "tokenizationSpecification": "GpayTokenizationSpecification" },
   GpayAllowedMethodsParameters: { "billingAddressParameters": "GpayBillingAddressParameters" },
   GpayTokenizationSpecification: { "parameters": "GpayTokenParameters" },
-  ApplepaySessionTokenResponse: { "sessionTokenData": "ApplePaySessionResponse", "paymentRequestData": "ApplePayPaymentRequest" },
+  ApplepayClientAuthenticationResponse: { "sessionResponse": "ApplePaySessionResponse", "paymentRequestData": "ApplePayPaymentRequest" },
   ApplePaySessionResponse: { "thirdPartySdk": "ThirdPartySdkSessionResponse" },
   ThirdPartySdkSessionResponse: { "secrets": "SecretInfoToInitiateSdk" },
   ApplePayPaymentRequest: { "total": "AmountInfo" },
   ApplePayRecurringPaymentRequest: { "regularBilling": "ApplePayRegularBillingRequest" },
-  PaypalSessionTokenResponse: { "transactionInfo": "PaypalTransactionInfo" },
+  PaypalClientAuthenticationResponse: { "transactionInfo": "PaypalTransactionInfo" },
   PaymentServiceAuthorizeRequest: { "amount": "Money", "paymentMethod": "PaymentMethod", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "customerAcceptance": "CustomerAcceptance", "browserInfo": "BrowserInformation", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "state": "ConnectorState", "orderDetails": "OrderDetailsWithAmount", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data" },
   PaymentServiceAuthorizeResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "redirectionData": "RedirectForm", "state": "ConnectorState", "mandateReference": "MandateReference", "connectorResponse": "ConnectorResponseData" },
   PaymentServiceGetRequest: { "amount": "Money", "state": "ConnectorState" },
@@ -320,15 +325,17 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   PaymentServiceVoidResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "state": "ConnectorState", "mandateReference": "MandateReference" },
   PaymentServiceReverseRequest: { "browserInfo": "BrowserInformation" },
   PaymentServiceReverseResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry" },
-  MerchantAuthenticationServiceCreateAccessTokenResponse: { "error": "ErrorInfo" },
-  MerchantAuthenticationServiceCreateSessionTokenRequest: { "amount": "Money", "state": "ConnectorState", "browserInfo": "BrowserInformation" },
-  MerchantAuthenticationServiceCreateSessionTokenResponse: { "error": "ErrorInfo" },
-  MerchantAuthenticationServiceCreateSdkSessionTokenRequest: { "amount": "Money", "customer": "Customer" },
-  MerchantAuthenticationServiceCreateSdkSessionTokenResponse: { "sessionToken": "SessionToken", "error": "ErrorInfo" },
+  MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse: { "error": "ErrorInfo" },
+  MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest: { "state": "ConnectorState", "payment": "PaymentSessionContext" },
+  PaymentSessionContext: { "amount": "Money", "browserInfo": "BrowserInformation" },
+  MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse: { "error": "ErrorInfo" },
+  MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest: { "payment": "PaymentClientAuthenticationContext" },
+  PaymentClientAuthenticationContext: { "amount": "Money", "customer": "Customer" },
+  MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse: { "sessionData": "ClientAuthenticationTokenData", "error": "ErrorInfo" },
   PaymentServiceCaptureRequest: { "amountToCapture": "Money", "multipleCaptureData": "MultipleCaptureRequestData", "browserInfo": "BrowserInformation", "state": "ConnectorState" },
   PaymentServiceCaptureResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "state": "ConnectorState", "mandateReference": "MandateReference" },
   PaymentServiceCreateOrderRequest: { "amount": "Money", "state": "ConnectorState" },
-  PaymentServiceCreateOrderResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "sessionToken": "SessionToken" },
+  PaymentServiceCreateOrderResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "sessionData": "ClientAuthenticationTokenData" },
   PaymentServiceRefundRequest: { "refundAmount": "Money", "browserInfo": "BrowserInformation", "state": "ConnectorState" },
   RefundResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "refundAmount": "Money", "state": "ConnectorState" },
   PaymentServiceDisputeRequest: { "state": "ConnectorState" },
@@ -371,7 +378,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   CashtocodeConfig: { "authKeyMap": "AuthKeyMapEntry" },
   AuthKeyMapEntry: { "value": "PayloadCurrencyAuthData" },
   PayloadConfig: { "authKeyMap": "AuthKeyMapEntry" },
-  ConnectorSpecificConfig: { "adyen": "AdyenConfig", "airwallex": "AirwallexConfig", "bambora": "BamboraConfig", "bankofamerica": "BankOfAmericaConfig", "billwerk": "BillwerkConfig", "bluesnap": "BluesnapConfig", "braintree": "BraintreeConfig", "cashtocode": "CashtocodeConfig", "cryptopay": "CryptopayConfig", "cybersource": "CybersourceConfig", "datatrans": "DatatransConfig", "dlocal": "DlocalConfig", "elavon": "ElavonConfig", "fiserv": "FiservConfig", "fiservemea": "FiservemeaConfig", "forte": "ForteConfig", "getnet": "GetnetConfig", "globalpay": "GlobalpayConfig", "hipay": "HipayConfig", "helcim": "HelcimConfig", "iatapay": "IatapayConfig", "jpmorgan": "JpmorganConfig", "mifinity": "MifinityConfig", "mollie": "MollieConfig", "multisafepay": "MultisafepayConfig", "nexinets": "NexinetsConfig", "nexixpay": "NexixpayConfig", "nmi": "NmiConfig", "noon": "NoonConfig", "novalnet": "NovalnetConfig", "nuvei": "NuveiConfig", "paybox": "PayboxConfig", "payme": "PaymeConfig", "payu": "PayuConfig", "powertranz": "PowertranzConfig", "rapyd": "RapydConfig", "redsys": "RedsysConfig", "shift4": "Shift4Config", "stax": "StaxConfig", "stripe": "StripeConfig", "trustpay": "TrustpayConfig", "tsys": "TsysConfig", "volt": "VoltConfig", "wellsfargo": "WellsfargoConfig", "worldpay": "WorldpayConfig", "worldpayvantiv": "WorldpayvantivConfig", "xendit": "XenditConfig", "phonepe": "PhonepeConfig", "cashfree": "CashfreeConfig", "paytm": "PaytmConfig", "calida": "CalidaConfig", "payload": "PayloadConfig", "authipay": "AuthipayConfig", "silverflow": "SilverflowConfig", "celero": "CeleroConfig", "trustpayments": "TrustpaymentsConfig", "paysafe": "PaysafeConfig", "barclaycard": "BarclaycardConfig", "worldpayxml": "WorldpayxmlConfig", "revolut": "RevolutConfig", "loonio": "LoonioConfig", "gigadat": "GigadatConfig", "hyperpg": "HyperpgConfig", "zift": "ZiftConfig", "screenstream": "ScreenstreamConfig", "ebanx": "EbanxConfig", "fiuu": "FiuuConfig", "globepay": "GlobepayConfig", "coinbase": "CoinbaseConfig", "coingate": "CoingateConfig", "revolv3": "Revolv3Config", "authorizedotnet": "AuthorizedotnetConfig", "peachpayments": "PeachpaymentsConfig", "paypal": "PaypalConfig", "truelayer": "TruelayerConfig", "fiservcommercehub": "FiservcommercehubConfig", "itaubank": "ItaubankConfig", "trustly": "TrustlyConfig" },
+  ConnectorSpecificConfig: { "adyen": "AdyenConfig", "airwallex": "AirwallexConfig", "bambora": "BamboraConfig", "bankofamerica": "BankOfAmericaConfig", "billwerk": "BillwerkConfig", "bluesnap": "BluesnapConfig", "braintree": "BraintreeConfig", "cashtocode": "CashtocodeConfig", "cryptopay": "CryptopayConfig", "cybersource": "CybersourceConfig", "datatrans": "DatatransConfig", "dlocal": "DlocalConfig", "elavon": "ElavonConfig", "fiserv": "FiservConfig", "fiservemea": "FiservemeaConfig", "forte": "ForteConfig", "getnet": "GetnetConfig", "globalpay": "GlobalpayConfig", "hipay": "HipayConfig", "helcim": "HelcimConfig", "iatapay": "IatapayConfig", "jpmorgan": "JpmorganConfig", "mifinity": "MifinityConfig", "mollie": "MollieConfig", "multisafepay": "MultisafepayConfig", "nexinets": "NexinetsConfig", "nexixpay": "NexixpayConfig", "nmi": "NmiConfig", "noon": "NoonConfig", "novalnet": "NovalnetConfig", "nuvei": "NuveiConfig", "paybox": "PayboxConfig", "payme": "PaymeConfig", "payu": "PayuConfig", "powertranz": "PowertranzConfig", "rapyd": "RapydConfig", "redsys": "RedsysConfig", "shift4": "Shift4Config", "stax": "StaxConfig", "stripe": "StripeConfig", "trustpay": "TrustpayConfig", "tsys": "TsysConfig", "volt": "VoltConfig", "wellsfargo": "WellsfargoConfig", "worldpay": "WorldpayConfig", "worldpayvantiv": "WorldpayvantivConfig", "xendit": "XenditConfig", "phonepe": "PhonepeConfig", "cashfree": "CashfreeConfig", "paytm": "PaytmConfig", "calida": "CalidaConfig", "payload": "PayloadConfig", "authipay": "AuthipayConfig", "silverflow": "SilverflowConfig", "celero": "CeleroConfig", "trustpayments": "TrustpaymentsConfig", "paysafe": "PaysafeConfig", "barclaycard": "BarclaycardConfig", "worldpayxml": "WorldpayxmlConfig", "revolut": "RevolutConfig", "loonio": "LoonioConfig", "gigadat": "GigadatConfig", "hyperpg": "HyperpgConfig", "zift": "ZiftConfig", "screenstream": "ScreenstreamConfig", "ebanx": "EbanxConfig", "fiuu": "FiuuConfig", "globepay": "GlobepayConfig", "coinbase": "CoinbaseConfig", "coingate": "CoingateConfig", "revolv3": "Revolv3Config", "authorizedotnet": "AuthorizedotnetConfig", "peachpayments": "PeachpaymentsConfig", "paypal": "PaypalConfig", "truelayer": "TruelayerConfig", "fiservcommercehub": "FiservcommercehubConfig", "itaubank": "ItaubankConfig", "ppro": "PproConfig", "trustly": "TrustlyConfig" },
   PaymentServiceTokenAuthorizeRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState", "billingDescriptor": "BillingDescriptor", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
   PaymentServiceTokenSetupRecurringRequest: { "amount": "Money", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "customerAcceptance": "CustomerAcceptance", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor" },
   PaymentServiceProxyAuthorizeRequest: { "amount": "Money", "cardProxy": "CardDetails", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
@@ -511,20 +518,20 @@ export class GrpcEventClient {
 export class GrpcMerchantAuthenticationClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
 
-  /** MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
-  async createAccessToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_access_token",
-      req, types.MerchantAuthenticationServiceCreateAccessTokenRequest, types.MerchantAuthenticationServiceCreateAccessTokenResponse);
+  /** MerchantAuthenticationService.CreateServerAuthenticationToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side. */
+  async createServerAuthenticationToken(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "merchant_authentication/create_server_authentication_token",
+      req, types.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest, types.MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse);
   }
-  /** MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking. */
-  async createSessionToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_session_token",
-      req, types.MerchantAuthenticationServiceCreateSessionTokenRequest, types.MerchantAuthenticationServiceCreateSessionTokenResponse);
+  /** MerchantAuthenticationService.CreateServerSessionAuthenticationToken — Create a server-side session with the connector. Establishes session state for multi-step operations like 3DS verification or wallet authorization. */
+  async createServerSessionAuthenticationToken(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "merchant_authentication/create_server_session_authentication_token",
+      req, types.MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest, types.MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse);
   }
-  /** MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification. */
-  async createSdkSessionToken(req: unknown): Promise<unknown> {
-    return callGrpc(this.ffi, this.config, "merchant_authentication/create_sdk_session_token",
-      req, types.MerchantAuthenticationServiceCreateSdkSessionTokenRequest, types.MerchantAuthenticationServiceCreateSdkSessionTokenResponse);
+  /** MerchantAuthenticationService.CreateClientAuthenticationToken — Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. Returns structured data the client SDK needs to render payment/verification UI. */
+  async createClientAuthenticationToken(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "merchant_authentication/create_client_authentication_token",
+      req, types.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest, types.MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse);
   }
 }
 

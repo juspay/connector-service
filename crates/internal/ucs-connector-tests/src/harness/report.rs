@@ -242,7 +242,7 @@ pub fn extract_pm_and_pmt(grpc_req: Option<&Value>) -> (Option<String>, Option<S
 
 /// Canonical suite ordering for table rows.
 const SUITE_ORDER: &[&str] = &[
-    "create_access_token",
+    "server_authentication_token",
     "create_customer",
     "authorize",
     "capture",
@@ -256,7 +256,9 @@ const SUITE_ORDER: &[&str] = &[
 
 fn suite_service_name(suite: &str) -> &'static str {
     match suite {
-        "create_access_token" => "MerchantAuthenticationService/CreateAccessToken",
+        "server_authentication_token" => {
+            "MerchantAuthenticationService/CreateServerAuthenticationToken"
+        }
         "create_customer" => "CustomerService/Create",
         "authorize" => "PaymentService/Authorize",
         "capture" => "PaymentService/Capture",
@@ -1101,7 +1103,7 @@ mod tests {
 
     #[test]
     fn suite_ordering_is_consistent() {
-        assert!(suite_sort_key("create_access_token") < suite_sort_key("authorize"));
+        assert!(suite_sort_key("server_authentication_token") < suite_sort_key("authorize"));
         assert!(suite_sort_key("authorize") < suite_sort_key("capture"));
         assert!(suite_sort_key("capture") < suite_sort_key("refund"));
         assert!(suite_sort_key("refund") < suite_sort_key("get"));
