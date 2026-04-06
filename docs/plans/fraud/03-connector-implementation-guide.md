@@ -69,22 +69,22 @@ impl ConnectorCommon for MyFraudConnector {
 
 ### Step 2: Implement Each Fraud Flow
 
-For each of the 7 fraud flows, implement `ConnectorIntegrationV2`:
+For each of the 6 fraud flows, implement `ConnectorIntegrationV2`:
 
-#### 2.1 Sale Flow
+#### 2.1 EvaluatePreAuthorization Flow (Pre-Auth)
 
 ```rust
-use interfaces::fraud::FraudSaleV2;
+use interfaces::fraud::FraudEvaluatePreAuthorizationV2;
 
 impl ConnectorIntegrationV2<
-    connector_flow::FraudSale,
-    FraudFlowData,
-    FraudSaleData,
-    FraudSaleResponse,
+    connector_flow::FraudEvaluatePreAuthorization,
+    FraudFlowData<T>,
+    FraudEvaluatePreAuthorizationData<T>,
+    FraudEvaluatePreAuthorizationResponse,
 > for MyFraudConnector {
     fn get_headers(
         &self,
-        req: &RouterData<..., FraudSaleData, FraudSaleResponse>,
+        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
         connectors: &Connectors,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         // Build HTTP headers
@@ -94,7 +94,7 @@ impl ConnectorIntegrationV2<
 
     fn get_url(
         &self,
-        req: &RouterData<..., FraudSaleData, FraudSaleResponse>,
+        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
         connectors: &Connectors,
     ) -> CustomResult<String, ConnectorError> {
         // Construct endpoint URL
@@ -103,110 +103,109 @@ impl ConnectorIntegrationV2<
 
     fn build_request(
         &self,
-        req: &RouterData<..., FraudSaleData, FraudSaleResponse>,
+        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
         connectors: &Connectors,
     ) -> CustomResult<Option<Request>, ConnectorError> {
-        // Transform FraudSaleData to connector-specific request
+        // Transform FraudEvaluatePreAuthorizationData to connector-specific request
         // Serialize to JSON/XML
         // Return Request object
     }
 
     fn handle_response(
         &self,
-        data: &RouterData<..., FraudSaleData, FraudSaleResponse>,
+        data: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
         res: Response,
-    ) -> CustomResult<FraudSaleResponse, ConnectorError> {
+    ) -> CustomResult<FraudEvaluatePreAuthorizationResponse, ConnectorError> {
         // Parse connector response
-        // Transform to FraudSaleResponse
+        // Transform to FraudEvaluatePreAuthorizationResponse
         // Handle success and error cases
     }
 }
 
-impl FraudSaleV2 for MyFraudConnector {}
+impl<T: PaymentMethodDataTypes> FraudEvaluatePreAuthorizationV2<T> for MyFraudConnector {}
 ```
 
-#### 2.2 Checkout Flow (Pre-Auth)
+#### 2.2 EvaluatePostAuthorization Flow (Post-Auth)
 
 ```rust
-use interfaces::fraud::FraudCheckoutV2;
+use interfaces::fraud::FraudEvaluatePostAuthorizationV2;
 
 impl ConnectorIntegrationV2<
-    connector_flow::FraudCheckout,
-    FraudFlowData,
-    FraudCheckoutData,
-    FraudCheckoutResponse,
-> for MyFraudConnector {
-    // Implementation similar to Sale
-    // Key difference: includes payment_method data
-    // Returns decision: Accept/Reject/Review/Challenge
-}
-
-impl FraudCheckoutV2 for MyFraudConnector {}
-```
-
-#### 2.3 Transaction Flow (Post-Auth)
-
-```rust
-use interfaces::fraud::FraudTransactionV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudTransaction,
-    FraudFlowData,
-    FraudTransactionData,
-    FraudTransactionResponse,
+    connector_flow::FraudEvaluatePostAuthorization,
+    FraudFlowData<T>,
+    FraudEvaluatePostAuthorizationData<T>,
+    FraudEvaluatePostAuthorizationResponse,
 > for MyFraudConnector {
     // Implementation includes authorization result
     // May include error codes from payment processor
 }
 
-impl FraudTransactionV2 for MyFraudConnector {}
+impl<T: PaymentMethodDataTypes> FraudEvaluatePostAuthorizationV2<T> for MyFraudConnector {}
 ```
 
-#### 2.4 Fulfillment Flow
+#### 2.3 RecordTransactionData Flow
 
 ```rust
-use interfaces::fraud::FraudFulfillmentV2;
+use interfaces::fraud::FraudRecordTransactionDataV2;
 
 impl ConnectorIntegrationV2<
-    connector_flow::FraudFulfillment,
-    FraudFlowData,
-    FraudFulfillmentData,
-    FraudFulfillmentResponse,
+    connector_flow::FraudRecordTransactionData,
+    FraudFlowData<T>,
+    FraudRecordTransactionDataData<T>,
+    FraudRecordTransactionDataResponse,
+> for MyFraudConnector {
+    // Implementation similar to post-auth
+    // Used for post-hoc fraud evaluation
+}
+
+impl<T: PaymentMethodDataTypes> FraudRecordTransactionDataV2<T> for MyFraudConnector {}
+```
+
+#### 2.4 RecordFulfillmentData Flow
+
+```rust
+use interfaces::fraud::FraudRecordFulfillmentDataV2;
+
+impl ConnectorIntegrationV2<
+    connector_flow::FraudRecordFulfillmentData,
+    FraudFlowData<T>,
+    FraudRecordFulfillmentDataData,
+    FraudRecordFulfillmentDataResponse,
 > for MyFraudConnector {
     // Send shipping/fulfillment information
     // Include tracking numbers
     // Update case status
 }
 
-impl FraudFulfillmentV2 for MyFraudConnector {}
+impl<T: PaymentMethodDataTypes> FraudRecordFulfillmentDataV2<T> for MyFraudConnector {}
 ```
 
 #### 2.5 RecordReturn Flow
 
 ```rust
-use interfaces::fraud::FraudRecordReturnV2;
+use interfaces::fraud::FraudRecordReturnDataV2;
 
 impl ConnectorIntegrationV2<
-    connector_flow::FraudRecordReturn,
-    FraudFlowData,
-    FraudRecordReturnData,
-    FraudRecordReturnResponse,
+    connector_flow::FraudRecordReturnData,
+    FraudFlowData<T>,
+    FraudRecordReturnDataData,
+    FraudRecordReturnDataResponse,
 > for MyFraudConnector {
     // Record return/refund information
     // Update fraud model
 }
 
-impl FraudRecordReturnV2 for MyFraudConnector {}
+impl<T: PaymentMethodDataTypes> FraudRecordReturnDataV2<T> for MyFraudConnector {}
 ```
 
-#### 2.6 Get Flow (Sync)
+#### 2.6 Get Flow (Status Sync)
 
 ```rust
 use interfaces::fraud::FraudGetV2;
 
 impl ConnectorIntegrationV2<
     connector_flow::FraudGet,
-    FraudFlowData,
+    FraudFlowData<T>,
     FraudGetData,
     FraudGetResponse,
 > for MyFraudConnector {
@@ -214,26 +213,10 @@ impl ConnectorIntegrationV2<
     // Used for polling when webhooks unavailable
 }
 
-impl FraudGetV2 for MyFraudConnector {}
+impl<T: PaymentMethodDataTypes> FraudGetV2<T> for MyFraudConnector {}
 ```
 
-#### 2.7 Cancel Flow
-
-```rust
-use interfaces::fraud::FraudCancelV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudCancel,
-    FraudFlowData,
-    FraudCancelData,
-    FraudCancelResponse,
-> for MyFraudConnector {
-    // Cancel pending fraud check
-    // Clean up resources
-}
-
-impl FraudCancelV2 for MyFraudConnector {}
-```
+**Note**: Exactly 6 flows implemented (no Cancel). Cancel is handled via webhooks or status updates.
 
 ### Step 3: Implement Combined Trait
 
@@ -265,12 +248,16 @@ pub fn get_fraud_connector(name: &str) -> Option<Box<dyn FraudConnectorTrait>> {
 
 ```rust
 // Transform internal type to connector request
-impl From<FraudCheckoutData> for MyConnectorCheckoutRequest {
-    fn from(data: FraudCheckoutData) -> Self {
+impl<T: PaymentMethodDataTypes> From<FraudEvaluatePreAuthorizationData<T>> 
+    for MyConnectorPreAuthRequest 
+{
+    fn from(data: FraudEvaluatePreAuthorizationData<T>) -> Self {
         Self {
             amount: data.amount as f64 / 100.0,  // Convert minor to base
             currency: data.currency.to_string(),
-            customer_email: data.customer.map(|c| c.email).flatten(),
+            customer_email: data.customer.and_then(|c| c.email),
+            device_fingerprint: data.device_fingerprint,
+            session_id: data.session_id,
             // ... other fields
         }
     }
@@ -281,12 +268,12 @@ impl From<FraudCheckoutData> for MyConnectorCheckoutRequest {
 
 ```rust
 // Transform connector response to internal type
-impl From<MyConnectorCheckoutResponse> for FraudCheckoutResponse {
-    fn from(res: MyConnectorCheckoutResponse) -> Self {
+impl From<MyConnectorPreAuthResponse> for FraudEvaluatePreAuthorizationResponse {
+    fn from(res: MyConnectorPreAuthResponse) -> Self {
         Self {
             fraud_check_id: res.check_id,
-            status: res.decision.into(),
-            recommended_action: res.action.into(),
+            status: res.decision.into(),           // Maps to FraudCheckStatus
+            recommended_action: res.action.into(), // Maps to FraudAction (ACCEPT/REJECT)
             score: res.risk_score.map(|s| FraudScore {
                 score: s,
                 risk_level: res.risk_level,
