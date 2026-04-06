@@ -785,8 +785,8 @@ def generate_scenario_files(
     examples_dir: Path,
 ) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write one consolidated examples/{connector}/python/{connector}.py and
-    examples/{connector}/javascript/{connector}.js containing all scenarios
+    Write one consolidated examples/{connector}/{connector}.py and
+    examples/{connector}/{connector}.js containing all scenarios
     plus individual flow functions.  Deletes stale per-scenario files.
 
     Returns (paths, scenario_lines, flow_lines) where:
@@ -821,7 +821,7 @@ def generate_scenario_files(
         ("python",     "py", snippets.render_consolidated_python),
         ("javascript", "ts", snippets.render_consolidated_javascript),
     ]:
-        out_dir  = examples_dir / connector_name / sdk
+        out_dir  = examples_dir / connector_name
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{connector_name}.{ext}"
         content  = render_fn(connector_name, scenarios_with_payloads, flow_metadata, _MESSAGE_SCHEMAS, flow_items)
@@ -867,8 +867,8 @@ def generate_flow_files(
     examples_dir: Path,
 ) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write one consolidated examples/{connector}/kotlin/{connector}.kt and
-    examples/{connector}/rust/{connector}.rs containing all scenario and flow functions.
+    Write one consolidated examples/{connector}/{connector}.kt and
+    examples/{connector}/{connector}.rs containing all scenario and flow functions.
     Deletes stale per-flow files for all languages.
 
     Returns (list_of_written_paths, flow_line_numbers, scenario_line_numbers_kt_rs) where:
@@ -905,7 +905,7 @@ def generate_flow_files(
         ("kotlin", "kt", snippets.render_consolidated_kotlin),
         ("rust",   "rs", snippets.render_consolidated_rust),
     ]:
-        out_dir  = examples_dir / connector_name / sdk
+        out_dir  = examples_dir / connector_name
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{connector_name}.{ext}"
         content  = render_fn(
@@ -1126,10 +1126,10 @@ def generate_connector_doc(
                 )
             )
             if has_payload:
-                base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
-                base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
-                base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
-                base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+                base_py = f"../../examples/{connector_name}/{connector_name}.py"
+                base_js = f"../../examples/{connector_name}/{connector_name}.js"
+                base_kt = f"../../examples/{connector_name}/{connector_name}.kt"
+                base_rs = f"../../examples/{connector_name}/{connector_name}.rs"
                 
                 # Get line numbers from flow_line_numbers
                 flow_lines = flow_line_numbers.get(f, {}) if flow_line_numbers else {}

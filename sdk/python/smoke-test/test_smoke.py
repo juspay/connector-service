@@ -3,7 +3,7 @@
 Multi-connector smoke test for the hyperswitch-payments SDK.
 
 Loads connector credentials from external JSON file and runs all scenario
-functions found in examples/{connector}/python/ for each connector.
+functions found in examples/{connector}/ for each connector.
 
 Each scenario file (checkout_card.py, refund.py, etc.) is auto-generated and
 exports a process_{scenario_key}(merchant_transaction_id, config=...) function.
@@ -155,7 +155,7 @@ async def test_connector_scenarios(
     """
     Discover and run all Python scenario functions for a connector.
 
-    Loads examples_dir/{connector_name}/python/{connector_name}.py and calls each
+    Loads examples_dir/{connector_name}/{connector_name}.py and calls each
     process_* function found in _SCENARIO_NAMES order.
     process_{scenario_key}(txn_id, config=config) function.
     """
@@ -170,7 +170,7 @@ async def test_connector_scenarios(
         result["status"] = "dry_run"
         return result
 
-    connector_dir = examples_dir / connector_name / "python"
+    connector_dir = examples_dir / connector_name
     if not connector_dir.exists():
         result["status"] = "skipped"
         result["scenarios"] = {"skipped": True, "reason": "no_examples_dir"}

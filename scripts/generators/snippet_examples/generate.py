@@ -2188,10 +2188,10 @@ def render_scenario_section(
     # Link to example files with line numbers if available
     scenario_key = scenario.key
     camel_scenario = "".join(w.capitalize() for w in scenario_key.split("_"))
-    base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
-    base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
-    base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
-    base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+    base_py = f"../../examples/{connector_name}/{connector_name}.py"
+    base_js = f"../../examples/{connector_name}/{connector_name}.js"
+    base_kt = f"../../examples/{connector_name}/{connector_name}.kt"
+    base_rs = f"../../examples/{connector_name}/{connector_name}.rs"
     
     # Get line numbers from the generated files
     ln_py = line_numbers.get("python", 0) if line_numbers else 0
@@ -3473,7 +3473,7 @@ def render_llms_txt_entry(
         if any(v.get("status") == "supported" for v in fdata.values())
     ]
     scenario_keys = [s.key for s in scenarios]
-    example_paths = [f"examples/{connector_name}/python/{connector_name}.py"] if scenario_keys else []
+    example_paths = [f"examples/{connector_name}/{connector_name}.py"] if scenario_keys else []
 
     lines = [
         f"## {display_name}",

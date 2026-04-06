@@ -232,7 +232,7 @@ jobs:
       - name: Install Node dependencies
         run: |
           cd sdk/javascript && npm ci && cd ../..
-          cd sdk/tests && npm ci && cd ../..
+          cd sdk/tests && npm install && cd ../..
 
       - name: Create connector credentials for SDK tests
         shell: bash
