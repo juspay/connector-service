@@ -275,10 +275,10 @@ publish: pack-archive
 		echo "  export TWINE_PASSWORD=pypi-xxxxx"; \
 		exit 1; \
 	fi
-	@echo "Publishing hyperswitch-prism to PyPI..."
+	@echo "Publishing hs-paylib to PyPI..."
 	@python3 -m pip install twine --quiet
 	@python3 -m twine upload $(WHEEL_FILE)
-	@echo "Published hyperswitch-prism to PyPI."
+	@echo "Published hs-paylib to PyPI."
 
 clean:
 	@rm -rf $(GENERATED_OUT)

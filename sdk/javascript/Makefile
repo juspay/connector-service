@@ -15,7 +15,7 @@ include $(SDK_ROOT)/../common.mk
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
 PACKAGE_VERSION  := $(shell node -p "require('$(SDK_ROOT)/package.json').version")
-JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).tgz
+JS_TARBALL       := $(PACKAGE_DIR)/hs-paylib-$(PACKAGE_VERSION).tgz
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -266,9 +266,9 @@ publish: build-ts
 	fi
 	@echo "Configuring npm with authentication token..."
 	@npm config set //registry.npmjs.org/:_authToken=$(NPM_TOKEN)
-	@echo "Publishing hyperswitch-prism to npm..."
+	@echo "Publishing hs-paylib to npm..."
 	@npm publish --access public
-	@echo "Published hyperswitch-prism to npm registry."
+	@echo "Published hs-paylib to npm registry."
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules
