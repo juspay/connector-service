@@ -145,6 +145,8 @@ test-package: generate-all install
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
+	@echo "Running composite smoke test..."
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runComposite
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
