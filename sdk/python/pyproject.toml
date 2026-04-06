@@ -3,8 +3,8 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hyperswitch-prism"
-version = "0.0.1"
+name = "hs-paylib"
+version = "0.0.4"
 description = "Hyperswitch Payments SDK — Python client for connector integrations via UniFFI FFI"
 readme = "README.md"
 requires-python = ">=3.8"
