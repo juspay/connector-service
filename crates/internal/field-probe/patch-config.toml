@@ -248,8 +248,13 @@ aliases = ["connector_feature_data"]
 type = "secret_string"
 value = "{}"
 
+["customer.id"]
+aliases = ["client_reference"]
+type = "string"
+value = "cust_probe_123"
+
 ["customer.connector_customer_id"]
-aliases = ["customer.id", "customer_id", "client_reference"]
+aliases = ["customer.id", "customer_id"]
 type = "string"
 value = "cust_probe_123"
 

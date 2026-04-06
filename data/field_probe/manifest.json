@@ -351,6 +351,7 @@
     "truelayer",
     "peachpayments",
     "finix",
+    "trustly",
     "itaubank"
   ],
   "message_schemas": {
@@ -823,6 +824,7 @@
         "stax": "STAX = 74",
         "stripe": "STRIPE = 75",
         "truelayer": "TRUELAYER = 110",
+        "trustly": "TRUSTLY = 116",
         "trustpay": "TRUSTPAY = 78",
         "trustpayments": "TRUSTPAYMENTS = 100",
         "tsys": "TSYS = 79",
@@ -903,6 +905,7 @@
         "stax": "StaxConfig",
         "stripe": "StripeConfig",
         "truelayer": "TruelayerConfig",
+        "trustly": "TrustlyConfig",
         "trustpay": "TrustpayConfig",
         "trustpayments": "TrustpaymentsConfig",
         "tsys": "TsysConfig",
@@ -3166,6 +3169,10 @@
       "field_types": {
         "country": "CountryAlpha2"
       }
+    },
+    "TrustlyConfig": {
+      "comments": {},
+      "field_types": {}
     },
     "TrustpayConfig": {
       "comments": {},
