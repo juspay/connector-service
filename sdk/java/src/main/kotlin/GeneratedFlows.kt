@@ -78,6 +78,7 @@ import uniffi.connector_service_ffi.tokenizeResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
 import uniffi.connector_service_ffi.voidResTransformer
 import uniffi.connector_service_ffi.handleEventTransformer
+import uniffi.connector_service_ffi.verifyRedirectResponseTransformer
 
 object FlowRegistry {
     val reqTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(
@@ -159,6 +160,7 @@ object FlowRegistry {
     // Single-step flows: direct transformer, no HTTP round-trip.
     val directTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(
         "handle_event" to ::handleEventTransformer,
+        "verify_redirect_response" to ::verifyRedirectResponseTransformer,
     )
 
 }
@@ -309,6 +311,10 @@ class PaymentClient(
     // void: PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
     fun void(request: PaymentServiceVoidRequest, options: RequestConfig? = null): PaymentServiceVoidResponse =
         executeFlow("void", request.toByteArray(), PaymentServiceVoidResponse.parser(), options)
+
+    // verify_redirect_response: PaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly.
+    fun verify_redirect_response(request: PaymentServiceVerifyRedirectResponseRequest, options: RequestConfig? = null): PaymentServiceVerifyRedirectResponseResponse =
+        executeDirect("verify_redirect_response", request.toByteArray(), PaymentServiceVerifyRedirectResponseResponse.parser(), options)
 
 }
 
