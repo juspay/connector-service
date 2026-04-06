@@ -15,27 +15,35 @@ Use the `payment_method_id` from [Quick Start](./quick-start.md) to authorize th
 {% tab title="Node.js" %}
 
 ```javascript
-const { ConnectorClient, Currency, CaptureMethod } = require('@juspay/connector-service-node');
+const { PaymentClient } = require('hyperswitch-prism');
+const types = require('hyperswitch-prism').types;
 
 async function authorizePayment(paymentMethodId) {
-    const client = new ConnectorClient({
-        connectors: {
-            stripe: { apiKey: process.env.STRIPE_API_KEY }
+    const config = {
+        connectorConfig: {
+            stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
         }
-    });
+    };
+    const paymentClient = new PaymentClient(config);
 
     try {
         // Authorize using the payment_method_id from Stripe or Adyen
-        const auth = await client.payments.authorize({
-            amount: { minorAmount: 1000, currency: Currency.USD },
-            merchantOrderId: 'order-456',
+        const auth = await paymentClient.authorize({
+            merchantTransactionId: 'order-456',
+            amount: { minorAmount: 1000, currency: types.Currency.USD },
             paymentMethod: {
-                paymentMethodId: paymentMethodId  // e.g., 'pm_1234...'
+                token: { token: paymentMethodId }  // e.g., 'pm_1234...'
             },
-            captureMethod: CaptureMethod.AUTOMATIC  // Authorize only, capture later
+            captureMethod: types.CaptureMethod.MANUAL,
+            address: { billingAddress: {} },
+            authType: types.AuthenticationType.NO_THREE_DS,
+            returnUrl: "https://example.com/return"
         });
 
-        console.log('Authorized:', auth.paymentId, auth.status);  // AUTHORIZED
+        if (auth.status === 'FAILED') {
+            throw new Error(`Payment failed: ${auth.error?.unifiedDetails?.message}`);
+        }
+        console.log('Authorized:', auth.connectorTransactionId, auth.status);
         return auth;
 
     } catch (error) {
@@ -44,23 +52,7 @@ async function authorizePayment(paymentMethodId) {
 }
 
 function handlePaymentError(error) {
-    switch (error.code) {
-        case 'PAYMENT_DECLINED':
-            console.error('Card declined:', error.message);
-            break;
-        case 'EXPIRED_CARD':
-            console.error('Card expired:', error.message);
-            break;
-        case 'INSUFFICIENT_FUNDS':
-            console.error('Insufficient funds:', error.message);
-            break;
-        case 'NETWORK_TIMEOUT':
-            console.error('Network issue:', error.message);
-            break;
-        default:
-            console.error('Payment failed:', error.message);
-            console.error('Request ID:', error.requestId);
-    }
+    console.error('Payment failed:', error.message);
 }
 ```
 
@@ -70,30 +62,35 @@ function handlePaymentError(error) {
 
 ```python
 import os
-from connector_service import ConnectorClient, Currency, CaptureMethod
-from connector_service.errors import PaymentDeclinedError, NetworkTimeoutError
+from hyperswitch_prism import PaymentClient
+from hyperswitch_prism.generated import payment_pb2
 
-client = ConnectorClient(
-    connectors={"stripe": {"api_key": os.environ["STRIPE_API_KEY"]}}
-)
+config = {
+    "connectorConfig": {
+        "stripe": {"apiKey": {"value": os.environ["STRIPE_API_KEY"]}}
+    }
+}
+payment_client = PaymentClient(config)
 
 def authorize_payment(payment_method_id):
     try:
-        auth = client.payments.authorize(
-            amount={"minor_amount": 1000, "currency": Currency.USD},
-            merchant_order_id="order-456",
-            payment_method={
-                "payment_method_id": payment_method_id  # e.g., 'pm_1234...'
+        auth = payment_client.authorize({
+            "merchantTransactionId": "order-456",
+            "amount": {"minorAmount": 1000, "currency": payment_pb2.Currency.USD},
+            "paymentMethod": {
+                "token": {"token": payment_method_id}
             },
-            capture_method=CaptureMethod.MANUAL
-        )
-        print(f"Authorized: {auth.payment_id}, {auth.status}")
+            "captureMethod": payment_pb2.CaptureMethod.MANUAL,
+            "address": {"billingAddress": {}},
+            "authType": payment_pb2.AuthenticationType.NO_THREE_DS,
+            "returnUrl": "https://example.com/return"
+        })
+        
+        if auth.status == 'FAILED':
+            raise Exception(f"Payment failed: {auth.error.unified_details.message}")
+        print(f"Authorized: {auth.connector_transaction_id}, {auth.status}")
         return auth
 
-    except PaymentDeclinedError as e:
-        print(f"Card declined: {e.message}")
-    except NetworkTimeoutError as e:
-        print(f"Network issue: {e.message}")
     except Exception as e:
         print(f"Payment failed: {e}")
 ```
@@ -103,35 +100,44 @@ def authorize_payment(payment_method_id):
 {% tab title="Java" %}
 
 ```java
-import com.juspay.connectorservice.*;
-import com.juspay.connectorservice.errors.*;
+import com.juspay.hyperswitch.prism.PaymentClient;
+import com.juspay.hyperswitch.prism.types.*;
 
 public class FirstPayment {
-    public ConnectorClient client = ConnectorClient.builder()
-        .connector("stripe", StripeConfig.builder()
-            .apiKey(System.getenv("STRIPE_API_KEY"))
-            .build())
-        .build();
+    private PaymentClient paymentClient;
+    
+    public FirstPayment() {
+        ConnectorConfig config = ConnectorConfig.builder()
+            .connectorConfig(ConnectorSpecificConfig.builder()
+                .stripe(StripeConfig.builder()
+                    .apiKey(SecretString.of(System.getenv("STRIPE_API_KEY")))
+                    .build())
+                .build())
+            .build();
+        this.paymentClient = new PaymentClient(config);
+    }
 
     public void authorizePayment(String paymentMethodId) {
         try {
-            AuthorizeResponse auth = client.payments().authorize(
+            AuthorizeResponse auth = paymentClient.authorize(
                 AuthorizeRequest.builder()
+                    .merchantTransactionId("order-456")
                     .amount(Amount.of(1000, Currency.USD))
-                    .merchantOrderId("order-456")
-                    .paymentMethod(PaymentMethod.byId(paymentMethodId))
+                    .paymentMethod(PaymentMethod.byToken(paymentMethodId))
                     .captureMethod(CaptureMethod.MANUAL)
+                    .address(Address.builder().billingAddress(BillingAddress.builder().build()).build())
+                    .authType(AuthenticationType.NO_THREE_DS)
+                    .returnUrl("https://example.com/return")
                     .build()
             );
-            System.out.println("Authorized: " + auth.getPaymentId());
+            
+            if (auth.getStatus() == Status.FAILED) {
+                throw new RuntimeException("Payment failed: " + auth.getError().getUnifiedDetails().getMessage());
+            }
+            System.out.println("Authorized: " + auth.getConnectorTransactionId());
 
-        } catch (PaymentDeclinedError e) {
-            System.err.println("Card declined: " + e.getMessage());
-        } catch (NetworkTimeoutError e) {
-            System.err.println("Network issue: " + e.getMessage());
-        } catch (PaymentError e) {
+        } catch (Exception e) {
             System.err.println("Payment failed: " + e.getMessage());
-            System.err.println("Request ID: " + e.getRequestId());
         }
     }
 }
@@ -143,33 +149,38 @@ public class FirstPayment {
 
 ```php
 <?php
-use ConnectorService\ConnectorClient;
-use ConnectorService\Enum\Currency;
-use ConnectorService\Enum\CaptureMethod;
+use HyperswitchPrism\PaymentClient;
+use HyperswitchPrism\Types\Currency;
+use HyperswitchPrism\Types\CaptureMethod;
+use HyperswitchPrism\Types\AuthenticationType;
 
-$client = new ConnectorClient([
-    'connectors' => [
-        'stripe' => ['api_key' => $_ENV['STRIPE_API_KEY']]
+$config = [
+    'connectorConfig' => [
+        'stripe' => ['apiKey' => ['value' => $_ENV['STRIPE_API_KEY']]]
     ]
-]);
+];
+$paymentClient = new PaymentClient($config);
 
-function authorizePayment($paymentMethodId) use ($client) {
+function authorizePayment($paymentMethodId) use ($paymentClient) {
     try {
-        $auth = $client->payments()->authorize([
-            'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD],
-            'merchant_order_id' => 'order-456',
-            'payment_method' => [
-                'payment_method_id' => $paymentMethodId  // e.g., 'pm_1234...'
+        $auth = $paymentClient->authorize([
+            'merchantTransactionId' => 'order-456',
+            'amount' => ['minorAmount' => 1000, 'currency' => Currency::USD],
+            'paymentMethod' => [
+                'token' => ['token' => $paymentMethodId]
             ],
-            'capture_method' => CaptureMethod::MANUAL
+            'captureMethod' => CaptureMethod::MANUAL,
+            'address' => ['billingAddress' => []],
+            'authType' => AuthenticationType::NO_THREE_DS,
+            'returnUrl' => 'https://example.com/return'
         ]);
-        echo "Authorized: " . $auth->getPaymentId() . "\n";
+        
+        if ($auth->status === 'FAILED') {
+            throw new Exception("Payment failed: " . $auth->error->unifiedDetails->message);
+        }
+        echo "Authorized: " . $auth->connectorTransactionId . "\n";
         return $auth;
 
-    } catch (PaymentDeclinedException $e) {
-        echo "Card declined: " . $e->getMessage() . "\n";
-    } catch (NetworkTimeoutException $e) {
-        echo "Network issue: " . $e->getMessage() . "\n";
     } catch (Exception $e) {
         echo "Payment failed: " . $e->getMessage() . "\n";
     }
@@ -189,18 +200,32 @@ If you're PCI compliant and collect card details directly:
 {% tab title="Node.js" %}
 
 ```javascript
-const auth = await client.payments.authorize({
-    amount: { minorAmount: 1000, currency: Currency.USD },
-    merchantOrderId: 'order-456',
+const { PaymentClient } = require('hyperswitch-prism');
+const types = require('hyperswitch-prism').types;
+
+const config = {
+    connectorConfig: {
+        stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
+    }
+};
+const paymentClient = new PaymentClient(config);
+
+const auth = await paymentClient.authorize({
+    merchantTransactionId: 'order-456',
+    amount: { minorAmount: 1000, currency: types.Currency.USD },
     paymentMethod: {
         card: {
-            cardNumber: '4242424242424242',
-            expiryMonth: '12',
-            expiryYear: '2027',
-            cardHolderName: 'Jane Doe'
+            cardNumber: { value: '4242424242424242' },
+            cardExpMonth: { value: '12' },
+            cardExpYear: { value: '2027' },
+            cardCvc: { value: '123' },
+            cardHolderName: { value: 'Jane Doe' }
         }
     },
-    captureMethod: CaptureMethod.AUTOMATIC  // Charge immediately
+    captureMethod: types.CaptureMethod.AUTOMATIC,  // Charge immediately
+    address: { billingAddress: {} },
+    authType: types.AuthenticationType.NO_THREE_DS,
+    returnUrl: "https://example.com/return"
 });
 ```
 
@@ -209,19 +234,34 @@ const auth = await client.payments.authorize({
 {% tab title="Python" %}
 
 ```python
-auth = client.payments.authorize(
-    amount={"minor_amount": 1000, "currency": Currency.USD},
-    merchant_order_id="order-456",
-    payment_method={
+import os
+from hyperswitch_prism import PaymentClient
+from hyperswitch_prism.generated import payment_pb2
+
+config = {
+    "connectorConfig": {
+        "stripe": {"apiKey": {"value": os.environ["STRIPE_API_KEY"]}}
+    }
+}
+payment_client = PaymentClient(config)
+
+auth = payment_client.authorize({
+    "merchantTransactionId": "order-456",
+    "amount": {"minorAmount": 1000, "currency": payment_pb2.Currency.USD},
+    "paymentMethod": {
         "card": {
-            "card_number": "4242424242424242",
-            "expiry_month": "12",
-            "expiry_year": "2027",
-            "card_holder_name": "Jane Doe"
+            "cardNumber": {"value": "4242424242424242"},
+            "cardExpMonth": {"value": "12"},
+            "cardExpYear": {"value": "2027"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "Jane Doe"}
         }
     },
-    capture_method=CaptureMethod.AUTOMATIC
-)
+    "captureMethod": payment_pb2.CaptureMethod.AUTOMATIC,
+    "address": {"billingAddress": {}},
+    "authType": payment_pb2.AuthenticationType.NO_THREE_DS,
+    "returnUrl": "https://example.com/return"
+})
 ```
 
 {% endtab %}
@@ -229,13 +269,32 @@ auth = client.payments.authorize(
 {% tab title="Java" %}
 
 ```java
-AuthorizeResponse auth = client.payments().authorize(
+import com.juspay.hyperswitch.prism.PaymentClient;
+import com.juspay.hyperswitch.prism.types.*;
+
+ConnectorConfig config = ConnectorConfig.builder()
+    .connectorConfig(ConnectorSpecificConfig.builder()
+        .stripe(StripeConfig.builder()
+            .apiKey(SecretString.of(System.getenv("STRIPE_API_KEY")))
+            .build())
+        .build())
+    .build();
+PaymentClient paymentClient = new PaymentClient(config);
+
+AuthorizeResponse auth = paymentClient.authorize(
     AuthorizeRequest.builder()
+        .merchantTransactionId("order-456")
         .amount(Amount.of(1000, Currency.USD))
-        .merchantOrderId("order-456")
         .paymentMethod(PaymentMethod.card(
-            "4242424242424242", "12", "2027", "Jane Doe"))
+            SecretString.of("4242424242424242"),
+            SecretString.of("12"),
+            SecretString.of("2027"),
+            SecretString.of("123"),
+            "Jane Doe"))
         .captureMethod(CaptureMethod.AUTOMATIC)
+        .address(Address.builder().billingAddress(BillingAddress.builder().build()).build())
+        .authType(AuthenticationType.NO_THREE_DS)
+        .returnUrl("https://example.com/return")
         .build()
 );
 ```
@@ -245,18 +304,35 @@ AuthorizeResponse auth = client.payments().authorize(
 {% tab title="PHP" %}
 
 ```php
-$auth = $client->payments()->authorize([
-    'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD],
-    'merchant_order_id' => 'order-456',
-    'payment_method' => [
+<?php
+use HyperswitchPrism\PaymentClient;
+use HyperswitchPrism\Types\Currency;
+use HyperswitchPrism\Types\CaptureMethod;
+use HyperswitchPrism\Types\AuthenticationType;
+
+$config = [
+    'connectorConfig' => [
+        'stripe' => ['apiKey' => ['value' => $_ENV['STRIPE_API_KEY']]]
+    ]
+];
+$paymentClient = new PaymentClient($config);
+
+$auth = $paymentClient->authorize([
+    'merchantTransactionId' => 'order-456',
+    'amount' => ['minorAmount' => 1000, 'currency' => Currency::USD],
+    'paymentMethod' => [
         'card' => [
-            'card_number' => '4242424242424242',
-            'expiry_month' => '12',
-            'expiry_year' => '2027',
-            'card_holder_name' => 'Jane Doe'
+            'cardNumber' => ['value' => '4242424242424242'],
+            'cardExpMonth' => ['value' => '12'],
+            'cardExpYear' => ['value' => '2027'],
+            'cardCvc' => ['value' => '123'],
+            'cardHolderName' => ['value' => 'Jane Doe']
         ]
     ],
-    'capture_method' => CaptureMethod::AUTOMATIC
+    'captureMethod' => CaptureMethod::AUTOMATIC,
+    'address' => ['billingAddress' => []],
+    'authType' => AuthenticationType::NO_THREE_DS,
+    'returnUrl' => 'https://example.com/return'
 ]);
 ```
 
@@ -274,25 +350,30 @@ After authorization, capture funds and handle refunds:
 
 ```javascript
 // 1. Check payment status
-const status = await client.payments.get({
-    paymentId: auth.paymentId
+const status = await paymentClient.get({
+    merchantTransactionId: 'order-456',
+    connectorTransactionId: auth.connectorTransactionId,
+    amount: { minorAmount: 1000, currency: types.Currency.USD }
 });
 console.log('Current status:', status.status);
 
 // 2. Capture the funds (when order ships)
-const capture = await client.payments.capture({
-    paymentId: auth.paymentId,
-    amount: { minorAmount: 1000, currency: Currency.USD }
+const capture = await paymentClient.capture({
+    merchantCaptureId: 'capture-001',
+    connectorTransactionId: auth.connectorTransactionId,
+    amountToCapture: { minorAmount: 1000, currency: types.Currency.USD }
 });
 console.log('Captured:', capture.status);  // CAPTURED
 
 // 3. Process a partial refund (customer returns item)
-const refund = await client.payments.refund({
-    paymentId: auth.paymentId,
-    amount: { minorAmount: 500, currency: Currency.USD },  // Refund $5
-    reason: 'Customer return'
+const refund = await paymentClient.refund({
+    merchantRefundId: 'refund-001',
+    connectorTransactionId: auth.connectorTransactionId,
+    paymentAmount: 1000,
+    refundAmount: { minorAmount: 500, currency: types.Currency.USD },  // Refund $5
+    reason: 'customer_request'
 });
-console.log('Refund ID:', refund.refundId);
+console.log('Refund ID:', refund.connectorRefundId);
 ```
 
 {% endtab %}
@@ -301,23 +382,30 @@ console.log('Refund ID:', refund.refundId);
 
 ```python
 # 1. Check payment status
-status = client.payments.get(payment_id=auth.payment_id)
+status = payment_client.get(
+    merchant_transaction_id="order-456",
+    connector_transaction_id=auth.connector_transaction_id,
+    amount={"minorAmount": 1000, "currency": payment_pb2.Currency.USD}
+)
 print(f"Current status: {status.status}")
 
 # 2. Capture the funds
-capture = client.payments.capture(
-    payment_id=auth.payment_id,
-    amount={"minor_amount": 1000, "currency": Currency.USD}
-)
+capture = payment_client.capture({
+    "merchantCaptureId": "capture-001",
+    "connectorTransactionId": auth.connector_transaction_id,
+    "amountToCapture": {"minorAmount": 1000, "currency": payment_pb2.Currency.USD}
+})
 print(f"Captured: {capture.status}")
 
 # 3. Process a partial refund
-refund = client.payments.refund(
-    payment_id=auth.payment_id,
-    amount={"minor_amount": 500, "currency": Currency.USD},
-    reason="Customer return"
-)
-print(f"Refund ID: {refund.refund_id}")
+refund = payment_client.refund({
+    "merchantRefundId": "refund-001",
+    "connectorTransactionId": auth.connector_transaction_id,
+    "paymentAmount": 1000,
+    "refundAmount": {"minorAmount": 500, "currency": payment_pb2.Currency.USD},
+    "reason": "customer_request"
+})
+print(f"Refund ID: {refund.connector_refund_id}")
 ```
 
 {% endtab %}
@@ -326,31 +414,36 @@ print(f"Refund ID: {refund.refund_id}")
 
 ```java
 // 1. Check payment status
-PaymentResponse status = client.payments().get(
-    GetPaymentRequest.builder()
-        .paymentId(auth.getPaymentId())
+PaymentServiceGetResponse status = paymentClient.get(
+    PaymentServiceGetRequest.builder()
+        .merchantTransactionId("order-456")
+        .connectorTransactionId(auth.getConnectorTransactionId())
+        .amount(Amount.of(1000, Currency.USD))
         .build()
 );
 System.out.println("Status: " + status.getStatus());
 
 // 2. Capture the funds
-CaptureResponse capture = client.payments().capture(
-    CaptureRequest.builder()
-        .paymentId(auth.getPaymentId())
-        .amount(Amount.of(1000, Currency.USD))
+PaymentServiceCaptureResponse capture = paymentClient.capture(
+    PaymentServiceCaptureRequest.builder()
+        .merchantCaptureId("capture-001")
+        .connectorTransactionId(auth.getConnectorTransactionId())
+        .amountToCapture(Amount.of(1000, Currency.USD))
         .build()
 );
 System.out.println("Captured: " + capture.getStatus());
 
 // 3. Process a partial refund
-RefundResponse refund = client.payments().refund(
-    RefundRequest.builder()
-        .paymentId(auth.getPaymentId())
-        .amount(Amount.of(500, Currency.USD))
-        .reason("Customer return")
+PaymentServiceRefundResponse refund = paymentClient.refund(
+    PaymentServiceRefundRequest.builder()
+        .merchantRefundId("refund-001")
+        .connectorTransactionId(auth.getConnectorTransactionId())
+        .paymentAmount(1000)
+        .refundAmount(Amount.of(500, Currency.USD))
+        .reason("customer_request")
         .build()
 );
-System.out.println("Refund ID: " + refund.getRefundId());
+System.out.println("Refund ID: " + refund.getConnectorRefundId());
 ```
 
 {% endtab %}
@@ -359,23 +452,30 @@ System.out.println("Refund ID: " + refund.getRefundId());
 
 ```php
 // 1. Check payment status
-$status = $client->payments()->get(['payment_id' => $auth->getPaymentId()]);
-echo "Status: " . $status->getStatus() . "\n";
+$status = $paymentClient->get([
+    'merchantTransactionId' => 'order-456',
+    'connectorTransactionId' => $auth->connectorTransactionId,
+    'amount' => ['minorAmount' => 1000, 'currency' => Currency::USD]
+]);
+echo "Status: " . $status->status . "\n";
 
 // 2. Capture the funds
-$capture = $client->payments()->capture([
-    'payment_id' => $auth->getPaymentId(),
-    'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD]
+$capture = $paymentClient->capture([
+    'merchantCaptureId' => 'capture-001',
+    'connectorTransactionId' => $auth->connectorTransactionId,
+    'amountToCapture' => ['minorAmount' => 1000, 'currency' => Currency::USD]
 ]);
-echo "Captured: " . $capture->getStatus() . "\n";
+echo "Captured: " . $capture->status . "\n";
 
 // 3. Process a partial refund
-$refund = $client->payments()->refund([
-    'payment_id' => $auth->getPaymentId(),
-    'amount' => ['minor_amount' => 500, 'currency' => Currency::USD],
-    'reason' => 'Customer return'
+$refund = $paymentClient->refund([
+    'merchantRefundId' => 'refund-001',
+    'connectorTransactionId' => $auth->connectorTransactionId,
+    'paymentAmount' => 1000,
+    'refundAmount' => ['minorAmount' => 500, 'currency' => Currency::USD],
+    'reason' => 'customer_request'
 ]);
-echo "Refund ID: " . $refund->getRefundId() . "\n";
+echo "Refund ID: " . $refund->connectorRefundId . "\n";
 ```
 
 {% endtab %}
@@ -387,22 +487,34 @@ echo "Refund ID: " . $refund->getRefundId() . "\n";
 ### Declined Card
 
 ```javascript
-// Using test card: 4000000000000002 (declined)
-const auth = await client.payments.authorize({
-    paymentMethod: { paymentMethodId: 'pm_declined' }
+// Card declined - check response.status and response.error
+const auth = await paymentClient.authorize({
+    merchantTransactionId: 'order-456',
+    amount: { minorAmount: 1000, currency: types.Currency.USD },
+    paymentMethod: { token: { token: 'pm_declined' } },
+    captureMethod: types.CaptureMethod.MANUAL,
+    address: { billingAddress: {} },
+    authType: types.AuthenticationType.NO_THREE_DS,
+    returnUrl: "https://example.com/return"
 });
-// Throws: PaymentDeclinedError with code 'PAYMENT_DECLINED'
+
+if (auth.status === 'FAILED') {
+    console.error('Payment declined:', auth.error?.unifiedDetails?.message);
+}
 ```
 
 ### Network Timeout
 
 ```javascript
+const { NetworkError } = require('hyperswitch-prism');
+
 try {
-    const auth = await client.payments.authorize({...});
+    const auth = await paymentClient.authorize({...});
 } catch (error) {
-    if (error.code === 'NETWORK_TIMEOUT') {
-        // Retry with exponential backoff
-        await retryWithBackoff(() => client.payments.authorize(request));
+    if (error instanceof NetworkError) {
+        // Network error - do NOT retry blindly
+        // The request may have been sent to the connector
+        console.error('Network error:', error.errorCode);
     }
 }
 ```
@@ -415,15 +527,21 @@ Authorize at checkout. Capture when you ship.
 
 ```javascript
 // Checkout: authorize only
-const auth = await client.payments.authorize({
-    amount: { minorAmount: 9999, currency: Currency.USD },
-    captureMethod: CaptureMethod.MANUAL
+const auth = await paymentClient.authorize({
+    merchantTransactionId: 'order-456',
+    amount: { minorAmount: 9999, currency: types.Currency.USD },
+    paymentMethod: { card: { /* card details */ } },
+    captureMethod: types.CaptureMethod.MANUAL,
+    address: { billingAddress: {} },
+    authType: types.AuthenticationType.NO_THREE_DS,
+    returnUrl: "https://example.com/return"
 });
 
 // Later: when order ships
-await client.payments.capture({
-    paymentId: auth.paymentId,
-    amount: { minorAmount: 9999, currency: Currency.USD }
+await paymentClient.capture({
+    merchantCaptureId: 'capture-001',
+    connectorTransactionId: auth.connectorTransactionId,
+    amountToCapture: { minorAmount: 9999, currency: types.Currency.USD }
 });
 ```
 
@@ -432,11 +550,16 @@ await client.payments.capture({
 For digital goods, capture immediately.
 
 ```javascript
-const payment = await client.payments.authorize({
-    amount: { minorAmount: 2900, currency: Currency.USD },
-    captureMethod: CaptureMethod.AUTOMATIC
+const payment = await paymentClient.authorize({
+    merchantTransactionId: 'order-456',
+    amount: { minorAmount: 2900, currency: types.Currency.USD },
+    paymentMethod: { card: { /* card details */ } },
+    captureMethod: types.CaptureMethod.AUTOMATIC,
+    address: { billingAddress: {} },
+    authType: types.AuthenticationType.NO_THREE_DS,
+    returnUrl: "https://example.com/return"
 });
-// Status: CAPTURED
+// Status: CAPTURED (auto-captured)
 ```
 
 ### Marketplace: Partial Refund
@@ -444,10 +567,12 @@ const payment = await client.payments.authorize({
 Customer returns one item from a multi-item order.
 
 ```javascript
-await client.payments.refund({
-    paymentId: 'pay_abc123',
-    amount: { minorAmount: 2500, currency: Currency.USD },
-    reason: 'Item damaged in shipping'
+await paymentClient.refund({
+    merchantRefundId: 'refund-001',
+    connectorTransactionId: 'conn_txn_abc123',
+    paymentAmount: 10000,
+    refundAmount: { minorAmount: 2500, currency: types.Currency.USD },
+    reason: 'customer_request'
 });
 ```
 
@@ -455,7 +580,7 @@ await client.payments.refund({
 
 - **One error handler** works for all connectors
 - **Unified error codes** tell you exactly what happened
-- **Request IDs** enable support to trace issues
+- **connectorTransactionId** is the key identifier for all operations
 - **Same code** works for Stripe, Adyen, PayPal, and 50+ more
 
-See [extending payment flows](./extending-to-more-flows.md) for subscriptions, 3D Secure, and more.
+See [extending payment flows](./extend-to-more-flows.md) for subscriptions, 3D Secure, and more.

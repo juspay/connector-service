@@ -104,7 +104,7 @@ npm install hyperswitch-prism
 #### **Python**
 
 ```bash
-pip install payments
+pip install hyperswitch-prism
 ```
 
 #### **Java**
@@ -114,7 +114,7 @@ Add to your `pom.xml`:
 ```xml
 <dependency>
     <groupId>com.juspay.hyperswitch</groupId>
-    <artifactId>prism</artifactId>
+    <artifactId>hyperswitch-prism</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -192,19 +192,13 @@ Once the basic plumbing is implemented you can leverage Prism's core benefit - *
     merchantOrderId: 'order-123',
     amount: {
       minorAmount: 1000,
-      currency: EUR
+      currency: currency  // Use the currency variable
     },
     orderType: 'PAYMENT',
     description: 'Test order'
   });
 
   console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
-
-// EUR goes to Adyen
-createOrder('order-456', 'EUR', 2500);
-
-// USD goes to Stripe
-createOrder('order-123', 'USD', 1000);
 ```
 
 **One integration pattern. Any service category.**
