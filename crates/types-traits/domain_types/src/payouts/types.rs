@@ -285,12 +285,15 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout>
                     .peek()
                     .clone(),
             )
-            .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "card_number",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Invalid card number".to_owned()),
-                    ..Default::default()
-                },
+            .map_err(|e| {
+                error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                    field_name: "card_number",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid card number".to_owned()),
+                        ..Default::default()
+                    },
+                })
+                .attach_printable(format!("{e:?}"))
             })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 card.card_exp_month
@@ -649,15 +652,16 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
                     .peek()
                     .clone(),
             )
-            .change_context(
-                    IntegrationError::InvalidDataFormat {
+            .map_err(|e| {
+                error_stack::Report::new(IntegrationError::InvalidDataFormat {
                     field_name: "dpan",
                     context: IntegrationErrorContext {
                         additional_context: Some("Invalid dpan".to_owned()),
                         ..Default::default()
                     },
-                },
-                )?,
+                })
+                .attach_printable(format!("{e:?}"))
+            })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 apple
                     .expiry_month
@@ -707,15 +711,16 @@ impl ForeignTryFrom<grpc_api_types::payouts::Paypal> for payouts::payout_method_
             email: paypal
                 .email
                 .map(|e| {
-                    e.peek().to_string().parse().change_context(
-                        IntegrationError::InvalidDataFormat {
+                    e.peek().to_string().parse().map_err(|err| {
+                        error_stack::Report::new(IntegrationError::InvalidDataFormat {
                             field_name: "email",
                             context: IntegrationErrorContext {
                                 additional_context: Some("Invalid email".to_owned()),
                                 ..Default::default()
                             },
-                        },
-                    )
+                        })
+                        .attach_printable(format!("{err:?}"))
+                    })
                 })
                 .transpose()?,
             telephone_number: paypal
@@ -763,12 +768,15 @@ impl ForeignTryFrom<grpc_api_types::payouts::InteracPayout>
                 .peek()
                 .to_string()
                 .parse()
-                .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "email",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Invalid email".to_owned()),
-                        ..Default::default()
-                    },
+                .map_err(|e| {
+                    error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                        field_name: "email",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Invalid email".to_owned()),
+                            ..Default::default()
+                        },
+                    })
+                    .attach_printable(format!("{e:?}"))
                 })?,
         })
     }
