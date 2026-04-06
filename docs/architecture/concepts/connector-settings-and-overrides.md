@@ -6,7 +6,7 @@ It offers the flexibility to enable the setting could be enabled at a connector 
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Proxy** | HTTP proxy URL for routing requests to a target endpoint. YOu may leverage this when you choose to outsource PCI compliance to compliant third party endpoint | None |
+| **Proxy** | HTTP proxy URL for routing requests to a target endpoint. You may leverage this when you choose to outsource PCI compliance to a compliant third party endpoint | None |
 | **Timeout** | Request timeout from API call in milliseconds. You may tweak this for processor which are slower to respond. | 30000ms |
 | **Retry** | Number of API retry attempts on failure, incase of network failures | 0 |
 

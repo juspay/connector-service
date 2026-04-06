@@ -3,7 +3,7 @@
 ## How Prism handles compliance?
 Hyperswitch Prism offers multiple flavors to manage PCI DSS (Payment Card Industry Data Security Standard) compliance. Prism provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of three modes, with each mode is supported by a specific payment client.
 
-- Outsource the PCI data handling to payment processors  (example: Stripe, Adyen, Braintree etc.,), so that you dont have to manage compliance
+- Outsource the PCI data handling to payment processors (example: Stripe, Adyen, Braintree, etc.), so that you don't have to manage compliance
 - Outsource the PCI data handling to processor agnostic PCI vaults (example: VGS, Tokenex, Juspay etc.,)
 - Self-manage the PCI compliance by handling raw card data
 
