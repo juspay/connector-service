@@ -65,6 +65,7 @@ package types;
 
 import "payment.proto";
 import "payouts.proto";
+import "fraud.proto";
 
 option go_package = "github.com/juspay/connector-service/crates/types-traits/grpc-api-types/proto;proto";
 
@@ -319,5 +320,34 @@ service PayoutService {
 
   // Enroll disburse account.
   rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
+}
+
+// ============================================================================
+// FRAUD SERVICE — Manages fraud detection and risk assessment
+// ============================================================================
+
+service FraudService {
+  // Pre-authorization fraud evaluation
+  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) 
+      returns (FraudServiceEvaluatePreAuthorizationResponse);
+  
+  // Post-authorization fraud evaluation with auth results
+  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) 
+      returns (FraudServiceEvaluatePostAuthorizationResponse);
+  
+  // Record completed transaction for post-hoc evaluation
+  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) 
+      returns (FraudServiceRecordTransactionDataResponse);
+  
+  // Record fulfillment/shipment data
+  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) 
+      returns (FraudServiceRecordFulfillmentDataResponse);
+  
+  // Record return/refund data
+  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) 
+      returns (FraudServiceRecordReturnDataResponse);
+  
+  // Retrieve fraud decision/status
+  rpc Get(FraudServiceGetRequest) returns (FraudServiceGetResponse);
 }
 
