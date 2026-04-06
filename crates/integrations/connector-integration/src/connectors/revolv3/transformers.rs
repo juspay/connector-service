@@ -444,8 +444,7 @@ impl Revolv3SaleResponse {
     pub fn get_transaction_response(
         &self,
         status_code: u16,
-    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorError>>
-    {
+    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorError>> {
         let status = AttemptStatus::from(&self.invoice_status);
         let response = if domain_types::utils::is_payment_failure(status) {
             Err(domain_types::router_data::ErrorResponse {
@@ -495,8 +494,7 @@ impl Revolv3AuthorizeResponse {
         &self,
         status_code: u16,
         is_setup_mandate: bool,
-    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorError>>
-    {
+    ) -> Result<DerivedPaymentResponse, error_stack::Report<ConnectorError>> {
         let mandate_reference = self.payment_method.as_ref().and_then(|pm| {
             pm.payment_method_id.map(|connector_mandate_id| {
                 domain_types::connector_types::MandateReference {

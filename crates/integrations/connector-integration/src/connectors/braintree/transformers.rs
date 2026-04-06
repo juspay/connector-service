@@ -1492,12 +1492,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
                     .edges
                     .first()
                     .ok_or_else(|| {
-                        Report::new(
-                            ConnectorError::response_handling_failed_with_context(
-                                item.http_code,
-                                Some("Braintree RSync: no refund in search results".to_string()),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some("Braintree RSync: no refund in search results".to_string()),
+                        ))
                     })?;
                 let connector_refund_id = &edge_data.node.id;
                 let response = Ok(RefundsResponseData {
@@ -2361,14 +2359,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                     .edges
                     .first()
                     .ok_or_else(|| {
-                        Report::new(
-                            ConnectorError::response_handling_failed_with_context(
-                                item.http_code,
-                                Some(
-                                    "Braintree PSync: no transaction in search results".to_string(),
-                                ),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some("Braintree PSync: no transaction in search results".to_string()),
+                        ))
                     })?;
                 let status = enums::AttemptStatus::from(edge_data.node.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
@@ -2606,8 +2600,7 @@ fn get_braintree_redirect_form<
                     Ok(bin) => bin,
                     Err(_) => {
                         return Err(
-                            ConnectorError::unexpected_response_error_http_status_unknown()
-                                .into(),
+                            ConnectorError::unexpected_response_error_http_status_unknown().into(),
                         );
                     }
                 }
@@ -2631,10 +2624,7 @@ fn get_braintree_redirect_form<
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                return Err(
-                    ConnectorError::unexpected_response_error_http_status_unknown()
-                        .into(),
-                );
+                return Err(ConnectorError::unexpected_response_error_http_status_unknown().into());
             }
         },
         acs_url: complete_authorize_url,

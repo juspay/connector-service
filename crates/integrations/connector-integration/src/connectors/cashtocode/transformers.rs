@@ -309,14 +309,10 @@ impl<
             CashtocodePaymentsResponse::CashtoCodeData(response_data) => {
                 let payment_method_type =
                     router_data.request.payment_method_type.ok_or_else(|| {
-                        Report::new(
-                            ConnectorError::response_handling_failed_with_context(
-                                http_code,
-                                Some(
-                                    "authorize: payment_method_type missing on request".to_string(),
-                                ),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            http_code,
+                            Some("authorize: payment_method_type missing on request".to_string()),
+                        ))
                     })?;
                 let redirection_data =
                     get_redirect_form_data(payment_method_type, response_data, http_code)?;

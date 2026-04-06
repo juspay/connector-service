@@ -33,12 +33,12 @@ export class IntegrationError extends Error {
 
 /**
  * Exception raised when res_transformer fails (response transformation error).
- * Wraps ConnectorResponseTransformationError and provides access to proto fields.
+ * Wraps ConnectorError and provides access to proto fields.
  */
-export class ConnectorResponseTransformationError extends Error {
+export class ConnectorError extends Error {
   constructor(public proto: any) {
     super(proto.errorMessage || proto.error_message);
-    this.name = 'ConnectorResponseTransformationError';
+    this.name = 'ConnectorError';
   }
 }
 

@@ -129,14 +129,8 @@ pub fn amount_conversion_ctx(
 
 // --- Response phase (`ConnectorError`) -----------------
 
-pub fn response_handling_fail(
-    http_status: u16,
-    detail: impl Into<String>,
-) -> ConnectorError {
-    ConnectorError::response_handling_failed_with_context(
-        http_status,
-        Some(detail.into()),
-    )
+pub fn response_handling_fail(http_status: u16, detail: impl Into<String>) -> ConnectorError {
+    ConnectorError::response_handling_failed_with_context(http_status, Some(detail.into()))
 }
 
 /// Canonical detail prefix for response-handling failures where connector
@@ -148,10 +142,7 @@ pub fn response_http_status_detail(connector: &str) -> String {
 }
 
 /// Convenience helper for the common non-success HTTP status case.
-pub fn response_handling_fail_for_connector(
-    http_status: u16,
-    connector: &str,
-) -> ConnectorError {
+pub fn response_handling_fail_for_connector(http_status: u16, connector: &str) -> ConnectorError {
     response_handling_fail(http_status, response_http_status_detail(connector))
 }
 
@@ -160,21 +151,12 @@ pub fn response_deserialization_fail(
     http_status: u16,
     detail: impl Into<String>,
 ) -> ConnectorError {
-    ConnectorError::response_deserialization_failed_with_context(
-        http_status,
-        Some(detail.into()),
-    )
+    ConnectorError::response_deserialization_failed_with_context(http_status, Some(detail.into()))
 }
 
 /// Connector returned a response that does not match this flow’s contract.
-pub fn unexpected_response_fail(
-    http_status: u16,
-    detail: impl Into<String>,
-) -> ConnectorError {
-    ConnectorError::unexpected_response_error_with_context(
-        http_status,
-        Some(detail.into()),
-    )
+pub fn unexpected_response_fail(http_status: u16, detail: impl Into<String>) -> ConnectorError {
+    ConnectorError::unexpected_response_error_with_context(http_status, Some(detail.into()))
 }
 
 pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {

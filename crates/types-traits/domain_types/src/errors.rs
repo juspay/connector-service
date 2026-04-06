@@ -362,12 +362,9 @@ pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
 }
 
 impl ConnectorError {
-    /// Machine-readable error code (SCREAMING_SNAKE_CASE from variant name).
+    /// Machine-readable error code (SCREAMING_SNAKE_CASE from variant name via `strum::AsRefStr`).
     pub fn error_code(&self) -> &str {
-        match self {
-            Self::ConnectorErrorResponse(_) => "CONNECTOR_ERROR_RESPONSE",
-            _ => self.as_ref(),
-        }
+        self.as_ref()
     }
 
     /// HTTP status code from the connector response (`None` when not applicable).

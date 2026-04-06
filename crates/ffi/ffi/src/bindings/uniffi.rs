@@ -12,8 +12,8 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use grpc_api_types::payments::Environment;
     use grpc_api_types::payments::{
-        ffi_result, ConnectorError, FfiConnectorHttpRequest,
-        FfiConnectorHttpResponse, FfiResult, IntegrationError,
+        ffi_result, ConnectorError, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiResult,
+        IntegrationError,
     };
     use prost::Message;
     use std::collections::HashMap;
@@ -172,13 +172,11 @@ mod uniffi_bindings_inner {
             Err(e) => {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(
-                        ConnectorError {
-                            error_message: format!("Request payload decode failed: {e}"),
-                            error_code: "DECODE_FAILED".to_string(),
-                            http_status_code: None,
-                        },
-                    )),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: format!("Request payload decode failed: {e}"),
+                        error_code: "DECODE_FAILED".to_string(),
+                        http_status_code: None,
+                    })),
                 }
                 .encode_to_vec();
             }
@@ -200,13 +198,11 @@ mod uniffi_bindings_inner {
             Err(e) => {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(
-                        ConnectorError {
-                            error_message: e.error_message,
-                            error_code: e.error_code,
-                            http_status_code: None,
-                        },
-                    )),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: e.error_message,
+                        error_code: e.error_code,
+                        http_status_code: None,
+                    })),
                 }
                 .encode_to_vec()
             }
@@ -283,13 +279,11 @@ mod uniffi_bindings_inner {
             Err(e) => {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(
-                        ConnectorError {
-                            error_message: format!("EventServiceHandleRequest decode failed: {e}"),
-                            error_code: "DECODE_FAILED".to_string(),
-                            http_status_code: None,
-                        },
-                    )),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: format!("EventServiceHandleRequest decode failed: {e}"),
+                        error_code: "DECODE_FAILED".to_string(),
+                        http_status_code: None,
+                    })),
                 }
                 .encode_to_vec();
             }
@@ -311,13 +305,11 @@ mod uniffi_bindings_inner {
             Err(e) => {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(
-                        ConnectorError {
-                            error_message: e.error_message,
-                            error_code: e.error_code,
-                            http_status_code: None,
-                        },
-                    )),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: e.error_message,
+                        error_code: e.error_code,
+                        http_status_code: None,
+                    })),
                 }
                 .encode_to_vec()
             }

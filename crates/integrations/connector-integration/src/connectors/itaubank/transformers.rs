@@ -283,11 +283,9 @@ impl TryFrom<ResponseRouterData<ItaubankErrorResponse, Self>>
     fn try_from(
         _item: ResponseRouterData<ItaubankErrorResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        Err(
-            ConnectorError::ResponseHandlingFailed {
-                context: Default::default(),
-            }
-            .into(),
-        )
+        Err(ConnectorError::ResponseHandlingFailed {
+            context: Default::default(),
+        }
+        .into())
     }
 }

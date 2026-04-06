@@ -266,12 +266,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     res.status_code,
                     res.response
                 );
-                Err(
-                    errors::ConnectorError::ResponseDeserializationFailed {
-                        context: Default::default(),
-                    }
-                    .into(),
-                )
+                Err(errors::ConnectorError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                }
+                .into())
             }
         }
     }
@@ -404,12 +402,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     res.status_code,
                     res.response
                 );
-                Err(
-                    errors::ConnectorError::ResponseDeserializationFailed {
-                        context: Default::default(),
-                    }
-                    .into(),
-                )
+                Err(errors::ConnectorError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                }
+                .into())
             }
         }
     }

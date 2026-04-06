@@ -407,7 +407,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   FfiOptions: { "connectorConfig": "ConnectorSpecificConfig" },
   FfiConnectorHttpRequest: { "headers": "HeadersEntry" },
   FfiConnectorHttpResponse: { "headers": "HeadersEntry" },
-  FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorResponseTransformationError": "ConnectorResponseTransformationError" },
+  FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorError": "ConnectorError" },
 };
 
 function _wrapSecretStrings(obj: unknown, msgName: string): unknown {

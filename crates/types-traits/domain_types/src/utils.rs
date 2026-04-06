@@ -13,10 +13,7 @@ use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{
-        self, ConnectorError, IntegrationError, IntegrationErrorContext,
-        ParsingError,
-    },
+    errors::{self, ConnectorError, IntegrationError, IntegrationErrorContext, ParsingError},
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
@@ -174,9 +171,7 @@ pub fn base64_decode(
 ) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
-        .change_context(
-            ConnectorError::response_handling_failed_http_status_unknown(),
-        )
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())
 }
 
 pub fn to_currency_base_unit(

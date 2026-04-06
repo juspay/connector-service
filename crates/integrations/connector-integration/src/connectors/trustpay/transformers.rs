@@ -947,10 +947,7 @@ impl TryFrom<WebhookStatus> for enums::AttemptStatus {
         match item {
             WebhookStatus::Paid => Ok(Self::Charged),
             WebhookStatus::Rejected => Ok(Self::AuthorizationFailed),
-            _ => Err(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
-            ),
+            _ => Err(ConnectorError::unexpected_response_error_http_status_unknown()),
         }
     }
 }
@@ -962,10 +959,7 @@ impl TryFrom<WebhookStatus> for enums::RefundStatus {
             WebhookStatus::Paid => Ok(Self::Success),
             WebhookStatus::Refunded => Ok(Self::Success),
             WebhookStatus::Rejected => Ok(Self::Failure),
-            _ => Err(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
-            ),
+            _ => Err(ConnectorError::unexpected_response_error_http_status_unknown()),
         }
     }
 }
@@ -1871,8 +1865,7 @@ impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
 fn handle_cards_refund_response(
     response: CardsRefundResponse,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError>
-{
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError> {
     let (refund_status, message) = get_refund_status(&response.payment_status);
     let error = match message {
         Some(message) => Some(ErrorResponse {
@@ -1899,8 +1892,7 @@ fn handle_cards_refund_response(
 pub fn handle_webhooks_refund_response(
     response: WebhookPaymentInformation,
     status_code: u16,
-) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError>
-{
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), ConnectorError> {
     let refund_status = enums::RefundStatus::try_from(response.status)?;
     let error = match utils::is_refund_failure(refund_status) {
         true => {

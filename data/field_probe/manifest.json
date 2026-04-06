@@ -737,7 +737,7 @@
         "extended_authorization_response_data": "ExtendedAuthorizationResponseData"
       }
     },
-    "ConnectorResponseTransformationError": {
+    "ConnectorError": {
       "comments": {
         "error_code": "Machine-readable code (e.g., \"RESPONSE_DESERIALIZATION_FAILED\")",
         "error_message": "Human-readable description of parsing failure (e.g., \"Expected JSON response, got HTML\")",
@@ -1254,7 +1254,7 @@
     "FfiResult": {
       "comments": {},
       "field_types": {
-        "connector_response_transformation_error": "ConnectorResponseTransformationError",
+        "connector_response_transformation_error": "ConnectorError",
         "http_request": "FfiConnectorHttpRequest",
         "http_response": "FfiConnectorHttpResponse",
         "integration_error": "IntegrationError",

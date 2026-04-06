@@ -116,8 +116,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
             .parse_struct("RazorpayV2ErrorResponse")
@@ -282,8 +281,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -291,8 +289,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
             .parse_struct("RazorpayV2ErrorResponse")
@@ -493,8 +490,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -502,8 +498,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -798,8 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -807,8 +801,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -906,8 +899,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -915,8 +907,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -1009,8 +1000,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1018,8 +1008,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }

@@ -1254,8 +1254,7 @@ impl FromStr for AciPaymentStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1515,8 +1514,7 @@ impl FromStr for AciStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1698,8 +1696,7 @@ impl FromStr for AciRefundStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }

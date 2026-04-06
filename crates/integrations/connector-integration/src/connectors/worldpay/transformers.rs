@@ -1411,10 +1411,7 @@ where
 
 fn extract_redirection_data(
     response: &WorldpayPaymentsResponse,
-) -> Result<
-    (Option<RedirectForm>, Option<String>),
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<(Option<RedirectForm>, Option<String>), error_stack::Report<ConnectorError>> {
     match &response.other_fields {
         Some(WorldpayPaymentResponseFields::ThreeDsChallenged(challenged)) => {
             let redirect_form = RedirectForm::Form {

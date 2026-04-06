@@ -1576,10 +1576,7 @@ impl TryFrom<ErrorInputs> for ErrorDetails {
                 serde_urlencoded::from_str::<FiuuPaymentRedirectResponse>(encoded_data)
             })
             .transpose()
-            .change_context(
-                ConnectorError::response_handling_failed_http_status_unknown(
-                ),
-            )
+            .change_context(ConnectorError::response_handling_failed_http_status_unknown())
             .attach_printable("Failed to deserialize FiuuPaymentRedirectResponse")?;
         let error_message = value
             .response_error_desc
@@ -1800,8 +1797,7 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
             }
             (StatCode::Failure, _) => Ok(Self::Failure),
             (other, _) => Err(error_stack::Report::from(
-                ConnectorError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(other.to_string())),
         }
@@ -2233,9 +2229,7 @@ pub fn get_qr_metadata(
         response.txn_data.request_data.qr_data.peek().clone(),
         DUIT_NOW_BRAND_COLOR,
     )
-    .change_context(
-        ConnectorError::response_handling_failed_http_status_unknown(),
-    )?;
+    .change_context(ConnectorError::response_handling_failed_http_status_unknown())?;
 
     let image_data_url = Url::parse(image_data.data.clone().as_str()).ok();
     let display_to_timestamp = None;
@@ -2250,10 +2244,7 @@ pub fn get_qr_metadata(
 
         Some(qr_code_info.encode_to_value())
             .transpose()
-            .change_context(
-                ConnectorError::response_handling_failed_http_status_unknown(
-                ),
-            )
+            .change_context(ConnectorError::response_handling_failed_http_status_unknown())
     } else {
         Ok(None)
     }

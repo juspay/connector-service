@@ -528,12 +528,10 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
 
         // Extract session token
         let session_token = response.session_token.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("session_token missing in Nuvei response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("session_token missing in Nuvei response".to_string()),
+            ))
         })?;
 
         let session_response_data =
@@ -969,15 +967,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
             .or(response.order_id.clone())
             .ok_or_else(|| {
-                Report::new(
-                    ConnectorError::response_handling_failed_with_context(
-                        item.http_code,
-                        Some(
-                            "missing transaction_id and order_id in Nuvei PSync response"
-                                .to_string(),
-                        ),
-                    ),
-                )
+                Report::new(ConnectorError::response_handling_failed_with_context(
+                    item.http_code,
+                    Some("missing transaction_id and order_id in Nuvei PSync response".to_string()),
+                ))
             })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -1129,12 +1122,10 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
 
         // Extract transaction details
         let transaction_details = response.transaction_details.as_ref().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("transaction_details missing in Nuvei PSync response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_details missing in Nuvei PSync response".to_string()),
+            ))
         })?;
 
         // Map transaction status to attempt status
@@ -1167,14 +1158,10 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         // Get connector transaction ID from transaction_details
         let connector_transaction_id =
             transaction_details.transaction_id.clone().ok_or_else(|| {
-                Report::new(
-                    ConnectorError::response_handling_failed_with_context(
-                        item.http_code,
-                        Some(
-                            "transaction_id missing in Nuvei PSync transaction_details".to_string(),
-                        ),
-                    ),
-                )
+                Report::new(ConnectorError::response_handling_failed_with_context(
+                    item.http_code,
+                    Some("transaction_id missing in Nuvei PSync transaction_details".to_string()),
+                ))
             })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -1255,12 +1242,10 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
 
         // Get connector transaction ID
         let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("transaction_id missing in Nuvei capture response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei capture response".to_string()),
+            ))
         })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -1473,12 +1458,10 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
 
         // Get connector refund ID
         let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("transaction_id missing in Nuvei refund response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei refund response".to_string()),
+            ))
         })?;
 
         let refunds_response_data = RefundsResponseData {
@@ -1556,12 +1539,10 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
 
         // Get connector refund ID
         let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("transaction_id missing in Nuvei refund sync response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei refund sync response".to_string()),
+            ))
         })?;
 
         let refunds_response_data = RefundsResponseData {
@@ -1728,12 +1709,10 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
 
         // Get connector transaction ID
         let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    item.http_code,
-                    Some("transaction_id missing in Nuvei void response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei void response".to_string()),
+            ))
         })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {

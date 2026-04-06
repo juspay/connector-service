@@ -10,8 +10,7 @@ use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use error_stack::Report;
 use grpc_api_types::payments::{
-    ConnectorError, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
-    FfiOptions, IntegrationError,
+    ConnectorError, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
 };
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use prost::Message;
@@ -52,9 +51,7 @@ pub fn build_ffi_request_bytes(
 }
 
 /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response.
-pub fn build_domain_response(
-    response_bytes: Vec<u8>,
-) -> Result<Response, ConnectorError> {
+pub fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ConnectorError> {
     let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
         ConnectorError {
             error_message: format!("ConnectorHttpResponse decode failed: {e}"),
@@ -80,13 +77,14 @@ pub fn build_domain_response(
             Some(header_map)
         },
         response: Bytes::from(response.body),
-        status_code: response.status_code.try_into().map_err(|e| {
-            ConnectorError {
+        status_code: response
+            .status_code
+            .try_into()
+            .map_err(|e| ConnectorError {
                 error_message: format!("Invalid HTTP status code: {e}"),
                 error_code: "INVALID_STATUS_CODE".to_string(),
                 http_status_code: None,
-            }
-        })?,
+            })?,
     })
 }
 
@@ -111,9 +109,7 @@ pub fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, I
 
 /// refactor later
 /// Parse FfiOptions from optional bytes (for response path).
-pub fn parse_ffi_options_for_res(
-    options_bytes: Vec<u8>,
-) -> Result<FfiOptions, ConnectorError> {
+pub fn parse_ffi_options_for_res(options_bytes: Vec<u8>) -> Result<FfiOptions, ConnectorError> {
     if options_bytes.is_empty() {
         return Err(ConnectorError {
             error_message: "Empty options bytes".to_string(),
@@ -121,12 +117,10 @@ pub fn parse_ffi_options_for_res(
             http_status_code: None,
         });
     }
-    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| {
-        ConnectorError {
-            error_message: format!("Options decode failed: {e}"),
-            error_code: "DECODE_FAILED".to_string(),
-            http_status_code: None,
-        }
+    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| ConnectorError {
+        error_message: format!("Options decode failed: {e}"),
+        error_code: "DECODE_FAILED".to_string(),
+        http_status_code: None,
     })
 }
 

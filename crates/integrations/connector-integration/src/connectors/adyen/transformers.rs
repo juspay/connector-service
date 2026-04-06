@@ -4666,9 +4666,8 @@ fn get_qr_metadata(
     response: &QrCodeResponseResponse,
 ) -> CustomResult<Option<serde_json::Value>, ConnectorError> {
     // Generate QR code image from qr_code_data
-    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone()).change_context(
-        ConnectorError::response_handling_failed_http_status_unknown(),
-    )?;
+    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())?;
 
     let image_data_url = Url::parse(image_data.data.as_str()).ok();
     let qr_code_url = response.action.qr_code_url.clone();
@@ -4703,9 +4702,7 @@ fn get_qr_metadata(
     qr_code_info
         .map(|info| info.encode_to_value())
         .transpose()
-        .change_context(
-            ConnectorError::response_handling_failed_http_status_unknown(),
-        )
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())
 }
 
 pub fn get_webhook_response(
@@ -7224,10 +7221,7 @@ pub fn get_present_to_shopper_metadata(
 
             Some(voucher_data.encode_to_value())
                 .transpose()
-                .change_context(
-                ConnectorError::response_handling_failed_http_status_unknown(
-                ),
-            )
+                .change_context(ConnectorError::response_handling_failed_http_status_unknown())
         }
         // NOTE: Support for other payment methods will be added in future iterations
         // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)

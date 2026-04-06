@@ -53,8 +53,7 @@ pub type NmiPreAuthenticateResponse = NmiVaultResponse;
 
 use super::macros;
 use crate::{
-    types::ResponseRouterData, with_error_response_body, ConnectorError,
-    IntegrationError,
+    types::ResponseRouterData, with_error_response_body, ConnectorError, IntegrationError,
 };
 
 pub(crate) mod headers {

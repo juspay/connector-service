@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ConnectorError, ConnectorSpecificConfig,
-    Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
+    self, connector_specific_config, ConnectorError, ConnectorSpecificConfig, Environment,
+    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};

@@ -5,9 +5,7 @@ pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../../config/produ
 use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
 
-use grpc_api_types::payments::{
-    ConnectorError, Environment, IntegrationError,
-};
+use grpc_api_types::payments::{ConnectorError, Environment, IntegrationError};
 
 fn get_config(
     environment: Option<Environment>,
@@ -87,10 +85,7 @@ include!("_generated_flow_registrations.rs");
 pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
-) -> Result<
-    grpc_api_types::payments::EventServiceHandleResponse,
-    ConnectorError,
-> {
+) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ConnectorError> {
     let config = get_config(environment).map_err(|e| ConnectorError {
         error_message: e.error_message,
         error_code: e.error_code,

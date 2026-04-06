@@ -51,7 +51,7 @@ try:
         SdkOptions,
         Environment,
         IntegrationError,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     )
     from payments.generated.connector_service_ffi import InternalError
 except ImportError as e:
@@ -241,9 +241,9 @@ async def test_connector_scenarios(
                     response_display = f"<{type(response).__name__}>"
                 print(_green(f"    [{scenario_key}] OK") + f" — {response_display}", flush=True)
                 result["scenarios"][scenario_key] = {"passed": True, "result": response}
-        except (IntegrationError, ConnectorResponseTransformationError, InternalError) as e:
+        except (IntegrationError, ConnectorError, InternalError) as e:
             # Connector rejected our test data — SDK round-trip succeeded.
-            # IntegrationError/ConnectorResponseTransformationError: FFI completed a full cycle, connector returned error.
+            # IntegrationError/ConnectorError: FFI completed a full cycle, connector returned error.
             # UniffiError (e.g. HandlerError): FFI-level connector rejection before HTTP
             # (e.g. InvalidWalletToken — bad probe token rejected during request building).
             msg = getattr(e, 'error_message', None) or str(e)

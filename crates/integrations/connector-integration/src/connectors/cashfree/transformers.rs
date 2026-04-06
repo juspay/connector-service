@@ -570,19 +570,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (status, redirection_data) = match response.channel.as_str() {
             "link" => {
                 // Intent flow - extract deep link from payload._default
-                let deep_link = response.data.payload.map(|p| p.default_link).ok_or_else(
-                        || {
-                            Report::new(
-                                ConnectorError::response_handling_failed_with_context(
-                                    item.http_code,
-                                    Some(
-                                        "link channel: missing payload.default_link (UPI intent)"
-                                            .to_string(),
-                                    ),
-                                ),
-                            )
-                        },
-                    )?;
+                let deep_link = response
+                    .data
+                    .payload
+                    .map(|p| p.default_link)
+                    .ok_or_else(|| {
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some(
+                                "link channel: missing payload.default_link (UPI intent)"
+                                    .to_string(),
+                            ),
+                        ))
+                    })?;
 
                 // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
                 let trimmed_link = if let Some(pos) = deep_link.find('?') {

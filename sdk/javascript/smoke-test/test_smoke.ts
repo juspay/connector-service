@@ -10,7 +10,7 @@
  *   node test_smoke.js --creds-file creds.json --all --dry-run
  */
 
-import { types, NetworkError, IntegrationError, ConnectorResponseTransformationError } from "hyperswitch-prism";
+import { types, NetworkError, IntegrationError, ConnectorError } from "hyperswitch-prism";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -191,7 +191,7 @@ async function testConnectorScenarios(
             let isConnectorError = false;
             switch (errorName) {
                 case "IntegrationError":
-                case "ConnectorResponseTransformationError":
+                case "ConnectorError":
                     isConnectorError = true;
                     break;
                 default:

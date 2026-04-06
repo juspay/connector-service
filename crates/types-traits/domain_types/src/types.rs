@@ -3896,10 +3896,7 @@ pub fn generate_create_order_response(
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     >,
-) -> Result<
-    PaymentServiceCreateOrderResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<PaymentServiceCreateOrderResponse, error_stack::Report<ConnectorError>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -3976,10 +3973,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
-) -> Result<
-    PaymentServiceAuthorizeResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ConnectorError>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     info!("Payment authorize response status: {:?}", status);
@@ -4086,16 +4080,14 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 }
             }
             _ => {
-                return Err(report!(
-                    ConnectorError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
+                return Err(report!(ConnectorError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }))
             }
         },
         Err(err) => {
@@ -4798,16 +4790,14 @@ pub fn generate_payment_void_response(
                     ),
                 })
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -4855,8 +4845,7 @@ pub fn generate_payment_void_post_capture_response(
         crate::connector_types::PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     >,
-) -> Result<PaymentServiceReverseResponse, error_stack::Report<ConnectorError>>
-{
+) -> Result<PaymentServiceReverseResponse, error_stack::Report<ConnectorError>> {
     let transaction_response = router_data_v2.response;
 
     // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
@@ -4906,16 +4895,14 @@ pub fn generate_payment_void_post_capture_response(
                         .get_connector_response_headers_as_map(),
                 })
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -5173,16 +5160,14 @@ pub fn generate_payment_sync_response(
                     payment_method_update: None,
                 })
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -5589,8 +5574,8 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
             | router_response_types::RedirectForm::CybersourceConsumerAuth { .. }
             | router_response_types::RedirectForm::DeutschebankThreeDSChallengeFlow { .. }
             | router_response_types::RedirectForm::Payme
-            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => Err(report!(
-                ConnectorError::UnexpectedResponseError {
+            | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
+                Err(report!(ConnectorError::UnexpectedResponseError {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
                         additional_context: Some(
@@ -5598,16 +5583,15 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
                                 .to_string(),
                         ),
                     },
-                }
-            )),
+                }))
+            }
         }
     }
 }
 
 pub fn generate_accept_dispute_response(
     router_data_v2: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-) -> Result<DisputeServiceAcceptResponse, error_stack::Report<ConnectorError>>
-{
+) -> Result<DisputeServiceAcceptResponse, error_stack::Report<ConnectorError>> {
     let dispute_response = router_data_v2.response;
     let response_headers = router_data_v2
         .resource_common_data
@@ -5725,10 +5709,7 @@ pub fn generate_submit_evidence_response(
         SubmitEvidenceData,
         DisputeResponseData,
     >,
-) -> Result<
-    DisputeServiceSubmitEvidenceResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<DisputeServiceSubmitEvidenceResponse, error_stack::Report<ConnectorError>> {
     let dispute_response = router_data_v2.response;
     let response_headers = router_data_v2
         .resource_common_data
@@ -6965,10 +6946,7 @@ pub fn generate_payment_incremental_authorization_response(
         PaymentsIncrementalAuthorizationData,
         PaymentsResponseData,
     >,
-) -> Result<
-    PaymentServiceIncrementalAuthorizationResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<PaymentServiceIncrementalAuthorizationResponse, error_stack::Report<ConnectorError>> {
     // Create state if either access token or connector customer is available
     let state = if router_data_v2.resource_common_data.access_token.is_some()
         || router_data_v2
@@ -7016,16 +6994,14 @@ pub fn generate_payment_incremental_authorization_response(
                     state,
                 })
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => Ok(PaymentServiceIncrementalAuthorizationResponse {
             status: grpc_api_types::payments::AuthorizationStatus::AuthorizationFailure.into(),
@@ -7055,8 +7031,7 @@ pub fn generate_payment_capture_response(
         PaymentsCaptureData,
         PaymentsResponseData,
     >,
-) -> Result<PaymentServiceCaptureResponse, error_stack::Report<ConnectorError>>
-{
+) -> Result<PaymentServiceCaptureResponse, error_stack::Report<ConnectorError>> {
     let transaction_response = router_data_v2.response;
 
     // Create state if either access token or connector customer is available
@@ -7137,16 +7112,14 @@ pub fn generate_payment_capture_response(
                     ),
                 })
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -8016,10 +7989,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
-) -> Result<
-    PaymentServiceSetupRecurringResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<PaymentServiceSetupRecurringResponse, error_stack::Report<ConnectorError>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -8167,16 +8137,14 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 }
             }
             _ => {
-                return Err(report!(
-                    ConnectorError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type received from connector".to_owned()
-                            ),
-                        },
-                    }
-                ))
+                return Err(report!(ConnectorError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type received from connector".to_owned()
+                        ),
+                    },
+                }))
             }
         },
         Err(err) => {
@@ -8288,8 +8256,7 @@ pub fn generate_defend_dispute_response(
         DisputeDefendData,
         DisputeResponseData,
     >,
-) -> Result<DisputeServiceDefendResponse, error_stack::Report<ConnectorError>>
-{
+) -> Result<DisputeServiceDefendResponse, error_stack::Report<ConnectorError>> {
     let defend_dispute_response = router_data_v2.response;
 
     let raw_connector_request = router_data_v2
@@ -9336,10 +9303,8 @@ pub fn generate_create_connector_customer_response(
         ConnectorCustomerData,
         crate::connector_types::ConnectorCustomerResponse,
     >,
-) -> Result<
-    grpc_payment_types::CustomerServiceCreateResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<grpc_payment_types::CustomerServiceCreateResponse, error_stack::Report<ConnectorError>>
+{
     let customer_response = router_data_v2.response;
 
     match customer_response {
@@ -9861,16 +9826,14 @@ pub fn generate_payment_sdk_session_token_response(
                     },
                 )
             }
-            _ => Err(report!(
-                ConnectorError::UnexpectedResponseError {
-                    context: ResponseTransformationErrorContext {
-                        http_status_code: None,
-                        additional_context: Some(
-                            "Invalid response type received from connector".to_owned()
-                        ),
-                    },
-                }
-            )),
+            _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                context: ResponseTransformationErrorContext {
+                    http_status_code: None,
+                    additional_context: Some(
+                        "Invalid response type received from connector".to_owned()
+                    ),
+                },
+            })),
         },
         Err(e) => Ok(
             MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse {
@@ -11215,16 +11178,14 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             ),
                         }),
-                        _ => Err(report!(
-                            ConnectorError::UnexpectedResponseError {
-                                context: ResponseTransformationErrorContext {
-                                    http_status_code: None,
-                                    additional_context: Some(
-                                        "Invalid response type received from connector".to_owned()
-                                    ),
-                                },
-                            }
-                        )),
+                        _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                            context: ResponseTransformationErrorContext {
+                                http_status_code: None,
+                                additional_context: Some(
+                                    "Invalid response type received from connector".to_owned()
+                                ),
+                            },
+                        })),
                     })
                     .transpose()?,
                 connector_feature_data: None,
@@ -11239,8 +11200,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
             _ => {
-                return Err(report!(
-                ConnectorError::UnexpectedResponseError {
+                return Err(report!(ConnectorError::UnexpectedResponseError {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
                         additional_context: Some(
@@ -11248,8 +11208,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                 .to_owned()
                         ),
                     },
-                }
-            ))
+                }))
             }
         },
         Err(err) => {
@@ -11400,16 +11359,14 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             })
                         }
-                        _ => Err(report!(
-                            ConnectorError::UnexpectedResponseError {
-                                context: ResponseTransformationErrorContext {
-                                    http_status_code: None,
-                                    additional_context: Some(
-                                        "Invalid response type received from connector".to_owned()
-                                    ),
-                                },
-                            }
-                        )),
+                        _ => Err(report!(ConnectorError::UnexpectedResponseError {
+                            context: ResponseTransformationErrorContext {
+                                http_status_code: None,
+                                additional_context: Some(
+                                    "Invalid response type received from connector".to_owned()
+                                ),
+                            },
+                        })),
                     })
                     .transpose()?,
                 connector_feature_data: None,
@@ -11423,17 +11380,15 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             },
             _ => {
-                return Err(report!(
-                    ConnectorError::UnexpectedResponseError {
-                        context: ResponseTransformationErrorContext {
-                            http_status_code: None,
-                            additional_context: Some(
-                                "Invalid response type for authenticate from connector response"
-                                    .to_owned()
-                            ),
-                        },
-                    }
-                ))
+                return Err(report!(ConnectorError::UnexpectedResponseError {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Invalid response type for authenticate from connector response"
+                                .to_owned()
+                        ),
+                    },
+                }))
             }
         },
         Err(err) => {
@@ -11519,8 +11474,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             },
             _ => {
-                return Err(report!(
-                ConnectorError::UnexpectedResponseError {
+                return Err(report!(ConnectorError::UnexpectedResponseError {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
                         additional_context: Some(
@@ -11528,8 +11482,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                                 .to_owned()
                         ),
                     },
-                }
-            ))
+                }))
             }
         },
         Err(err) => {

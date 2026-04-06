@@ -140,10 +140,7 @@ pub fn handle_connector_response<F, ResourceCommonData, Req, Resp>(
     method: Method,
     url: String,
     event_params: Option<&EventProcessingParams<'_>>,
-) -> CustomResult<
-    RouterDataV2<F, ResourceCommonData, Req, Resp>,
-    ConnectorError,
->
+) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
@@ -227,9 +224,9 @@ where
                         "response.status_code",
                         tracing::field::display(error_response.status_code),
                     );
-                    return Err(error_stack::report!(
+                    Err(error_stack::report!(
                         ConnectorError::ConnectorErrorResponse(error_response)
-                    ));
+                    ))?
                 }
             };
             Ok(response)

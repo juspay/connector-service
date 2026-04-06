@@ -49,7 +49,7 @@ class NetworkError(Exception):
 
     @property
     def error_code(self) -> str:
-        """String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. 'CONNECT_TIMEOUT')."""
+        """String error code for parity with IntegrationError/ConnectorError (e.g. 'CONNECT_TIMEOUT')."""
         names = {
             sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED: "CONNECT_TIMEOUT_EXCEEDED",
             sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED: "RESPONSE_TIMEOUT_EXCEEDED",

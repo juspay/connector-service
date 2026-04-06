@@ -54,10 +54,7 @@ pub fn get_webhook_object_from_body(
 fn get_webhook_response(
     response: responses::PeachpaymentsIncomingWebhook,
     status_code: u16,
-) -> CustomResult<
-    (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
-    ConnectorError,
-> {
+) -> CustomResult<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), ConnectorError> {
     let transaction =
         response
             .transaction

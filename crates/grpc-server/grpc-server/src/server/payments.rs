@@ -998,9 +998,7 @@ impl PaymentService for Payments {
                         connectors,
                         &request_data.masked_metadata,
                     ))
-                    .map_err(|e| {
-                        tonic::Status::internal(format!("Failed to create payment flow data: {e}"))
-                    })?;
+                    .map_err(|e| e.into_grpc_status())?;
                     let should_do_access_token = connector_data
                         .connector
                         .should_do_access_token(Some(temp_payment_flow_data.payment_method));
@@ -1285,9 +1283,7 @@ impl PaymentService for Payments {
                         connectors,
                         &request_data.masked_metadata,
                     ))
-                    .map_err(|e| {
-                        tonic::Status::internal(format!("Failed to create payment flow data: {e}"))
-                    })?;
+                    .map_err(|e| e.into_grpc_status())?;
                     let should_do_access_token = connector_data
                         .connector
                         .should_do_access_token(Some(temp_payment_flow_data.payment_method));
@@ -1835,9 +1831,7 @@ impl PaymentMethodService for PaymentMethod {
                                     "Failed to process payment method token data: {:?}",
                                     err
                                 );
-                                tonic::Status::internal(format!(
-                                    "Failed to process payment method token data: {err}"
-                                ))
+                                err.into_grpc_status()
                             },
                         )?;
 
@@ -2024,9 +2018,10 @@ impl MerchantAuthentication {
                 );
                 Ok(session_response)
             }
-            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Session Token creation failed: {message}"
-            ))),
+            Err(error_response) => Err(error_stack::report!(
+                ConnectorError::ConnectorErrorResponse(error_response)
+            )
+            .into_grpc_status()),
         }
     }
 
@@ -2812,10 +2807,7 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<
-    RecurringPaymentServiceRevokeResponse,
-    error_stack::Report<ConnectorError>,
-> {
+) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ConnectorError>> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data

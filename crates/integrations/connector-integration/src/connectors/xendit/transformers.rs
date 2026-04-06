@@ -282,9 +282,8 @@ fn is_auto_capture_request<
 fn is_auto_capture_psync_response(
     data: &PaymentsSyncData,
 ) -> Result<bool, error_stack::Report<ConnectorError>> {
-    is_auto_capture_psync(data).change_context(
-        ConnectorError::response_handling_failed_http_status_unknown(),
-    )
+    is_auto_capture_psync(data)
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())
 }
 
 fn map_payment_response_to_attempt_status(

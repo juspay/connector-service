@@ -508,31 +508,25 @@ pub fn handle_event_transformer(
 ) -> Result<EventServiceHandleResponse, ConnectorError> {
     use domain_types::utils::ForeignTryFrom as _;
 
+    let request_details = payload.request_details.ok_or_else(|| ConnectorError {
+        error_message: "Missing required field: request_details".to_string(),
+        error_code: "MISSING_REQUIRED_FIELD".to_string(),
+        http_status_code: None,
+    })?;
     let request_details =
-        payload
-            .request_details
-            .ok_or_else(|| ConnectorError {
-                error_message: "Missing required field: request_details".to_string(),
-                error_code: "MISSING_REQUIRED_FIELD".to_string(),
-                http_status_code: None,
-            })?;
-    let request_details = RequestDetails::foreign_try_from(request_details).map_err(|e| {
-        ConnectorError {
+        RequestDetails::foreign_try_from(request_details).map_err(|e| ConnectorError {
             error_message: format!("ForeignTryFrom failed: {e}"),
             error_code: "CONVERSION_FAILED".to_string(),
             http_status_code: None,
-        }
-    })?;
+        })?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(|ws| {
-            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                ConnectorError {
-                    error_message: format!("ForeignTryFrom failed: {e}"),
-                    error_code: "CONVERSION_FAILED".to_string(),
-                    http_status_code: None,
-                }
+            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| ConnectorError {
+                error_message: format!("ForeignTryFrom failed: {e}"),
+                error_code: "CONVERSION_FAILED".to_string(),
+                http_status_code: None,
             })
         })
         .transpose()?;

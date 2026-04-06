@@ -821,11 +821,9 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(
-                ConnectorError::ResponseDeserializationFailed {
-                    context: Default::default(),
-                },
-            )?;
+            .change_context(ConnectorError::ResponseDeserializationFailed {
+                context: Default::default(),
+            })?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)
@@ -1451,11 +1449,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
         let (status, payment_response) = match response.response {
             Response::Approved => {
                 let auth_type = NmiAuthType::try_from(&item.router_data.connector_config)
-                    .change_context(
-                        ConnectorError::ResponseHandlingFailed {
-                            context: Default::default(),
-                        },
-                    )?;
+                    .change_context(ConnectorError::ResponseHandlingFailed {
+                        context: Default::default(),
+                    })?;
                 let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
                     ConnectorError::ResponseHandlingFailed {
@@ -1463,11 +1459,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     },
                 )?;
                 let customer_vault_id = response.customer_vault_id.clone().ok_or_else(|| {
-                    error_stack::report!(
-                        ConnectorError::UnexpectedResponseError {
-                            context: Default::default(),
-                        }
-                    )
+                    error_stack::report!(ConnectorError::UnexpectedResponseError {
+                        context: Default::default(),
+                    })
                 })?;
 
                 (
@@ -1505,11 +1499,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .as_ref()
                                 .map(|url| url.to_string())
                                 .ok_or_else(|| {
-                                    error_stack::report!(
-                                        ConnectorError::ResponseHandlingFailed {
-                                            context: Default::default(),
-                                        }
-                                    )
+                                    error_stack::report!(ConnectorError::ResponseHandlingFailed {
+                                        context: Default::default(),
+                                    })
                                 })?,
                         })),
                         connector_response_reference_id: Some(response.transactionid.clone()),

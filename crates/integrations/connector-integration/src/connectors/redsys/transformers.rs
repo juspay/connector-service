@@ -555,12 +555,10 @@ fn build_threeds_invoke_response(
     let notification_url = continue_redirection_url
         .map(|url| url.to_string())
         .ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    http_status,
-                    Some("continue_redirection_url missing for 3DS method URL".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                http_status,
+                Some("continue_redirection_url missing for 3DS method URL".to_string()),
+            ))
         })?;
 
     let threeds_invoke_request = requests::RedsysThreedsInvokeRequest {

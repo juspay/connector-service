@@ -284,17 +284,12 @@ pub struct ZiftAuthPaymentsResponse {
 }
 
 impl ZiftAuthPaymentsResponse {
-    pub fn get_transaction_id(
-        &self,
-        http_code: u16,
-    ) -> CustomResult<String, ConnectorError> {
+    pub fn get_transaction_id(&self, http_code: u16) -> CustomResult<String, ConnectorError> {
         self.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    http_code,
-                    Some("missing transaction_id in connector response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                http_code,
+                Some("missing transaction_id in connector response".to_string()),
+            ))
         })
     }
 }
@@ -327,17 +322,12 @@ pub struct ZiftRefundResponse {
 }
 
 impl ZiftRefundResponse {
-    pub fn get_transaction_id(
-        &self,
-        http_code: u16,
-    ) -> CustomResult<String, ConnectorError> {
+    pub fn get_transaction_id(&self, http_code: u16) -> CustomResult<String, ConnectorError> {
         self.transaction_id.clone().ok_or_else(|| {
-            Report::new(
-                ConnectorError::response_handling_failed_with_context(
-                    http_code,
-                    Some("missing transaction_id in connector response".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                http_code,
+                Some("missing transaction_id in connector response".to_string()),
+            ))
         })
     }
 }
@@ -1307,14 +1297,10 @@ impl<F> TryFrom<ResponseRouterData<ZiftRefundResponse, Self>>
                     .clone()
                     .or(item.response.transaction_code.clone())
                     .ok_or_else(|| {
-                        Report::new(
-                            ConnectorError::response_handling_failed_with_context(
-                                item.http_code,
-                                Some(
-                                    "missing connector refund id in connector response".to_string(),
-                                ),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some("missing connector refund id in connector response".to_string()),
+                        ))
                     })?,
                 refund_status,
                 status_code: item.http_code,
