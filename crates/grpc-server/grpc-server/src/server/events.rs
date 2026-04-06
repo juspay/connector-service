@@ -7,6 +7,7 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::VerifyWebhookSource,
     connector_types::VerifyWebhookSourceFlowData,
+    errors::IntegrationError,
     payment_method_data::DefaultPCIHolder,
     router_data::ConnectorSpecificConfig,
     router_data::ErrorResponse,
@@ -34,9 +35,21 @@ impl EventService for EventServiceImpl {
         name = "EventService::handle_event",
         skip(self, request),
         fields(
+            name = common_utils::consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = FlowName::IncomingWebhook.to_string(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::IncomingWebhook.to_string(),
+            flow_specific_fields.status = tracing::field::Empty,
         )
     )]
     async fn handle_event(
@@ -65,10 +78,13 @@ impl EventService for EventServiceImpl {
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                        .transpose()
+                        .map_err(|e: error_stack::Report<IntegrationError>| {
+                            e.into_grpc_status()
+                        })?
                         .ok_or_else(|| {
                             tonic::Status::invalid_argument("missing request_details in the payload")
-                        })?
-                        .map_err(|e| e.into_grpc_status())?;
+                        })?;
                     let webhook_secrets = payload
                         .webhook_secrets
                         .clone()
@@ -76,7 +92,9 @@ impl EventService for EventServiceImpl {
                             domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
                                 details,
                             )
-                            .map_err(|e| e.into_grpc_status())
+                            .map_err(|e: error_stack::Report<IntegrationError>| {
+                                e.into_grpc_status()
+                            })
                         })
                         .transpose()?;
                     //get connector data
@@ -122,15 +140,14 @@ impl EventService for EventServiceImpl {
                         }
                     };
 
-                    let response =
-                        connector_integration::webhook_utils::process_webhook_event(
-                            connector_data,
-                            request_details,
-                            webhook_secrets,
-                            Some(connector_config.clone()),
-                            source_verified,
-                        )
-                        .into_grpc_status()?;
+                    let response = connector_integration::webhook_utils::process_webhook_event(
+                        connector_data,
+                        request_details,
+                        webhook_secrets,
+                        Some(connector_config.clone()),
+                        source_verified,
+                    )
+                    .into_grpc_status()?;
 
                     Ok(tonic::Response::new(response))
                 }
@@ -159,17 +176,17 @@ async fn verify_webhook_source_external(
         connector_response_headers: None,
     };
 
-    let merchant_secret = webhook_secrets.ok_or_else(|| {
-        tonic::Status::invalid_argument(
-            "webhook_secrets is required for external webhook source verification",
-        )
-    })?;
+    let merchant_secret =
+        webhook_secrets.unwrap_or_else(|| domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: "default_secret".to_string().into_bytes(),
+            additional_secret: None,
+        });
 
     let verify_webhook_request = VerifyWebhookSourceRequestData {
         webhook_headers: request_details.headers.clone(),
         webhook_body: request_details.body.clone(),
         merchant_secret,
-        webhook_uri: None,
+        webhook_uri: request_details.uri.clone(),
     };
 
     let verify_webhook_router_data = RouterDataV2::<

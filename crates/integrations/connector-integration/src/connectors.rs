@@ -233,5 +233,11 @@ pub use self::peachpayments::Peachpayments;
 pub mod finix;
 pub use self::finix::Finix;
 
+pub mod trustly;
+pub use self::trustly::Trustly;
+
+pub mod itaubank;
+pub use self::itaubank::Itaubank;
+
 pub mod imerchantsolutions;
 pub use self::imerchantsolutions::Imerchantsolutions;

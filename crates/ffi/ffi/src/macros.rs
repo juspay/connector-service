@@ -57,8 +57,8 @@ macro_rules! req_transformer {
                 &connector_config,
                 config,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                ucs_env::error::ErrorSwitch::switch(e.current_context())
+            .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             let flow_data: $resource_common_data_type =
@@ -67,14 +67,14 @@ macro_rules! req_transformer {
                     connectors,
                     metadata,
                 ))
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             let payment_request_data: $request_data_type =
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -87,9 +87,8 @@ macro_rules! req_transformer {
 
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                    let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-                    ucs_env::error::ErrorSwitch::switch(&app_error)
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             Ok(connector_request)
@@ -155,8 +154,13 @@ macro_rules! res_transformer {
                 &connector_config,
                 config,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                ucs_env::error::ErrorSwitch::switch(e.current_context())
+            .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                let ctx = e.current_context();
+                grpc_api_types::payments::ConnectorResponseTransformationError {
+                    error_message: ctx.to_string(),
+                    error_code: ctx.error_code().to_string(),
+                    http_status_code: None,
+                }
             })?;
 
             let flow_data: $resource_common_data_type =
@@ -165,14 +169,24 @@ macro_rules! res_transformer {
                     connectors,
                     metadata,
                 ))
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    let ctx = e.current_context();
+                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                        error_message: ctx.to_string(),
+                        error_code: ctx.error_code().to_string(),
+                        http_status_code: None,
+                    }
                 })?;
 
             let payment_request_data: $request_data_type =
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    let ctx = e.current_context();
+                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                        error_message: ctx.to_string(),
+                        error_code: ctx.error_code().to_string(),
+                        http_status_code: None,
+                    }
                 })?;
 
             let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -199,14 +213,18 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-                ucs_env::error::ErrorSwitch::switch(&app_error)
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+                common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             domain_types::types::$generate_response_fn(response)
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+                    let ctx = e.current_context();
+                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                        error_message: ctx.to_string(),
+                        error_code: ctx.error_code().to_string(),
+                        http_status_code: ctx.http_status_code().map(u32::from),
+                    }
                 })
         }
     };
@@ -268,8 +286,8 @@ macro_rules! payout_req_transformer {
                 &connector_config,
                 config,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                ucs_env::error::ErrorSwitch::switch(e.current_context())
+            .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             let flow_data: $resource_common_data_type =
@@ -278,14 +296,14 @@ macro_rules! payout_req_transformer {
                     connectors,
                     metadata,
                 ))
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             let payment_request_data: $request_data_type =
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -298,9 +316,8 @@ macro_rules! payout_req_transformer {
 
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                    let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-                    ucs_env::error::ErrorSwitch::switch(&app_error)
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })?;
 
             Ok(connector_request)
@@ -368,8 +385,13 @@ macro_rules! payout_res_transformer {
                 &connector_config,
                 config,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                ucs_env::error::ErrorSwitch::switch(e.current_context())
+            .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                let ctx = e.current_context();
+                grpc_api_types::payments::ConnectorResponseTransformationError {
+                    error_message: ctx.to_string(),
+                    error_code: ctx.error_code().to_string(),
+                    http_status_code: None,
+                }
             })?;
 
             let flow_data: $resource_common_data_type =
@@ -378,14 +400,24 @@ macro_rules! payout_res_transformer {
                     connectors,
                     metadata,
                 ))
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    let ctx = e.current_context();
+                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                        error_message: ctx.to_string(),
+                        error_code: ctx.error_code().to_string(),
+                        http_status_code: None,
+                    }
                 })?;
 
             let payment_request_data: $request_data_type =
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
+                    let ctx = e.current_context();
+                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                        error_message: ctx.to_string(),
+                        error_code: ctx.error_code().to_string(),
+                        http_status_code: None,
+                    }
                 })?;
 
             let router_data = domain_types::router_data_v2::RouterDataV2 {
@@ -412,14 +444,13 @@ macro_rules! payout_res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-                ucs_env::error::ErrorSwitch::switch(&app_error)
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+                common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             domain_types::payouts::types::$generate_response_fn(response)
-                .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-                    ucs_env::error::ErrorSwitch::switch(e.current_context())
+                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+                    common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })
         }
     };

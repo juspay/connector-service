@@ -34,13 +34,16 @@ pub struct ImerchantsolutionsErrorResponse {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for ImerchantsolutionsAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Imerchantsolutions { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(errors::IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -99,7 +102,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ImerchantsolutionsPaymentsRequestData<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
     fn try_from(
         item: ImerchantsolutionsRouterData<
             RouterDataV2<
@@ -196,7 +199,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_optional_billing_phone_number(),
                     billing,
                     delivery_address,
-                    manual_capture: !item.router_data.request.is_auto_capture()?,
+                    manual_capture: !item.router_data.request.is_auto_capture(),
                 })
             }
             PaymentMethodData::CardRedirect(_)
@@ -218,8 +221,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(errors::IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Imerchantsolutions"),
+                    Default::default(),
                 ))?
             }
         }
@@ -288,13 +292,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_payment_status(
             item.response.result_code.clone(),
-            item.router_data.request.is_auto_capture()?,
+            item.router_data.request.is_auto_capture(),
         );
 
         if is_payment_failure(status) {
@@ -371,13 +375,13 @@ struct Captures {
 impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(
             item.response.status.clone(),
-            item.router_data.request.is_auto_capture()?,
+            item.router_data.request.is_auto_capture(),
         );
 
         if is_payment_failure(status) {
@@ -440,7 +444,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ImerchantsolutionsVoidRequestData
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
 
     fn try_from(
         item: ImerchantsolutionsRouterData<
@@ -475,7 +479,7 @@ enum ImerchantsolutionsVoidStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>,
@@ -543,7 +547,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ImerchantsolutionsCaptureRequestData
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
 
     fn try_from(
         item: ImerchantsolutionsRouterData<
@@ -556,7 +560,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            .change_context(errors::IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             psp_reference,
@@ -590,7 +596,7 @@ enum ImerchantsolutionsCaptureStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>,
@@ -599,7 +605,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
             get_capture_status(
                 item.response.status,
                 item.router_data.request.capture_method,
-            )?
+            )
         } else {
             AttemptStatus::CaptureFailed
         };
@@ -661,7 +667,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ImerchantsolutionsRefundRequestData
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
 
     fn try_from(
         item: ImerchantsolutionsRouterData<
@@ -703,7 +709,7 @@ enum ImerchantsolutionsRefundStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>,
@@ -770,19 +776,13 @@ struct Refunds {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = get_refund_status(item.response.status.clone());
 
         let connector_refund_id = item.router_data.request.connector_refund_id.clone();
-        let refund_data = item
-            .response
-            .refunds
-            .iter()
-            .find(|&refund| refund.psp_reference == connector_refund_id)
-            .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
 
         let response = if utils::is_refund_failure(status) {
             Err(ErrorResponse {
@@ -798,7 +798,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
             })
         } else {
             Ok(RefundsResponseData {
-                connector_refund_id: refund_data.psp_reference.clone(),
+                connector_refund_id,
                 refund_status: status,
                 status_code: item.http_code,
             })
@@ -861,22 +861,16 @@ fn get_attempt_status(
 fn get_capture_status(
     capture_status: ImerchantsolutionsCaptureStatus,
     capture_method: Option<common_enums::CaptureMethod>,
-) -> Result<AttemptStatus, errors::ConnectorError> {
+) -> AttemptStatus {
     match capture_status {
-        ImerchantsolutionsCaptureStatus::Received => Ok(AttemptStatus::CaptureInitiated),
+        ImerchantsolutionsCaptureStatus::Received => AttemptStatus::CaptureInitiated,
         ImerchantsolutionsCaptureStatus::PartiallyCaptured => match capture_method {
-            Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(errors::ConnectorError::CaptureMethodNotSupported)?
-            }
             Some(common_enums::CaptureMethod::ManualMultiple) => {
-                Ok(AttemptStatus::PartialChargedAndChargeable)
+                AttemptStatus::PartialChargedAndChargeable
             }
-            Some(common_enums::CaptureMethod::Manual)
-            | Some(common_enums::CaptureMethod::Automatic)
-            | Some(common_enums::CaptureMethod::SequentialAutomatic)
-            | None => Ok(AttemptStatus::PartialCharged),
+            _ => AttemptStatus::PartialCharged,
         },
-        ImerchantsolutionsCaptureStatus::Captured => Ok(AttemptStatus::Charged),
+        ImerchantsolutionsCaptureStatus::Captured => AttemptStatus::Charged,
     }
 }
 
