@@ -3430,12 +3430,23 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+    Adyen(AdyenClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Adyen's session_id and session_data for browser-side Adyen Drop-in/Components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdyenClientAuthenticationResponse {
+    /// The unique identifier of the session
+    pub session_id: String,
+    /// The session data required to initialize the Adyen SDK
+    pub session_data: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -9731,6 +9731,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Adyen(adyen_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Adyen(
+                        grpc_api_types::payments::AdyenClientAuthenticationResponse {
+                            session_id: adyen_data.session_id,
+                            session_data: Some(adyen_data.session_data),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

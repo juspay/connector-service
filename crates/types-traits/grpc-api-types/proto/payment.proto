@@ -1533,7 +1533,7 @@ message ClientAuthenticationTokenData {
 message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
-    // AdyenClientAuthenticationResponse adyen = 2;    // future
+    AdyenClientAuthenticationResponse adyen = 2;
     // CheckoutClientAuthenticationResponse checkout = 3; // future
   }
 }
@@ -1541,6 +1541,12 @@ message ConnectorSpecificClientAuthenticationResponse {
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
 message StripeClientAuthenticationResponse {
   SecretString client_secret = 1;
+}
+
+// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+message AdyenClientAuthenticationResponse {
+  string session_id = 1;
+  SecretString session_data = 2;
 }
 
 // Google Pay Session Data
