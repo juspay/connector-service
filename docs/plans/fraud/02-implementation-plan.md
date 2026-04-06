@@ -464,12 +464,14 @@ enum WebhookEventType {
 
 use common_enums::{AuthorizationStatus, Currency};
 use common_utils::events::{ApiEventMetric, ApiEventsType};
-use diesel_models::types::OrderDetailsWithAmount;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    payment_method_data::PaymentMethodData,
-    router_data::{Address, BrowserInformation, CustomerData},
+    connector_types::ConnectorCustomerData,
+    payment_address::{Address, OrderDetailsWithAmount},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    router_request_types::BrowserInformation,
+    types::ConnectorState,
 };
 
 // ============================================================================
@@ -503,16 +505,17 @@ pub struct FraudFlowData {
     pub merchant_fraud_check_id: Option<String>,
     pub order_id: Option<String>,
     pub connector_fraud_check_id: Option<String>,
-    pub connector_state: Option<crate::router_data::ConnectorState>,
+    pub connector_state: Option<ConnectorState>,
 }
 
+/// Generic over PaymentMethodDataTypes to support PCI and vault modes
 #[derive(Debug, Clone)]
-pub struct FraudEvaluatePreAuthorizationData {
+pub struct FraudEvaluatePreAuthorizationData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub currency: Currency,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub customer: Option<CustomerData>,
-    pub payment_method: Option<PaymentMethodData>,
+    pub customer: Option<ConnectorCustomerData<T>>,
+    pub payment_method: Option<PaymentMethodData<T>>,
     pub browser_info: Option<BrowserInformation>,
     pub shipping_address: Option<Address>,
     pub billing_address: Option<Address>,
@@ -536,11 +539,11 @@ pub struct FraudEvaluatePreAuthorizationResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct FraudEvaluatePostAuthorizationData {
+pub struct FraudEvaluatePostAuthorizationData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub currency: Currency,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub payment_method: Option<PaymentMethodData>,
+    pub payment_method: Option<PaymentMethodData<T>>,
     pub authorization_status: AuthorizationStatus,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -561,11 +564,11 @@ pub struct FraudEvaluatePostAuthorizationResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct FraudRecordTransactionDataData {
+pub struct FraudRecordTransactionDataData<T: PaymentMethodDataTypes> {
     pub amount: i64,
     pub currency: Currency,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub customer: Option<CustomerData>,
+    pub customer: Option<ConnectorCustomerData<T>>,
     pub browser_info: Option<BrowserInformation>,
     pub shipping_address: Option<Address>,
     pub billing_address: Option<Address>,
@@ -738,6 +741,7 @@ impl ApiEventMetric for FraudGetResponse {
 2. Run `cargo check` to verify compilation
 3. Confirm FraudCheckStatus has exactly 5 variants (not counting UNSPECIFIED)
 4. Confirm FraudAction has exactly 2 variants (not counting UNSPECIFIED)
+5. Perform final validations by running `rustc` and fixing the errors
 
 **Commit Message**: `feat(domain): add fraud check domain types with Hyperswitch-aligned enums`
 
@@ -746,13 +750,40 @@ impl ApiEventMetric for FraudGetResponse {
 ### Step 2.2: Add Connector Flow Types
 **File**: `crates/types-traits/domain_types/src/connector_flow.rs`
 
-Add variants to existing enum:
+Add the fraud flow marker structs before the `FlowName` enum:
 
 ```rust
-pub enum ConnectorFlow {
-    // ... existing flows
-    
-    // Fraud flows - Updated method names
+// Fraud flows - Phase 2
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePreAuthorization;
+
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePostAuthorization;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordTransactionData;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordFulfillmentData;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordReturnData;
+
+#[derive(Debug, Clone)]
+pub struct FraudGet;
+```
+
+Then add the corresponding variants to the `FlowName` enum:
+
+```rust
+#[derive(strum::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum FlowName {
+    // ... existing variants
+    PayoutCreateLink,
+    PayoutCreateRecipient,
+    PayoutEnrollDisburseAccount,
+    // Fraud flows - Phase 2
     FraudEvaluatePreAuthorization,
     FraudEvaluatePostAuthorization,
     FraudRecordTransactionData,
@@ -763,9 +794,10 @@ pub enum ConnectorFlow {
 ```
 
 **Verification Steps**:
-1. Verify enum compiles
+1. Verify `cargo check -p domain_types` compiles
 2. Check that all flow types are unique
 3. Confirm exactly 6 fraud flow types (no Cancel)
+4. Verify `FlowName` derives display as snake_case
 
 **Commit Message**: `feat(domain): add fraud connector flow types`
 
