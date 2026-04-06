@@ -1948,7 +1948,7 @@ impl ForeignTryFrom<(RazorpayDeleteTokenResponse, Self, u16)>
         domain_types::connector_types::MandateRevokeResponseData,
     >
 {
-    type Error = errors::ConnectorError;
+    type Error = IntegrationError;
 
     fn foreign_try_from(
         (response, data, http_code): (RazorpayDeleteTokenResponse, Self, u16),

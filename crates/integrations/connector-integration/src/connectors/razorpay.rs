@@ -1400,7 +1400,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateRevokeRequestData,
             MandateRevokeResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
@@ -1418,7 +1418,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateRevokeRequestData,
             MandateRevokeResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
         let customer_id = req.request.mandate_id.peek();
         let token_id = req
@@ -1426,8 +1426,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_mandate_id
             .as_ref()
             .map(|s| s.peek().to_string())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "connector_mandate_id",
+                context: Default::default(),
             })?;
         Ok(format!(
             "{base_url}v1/customers/{customer_id}/tokens/{token_id}"
@@ -1451,24 +1452,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateRevokeRequestData,
             MandateRevokeResponseData,
         >,
-        errors::ConnectorError,
+        ConnectorResponseTransformationError,
     > {
         let response: razorpay::RazorpayDeleteTokenResponse = res
             .response
             .parse_struct("RazorpayDeleteTokenResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(crate::utils::response_deserialization_fail(
+                res.status_code,
+                "razorpay: RazorpayDeleteTokenResponse",
+            ))?;
 
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            .change_context(crate::utils::response_handling_fail(
+                res.status_code,
+                "razorpay: MandateRevoke response handling",
+            ))
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1476,7 +1483,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
         self.build_error_response(res, event_builder)
     }
 }
