@@ -1,5 +1,5 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-grpc-bindings \
-        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist clean
+        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -14,7 +14,7 @@ include $(SDK_ROOT)/../common.mk
 # SDK-specific paths continued
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
-JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-0.0.1.tgz
+JS_TARBALL       := $(PACKAGE_DIR)/hs-paylib-0.0.1.tgz
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -253,6 +253,23 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings 
 		pkill -f grpc-server 2>/dev/null || true; \
 		rm -rf /tmp/test-hyperswitch-js-grpc; \
 		exit $$EXIT
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes the package to npm registry.
+# Requires NPM_TOKEN to be set or logged in via npm login.
+# ---------------------------------------------------------------------------
+publish: build-ts
+	@if [ -z "$(NPM_TOKEN)" ]; then \
+		echo "Error: NPM_TOKEN is not set"; \
+		echo "Set it with: export NPM_TOKEN=npm_xxxxx"; \
+		exit 1; \
+	fi
+	@echo "Configuring npm with authentication token..."
+	@npm config set //registry.npmjs.org/:_authToken=$(NPM_TOKEN)
+	@echo "Publishing hs-paylib to npm..."
+	@npm publish --access public
+	@echo "Published hs-paylib to npm registry."
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules

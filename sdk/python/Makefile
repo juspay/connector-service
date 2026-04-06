@@ -1,5 +1,5 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-composite test-grpc test-grpc-no-server dist clean
+        generate-flows pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -151,7 +151,7 @@ test-package: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(PACKAGE_DIR)/hs_paylib-*.whl \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
@@ -176,7 +176,7 @@ test-composite: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-composite \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(PACKAGE_DIR)/hs_paylib-*.whl \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py-composite && python3 test_smoke_composite.py --creds-file creds.json
 	@rm -rf /tmp/test-hyperswitch-py-composite
@@ -197,7 +197,7 @@ test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-grpc
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-grpc \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(PACKAGE_DIR)/hs_paylib-*.whl \
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
@@ -224,7 +224,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-grpc
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-grpc \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(PACKAGE_DIR)/hs_paylib-*.whl \
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
@@ -259,6 +259,24 @@ dist:
 	@# dist always ships release-optimised binaries (lto=thin, codegen-units=1).
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution wheel created in $(PACKAGE_DIR)/"
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes the package to PyPI.
+# Requires TWINE_USERNAME and TWINE_PASSWORD to be set.
+# ---------------------------------------------------------------------------
+publish: pack-archive
+	@if [ -z "$(TWINE_USERNAME)" ] || [ -z "$(TWINE_PASSWORD)" ]; then \
+		echo "Error: TWINE_USERNAME or TWINE_PASSWORD is not set"; \
+		echo "Set them with:"; \
+		echo "  export TWINE_USERNAME=__token__"; \
+		echo "  export TWINE_PASSWORD=pypi-xxxxx"; \
+		exit 1; \
+	fi
+	@echo "Publishing hs-paylib to PyPI..."
+	@python3 -m pip install twine --quiet
+	@python3 -m twine upload $(PACKAGE_DIR)/hs_paylib-*.whl
+	@echo "Published hs-paylib to PyPI."
 
 clean:
 	@rm -rf $(GENERATED_OUT)

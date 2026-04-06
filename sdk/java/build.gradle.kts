@@ -51,7 +51,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.hyperswitch"
-            artifactId = "payments-client"
+            artifactId = "hs-paylib"
             from(components["java"])
         }
     }
