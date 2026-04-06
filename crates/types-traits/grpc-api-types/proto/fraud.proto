@@ -108,9 +108,9 @@ message FraudReason {
 // ============================================================================
 
 message FraudServiceEvaluatePreAuthorizationRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED - was optional
+  string merchant_fraud_id = 1;        // REQUIRED - was optional
   string order_id = 2;                       // REQUIRED - was optional
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   Money amount = 4;
   optional PaymentMethod payment_method = 5;
   Customer customer = 6;                     // REQUIRED - was optional
@@ -121,7 +121,7 @@ message FraudServiceEvaluatePreAuthorizationRequest {
   optional string connector_name = 11;
   optional SecretString connector_feature_data = 12;
   optional string webhook_url = 13;
-  optional string previous_fraud_check_id = 14;
+  optional string previous_fraud_id = 14;
   optional ConnectorState connector_state = 15;
   string device_fingerprint = 16;            // NEW - Signifyd requirement
   string session_id = 17;                    // NEW - Session tracking
@@ -129,9 +129,9 @@ message FraudServiceEvaluatePreAuthorizationRequest {
 }
 
 message FraudServiceEvaluatePreAuthorizationResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   FraudAction recommended_action = 5;        // ACCEPT or REJECT
   optional FraudScore score = 6;
@@ -151,9 +151,9 @@ message FraudServiceEvaluatePreAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceEvaluatePostAuthorizationRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   string connector_transaction_id = 4;       // REQUIRED - was optional
   Money amount = 5;
   optional PaymentMethod payment_method = 6;
@@ -168,9 +168,9 @@ message FraudServiceEvaluatePostAuthorizationRequest {
 }
 
 message FraudServiceEvaluatePostAuthorizationResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   FraudAction recommended_action = 5;        // ACCEPT or REJECT
   optional FraudScore score = 6;
@@ -189,7 +189,7 @@ message FraudServiceEvaluatePostAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceRecordTransactionDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
   Money amount = 3;
   string session_id = 4;                     // NEW - was optional
@@ -204,9 +204,9 @@ message FraudServiceRecordTransactionDataRequest {
 }
 
 message FraudServiceRecordTransactionDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   FraudAction recommended_action = 5;        // ACCEPT or REJECT
   optional FraudScore score = 6;
@@ -224,9 +224,9 @@ message FraudServiceRecordTransactionDataResponse {
 // ============================================================================
 
 message FraudServiceRecordFulfillmentDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FulfillmentStatus fulfillment_status = 4;
   repeated FraudShipment shipments = 5;
   optional SecretString connector_feature_data = 6;
@@ -236,9 +236,9 @@ message FraudServiceRecordFulfillmentDataRequest {
 }
 
 message FraudServiceRecordFulfillmentDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   repeated string shipment_ids = 5;
   optional ErrorInfo error = 6;
@@ -254,9 +254,9 @@ message FraudServiceRecordFulfillmentDataResponse {
 // ============================================================================
 
 message FraudServiceRecordReturnDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   optional string refund_transaction_id = 4;
   Money amount = 5;
   RefundMethod refund_method = 6;
@@ -269,9 +269,9 @@ message FraudServiceRecordReturnDataRequest {
 }
 
 message FraudServiceRecordReturnDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   optional string return_id = 5;
   optional ErrorInfo error = 6;
@@ -287,16 +287,16 @@ message FraudServiceRecordReturnDataResponse {
 // ============================================================================
 
 message FraudServiceGetRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   optional string case_id = 4;
 }
 
 message FraudServiceGetResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
   FraudAction recommended_action = 5;        // ACCEPT or REJECT
   optional FraudScore score = 6;
@@ -315,9 +315,9 @@ message FraudServiceGetResponse {
 // ============================================================================
 
 message FraudEventContent {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   WebhookEventType event_type = 4;
   FraudCheckStatus fraud_check_status = 5;   // Hyperswitch-aligned
   FraudAction recommended_action = 6;        // ACCEPT or REJECT

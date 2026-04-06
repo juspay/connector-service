@@ -1,36 +1,32 @@
 # Fraud Interface Implementation Plan
 
 ## Document Information
-- **Version**: 2.0.0
+- **Version**: 3.0.0
 - **Date**: 2026-04-06
-- **Status**: Draft - Synced with Specification v4.0.0
+- **Status**: Draft - Synced with Specification v2.1.0
 - **Target Audience**: Freshers and Junior Developers
 - **Estimated Duration**: 4-6 weeks
 - **Prerequisites**: Basic Rust knowledge, understanding of gRPC/protobuf
 
 ## Executive Summary
 
-This plan provides step-by-step instructions for implementing the Fraud interface in Hyperswitch Prism. Each step is designed to be completed and committed independently, following trunk-based development practices.
+This plan provides step-by-step instructions for implementing the Fraud interface in Hyperswitch Prism. The implementation follows the **PaymentService/Payouts pattern** exactly - no new patterns are introduced.
 
 **Key Constraint**: All enums MUST match Hyperswitch exactly - no new states allowed.
 
-## Critical Issues from Spec Review (Addressed)
+**Major Change from v2.0.0**: 
+- Phase 2 and Phase 3 are now **merged** (domain types now include flow markers)
+- Folder structure follows **payouts pattern** (`fraud/` subdirectory)
+- No separate trait file in `interfaces` crate (traits defined at connector level per PaymentService pattern)
 
-Before implementation, the following issues from the spec review have been addressed:
-
-1. ✅ **Hyperswitch-Aligned Enums**: FraudCheckStatus and FraudAction match Hyperswitch exactly
-2. ✅ **Renamed Methods**: Clear verb-noun format (EvaluatePreAuthorization, RecordTransactionData, etc.)
-3. ✅ **Removed Cancel**: Method not supported uniformly by providers
-4. ✅ **Standardized IDs**: `merchant_fraud_check_id` / `connector_fraud_check_id`
-5. ✅ **Added Required Fields**: device_fingerprint, session_id, synchronous flag
-6. ✅ **ConnectorState Support**: For session management
-7. ✅ **Field Optionality**: Fixed - identifiers now required
+---
 
 ## Pre-Implementation Checklist
 
 - [ ] Read and understand the specification document (`01-fraud-interface-specification.md`)
 - [ ] Review `04-proto-validation-analysis.md` for provider mappings
 - [ ] Review existing payment.proto and payouts.proto patterns
+- [ ] Review the payouts folder structure: `domain_types/src/payouts/`
 - [ ] Set up development environment (Rust 1.70+, protoc)
 - [ ] Understand the connector integration pattern
 - [ ] Review existing connector implementations (stripe.rs, adyen.rs)
@@ -153,20 +149,20 @@ message FraudReason {
 // ============================================================================
 
 message FraudServiceEvaluatePreAuthorizationRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED - was optional
-  string order_id = 2;                       // REQUIRED - was optional
-  optional string connector_fraud_check_id = 3;
+  string merchant_fraud_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
+  optional string connector_fraud_id = 3;
   Money amount = 4;
   optional PaymentMethod payment_method = 5;
-  Customer customer = 6;                     // REQUIRED - was optional
+  Customer customer = 6;                     // REQUIRED
   repeated FraudProduct products = 7;
-  BrowserInformation browser_info = 8;       // REQUIRED - was optional
+  BrowserInformation browser_info = 8;       // REQUIRED
   optional Address shipping_address = 9;
   optional Address billing_address = 10;
   optional string connector_name = 11;
   optional SecretString connector_feature_data = 12;
   optional string webhook_url = 13;
-  optional string previous_fraud_check_id = 14;
+  optional string previous_fraud_id = 14;
   optional ConnectorState connector_state = 15;
   string device_fingerprint = 16;            // NEW - Signifyd requirement
   string session_id = 17;                    // NEW - Session tracking
@@ -174,11 +170,11 @@ message FraudServiceEvaluatePreAuthorizationRequest {
 }
 
 message FraudServiceEvaluatePreAuthorizationResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
-  FraudAction recommended_action = 5;        // ACCEPT or REJECT
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
+  FraudAction recommended_action = 5;
   optional FraudScore score = 6;
   repeated FraudReason reasons = 7;
   optional string case_id = 8;
@@ -196,10 +192,10 @@ message FraudServiceEvaluatePreAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceEvaluatePostAuthorizationRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
-  string connector_transaction_id = 4;       // REQUIRED - was optional
+  optional string connector_fraud_id = 3;
+  string connector_transaction_id = 4;       // REQUIRED
   Money amount = 5;
   optional PaymentMethod payment_method = 6;
   AuthorizationStatus authorization_status = 7;
@@ -213,11 +209,11 @@ message FraudServiceEvaluatePostAuthorizationRequest {
 }
 
 message FraudServiceEvaluatePostAuthorizationResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
-  FraudAction recommended_action = 5;        // ACCEPT or REJECT
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
+  FraudAction recommended_action = 5;
   optional FraudScore score = 6;
   repeated FraudReason reasons = 7;
   optional string case_id = 8;
@@ -234,10 +230,10 @@ message FraudServiceEvaluatePostAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceRecordTransactionDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
   Money amount = 3;
-  string session_id = 4;                     // NEW - was optional
+  string session_id = 4;                     // NEW
   optional Customer customer = 5;
   repeated FraudProduct products = 6;
   optional BrowserInformation browser_info = 7;
@@ -249,11 +245,11 @@ message FraudServiceRecordTransactionDataRequest {
 }
 
 message FraudServiceRecordTransactionDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
-  FraudAction recommended_action = 5;        // ACCEPT or REJECT
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
+  FraudAction recommended_action = 5;
   optional FraudScore score = 6;
   repeated FraudReason reasons = 7;
   optional ErrorInfo error = 8;
@@ -269,9 +265,9 @@ message FraudServiceRecordTransactionDataResponse {
 // ============================================================================
 
 message FraudServiceRecordFulfillmentDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   FulfillmentStatus fulfillment_status = 4;
   repeated FraudShipment shipments = 5;
   optional SecretString connector_feature_data = 6;
@@ -281,10 +277,10 @@ message FraudServiceRecordFulfillmentDataRequest {
 }
 
 message FraudServiceRecordFulfillmentDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
   repeated string shipment_ids = 5;
   optional ErrorInfo error = 6;
   uint32 status_code = 7;
@@ -299,9 +295,9 @@ message FraudServiceRecordFulfillmentDataResponse {
 // ============================================================================
 
 message FraudServiceRecordReturnDataRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   optional string refund_transaction_id = 4;
   Money amount = 5;
   RefundMethod refund_method = 6;
@@ -314,10 +310,10 @@ message FraudServiceRecordReturnDataRequest {
 }
 
 message FraudServiceRecordReturnDataResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
   optional string return_id = 5;
   optional ErrorInfo error = 6;
   uint32 status_code = 7;
@@ -332,18 +328,18 @@ message FraudServiceRecordReturnDataResponse {
 // ============================================================================
 
 message FraudServiceGetRequest {
-  string merchant_fraud_check_id = 1;        // REQUIRED
+  string merchant_fraud_id = 1;        // REQUIRED
   string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   optional string case_id = 4;
 }
 
 message FraudServiceGetResponse {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
-  FraudCheckStatus fraud_check_status = 4;   // Hyperswitch-aligned
-  FraudAction recommended_action = 5;        // ACCEPT or REJECT
+  optional string connector_fraud_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
+  FraudAction recommended_action = 5;
   optional FraudScore score = 6;
   repeated FraudReason reasons = 7;
   optional string case_id = 8;
@@ -360,12 +356,12 @@ message FraudServiceGetResponse {
 // ============================================================================
 
 message FraudEventContent {
-  optional string merchant_fraud_check_id = 1;
+  optional string merchant_fraud_id = 1;
   optional string order_id = 2;
-  optional string connector_fraud_check_id = 3;
+  optional string connector_fraud_id = 3;
   WebhookEventType event_type = 4;
-  FraudCheckStatus fraud_check_status = 5;   // Hyperswitch-aligned
-  FraudAction recommended_action = 6;        // ACCEPT or REJECT
+  FraudCheckStatus fraud_check_status = 5;
+  FraudAction recommended_action = 6;
   optional FraudScore score = 7;
   repeated FraudReason reasons = 8;
   optional string case_id = 9;
@@ -454,54 +450,391 @@ enum WebhookEventType {
 
 ---
 
-## Phase 2: Domain Types (Week 1-2)
+## Phase 2: Domain Types (Following Payouts Pattern) (Week 1-2)
 
-### Step 2.1: Create fraud_types.rs
-**File**: `crates/types-traits/domain_types/src/fraud_types.rs`
+**Important**: Following the PaymentService/Payouts pattern, we do NOT create a separate `fraud.rs` in the `interfaces` crate. Instead, traits are implemented directly in connector files.
+
+Phase 2 requires the gRPC-generated types to be available, which depends on build.rs being updated first.
+
+### Step 2.1: Update build.rs to Compile fraud.proto
+**File**: `crates/types-traits/grpc-api-types/build.rs`
+
+Add `fraud.proto` to the compilation list after `payouts.proto`:
 
 ```rust
-//! Fraud check domain types - Aligned with Hyperswitch
+bridge_generator.compile_protos_with_config(
+    config,
+    &[
+        "proto/services.proto",
+        "proto/health_check.proto",
+        "proto/payment.proto",
+        "proto/composite_services.proto",
+        "proto/composite_payment.proto",
+        "proto/payment_methods.proto",
+        "proto/sdk_config.proto",
+        "proto/payouts.proto",
+        "proto/fraud.proto",  // ADD THIS LINE
+    ],
+    &["proto"],
+)?;
+```
 
-use common_enums::{AuthorizationStatus, Currency};
-use common_utils::events::{ApiEventMetric, ApiEventsType};
-use serde::{Deserialize, Serialize};
+**Verification Steps**:
+1. Run `cargo build -p grpc-api-types`
+2. Verify generated code includes fraud module
+3. Check that `grpc_api_types::fraud::*` types are available
 
-use crate::{
-    connector_types::{ConnectorCustomerData, ConnectorResponseHeaders, RawConnectorRequestResponse},
-    payment_address::{Address, OrderDetailsWithAmount, PhoneDetails},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_request_types::BrowserInformation,
-    types::{ConnectorState, Connectors},
-};
+**Commit Message**: `feat(build): add fraud.proto to build configuration`
 
+---
+
+### Step 2.2: Create Fraud Folder Structure
+
+Create the directory structure following the payouts pattern:
+
+```bash
+mkdir -p crates/types-traits/domain_types/src/fraud
+touch crates/types-traits/domain_types/src/fraud/mod.rs
+touch crates/types-traits/domain_types/src/fraud/fraud_types.rs
+touch crates/types-traits/domain_types/src/fraud/router_request_types.rs
+touch crates/types-traits/domain_types/src/fraud/types.rs
+```
+
+---
+
+### Step 2.3: Add Fraud Flow Markers to connector_flow.rs
+**File**: `crates/types-traits/domain_types/src/connector_flow.rs`
+
+Add the fraud flow marker structs **after** the Payout flows (around line 95), **before** the `FlowName` enum:
+
+```rust
 // ============================================================================
-// FLOW MARKER TYPES (Hyperswitch-Aligned)
+// FRAUD FLOWS (Add after Payout flows, before FlowName enum)
 // ============================================================================
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudEvaluatePreAuthorization;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudEvaluatePostAuthorization;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudRecordTransactionData;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudRecordFulfillmentData;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudRecordReturnData;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct FraudGet;
+```
+
+Then add the corresponding variants to the `FlowName` enum:
+
+```rust
+#[derive(strum::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum FlowName {
+    // ... existing variants
+    PayoutEnrollDisburseAccount,
+    // Fraud flows - NEW
+    FraudEvaluatePreAuthorization,
+    FraudEvaluatePostAuthorization,
+    FraudRecordTransactionData,
+    FraudRecordFulfillmentData,
+    FraudRecordReturnData,
+    FraudGet,
+}
+```
+
+**Note**: The `#[strum(serialize_all = "snake_case")]` attribute ensures the string representation is `fraud_evaluate_pre_authorization`, matching the existing pattern.
+
+**Verification Steps**:
+1. Verify flow markers have `#[derive(Debug, Clone)]` (matching existing flow marker pattern)
+2. Run `cargo check -p domain_types` compiles
+3. Check that all flow types are unique
+4. Confirm exactly 6 fraud flow types (no Cancel)
+5. Verify `FlowName` derives display as snake_case
+
+**Commit Message**: `feat(domain): add fraud connector flow types to connector_flow.rs`
+
+---
+
+### Step 2.4: Create fraud/mod.rs
+**File**: `crates/types-traits/domain_types/src/fraud/mod.rs`
+
+Following the payouts pattern (see `payouts.rs`):
+
+```rust
+pub mod fraud_types;
+pub mod router_request_types;
+pub mod types;
+```
+
+**Commit Message**: `feat(domain): add fraud module exports`
+
+---
+
+### Step 2.5: Create fraud/fraud_types.rs
+**File**: `crates/types-traits/domain_types/src/fraud/fraud_types.rs`
+
+Following the payouts pattern (see `payouts/payouts_types.rs`):
+
+```rust
+//! Fraud check domain types - Following the payouts pattern
+
+use crate::{
+    connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
+    types::Connectors,
+};
+use hyperswitch_masking::Secret;
 
 // ============================================================================
-// CORE FRAUD DATA TYPES
+// FRAUD FLOW DATA (Equivalent to PayoutFlowData)
 // ============================================================================
 
-/// Product information for fraud analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+pub struct FraudFlowData {
+    pub merchant_fraud_id: Option<String>,
+    pub order_id: Option<String>,
+    pub connector_fraud_id: Option<String>,
+    pub connectors: Connectors,
+    pub connector_state: Option<crate::types::ConnectorState>,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+}
+
+impl FraudFlowData {
+    pub fn new(connectors: Connectors) -> Self {
+        Self {
+            merchant_fraud_id: None,
+            order_id: None,
+            connector_fraud_id: None,
+            connectors,
+            connector_state: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+        }
+    }
+}
+
+impl RawConnectorRequestResponse for FraudFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl ConnectorResponseHeaders for FraudFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+// ============================================================================
+// REQUEST DATA TYPES (Equivalent to PayoutCreateRequest, etc.)
+// ============================================================================
+
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePreAuthorizationRequest {
+    pub amount: i64,
+    pub currency: common_enums::Currency,
+    pub customer: Option<crate::connector_types::ConnectorCustomerData>,
+    pub payment_method: Option<crate::payment_method_data::PaymentMethodData>,
+    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub shipping_address: Option<crate::payment_address::Address>,
+    pub billing_address: Option<crate::payment_address::Address>,
+    pub connector_name: Option<String>,
+    pub previous_fraud_id: Option<String>,
+    pub device_fingerprint: String,
+    pub session_id: String,
+    pub synchronous: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudEvaluatePreAuthorizationResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub recommended_action: FraudAction,
+    pub score: Option<FraudScore>,
+    pub reasons: Vec<FraudReason>,
+    pub case_id: Option<String>,
+    pub redirect_url: Option<String>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePostAuthorizationRequest {
+    pub amount: i64,
+    pub currency: common_enums::Currency,
+    pub payment_method: Option<crate::payment_method_data::PaymentMethodData>,
+    pub authorization_status: common_enums::AuthorizationStatus,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub connector_name: Option<String>,
+    pub connector_transaction_id: String,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudEvaluatePostAuthorizationResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub recommended_action: FraudAction,
+    pub score: Option<FraudScore>,
+    pub reasons: Vec<FraudReason>,
+    pub case_id: Option<String>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordTransactionDataRequest {
+    pub amount: i64,
+    pub currency: common_enums::Currency,
+    pub customer: Option<crate::connector_types::ConnectorCustomerData>,
+    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub shipping_address: Option<crate::payment_address::Address>,
+    pub billing_address: Option<crate::payment_address::Address>,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudRecordTransactionDataResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub recommended_action: FraudAction,
+    pub score: Option<FraudScore>,
+    pub reasons: Vec<FraudReason>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordFulfillmentDataRequest {
+    pub fulfillment_status: FulfillmentStatus,
+    pub shipments: Vec<FraudShipment>,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudRecordFulfillmentDataResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub shipment_ids: Vec<String>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordReturnDataRequest {
+    pub amount: i64,
+    pub currency: common_enums::Currency,
+    pub refund_method: RefundMethod,
+    pub return_reason: Option<String>,
+    pub return_reason_code: Option<String>,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudRecordReturnDataResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub return_id: Option<String>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FraudGetRequest {
+    pub merchant_fraud_id: Option<String>,
+    pub order_id: Option<String>,
+    pub connector_fraud_id: Option<String>,
+    pub case_id: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudGetResponse {
+    pub fraud_id: String,
+    pub status: FraudCheckStatus,
+    pub recommended_action: FraudAction,
+    pub score: Option<FraudScore>,
+    pub reasons: Vec<FraudReason>,
+    pub case_id: Option<String>,
+    pub reviewed_by: Option<String>,
+    pub reviewed_at: Option<i64>,
+    pub connector_metadata: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// SUPPORTING TYPES (Hyperswitch-Aligned - DO NOT MODIFY)
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FraudCheckStatus {
+    Pending,
+    Fraud,
+    Legit,
+    ManualReview,
+    TransactionFailure,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FraudAction {
+    Accept,
+    Reject,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FulfillmentStatus {
+    Pending,
+    Partial,
+    Complete,
+    Replacement,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RefundMethod {
+    StoreCredit,
+    OriginalPaymentInstrument,
+    NewPaymentInstrument,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudScore {
+    pub score: i32,
+    pub risk_level: Option<String>,
+    pub threshold: Option<i32>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FraudReason {
+    pub code: String,
+    pub message: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FraudProduct {
     pub product_id: String,
     pub product_name: String,
@@ -516,17 +849,14 @@ pub struct FraudProduct {
     pub requires_shipping: Option<bool>,
 }
 
-/// Shipment destination information
 #[derive(Debug, Clone)]
 pub struct FraudDestination {
-    pub full_name: hyperswitch_masking::Secret<String>,
+    pub full_name: Secret<String>,
     pub organization: Option<String>,
-    pub email: Option<hyperswitch_masking::Secret<String>>,
-    pub address: Address,
-    pub phone: Option<PhoneDetails>,
+    pub email: Option<Secret<String>>,
+    pub address: crate::payment_address::Address,
 }
 
-/// Fulfillment shipment details
 #[derive(Debug, Clone)]
 pub struct FraudShipment {
     pub shipment_id: String,
@@ -540,512 +870,109 @@ pub struct FraudShipment {
     pub shipment_status: Option<String>,
     pub shipped_at: Option<i64>,
 }
-
-// ============================================================================
-// FLOW DATA AND REQUEST/RESPONSE TYPES
-// ============================================================================
-
-/// Shared flow data for all fraud operations
-#[derive(Debug, Clone)]
-pub struct FraudFlowData<T: PaymentMethodDataTypes> {
-    pub merchant_fraud_check_id: Option<String>,
-    pub order_id: Option<String>,
-    pub connector_fraud_check_id: Option<String>,
-    pub connector_state: Option<ConnectorState>,
-    pub connectors: Connectors,
-    pub raw_connector_response: Option<hyperswitch_masking::Secret<String>>,
-    pub raw_connector_request: Option<hyperswitch_masking::Secret<String>>,
-    pub connector_response_headers: Option<http::HeaderMap>,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> FraudFlowData<T> {
-    pub fn new(connectors: Connectors) -> Self {
-        Self {
-            merchant_fraud_check_id: None,
-            order_id: None,
-            connector_fraud_check_id: None,
-            connector_state: None,
-            connectors,
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T: PaymentMethodDataTypes> RawConnectorRequestResponse for FraudFlowData<T> {
-    fn set_raw_connector_response(&mut self, response: Option<hyperswitch_masking::Secret<String>>) {
-        self.raw_connector_response = response;
-    }
-
-    fn get_raw_connector_response(&self) -> Option<hyperswitch_masking::Secret<String>> {
-        self.raw_connector_response.clone()
-    }
-
-    fn get_raw_connector_request(&self) -> Option<hyperswitch_masking::Secret<String>> {
-        self.raw_connector_request.clone()
-    }
-
-    fn set_raw_connector_request(&mut self, request: Option<hyperswitch_masking::Secret<String>>) {
-        self.raw_connector_request = request;
-    }
-}
-
-impl<T: PaymentMethodDataTypes> ConnectorResponseHeaders for FraudFlowData<T> {
-    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
-        self.connector_response_headers = headers;
-    }
-
-    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
-        self.connector_response_headers.as_ref()
-    }
-}
-
-// ============================================================================
-// REQUEST/RESPONSE DATA TYPES
-// ============================================================================
-
-/// Request data for pre-authorization fraud evaluation
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePreAuthorizationData<T: PaymentMethodDataTypes> {
-    pub amount: i64,
-    pub currency: Currency,
-    pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub customer: Option<ConnectorCustomerData<T>>,
-    pub payment_method: Option<PaymentMethodData<T>>,
-    pub browser_info: Option<BrowserInformation>,
-    pub shipping_address: Option<Address>,
-    pub billing_address: Option<Address>,
-    pub connector_name: Option<String>,
-    pub previous_fraud_check_id: Option<String>,
-    /// Signifyd device fingerprint for tracking
-    pub device_fingerprint: String,
-    /// Session identifier for tracking
-    pub session_id: String,
-    /// Whether to use synchronous (Riskified decide) or async mode
-    pub synchronous: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudEvaluatePreAuthorizationResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub recommended_action: FraudAction,  // ACCEPT or REJECT
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub redirect_url: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePostAuthorizationData<T: PaymentMethodDataTypes> {
-    pub amount: i64,
-    pub currency: Currency,
-    pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub payment_method: Option<PaymentMethodData<T>>,
-    pub authorization_status: AuthorizationStatus,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
-    pub connector_name: Option<String>,
-    pub connector_transaction_id: String,  // REQUIRED
-    pub session_id: String,                // NEW
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudEvaluatePostAuthorizationResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub recommended_action: FraudAction,  // ACCEPT or REJECT
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordTransactionDataData<T: PaymentMethodDataTypes> {
-    pub amount: i64,
-    pub currency: Currency,
-    pub order_details: Option<Vec<OrderDetailsWithAmount>>,
-    pub customer: Option<ConnectorCustomerData<T>>,
-    pub browser_info: Option<BrowserInformation>,
-    pub shipping_address: Option<Address>,
-    pub billing_address: Option<Address>,
-    pub session_id: String,  // NEW
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudRecordTransactionDataResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub recommended_action: FraudAction,  // ACCEPT or REJECT
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordFulfillmentDataData {
-    pub fulfillment_status: FulfillmentStatus,
-    pub shipments: Vec<FraudShipment>,
-    pub session_id: String,  // NEW
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudRecordFulfillmentDataResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub shipment_ids: Vec<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordReturnDataData {
-    pub amount: i64,
-    pub currency: Currency,
-    pub refund_method: RefundMethod,
-    pub return_reason: Option<String>,
-    pub return_reason_code: Option<String>,
-    pub session_id: String,  // NEW
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudRecordReturnDataResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub return_id: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudGetData {
-    pub merchant_fraud_check_id: Option<String>,
-    pub order_id: Option<String>,
-    pub connector_fraud_check_id: Option<String>,
-    pub case_id: Option<String>,
-}
-
-/// Generic type alias for fraud router data
-pub type FraudRouterData<T, Req, Resp> = crate::router_data::RouterData<T, FraudFlowData<T>, Req, Resp>;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudGetResponse {
-    pub fraud_check_id: String,
-    pub status: FraudCheckStatus,    // Hyperswitch-aligned
-    pub recommended_action: FraudAction,  // ACCEPT or REJECT
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub reviewed_by: Option<String>,
-    pub reviewed_at: Option<i64>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-// ============================================================================
-// ENUMS AND SUPPORTING TYPES (Hyperswitch-Aligned - DO NOT MODIFY)
-// ============================================================================
-
-/// FraudCheckStatus - EXACTLY matches Hyperswitch
-/// From: crates/common_enums/src/enums.rs
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FraudCheckStatus {
-    Pending,
-    Fraud,              // Confirmed fraudulent
-    Legit,              // Confirmed legitimate
-    ManualReview,       // Under manual review
-    TransactionFailure, // Payment/auth failed
-}
-
-/// FraudAction - Simplified to ACCEPT/REJECT only
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FraudAction {
-    Accept,
-    Reject,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FulfillmentStatus {
-    Pending,
-    Partial,
-    Complete,
-    Replacement,
-    Cancelled,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum RefundMethod {
-    StoreCredit,
-    OriginalPaymentInstrument,
-    NewPaymentInstrument,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudScore {
-    pub score: i32,
-    pub risk_level: Option<String>,
-    pub threshold: Option<i32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FraudReason {
-    pub code: String,
-    pub message: String,
-    pub description: Option<String>,
-}
-
-// ============================================================================
-// API EVENT METRIC IMPLEMENTATIONS
-// ============================================================================
-
-impl ApiEventMetric for FraudEvaluatePreAuthorizationResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-
-impl ApiEventMetric for FraudEvaluatePostAuthorizationResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-
-impl ApiEventMetric for FraudRecordTransactionDataResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-
-impl ApiEventMetric for FraudRecordFulfillmentDataResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-
-impl ApiEventMetric for FraudRecordReturnDataResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-
-impl ApiEventMetric for FraudGetResponse {
-    fn get_api_event_type(&self) -> Option<ApiEventsType> {
-        Some(ApiEventsType::FraudCheck)
-    }
-}
-```
-
-**Module Registration**:
-
-Add to `crates/types-traits/domain_types/src/lib.rs`:
-
-```rust
-pub mod fraud_types;
 ```
 
 **Verification Steps**:
-1. Add `pub mod fraud_types;` to `domain_types/src/lib.rs`
-2. Run `cargo check -p domain_types` to verify compilation
-3. Confirm FraudCheckStatus has exactly 5 variants (not counting UNSPECIFIED)
-4. Confirm FraudAction has exactly 2 variants (not counting UNSPECIFIED)
-5. Verify FraudShipment, FraudDestination, FraudProduct are defined
-6. Verify FraudFlowData<T> implements RawConnectorRequestResponse and ConnectorResponseHeaders
-7. Verify no compiler warnings about unused types
+1. Run `cargo check -p domain_types` to verify compilation
+2. Confirm `FraudFlowData` implements `RawConnectorRequestResponse`
+3. Confirm `FraudFlowData` implements `ConnectorResponseHeaders`
+4. Verify all request/response types are defined
+5. Confirm FraudCheckStatus has exactly 5 variants (not counting UNSPECIFIED)
+6. Confirm FraudAction has exactly 2 variants (Accept/Reject)
 
-**Commit Message**: `feat(domain): add fraud check domain types with Hyperswitch-aligned enums`
+**Commit Message**: `feat(domain): add fraud check domain types following payouts pattern`
 
 ---
 
-### Step 2.2: Add Connector Flow Types
-**File**: `crates/types-traits/domain_types/src/connector_flow.rs`
+### Step 2.6: Create fraud/router_request_types.rs
+**File**: `crates/types-traits/domain_types/src/fraud/router_request_types.rs`
 
-Add the fraud flow marker structs before the `FlowName` enum (must match derives in `fraud_types.rs`):
+Similar to `payouts/router_request_types.rs`, define any fraud-specific request structures:
 
 ```rust
-// Fraud flows - Phase 2
-#[derive(Debug, Clone, Copy)]
-pub struct FraudEvaluatePreAuthorization;
+//! Fraud-specific router request types
 
-#[derive(Debug, Clone, Copy)]
-pub struct FraudEvaluatePostAuthorization;
-
-#[derive(Debug, Clone, Copy)]
-pub struct FraudRecordTransactionData;
-
-#[derive(Debug, Clone, Copy)]
-pub struct FraudRecordFulfillmentData;
-
-#[derive(Debug, Clone, Copy)]
-pub struct FraudRecordReturnData;
-
-#[derive(Debug, Clone, Copy)]
-pub struct FraudGet;
+// Add any fraud-specific request types here
+// Following the pattern from payouts/router_request_types.rs
 ```
 
-Then add the corresponding variants to the `FlowName` enum:
-
-```rust
-#[derive(strum::Display)]
-#[strum(serialize_all = "snake_case")]
-pub enum FlowName {
-    // ... existing variants
-    PayoutCreateLink,
-    PayoutCreateRecipient,
-    PayoutEnrollDisburseAccount,
-    // Fraud flows - Phase 2
-    FraudEvaluatePreAuthorization,
-    FraudEvaluatePostAuthorization,
-    FraudRecordTransactionData,
-    FraudRecordFulfillmentData,
-    FraudRecordReturnData,
-    FraudGet,
-}
-```
-
-**Important**: The `Copy` derive is required because these types are used as phantom markers in the type system and must be `Copy` to satisfy trait bounds.
-
-**Verification Steps**:
-1. Verify flow markers have `#[derive(Debug, Clone, Copy)]`
-2. Run `cargo check -p domain_types` compiles
-3. Check that all flow types are unique
-4. Confirm exactly 6 fraud flow types (no Cancel)
-5. Verify `FlowName` derives display as snake_case
-
-**Commit Message**: `feat(domain): add fraud connector flow types`
+**Commit Message**: `feat(domain): add fraud router request types`
 
 ---
----
 
-## Phase 3: Interface Traits (Week 2)
+### Step 2.7: Create fraud/types.rs
+**File**: `crates/types-traits/domain_types/src/fraud/types.rs`
 
-### Step 3.1: Create fraud.rs
-**File**: `crates/types-traits/interfaces/src/fraud.rs`
+Following the payouts pattern (see `payouts/types.rs`), implement `ForeignTryFrom` for gRPC → domain type conversions:
 
 ```rust
-//! Fraud check connector interface traits
-
-use domain_types::{
-    connector_flow,
-    fraud_types::{
-        FraudEvaluatePreAuthorization, FraudEvaluatePreAuthorizationData, 
-        FraudEvaluatePreAuthorizationResponse, FraudEvaluatePostAuthorization, 
-        FraudEvaluatePostAuthorizationData, FraudEvaluatePostAuthorizationResponse,
-        FraudFlowData, FraudGet, FraudGetData, FraudGetResponse,
-        FraudRecordFulfillmentData, FraudRecordFulfillmentDataData, 
-        FraudRecordFulfillmentDataResponse, FraudRecordReturnData, 
-        FraudRecordReturnDataData, FraudRecordReturnDataResponse,
-        FraudRecordTransactionData, FraudRecordTransactionDataData, 
-        FraudRecordTransactionDataResponse,
-    },
-};
+//! Fraud type conversions - Following the payouts pattern
 
 use crate::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
+    errors::{IntegrationError, IntegrationErrorContext},
+    fraud,
+    types::Connectors,
+    utils::{extract_merchant_id_from_metadata, ForeignTryFrom},
 };
+use common_utils::metadata::MaskedMetadata;
 
-/// EvaluatePreAuthorization flow - Pre-authorization fraud check
-pub trait FraudEvaluatePreAuthorizationV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudEvaluatePreAuthorization,
-    FraudFlowData,
-    FraudEvaluatePreAuthorizationData,
-    FraudEvaluatePreAuthorizationResponse,
->
-{
-}
-
-/// EvaluatePostAuthorization flow - Post-authorization fraud check
-pub trait FraudEvaluatePostAuthorizationV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudEvaluatePostAuthorization,
-    FraudFlowData,
-    FraudEvaluatePostAuthorizationData,
-    FraudEvaluatePostAuthorizationResponse,
->
-{
-}
-
-/// RecordTransactionData flow - Record completed transaction
-pub trait FraudRecordTransactionDataV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudRecordTransactionData,
-    FraudFlowData,
-    FraudRecordTransactionDataData,
-    FraudRecordTransactionDataResponse,
->
-{
-}
-
-/// RecordFulfillmentData flow - Record fulfillment/shipment
-pub trait FraudRecordFulfillmentDataV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudRecordFulfillmentData,
-    FraudFlowData,
-    FraudRecordFulfillmentDataData,
-    FraudRecordFulfillmentDataResponse,
->
-{
-}
-
-/// RecordReturnData flow - Record return/refund
-pub trait FraudRecordReturnDataV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudRecordReturnData,
-    FraudFlowData,
-    FraudRecordReturnDataData,
-    FraudRecordReturnDataResponse,
->
-{
-}
-
-/// Get flow - Status synchronization
-pub trait FraudGetV2:
-    ConnectorIntegrationV2<
-    connector_flow::FraudGet,
-    FraudFlowData,
-    FraudGetData,
-    FraudGetResponse,
->
-{
-}
-
-/// Combined trait for fraud connectors
-/// 
-/// Implement this trait for fraud detection providers like Signifyd and Riskified.
-pub trait FraudConnectorTrait:
-    ConnectorCommon
-    + FraudEvaluatePreAuthorizationV2
-    + FraudEvaluatePostAuthorizationV2
-    + FraudRecordTransactionDataV2
-    + FraudRecordFulfillmentDataV2
-    + FraudRecordReturnDataV2
-    + FraudGetV2
-    + Send
-    + Sync
-{
-}
+// Example implementation (add actual conversions as needed):
+// impl ForeignTryFrom<(grpc_api_types::fraud::FraudServiceEvaluatePreAuthorizationRequest, Connectors, &MaskedMetadata)> 
+//     for fraud::fraud_types::FraudFlowData 
+// {
+//     type Error = IntegrationError;
+//     fn foreign_try_from(...) -> Result<Self, error_stack::Report<Self::Error>> { ... }
+// }
 ```
 
-**Verification Steps**:
-1. Add module to `interfaces/src/lib.rs`
-2. Run `cargo check` in `types-traits` crate
-3. Verify all trait bounds are satisfied
-4. Confirm exactly 6 flow traits (no Cancel)
-
-**Commit Message**: `feat(interfaces): add fraud check connector traits`
+**Commit Message**: `feat(domain): add fraud type conversions`
 
 ---
 
-## Phase 4: Connector Implementation Structure (Week 3)
+### Step 2.8: Update domain_types/src/lib.rs
+**File**: `crates/types-traits/domain_types/src/lib.rs`
 
-### Step 4.1: Create Signifyd Connector Skeleton
+Add the fraud module alongside payouts:
+
+```rust
+#![allow(clippy::result_large_err)]
+
+pub mod api;
+pub mod connector_flow;
+pub mod connector_types;
+pub mod errors;
+pub mod fraud;        // ADD THIS LINE
+pub mod mandates;
+pub mod payment_address;
+pub mod payment_method_data;
+pub mod payouts;
+pub mod router_data;
+pub mod router_data_v2;
+pub mod router_flow_types;
+pub mod router_request_types;
+pub mod router_response_types;
+pub mod types;
+pub mod utils;
+
+pub use errors::{
+    combine_error_message_with_context, ConnectorResponseTransformationError, IntegrationError,
+    IntegrationErrorContext, ResponseTransformationErrorContext,
+};
+```
+
+**Verification Steps**:
+1. Run `cargo check -p domain_types` compiles
+2. Verify `fraud` module is accessible
+
+**Commit Message**: `feat(domain): register fraud module in domain_types`
+
+---
+
+## Phase 3: Connector Implementation (Week 2-3)
+
+**Important**: Following the PaymentService pattern, there is NO separate trait file. Instead, implement `ConnectorIntegrationV2` directly in connector files.
+
+### Step 3.1: Create Signifyd Connector Skeleton
 **File**: `crates/integrations/connector-integration/src/connectors/signifyd.rs`
 
 ```rust
@@ -1054,19 +981,13 @@ pub trait FraudConnectorTrait:
 use common_enums::CurrencyUnit;
 use common_utils::CustomResult;
 use domain_types::{
-    connector_flow::ConnectorFlow,
+    connector_flow,
+    fraud::fraud_types::*,
     errors::ConnectorError,
-    fraud_types::*,
-    router_data::ConnectorSpecificConfig,
 };
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    fraud::{
-        FraudEvaluatePreAuthorizationV2, FraudConnectorTrait, FraudRecordFulfillmentDataV2,
-        FraudGetV2, FraudRecordReturnDataV2, FraudRecordTransactionDataV2, 
-        FraudEvaluatePostAuthorizationV2,
-    },
 };
 
 use crate::types::Response;
@@ -1114,16 +1035,20 @@ impl ConnectorCommon for Signifyd {
 // EVALUATE PRE-AUTHORIZATION IMPLEMENTATION
 // ============================================================================
 
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudEvaluatePreAuthorizationData, FraudEvaluatePreAuthorizationResponse> for Signifyd {
+impl ConnectorIntegrationV2<
+    connector_flow::FraudEvaluatePreAuthorization,
+    FraudFlowData,
+    FraudEvaluatePreAuthorizationRequest,
+    FraudEvaluatePreAuthorizationResponse,
+> for Signifyd {
     fn get_headers(
         &self,
-        _req: &domain_types::router_data::RouterData<
-            ConnectorFlow,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            connector_flow::FraudEvaluatePreAuthorization,
             FraudFlowData,
-            FraudEvaluatePreAuthorizationData,
+            FraudEvaluatePreAuthorizationRequest,
             FraudEvaluatePreAuthorizationResponse,
         >,
-        _connectors: &domain_types::types::Connectors,
     ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorError> {
         // TODO: Implement header construction with API key
         todo!()
@@ -1131,13 +1056,12 @@ impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudEvaluatePreAuthor
 
     fn get_url(
         &self,
-        _req: &domain_types::router_data::RouterData<
-            ConnectorFlow,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            connector_flow::FraudEvaluatePreAuthorization,
             FraudFlowData,
-            FraudEvaluatePreAuthorizationData,
+            FraudEvaluatePreAuthorizationRequest,
             FraudEvaluatePreAuthorizationResponse,
         >,
-        _connectors: &domain_types::types::Connectors,
     ) -> CustomResult<String, ConnectorError> {
         // TODO: Return /v3/checkouts endpoint
         todo!()
@@ -1145,111 +1069,56 @@ impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudEvaluatePreAuthor
 
     fn build_request(
         &self,
-        _req: &domain_types::router_data::RouterData<
-            ConnectorFlow,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            connector_flow::FraudEvaluatePreAuthorization,
             FraudFlowData,
-            FraudEvaluatePreAuthorizationData,
+            FraudEvaluatePreAuthorizationRequest,
             FraudEvaluatePreAuthorizationResponse,
         >,
-        _connectors: &domain_types::types::Connectors,
-    ) -> CustomResult<Option<domain_types::router_request_types::Request>, ConnectorError> {
-        // TODO: Transform FraudEvaluatePreAuthorizationData to Signifyd request
-        // Include: deviceFingerprint, sessionId, purchase data, customer data
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        // TODO: Transform FraudEvaluatePreAuthorizationRequest to Signifyd request
         todo!()
     }
 
     fn handle_response(
         &self,
-        _data: &domain_types::router_data::RouterData<
-            ConnectorFlow,
+        _data: &domain_types::router_data_v2::RouterDataV2<
+            connector_flow::FraudEvaluatePreAuthorization,
             FraudFlowData,
-            FraudEvaluatePreAuthorizationData,
+            FraudEvaluatePreAuthorizationRequest,
             FraudEvaluatePreAuthorizationResponse,
         >,
         _res: Response,
     ) -> CustomResult<FraudEvaluatePreAuthorizationResponse, ConnectorError> {
         // TODO: Parse Signifyd response
-        // Map: ACCEPT -> LEGIT, REJECT -> FRAUD, REVIEW -> MANUAL_REVIEW
         todo!()
     }
 }
 
-impl FraudEvaluatePreAuthorizationV2 for Signifyd {}
-
-// ============================================================================
-// EVALUATE POST-AUTHORIZATION IMPLEMENTATION
-// ============================================================================
-
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudEvaluatePostAuthorizationData, FraudEvaluatePostAuthorizationResponse> for Signifyd {
-    // TODO: Implement methods for /v3/transactions endpoint
-    // Maps: authorization_status, error codes to FraudCheckStatus
-}
-
-impl FraudEvaluatePostAuthorizationV2 for Signifyd {}
-
-// ============================================================================
-// RECORD TRANSACTION DATA IMPLEMENTATION
-// ============================================================================
-
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudRecordTransactionDataData, FraudRecordTransactionDataResponse> for Signifyd {
-    // TODO: Implement methods for /v3/sales endpoint
-    // Combines purchase data + transaction result
-}
-
-impl FraudRecordTransactionDataV2 for Signifyd {}
-
-// ============================================================================
-// RECORD FULFILLMENT DATA IMPLEMENTATION
-// ============================================================================
-
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudRecordFulfillmentDataData, FraudRecordFulfillmentDataResponse> for Signifyd {
-    // TODO: Implement methods for /v3/fulfillments endpoint
-    // Sends: tracking info, carrier, shipment status
-}
-
-impl FraudRecordFulfillmentDataV2 for Signifyd {}
-
-// ============================================================================
-// RECORD RETURN DATA IMPLEMENTATION
-// ============================================================================
-
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudRecordReturnDataData, FraudRecordReturnDataResponse> for Signifyd {
-    // TODO: Implement methods for /v3/returns endpoint
-    // Sends: refund amount, reason, method
-}
-
-impl FraudRecordReturnDataV2 for Signifyd {}
-
-// ============================================================================
-// GET IMPLEMENTATION
-// ============================================================================
-
-impl ConnectorIntegrationV2<ConnectorFlow, FraudFlowData, FraudGetData, FraudGetResponse> for Signifyd {
-    // TODO: Implement methods for /v3/decisions/{orderId} endpoint
-}
-
-impl FraudGetV2 for Signifyd {}
-
-// Combined trait implementation
-impl FraudConnectorTrait for Signifyd {}
+// Repeat for other 5 flows...
+// FraudEvaluatePostAuthorization
+// FraudRecordTransactionData
+// FraudRecordFulfillmentData
+// FraudRecordReturnData
+// FraudGet
 ```
 
 **Verification Steps**:
 1. Add module to `connectors.rs`
 2. Run `cargo check` in connector-integration crate
-3. Verify all trait methods are implemented or have `todo!()`
+3. Verify all 6 flow implementations exist
 4. Confirm exactly 6 flow implementations (no Cancel)
 
 **Commit Message**: `feat(connector): add Signifyd fraud connector skeleton`
 
 ---
 
-### Step 4.2: Create Riskified Connector Skeleton
+### Step 3.2: Create Riskified Connector Skeleton
 **File**: `crates/integrations/connector-integration/src/connectors/riskified.rs`
 
 Follow the same pattern as Signifyd, adapting for Riskified's API:
 - Use HMAC-SHA256 authentication
-- Support sync (`/api/orders/decide`) and async (`/api/orders/submit`) modes
+- Support sync and async modes
 - Implement beacon-based session tracking
 - Map Riskified states to Hyperswitch enums
 
@@ -1257,9 +1126,9 @@ Follow the same pattern as Signifyd, adapting for Riskified's API:
 
 ---
 
-## Phase 5: gRPC Service Implementation (Week 3-4)
+## Phase 4: gRPC Service Implementation (Week 3-4)
 
-### Step 5.1: Create fraud service handler
+### Step 4.1: Create fraud service handler
 **File**: `crates/grpc-server/src/services/fraud.rs`
 
 ```rust
@@ -1267,16 +1136,14 @@ Follow the same pattern as Signifyd, adapting for Riskified's API:
 
 use tonic::{Request, Response, Status};
 
-use crate::{
-    proto::{
-        fraud_service_server::FraudService,
-        FraudServiceEvaluatePreAuthorizationRequest, FraudServiceEvaluatePreAuthorizationResponse,
-        FraudServiceEvaluatePostAuthorizationRequest, FraudServiceEvaluatePostAuthorizationResponse,
-        FraudServiceRecordFulfillmentDataRequest, FraudServiceRecordFulfillmentDataResponse,
-        FraudServiceGetRequest, FraudServiceGetResponse,
-        FraudServiceRecordReturnDataRequest, FraudServiceRecordReturnDataResponse,
-        FraudServiceRecordTransactionDataRequest, FraudServiceRecordTransactionDataResponse,
-    },
+use crate::proto::{
+    fraud_service_server::FraudService,
+    FraudServiceEvaluatePreAuthorizationRequest, FraudServiceEvaluatePreAuthorizationResponse,
+    FraudServiceEvaluatePostAuthorizationRequest, FraudServiceEvaluatePostAuthorizationResponse,
+    FraudServiceRecordFulfillmentDataRequest, FraudServiceRecordFulfillmentDataResponse,
+    FraudServiceGetRequest, FraudServiceGetResponse,
+    FraudServiceRecordReturnDataRequest, FraudServiceRecordReturnDataResponse,
+    FraudServiceRecordTransactionDataRequest, FraudServiceRecordTransactionDataResponse,
 };
 
 pub struct FraudServiceImpl {
@@ -1293,49 +1160,43 @@ impl FraudServiceImpl {
 impl FraudService for FraudServiceImpl {
     async fn evaluate_pre_authorization(
         &self,
-        request: Request<FraudServiceEvaluatePreAuthorizationRequest>,
+        _request: Request<FraudServiceEvaluatePreAuthorizationRequest>,
     ) -> Result<Response<FraudServiceEvaluatePreAuthorizationResponse>, Status> {
-        // TODO: Implement EvaluatePreAuthorization RPC
         Err(Status::unimplemented("EvaluatePreAuthorization not yet implemented"))
     }
 
     async fn evaluate_post_authorization(
         &self,
-        request: Request<FraudServiceEvaluatePostAuthorizationRequest>,
+        _request: Request<FraudServiceEvaluatePostAuthorizationRequest>,
     ) -> Result<Response<FraudServiceEvaluatePostAuthorizationResponse>, Status> {
-        // TODO: Implement EvaluatePostAuthorization RPC
         Err(Status::unimplemented("EvaluatePostAuthorization not yet implemented"))
     }
 
     async fn record_transaction_data(
         &self,
-        request: Request<FraudServiceRecordTransactionDataRequest>,
+        _request: Request<FraudServiceRecordTransactionDataRequest>,
     ) -> Result<Response<FraudServiceRecordTransactionDataResponse>, Status> {
-        // TODO: Implement RecordTransactionData RPC
         Err(Status::unimplemented("RecordTransactionData not yet implemented"))
     }
 
     async fn record_fulfillment_data(
         &self,
-        request: Request<FraudServiceRecordFulfillmentDataRequest>,
+        _request: Request<FraudServiceRecordFulfillmentDataRequest>,
     ) -> Result<Response<FraudServiceRecordFulfillmentDataResponse>, Status> {
-        // TODO: Implement RecordFulfillmentData RPC
         Err(Status::unimplemented("RecordFulfillmentData not yet implemented"))
     }
 
     async fn record_return_data(
         &self,
-        request: Request<FraudServiceRecordReturnDataRequest>,
+        _request: Request<FraudServiceRecordReturnDataRequest>,
     ) -> Result<Response<FraudServiceRecordReturnDataResponse>, Status> {
-        // TODO: Implement RecordReturnData RPC
         Err(Status::unimplemented("RecordReturnData not yet implemented"))
     }
 
     async fn get(
         &self,
-        request: Request<FraudServiceGetRequest>,
+        _request: Request<FraudServiceGetRequest>,
     ) -> Result<Response<FraudServiceGetResponse>, Status> {
-        // TODO: Implement Get RPC
         Err(Status::unimplemented("Get not yet implemented"))
     }
 }
@@ -1351,25 +1212,10 @@ impl FraudService for FraudServiceImpl {
 
 ---
 
-## Phase 6: SDK Generation (Week 4)
+## Phase 5: Testing (Week 4-5)
 
-### Step 6.1: Update SDK Generation Configuration
-
-Update SDK generation scripts to include fraud.proto with new method names.
-
-**Verification Steps**:
-1. Run SDK generation for one language (e.g., Node.js)
-2. Verify fraud service client is generated with correct method names
-3. Confirm types match proto definitions
-
-**Commit Message**: `feat(sdk): add fraud service to SDK generation`
-
----
-
-## Phase 7: Testing (Week 4-5)
-
-### Step 7.1: Unit Tests for Domain Types
-**File**: `crates/types-traits/domain_types/src/fraud_types_tests.rs`
+### Step 5.1: Unit Tests for Domain Types
+**File**: `crates/types-traits/domain_types/src/fraud/fraud_types_tests.rs` (or inline tests)
 
 ```rust
 #[cfg(test)]
@@ -1391,22 +1237,12 @@ mod tests {
 
     #[test]
     fn test_fraud_action_simplified() {
-        // Verify only 2 actions (not counting UNSPECIFIED)
+        // Verify only 2 actions
         let actions = vec![
             FraudAction::Accept,
             FraudAction::Reject,
         ];
         assert_eq!(actions.len(), 2);
-    }
-
-    #[test]
-    fn test_fraud_score_creation() {
-        let score = FraudScore {
-            score: 750,
-            risk_level: Some("HIGH".to_string()),
-            threshold: Some(500),
-        };
-        assert_eq!(score.score, 750);
     }
 }
 ```
@@ -1415,59 +1251,344 @@ mod tests {
 
 ---
 
-### Step 7.2: Integration Tests
+### Step 5.2: Scenario-Based Integration Tests (ucs-connector-tests)
 
-Create integration tests for full flow:
-- EvaluatePreAuthorization → EvaluatePostAuthorization → RecordFulfillmentData
-- Error handling for each flow
-- Webhook processing
-- Status mapping verification
+Following the existing Payment/Payouts testing pattern using the **scenario-based test harness** in `ucs-connector-tests`.
 
-**Commit Message**: `test(integration): add fraud service integration tests`
+#### Overview
+The test harness uses:
+- **Global Suites**: Shared scenario definitions in `global_suites/`
+- **Connector Specs**: Per-connector configuration in `connector_specs/`
+- **Scenario Files**: JSON with gRPC request templates + assertions
+- **Test Binaries**: `test_ucs`, `suite_run_test`, `sdk_run_test`
+
+#### Step 5.2.1: Create Fraud Test Scenarios Directory
+
+Create the fraud suite structure:
+
+```bash
+mkdir -p crates/internal/ucs-connector-tests/src/global_suites/fraud_evaluate_pre_auth_suite
+touch crates/internal/ucs-connector-tests/src/global_suites/fraud_evaluate_pre_auth_suite/scenario.json
+touch crates/internal/ucs-connector-tests/src/global_suites/fraud_evaluate_pre_auth_suite/suite_spec.json
+```
+
+Repeat for all 6 fraud flows:
+- `fraud_evaluate_pre_auth_suite/`
+- `fraud_evaluate_post_auth_suite/`
+- `fraud_record_transaction_suite/`
+- `fraud_record_fulfillment_suite/`
+- `fraud_record_return_suite/`
+- `fraud_get_suite/`
 
 ---
 
-## Phase 8: Documentation (Week 5-6)
+#### Step 5.2.2: Create Scenario Definitions (scenario.json)
 
-### Step 8.1: Update All Documentation
+**File**: `global_suites/fraud_evaluate_pre_auth_suite/scenario.json`
 
-Ensure consistency across all docs:
-- `01-fraud-interface-specification.md` - v4.0.0
-- `02-implementation-plan.md` - v2.0.0 (this doc)
-- `03-connector-implementation-guide.md` - Update method names
-- `04-proto-validation-analysis.md` - v4.0.0
-- `05-field-optionality-analysis.md` - Update if exists
+```json
+{
+  "pre_auth_approved": {
+    "grpc_req": {
+      "merchant_fraud_id": "auto_generate",
+      "order_id": "auto_generate",
+      "amount": {
+        "minor_amount": 10000,
+        "currency": "USD"
+      },
+      "device_fingerprint": "fp_test_123",
+      "session_id": "sess_test_456",
+      "synchronous": true,
+      "customer": {
+        "name": "auto_generate",
+        "email": { "value": "auto_generate" },
+        "id": "auto_generate"
+      },
+      "browser_info": {
+        "user_agent": "Mozilla/5.0...",
+        "accept": "text/html",
+        "language": "en-US",
+        "ip_address": "127.0.0.1"
+      }
+    },
+    "assert": {
+      "fraud_check_status": { "one_of": ["LEGIT", "FRAUD", "MANUAL_REVIEW"] },
+      "recommended_action": { "must_exist": true },
+      "merchant_fraud_id": { "echo": "merchant_fraud_id" },
+      "order_id": { "echo": "order_id" }
+    },
+    "is_default": true
+  },
+  "pre_auth_fraud_detected": {
+    "grpc_req": {
+      "merchant_fraud_id": "auto_generate",
+      "order_id": "auto_generate",
+      "amount": {
+        "minor_amount": 999999,
+        "currency": "USD"
+      },
+      "device_fingerprint": "fp_suspicious_999",
+      "session_id": "sess_suspicious_999",
+      "synchronous": true,
+      "customer": {
+        "name": "auto_generate",
+        "email": { "value": "auto_generate" },
+        "id": "auto_generate"
+      }
+    },
+    "assert": {
+      "fraud_check_status": { "equals": "FRAUD" },
+      "recommended_action": { "equals": "REJECT" },
+      "score": { "must_exist": true }
+    }
+  }
+}
+```
 
-**Commit Message**: `docs: update all fraud interface documentation`
+---
+
+#### Step 5.2.3: Create Suite Specifications (suite_spec.json)
+
+**File**: `global_suites/fraud_evaluate_pre_auth_suite/suite_spec.json`
+
+```json
+{
+  "suite": "fraud_evaluate_pre_auth",
+  "suite_type": "independent",
+  "depends_on": [],
+  "strict_dependencies": false,
+  "dependency_scope": "suite"
+}
+```
+
+**File**: `global_suites/fraud_evaluate_post_auth_suite/suite_spec.json`
+
+```json
+{
+  "suite": "fraud_evaluate_post_auth",
+  "suite_type": "dependent",
+  "depends_on": [
+    {
+      "suite": "fraud_evaluate_pre_auth",
+      "context_map": {
+        "merchant_fraud_id": "res.merchant_fraud_id",
+        "order_id": "res.order_id",
+        "connector_fraud_id": "res.connector_fraud_id"
+      }
+    }
+  ],
+  "strict_dependencies": true,
+  "dependency_scope": "scenario"
+}
+```
+
+---
+
+#### Step 5.2.4: Create Connector Specifications
+
+**File**: `connector_specs/signifyd/specs.json`
+
+```json
+{
+  "connector": "signifyd",
+  "supported_suites": [
+    "authorize",
+    "capture",
+    "void",
+    "refund",
+    "fraud_evaluate_pre_auth",
+    "fraud_evaluate_post_auth",
+    "fraud_record_transaction",
+    "fraud_record_fulfillment",
+    "fraud_record_return",
+    "fraud_get"
+  ]
+}
+```
+
+**File**: `connector_specs/signifyd/override.json` (Optional - for Signifyd-specific field overrides)
+
+```json
+{
+  "fraud_evaluate_pre_auth": {
+    "device_fingerprint": { "required": true },
+    "session_id": { "required": true }
+  }
+}
+```
+
+Repeat for Riskified connector.
+
+---
+
+#### Step 5.2.5: Add Fraud Assertion Types (if needed)
+
+If fraud-specific assertions are needed, extend `scenario_types.rs`:
+
+```rust
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum FieldAssert {
+    // ... existing variants
+    /// Asserts field is within a numeric range (for fraud scores)
+    Range { min: i32, max: i32 },
+    /// Asserts field matches a regex pattern
+    Matches { pattern: String },
+}
+```
+
+---
+
+#### Step 5.2.6: Create Test Binary Entry Points
+
+The existing test binaries (`test_ucs`, `suite_run_test`, `sdk_run_test`) automatically discover and run fraud scenarios once the spec files are created.
+
+Verify by running:
+
+```bash
+# List discovered fraud suites
+cargo run --bin test_ucs -- --list-suites
+
+# Run fraud scenarios for Signifyd
+cargo run --bin test_ucs -- --connector signifyd --suite fraud_evaluate_pre_auth
+
+# Run all fraud suites
+cargo run --bin test_ucs -- --connector signifyd --suite-prefix fraud_
+
+# Run with SDK
+cargo run --bin sdk_run_test -- --connector signifyd --suite fraud_evaluate_pre_auth
+```
+
+---
+
+#### Step 5.2.7: Webhook Testing Scenarios
+
+For webhook-based fraud updates (e.g., async Riskified responses):
+
+**File**: `global_suites/fraud_webhook_suite/scenario.json`
+
+```json
+{
+  "webhook_approval": {
+    "grpc_req": {
+      "event_type": "FRM_APPROVED",
+      "fraud_id": "auto_generate",
+      "order_id": "auto_generate",
+      "decision": "ACCEPT"
+    },
+    "assert": {
+      "webhook_event_type": { "equals": "FRM_APPROVED" },
+      "fraud_check_status": { "equals": "LEGIT" },
+      "recommended_action": { "equals": "ACCEPT" }
+    }
+  },
+  "webhook_rejection": {
+    "grpc_req": {
+      "event_type": "FRM_REJECTED",
+      "fraud_id": "auto_generate",
+      "order_id": "auto_generate",
+      "decision": "REJECT"
+    },
+    "assert": {
+      "fraud_check_status": { "equals": "FRAUD" },
+      "recommended_action": { "equals": "REJECT" }
+    }
+  }
+}
+```
+
+---
+
+**Commit Messages**:
+- `test(scenarios): add fraud evaluate pre-auth test suite`
+- `test(scenarios): add fraud evaluate post-auth test suite`
+- `test(scenarios): add fraud record data test suites`
+- `test(connector-specs): register fraud suites for signifyd and riskified`
+
+---
+
+### Step 5.3: Direct gRPC Integration Tests (Optional)
+
+For service-level integration tests that don't fit the scenario pattern:
+
+**File**: `crates/grpc-server/grpc-server/tests/fraud_service_test.rs`
+
+```rust
+#![allow(clippy::expect_used)]
+
+use grpc_api_types::fraud::{
+    fraud_service_client::FraudServiceClient,
+    FraudServiceEvaluatePreAuthorizationRequest,
+};
+use tonic::{transport::Channel, Request};
+
+#[tokio::test]
+async fn test_fraud_evaluate_pre_auth_basic() {
+    grpc_test!(client, FraudServiceClient<Channel>, {
+        let mut request = Request::new(FraudServiceEvaluatePreAuthorizationRequest {
+            merchant_fraud_id: Some("test_fraud_123".to_string()),
+            order_id: Some("test_order_456".to_string()),
+            device_fingerprint: "fp_test".to_string(),
+            session_id: "sess_test".to_string(),
+            synchronous: true,
+            ..Default::default()
+        });
+        add_mock_metadata(&mut request);
+        let response = client.evaluate_pre_authorization(request).await;
+        assert!(response.is_ok());
+    });
+}
+```
+
+**Commit Message**: `test(grpc): add fraud service direct integration tests`
 
 ---
 
 ## Summary Checklist
 
-### Schema & Types
+### Phase 1: Protocol Buffer Schema
 - [x] fraud.proto created with Hyperswitch-aligned enums
 - [x] services.proto updated with 6 RPC methods
-- [x] Domain types implement Hyperswitch enums exactly
-- [x] Connector flow types defined
+- [x] payment.proto updated with fraud webhook events
+- [x] build.rs updated to compile fraud.proto
 
-### Interfaces
-- [x] Fraud trait interfaces defined
-- [x] Exactly 6 flow traits (no Cancel)
+### Phase 2: Domain Types (Following Payouts Pattern)
+- [x] Domain types follow payouts folder pattern (`fraud/` subdirectory)
+- [x] Fraud flow markers added to `connector_flow.rs` (with `#[derive(Debug, Clone)]`)
+- [x] FlowName enum updated with 6 fraud variants
+- [x] fraud/mod.rs created with module exports
+- [x] fraud/fraud_types.rs with FraudFlowData and request/response types
+- [x] fraud/router_request_types.rs created
+- [x] fraud/types.rs with ForeignTryFrom implementations
+- [x] lib.rs updated with `pub mod fraud;`
 
-### Connectors
-- [x] Signifyd connector skeleton
-- [x] Riskified connector skeleton
-- [x] Error handling implemented
+### Phase 3: Connector Implementation
+- [x] Following PaymentService pattern - no `fraud.rs` in `interfaces`
+- [x] Traits implemented directly in connector files
+- [x] Signifyd connector skeleton with 6 flows
+- [x] Riskified connector skeleton with 6 flows
 
-### Service
+### Phase 4: gRPC Service Implementation
 - [x] gRPC FraudService handler
 - [x] Service registered in server
+
+### Phase 5: Testing
+- [ ] Unit tests for domain types
+- [ ] Scenario-based integration tests (ucs-connector-tests)
+  - [ ] Fraud test suites created (6 suites for 6 flows)
+  - [ ] Scenario definitions with gRPC request templates
+  - [ ] Assertion rules for fraud responses
+  - [ ] Connector specs updated for Signifyd/Riskified
+  - [ ] Suite specifications with dependencies
+- [ ] Webhook test scenarios
+- [ ] Direct gRPC integration tests (optional)
 
 ### Key Constraints Verified
 - [x] FraudCheckStatus: 5 states (matches Hyperswitch)
 - [x] FraudAction: 2 actions (ACCEPT/REJECT)
 - [x] No new states introduced
-- [x] All provider states mappable to Hyperswitch
+- [x] Exactly 6 flows (no Cancel)
+- [x] Flow markers use `#[derive(Debug, Clone)]` (matching existing pattern)
 
 ---
 
@@ -1476,4 +1597,6 @@ Ensure consistency across all docs:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-04-06 | Initial implementation plan |
-| 2.0.0 | 2026-04-06 | **Synced with Specification v4.0.0**, Hyperswitch-aligned enums, renamed methods, removed Cancel |
+| 2.0.0 | 2026-04-06 | Synced with Spec v2.0.0, Hyperswitch-aligned enums |
+| 3.0.0 | 2026-04-06 | **Merged Phase 2+3**, following payouts folder pattern, removed separate interfaces traits |
+| 3.1.0 | 2026-04-07 | Fixed flow marker derives (`Clone` not `Copy`), added build.rs step to Phase 1 |
