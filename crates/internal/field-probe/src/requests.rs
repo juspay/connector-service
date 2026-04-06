@@ -28,11 +28,13 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
-    AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails,
-    ConnectorMandateReferenceId, CustomerAcceptance, CustomerServiceCreateRequest, merchant_authentication_service_create_client_authentication_token_request::DomainContext,
-    DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
-    EvidenceDocument, EventServiceHandleRequest, EvidenceType, HttpMethod, MandateReference,
+    self as proto, mandate_reference::MandateIdType,
+    merchant_authentication_service_create_client_authentication_token_request::DomainContext,
+    payment_method::PaymentMethod as PmVariant, AcceptanceType, Address, AuthenticationType,
+    CaptureMethod, CardDetails, ConnectorMandateReferenceId, CustomerAcceptance,
+    CustomerServiceCreateRequest, DisputeServiceAcceptRequest, DisputeServiceDefendRequest,
+    DisputeServiceSubmitEvidenceRequest, EventServiceHandleRequest, EvidenceDocument, EvidenceType,
+    HttpMethod, MandateReference,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest, PaymentAddress,
@@ -255,14 +257,10 @@ pub(crate) fn base_create_client_authentication_token_request(
 ) -> MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
     MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
         merchant_client_session_id: "probe_sdk_session_001".to_string(),
-        domain_context: Some(
-            DomainContext::Payment(
-                PaymentClientAuthenticationContext {
-                    amount: Some(usd_money(1000)),
-                    ..Default::default()
-                },
-            ),
-        ),
+        domain_context: Some(DomainContext::Payment(PaymentClientAuthenticationContext {
+            amount: Some(usd_money(1000)),
+            ..Default::default()
+        })),
         ..Default::default()
     }
 }

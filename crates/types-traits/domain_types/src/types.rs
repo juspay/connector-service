@@ -2,8 +2,8 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use crate::{
-    connector_types::{self, ConnectorEnum},
     connector_flow::MandateRevoke,
+    connector_types::{self, ConnectorEnum},
     payment_method_data::SamsungPayWalletCredentials,
     utils::extract_connector_request_reference_id,
 };

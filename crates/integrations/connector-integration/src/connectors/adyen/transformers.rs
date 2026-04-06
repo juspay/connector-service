@@ -3619,15 +3619,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(_mandate_ref) => Err(IntegrationError::not_implemented("payment_method").into()),
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
-                PaymentMethodData::CardRedirect(ref card_redirect_data) => Self::try_from((item, card_redirect_data)),
+                PaymentMethodData::CardRedirect(ref card_redirect_data) => {
+                    Self::try_from((item, card_redirect_data))
+                }
                 PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data)),
-                PaymentMethodData::BankRedirect(ref bank_redirect) => Self::try_from((item, bank_redirect)),
-                PaymentMethodData::BankTransfer(ref bank_transfer) => Self::try_from((item, bank_transfer.as_ref())),
+                PaymentMethodData::BankRedirect(ref bank_redirect) => {
+                    Self::try_from((item, bank_redirect))
+                }
+                PaymentMethodData::BankTransfer(ref bank_transfer) => {
+                    Self::try_from((item, bank_transfer.as_ref()))
+                }
                 PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit)),
-                PaymentMethodData::GiftCard(ref gift_card) => Self::try_from((item, gift_card.as_ref())),
-                PaymentMethodData::Voucher(ref voucher_data) => Self::try_from((item, voucher_data)),
-                PaymentMethodData::PayLater(ref pay_later_data) => Self::try_from((item, pay_later_data)),
-                PaymentMethodData::NetworkToken(ref token_data) => Self::try_from((item, token_data)),
+                PaymentMethodData::GiftCard(ref gift_card) => {
+                    Self::try_from((item, gift_card.as_ref()))
+                }
+                PaymentMethodData::Voucher(ref voucher_data) => {
+                    Self::try_from((item, voucher_data))
+                }
+                PaymentMethodData::PayLater(ref pay_later_data) => {
+                    Self::try_from((item, pay_later_data))
+                }
+                PaymentMethodData::NetworkToken(ref token_data) => {
+                    Self::try_from((item, token_data))
+                }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -6287,8 +6301,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         {
                             Some(card_network) => card_network,
                             None => CardBrand::try_from(
-                                &card_details_for_network_transaction_id
-                                    .get_card_issuer()?,
+                                &card_details_for_network_transaction_id.get_card_issuer()?,
                             )?,
                         };
                         let card_holder_name = item
