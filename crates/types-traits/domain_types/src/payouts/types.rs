@@ -542,9 +542,11 @@ impl ForeignTryFrom<grpc_api_types::payouts::SepaBankTransferPayout>
                 sepa.iban
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "amount",
+                            field_name: "iban",
                             context: IntegrationErrorContext {
-                                additional_context: Some("Amount is required".to_owned()),
+                                additional_context: Some(
+                                    "IBAN is required for SEPA bank transfer".to_owned()
+                                ),
                                 ..Default::default()
                             },
                         })
@@ -592,10 +594,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                 pix.bank_account_number
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "account_holder_name",
+                            field_name: "bank_account_number",
                             context: IntegrationErrorContext {
                                 additional_context: Some(
-                                    "Account holder name is required for OpenBankingUK".to_owned()
+                                    "Bank account number is required for Pix".to_owned()
                                 ),
                                 ..Default::default()
                             },
@@ -608,11 +610,9 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                 pix.pix_key
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "bank_account_number",
+                            field_name: "pix_key",
                             context: IntegrationErrorContext {
-                                additional_context: Some(
-                                    "Bank account number is required for Pix".to_owned()
-                                ),
+                                additional_context: Some("Pix key is required for Pix".to_owned()),
                                 ..Default::default()
                             },
                         })
@@ -655,10 +655,11 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
                     .dpan
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "iban",
+                            field_name: "dpan",
                             context: IntegrationErrorContext {
                                 additional_context: Some(
-                                    "IBAN is required for OpenBankingUK".to_owned()
+                                    "DPAN (device primary account number) is required for Apple Pay decrypt"
+                                        .to_owned()
                                 ),
                                 ..Default::default()
                             },

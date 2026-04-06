@@ -94,7 +94,8 @@ pub enum ConfigurationError {
 /// Direct gRPC status mapping for `IntegrationError` (request phase).
 /// Missing/invalid input → invalid_argument (400)
 /// Flow/feature unsupported → failed_precondition (400)
-/// Auth/config failures → unauthenticated or internal (401/500)
+/// Auth / credential resolution failures → unauthenticated (401)
+/// Connector or merchant configuration problems → failed_precondition (not 401; avoids blaming client auth)
 /// Internal build/encode failures → internal (500)
 impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
     fn into_grpc_status(self) -> Status {
@@ -115,11 +116,11 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
             IntegrationError::FlowNotSupported { .. }
             | IntegrationError::NotSupported { .. }
             | IntegrationError::CaptureMethodNotSupported { .. }
-            | IntegrationError::NotImplemented(..) => Status::failed_precondition(msg),
-            IntegrationError::FailedToObtainAuthType { .. }
+            | IntegrationError::NotImplemented(..)
             | IntegrationError::InvalidConnectorConfig { .. }
             | IntegrationError::ConfigurationError { .. }
-            | IntegrationError::NoConnectorMetaData { .. } => Status::unauthenticated(msg),
+            | IntegrationError::NoConnectorMetaData { .. } => Status::failed_precondition(msg),
+            IntegrationError::FailedToObtainAuthType { .. } => Status::unauthenticated(msg),
             IntegrationError::SourceVerificationFailed { .. } => Status::unauthenticated(msg),
             IntegrationError::MissingConnectorTransactionID { .. }
             | IntegrationError::MissingConnectorRefundID { .. }
