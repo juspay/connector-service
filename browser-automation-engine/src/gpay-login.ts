@@ -29,7 +29,11 @@ interface LoginOptions {
 
 function parseArgs(argv: string[]): LoginOptions {
   const gpayDir = path.resolve(__dirname, "..", "gpay");
-  let profileDir = path.join(gpayDir, ".webkit-profile");
+  const defaultProfileDir = path.join(gpayDir, ".webkit-profile");
+  // GPAY_PROFILE_DIR env var overrides the default; --profile CLI flag overrides both.
+  let profileDir = process.env["GPAY_PROFILE_DIR"]
+    ? path.resolve(process.env["GPAY_PROFILE_DIR"])
+    : defaultProfileDir;
   let timeout = 300_000; // 5 minutes to sign in
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -45,6 +49,9 @@ function parseArgs(argv: string[]): LoginOptions {
           "  --profile <dir>    Browser profile directory (default: gpay/.webkit-profile)",
           "  --timeout <ms>     Max time to wait for sign-in (default: 300000 = 5 min)",
           "  --help             Show this help",
+          "",
+          "Environment variables:",
+          "  GPAY_PROFILE_DIR   Browser profile directory (overridden by --profile flag)",
         ].join("\n")
       );
       process.exit(0);

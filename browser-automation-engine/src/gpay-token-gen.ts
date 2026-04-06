@@ -76,6 +76,11 @@ function printUsage(): void {
     "  GPAY_HOSTED_URL            Hosted Google Pay page URL",
     "                             Example: https://shimmering-pegasus-24c886.netlify.app/gpay/gpay-token-gen.html",
     "",
+    "Optional environment variables:",
+    "  GPAY_PROFILE_DIR           Browser profile dir containing storage-state.json",
+    "                             (persisted Google login session). Overridden by --profile flag.",
+    "                             Default: gpay/.webkit-profile/",
+    "",
     "Optional parameters:",
     "  --creds-index <n>       Which creds entry to use when multiple exist (default: 0)",
     "  --headed                Run browser with visible UI (default)",
@@ -92,6 +97,7 @@ function printUsage(): void {
     "Examples:",
     "  export CONNECTOR_AUTH_FILE_PATH=~/Downloads/creds.json",
     "  export GPAY_HOSTED_URL=https://shimmering-pegasus-24c886.netlify.app/gpay/gpay-token-gen.html",
+    "  export GPAY_PROFILE_DIR=~/gpay-session  # optional, for custom storage-state location",
     "  npm run gpay -- --connector authorizedotnet --pretty",
     "  npm run gpay -- --connector cybersource --output token.json",
     "  npm run gpay -- --connector stripe --creds-index 1 --pretty",
@@ -167,12 +173,16 @@ function parseCliOptions(argv: string[]): CliOptions {
 }
 
 /** Reads required env vars, throws a descriptive error if any are missing. */
-function readEnvConfig(): { credsPath: string; hostedUrl: string } {
+function readEnvConfig(): { credsPath: string; hostedUrl: string; profileDir?: string } {
   const credsPath =
     process.env["CONNECTOR_AUTH_FILE_PATH"] ??
     process.env["UCS_CREDS_PATH"];
 
   const hostedUrl = process.env["GPAY_HOSTED_URL"];
+
+  // Optional: override the browser profile directory (contains storage-state.json
+  // with the persisted Google login session). When unset, defaults to gpay/.webkit-profile/.
+  const profileDir = process.env["GPAY_PROFILE_DIR"];
 
   const missing: string[] = [];
   if (!credsPath) missing.push("  CONNECTOR_AUTH_FILE_PATH  (or fallback: UCS_CREDS_PATH)  — path to creds.json");
@@ -187,7 +197,7 @@ function readEnvConfig(): { credsPath: string; hostedUrl: string } {
     );
   }
 
-  return { credsPath: credsPath!, hostedUrl: hostedUrl! };
+  return { credsPath: credsPath!, hostedUrl: hostedUrl!, profileDir };
 }
 
 // ── Config loading ────────────────────────────────────────────────────────────
@@ -739,7 +749,7 @@ async function waitForGPayResult(page: Page, timeoutMs: number): Promise<Record<
 
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
-  const { credsPath, hostedUrl } = readEnvConfig();
+  const { credsPath, hostedUrl, profileDir: envProfileDir } = readEnvConfig();
 
   const gpayDir = path.resolve(__dirname, "..", "gpay");
   const defaultProfileDir = path.join(gpayDir, ".webkit-profile");
@@ -748,7 +758,12 @@ async function main(): Promise<void> {
   const credsFullPath = path.resolve(credsPath);
 
   const config = await loadConfigFromCreds(credsFullPath, options.connector, options.credsIndex);
-  const profileDir = options.profileDir ? path.resolve(options.profileDir) : defaultProfileDir;
+  // Priority: --profile CLI flag > GPAY_PROFILE_DIR env var > default (gpay/.webkit-profile/)
+  const profileDir = options.profileDir
+    ? path.resolve(options.profileDir)
+    : envProfileDir
+      ? path.resolve(envProfileDir)
+      : defaultProfileDir;
   const screenshotDir = options.screenshotDir ? path.resolve(options.screenshotDir) : defaultScreenshotDir;
 
   console.log(`[gpay] Connector:          ${options.connector}`);
