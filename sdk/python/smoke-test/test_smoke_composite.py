@@ -189,6 +189,7 @@ async def test_paypal_authorize(creds_file: str) -> bool:
 
         authorize_request.auth_type = AuthenticationType.NO_THREE_DS
         authorize_request.address.CopyFrom(PaymentAddress())
+        authorize_request.return_url = "https://example.com/return"
         authorize_request.test_mode = True
 
         response = await payment_client.authorize(authorize_request)
@@ -252,6 +253,7 @@ async def test_stripe_authorize(creds_file: str) -> bool:
 
         authorize_request.auth_type = AuthenticationType.NO_THREE_DS
         authorize_request.address.CopyFrom(PaymentAddress())
+        authorize_request.return_url = "https://example.com/return"
 
         response = await payment_client.authorize(authorize_request)
 

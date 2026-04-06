@@ -102,11 +102,10 @@ val authorizeRequest = PaymentServiceAuthorizeRequest(
             cardHolderName = "John Doe"
         )
     ),
-    customer = Customer(
-        email = SecretString(value = "customer@example.com"),
-        name = "John Doe"
-    ),
-    testMode = true
+    address = Address(billingAddress = AddressDetails()),
+    authType = AuthenticationType.NO_THREE_DS,
+    returnUrl = "https://example.com/return",
+    orderDetails = emptyList()
 )
 
 val response = client.authorize(authorizeRequest)
