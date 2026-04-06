@@ -22,7 +22,7 @@ These occur **before** Prism sends any request to the connector — during reque
 | Field | Description |
 |-------|-------------|
 | `errorCode` | `SCREAMING_SNAKE_CASE` string identifying the error |
-| `errorMessage` | Human-readable description |
+| `message` | Human-readable description |
 | `suggestedAction` | How to fix it (optional) |
 | `docUrl` | Link to relevant documentation (optional) |
 
@@ -38,7 +38,7 @@ try {
 } catch (error) {
     if (error instanceof IntegrationError) {
         console.error(error.errorCode);
-        console.error(error.errorMessage);
+        console.error(error.message);
         if (error.suggestedAction) {
             console.error(error.suggestedAction);
         }
@@ -76,7 +76,7 @@ try {
     AuthorizeResponse response = client.authorize(request);
 } catch (IntegrationError e) {
     System.err.println(e.getErrorCode());
-    System.err.println(e.getErrorMessage());
+    System.err.println(e.getMessage());
     if (e.getSuggestedAction() != null) {
         System.err.println(e.getSuggestedAction());
     }
@@ -96,7 +96,7 @@ try {
     $response = $client->authorize($request);
 } catch (IntegrationError $e) {
     echo $e->getErrorCode() . "\n";
-    echo $e->getErrorMessage() . "\n";
+    echo $e->getMessage() . "\n";
     if ($e->getSuggestedAction()) {
         echo $e->getSuggestedAction() . "\n";
     }
@@ -119,15 +119,14 @@ These occur during HTTP communication with the connector — after the request m
 | Field | Description |
 |-------|-------------|
 | `errorCode` | String error code, e.g. `"CONNECT_TIMEOUT_EXCEEDED"` — use for logging and comparisons |
-| `code` | Numeric enum value — use for programmatic switching |
 | `message` | Human-readable description |
 | `statusCode` | HTTP status code if available (optional) |
 
 **Field access by language:**
 
-- **JS/Kotlin:** `error.errorCode`, `error.message`, `error.statusCode`
+- **JS:** `error.errorCode`, `error.message`, `error.statusCode`
 - **Python:** `error.error_code`, `str(error)`, `error.status_code`
-- **Rust:** `error.error_code()`, `error.message`, `error.status_code`
+- **Rust:** `error.error_code`, `error.message`, `error.status_code`
 
 > **Retry safety:** Most network errors happen after the request was already sent to the connector. Retrying without idempotency keys can cause double charges. Only retry `CONNECT_TIMEOUT_EXCEEDED` (connection never established) with confidence. For all others, verify payment status before retrying.
 
@@ -226,12 +225,12 @@ These occur when the connector returns a 4xx or 5xx response, or when the respon
 | Field | Description |
 |-------|-------------|
 | `errorCode` | String error code, e.g. `"RESPONSE_DESERIALIZATION_FAILED"` |
-| `errorMessage` | Human-readable description |
+| `message` | Human-readable description |
 | `httpStatusCode` | HTTP status returned by the connector (optional) |
 
 **Field access by language:**
 
-- **JS:** `error.errorCode`, `error.errorMessage`, `error.httpStatusCode`
+- **JS:** `error.errorCode`, `error.message`, `error.httpStatusCode`
 - **Python:** `error.error_code`, `error.error_message`, `error.http_status_code`
 - **Rust:** `error.error_code`, `error.error_message`, `error.http_status_code`
 
@@ -249,7 +248,7 @@ try {
 } catch (error) {
     if (error instanceof ConnectorError) {
         console.error(error.errorCode);
-        console.error(error.errorMessage);
+        console.error(error.message);
         if (error.httpStatusCode) {
             console.error(error.httpStatusCode);
         }
@@ -288,7 +287,7 @@ try {
     AuthorizeResponse response = client.authorize(request);
 } catch (ConnectorError e) {
     System.err.println(e.getErrorCode());
-    System.err.println(e.getErrorMessage());
+    System.err.println(e.getMessage());
     if (e.getHttpStatusCode() != null) {
         System.err.println(e.getHttpStatusCode());
     }
@@ -308,7 +307,7 @@ try {
     $response = $client->authorize($request);
 } catch (ConnectorError $e) {
     echo $e->getErrorCode() . "\n";
-    echo $e->getErrorMessage() . "\n";
+    echo $e->getMessage() . "\n";
     if ($e->getHttpStatusCode()) {
         echo $e->getHttpStatusCode() . "\n";
     }
@@ -537,7 +536,7 @@ async function authorizePayment(client, request) {
     } catch (error) {
         if (error instanceof IntegrationError) {
             // Request never sent — fix the input or config
-            console.error('Integration error:', error.errorCode, error.errorMessage);
+            console.error('Integration error:', error.errorCode, error.message);
             throw error;
         }
 
@@ -549,7 +548,7 @@ async function authorizePayment(client, request) {
 
         if (error instanceof ConnectorError) {
             // Payment may have been processed — investigate before retrying
-            console.error('Connector error:', error.errorCode, error.errorMessage);
+            console.error('Connector error:', error.errorCode, error.message);
             throw error;
         }
 
@@ -622,7 +621,7 @@ public AuthorizeResponse authorizePayment(PaymentClient client, AuthorizeRequest
         response = client.authorize(request);
     } catch (IntegrationError e) {
         // Request never sent — fix the input or config
-        System.err.println("Integration error: " + e.getErrorCode() + " " + e.getErrorMessage());
+        System.err.println("Integration error: " + e.getErrorCode() + " " + e.getMessage());
         throw e;
     } catch (NetworkError e) {
         // Request may have been sent — do not retry without verifying
@@ -630,7 +629,7 @@ public AuthorizeResponse authorizePayment(PaymentClient client, AuthorizeRequest
         throw e;
     } catch (ConnectorError e) {
         // Payment may have been processed — investigate before retrying
-        System.err.println("Connector error: " + e.getErrorCode() + " " + e.getErrorMessage());
+        System.err.println("Connector error: " + e.getErrorCode() + " " + e.getMessage());
         throw e;
     }
 
@@ -832,7 +831,6 @@ if (response.error.unifiedDetails.code === 'PAYMENT_DECLINED') {
 | `INCORRECT_CVV` | Wrong security code | `incorrect_cvc` | `CVC Declined` (refusalReasonCode: 24) |
 | `INVALID_CARD_NUMBER` | Card number is invalid | `incorrect_number` | `Invalid Card Number` (refusalReasonCode: 8) |
 | `PROCESSING_ERROR` | Generic processor error | `processing_error` | `Acquirer Error` (refusalReasonCode: 4) |
-| `NETWORK_TIMEOUT` | Request timed out | HTTP 504 | HTTP 504 / network timeout |
 | `RATE_LIMITED` | Too many requests | HTTP 429 | Refusal code 46 |
 | `INVALID_API_KEY` | Authentication failed | `api_key_expired` / HTTP 401 | HTTP 401 |
 | `VALIDATION_ERROR` | Bad request format | HTTP 400 | HTTP 422 |

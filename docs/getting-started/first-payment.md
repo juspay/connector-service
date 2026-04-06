@@ -20,7 +20,7 @@ Use Prism's client authentication token flow to fetch the Stripe `client_secret`
 const {
   MerchantAuthenticationClient,
   IntegrationError,
-  ConnectorResponseTransformationError,
+  ConnectorError,
   NetworkError,
   types,
 } = require("hyperswitch-prism");
@@ -50,15 +50,15 @@ async function createClientAuthenticationToken() {
     if (error instanceof IntegrationError) {
       console.error(
         "Integration error:",
-        error.proto?.errorCode,
+        error.errorCode,
         error.message,
       );
     } else if (error instanceof NetworkError) {
       console.error("Network error:", error.errorCode, error.message);
-    } else if (error instanceof ConnectorResponseTransformationError) {
+    } else if (error instanceof ConnectorError) {
       console.error(
-        "Transformation error:",
-        error.proto?.errorCode,
+        "Connector error:",
+        error.errorCode,
         error.message,
       );
     } else {
@@ -80,7 +80,7 @@ async function createClientAuthenticationToken() {
 from hyperswitch_prism import (
     MerchantAuthenticationClient,
     IntegrationError,
-    ConnectorResponseTransformationError,
+    ConnectorError,
     NetworkError,
 )
 
@@ -109,8 +109,8 @@ def create_client_authentication_token():
     except NetworkError as error:
         print(f"Network error: {error.error_code} - {error}")
         raise
-    except ConnectorResponseTransformationError as error:
-        print(f"Transformation error: {error.error_code} - {error.error_message}")
+    except ConnectorError as error:
+        print(f"Connector error: {error.error_code} - {error.error_message}")
         raise
 ```
 
@@ -119,7 +119,7 @@ def create_client_authentication_token():
 {% tab title="Java" %}
 
 ```java
-import payments.ConnectorResponseTransformationError;
+import payments.ConnectorError;
 import payments.IntegrationError;
 import payments.MerchantAuthenticationClient;
 import payments.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest;
@@ -152,13 +152,13 @@ public String createClientAuthenticationToken() {
         System.out.println("Client secret: " + clientSecret);
         return clientSecret;
     } catch (IntegrationError error) {
-        System.err.println("Integration error: " + error.getProto().getErrorCode() + " - " + error.getMessage());
+        System.err.println("Integration error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     } catch (NetworkError error) {
         System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
-    } catch (ConnectorResponseTransformationError error) {
-        System.err.println("Transformation error: " + error.getProto().getErrorCode() + " - " + error.getMessage());
+    } catch (ConnectorError error) {
+        System.err.println("Connector error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     }
 }
@@ -250,7 +250,7 @@ Use the `payment_method_id` returned by Stripe.js / Stripe Elements to authorize
 ```javascript
 const {
   IntegrationError,
-  ConnectorResponseTransformationError,
+  ConnectorError,
   NetworkError,
 } = require("hyperswitch-prism");
 
@@ -280,15 +280,15 @@ async function authorizePayment(paymentMethodId) {
     if (error instanceof IntegrationError) {
       console.error(
         "Integration error:",
-        error.proto?.errorCode,
+        error.errorCode,
         error.message,
       );
     } else if (error instanceof NetworkError) {
       console.error("Network error:", error.errorCode, error.message);
-    } else if (error instanceof ConnectorResponseTransformationError) {
+    } else if (error instanceof ConnectorError) {
       console.error(
-        "Transformation error:",
-        error.proto?.errorCode,
+        "Connector error:",
+        error.errorCode,
         error.message,
       );
     } else {
@@ -306,7 +306,7 @@ async function authorizePayment(paymentMethodId) {
 ```python
 from hyperswitch_prism import (
     IntegrationError,
-    ConnectorResponseTransformationError,
+    ConnectorError,
     NetworkError,
 )
 
@@ -338,8 +338,8 @@ def authorize_payment(payment_method_id):
     except NetworkError as error:
         print(f"Network error: {error.error_code} - {error}")
         raise
-    except ConnectorResponseTransformationError as error:
-        print(f"Transformation error: {error.error_code} - {error.error_message}")
+    except ConnectorError as error:
+        print(f"Connector error: {error.error_code} - {error.error_message}")
         raise
 ```
 
@@ -350,7 +350,7 @@ def authorize_payment(payment_method_id):
 ```java
 import payments.Address;
 import payments.CaptureMethod;
-import payments.ConnectorResponseTransformationError;
+import payments.ConnectorError;
 import payments.Currency;
 import payments.IntegrationError;
 import payments.NetworkError;
@@ -379,13 +379,13 @@ public void authorizePayment(String paymentMethodId) {
         var auth = stripeClient.token_authorize(request);
         System.out.println("Authorized: " + auth.getConnectorTransactionId() + ", " + auth.getStatus());
     } catch (IntegrationError error) {
-        System.err.println("Integration error: " + error.getProto().getErrorCode() + " - " + error.getMessage());
+        System.err.println("Integration error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     } catch (NetworkError error) {
         System.err.println("Network error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
-    } catch (ConnectorResponseTransformationError error) {
-        System.err.println("Transformation error: " + error.getProto().getErrorCode() + " - " + error.getMessage());
+    } catch (ConnectorError error) {
+        System.err.println("Connector error: " + error.getErrorCode() + " - " + error.getMessage());
         throw error;
     }
 }
@@ -722,7 +722,7 @@ const auth = await stripeClient.authorize({
 try {
   const auth = await stripeClient.authorize(request);
 } catch (error) {
-  if (error.code === "NETWORK_TIMEOUT") {
+  if (error.errorCode === "CONNECT_TIMEOUT_EXCEEDED") {
     // Retry with exponential backoff
     await retryWithBackoff(() => stripeClient.authorize(request));
   }
