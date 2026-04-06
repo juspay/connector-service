@@ -1,5 +1,5 @@
 {
-  "suite": "create_session_token",
+  "suite": "client_authentication_token",
   "suite_type": "independent",
   "depends_on": [],
   "strict_dependencies": true

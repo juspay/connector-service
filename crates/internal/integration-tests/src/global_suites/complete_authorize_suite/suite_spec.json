@@ -2,7 +2,7 @@
   "suite": "complete_authorize",
   "suite_type": "dependent",
   "depends_on": [
-    "create_access_token",
+    "server_authentication_token",
     {
       "suite": "pre_authenticate",
       "scenario": "threeds_card_pre_authenticate"
