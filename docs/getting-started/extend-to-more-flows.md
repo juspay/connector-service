@@ -200,33 +200,54 @@ See: [`reverse`](../../api-reference/services/payment-service/reverse.md)
 Let's take businesses that need to process asynchronous payment events from multiple processors. Such businesses need a unified way to handle webhooks for payment status updates, refunds, disputes and more. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
+const { EventClient } = require('hyperswitch-prism');
+const types = require('hyperswitch-prism').types;
+
+const config = {
+    connectorConfig: {
+        stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
+    }
+};
+const eventClient = new EventClient(config);
+
 // Express route for webhooks
 app.post('/webhooks', async (req, res) => {
-    // Webhook handling is done at application level
-    // Parse the webhook payload and verify signature
-    const payload = req.body;
-    const signature = req.headers['stripe-signature'];
-    
-    // Process based on event type
-    const eventType = payload.type;
-    
-    switch (eventType) {
-        case 'payment_intent.succeeded':
-            await fulfillOrder(payload.data.object.id);
-            break;
-        case 'payment_intent.payment_failed':
-            await notifyCustomer(payload.data.object.id);
-            break;
-        case 'charge.refunded':
-            await updateInventory(payload.data.object.id);
-            break;
+    try {
+        const result = await eventClient.handleEvent({
+            merchantEventId: `evt_${Date.now()}`,
+            requestDetails: {
+                method: 'POST',
+                url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+                headers: req.headers,
+                body: req.body
+            },
+            webhookSecrets: {
+                secret: { value: process.env.STRIPE_WEBHOOK_SECRET }
+            }
+        });
+
+        // Use normalized WebhookEventType enum
+        switch (result.eventType) {
+            case types.WebhookEventType.PAYMENT_INTENT_SUCCESS:
+                await fulfillOrder(result.eventResponse?.paymentsResponse?.connectorTransactionId);
+                break;
+            case types.WebhookEventType.PAYMENT_INTENT_FAILURE:
+                await notifyCustomer(result.eventResponse?.paymentsResponse?.connectorTransactionId);
+                break;
+            case types.WebhookEventType.PAYMENT_INTENT_CAPTURE_SUCCESS:
+                await updateOrder(result.eventResponse?.paymentsResponse?.connectorTransactionId);
+                break;
+        }
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('Webhook error:', error.message);
+        res.sendStatus(400);
     }
-    
-    res.sendStatus(200);
 });
 ```
 
-See: [`handle`](../../api-reference/services/event-service/handle.md)
+See: [`handleEvent`](../../api-reference/services/event-service/handle.md)
 
 ## Dispute Handling
 
