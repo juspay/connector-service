@@ -2,31 +2,45 @@
 
 ## Overview
 
-This guide provides detailed instructions for implementing fraud detection connectors in Hyperswitch Prism. Use this as a reference when adding support for new fraud detection providers.
+This guide provides detailed instructions for implementing fraud detection connectors in Hyperswitch Prism. **This follows the exact same pattern as PaymentService** - no new patterns are introduced.
 
 ## Prerequisites
 
 - Understanding of Rust trait system
 - Familiarity with gRPC and Protocol Buffers
 - Knowledge of the fraud detection provider's API
+- Review of the payouts folder structure in `domain_types/src/payouts/`
+
+## Key Architecture Principles
+
+### 1. NO Separate Trait File in `interfaces` Crate
+
+**PaymentService Pattern**: There is NO `payment.rs` in `interfaces/src/`. Similarly, there is NO `fraud.rs` in `interfaces/src/`.
+
+Instead, connectors implement `ConnectorIntegrationV2` directly in their connector files.
+
+### 2. Flow Markers Live in `connector_flow.rs`
+
+Following the existing pattern:
+- `Authorize`, `PSync`, `Void`, etc. are in `domain_types/src/connector_flow.rs`
+- Fraud flow markers (`FraudEvaluatePreAuthorization`, etc.) are also in `connector_flow.rs`
+
+### 3. Domain Types Live in `fraud/` Subdirectory
+
+Following the payouts pattern:
+- `payouts/` contains `payouts_types.rs`, `types.rs`, `router_request_types.rs`
+- `fraud/` contains `fraud_types.rs`, `types.rs`, `router_request_types.rs`
 
 ## Connector Structure
 
 ### Required Files
 
 1. **Connector Implementation**: `crates/integrations/connector-integration/src/connectors/{connector_name}.rs`
-2. **Transformers**: `crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs` (optional, for complex transformations)
-3. **Test Scenarios**: `crates/internal/ucs-connector-tests/scenarios/fraud/{connector_name}/`
+2. **Test Scenarios**: `crates/internal/ucs-connector-tests/scenarios/fraud/{connector_name}/`
 
-### Directory Layout
+### NO Transformers Subdirectory Required
 
-```
-crates/integrations/connector-integration/src/connectors/
-├── {connector_name}.rs           # Main connector implementation
-└── {connector_name}/
-    ├── transformers.rs           # Request/response transformations
-    └── types.rs                  # Connector-specific types (optional)
-```
+Unlike some payment connectors, fraud connectors typically don't need a separate `transformers.rs` file. Keep implementations simple and self-contained.
 
 ## Implementation Steps
 
@@ -49,7 +63,7 @@ impl ConnectorCommon for MyFraudConnector {
     }
 
     fn common_get_content_type(&self) -> &'static str {
-        "application/json"  // or "application/xml", etc.
+        "application/json"
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -69,232 +83,134 @@ impl ConnectorCommon for MyFraudConnector {
 
 ### Step 2: Implement Each Fraud Flow
 
-For each of the 6 fraud flows, implement `ConnectorIntegrationV2`:
-
-#### 2.1 EvaluatePreAuthorization Flow (Pre-Auth)
+For each of the 6 fraud flows, implement `ConnectorIntegrationV2` directly:
 
 ```rust
-use interfaces::fraud::FraudEvaluatePreAuthorizationV2;
+use interfaces::connector_integration_v2::ConnectorIntegrationV2;
+use domain_types::{
+    connector_flow,
+    fraud::fraud_types::*,
+};
 
 impl ConnectorIntegrationV2<
     connector_flow::FraudEvaluatePreAuthorization,
-    FraudFlowData<T>,
-    FraudEvaluatePreAuthorizationData<T>,
+    FraudFlowData,
+    FraudEvaluatePreAuthorizationRequest,
     FraudEvaluatePreAuthorizationResponse,
 > for MyFraudConnector {
     fn get_headers(
         &self,
-        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
-        connectors: &Connectors,
+        req: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, FraudEvaluatePreAuthorizationResponse>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         // Build HTTP headers
-        // Include authentication headers
-        // Set content-type
     }
 
     fn get_url(
         &self,
-        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
-        connectors: &Connectors,
+        req: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, FraudEvaluatePreAuthorizationResponse>,
     ) -> CustomResult<String, ConnectorError> {
         // Construct endpoint URL
-        // May vary by environment (sandbox vs production)
     }
 
     fn build_request(
         &self,
-        req: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
-        connectors: &Connectors,
+        req: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, FraudEvaluatePreAuthorizationResponse>,
     ) -> CustomResult<Option<Request>, ConnectorError> {
-        // Transform FraudEvaluatePreAuthorizationData to connector-specific request
-        // Serialize to JSON/XML
-        // Return Request object
+        // Transform request to connector-specific format
     }
 
     fn handle_response(
         &self,
-        data: &RouterData<..., FraudEvaluatePreAuthorizationData<T>, FraudEvaluatePreAuthorizationResponse>,
+        data: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, FraudEvaluatePreAuthorizationResponse>,
         res: Response,
     ) -> CustomResult<FraudEvaluatePreAuthorizationResponse, ConnectorError> {
         // Parse connector response
-        // Transform to FraudEvaluatePreAuthorizationResponse
-        // Handle success and error cases
     }
 }
-
-impl<T: PaymentMethodDataTypes> FraudEvaluatePreAuthorizationV2<T> for MyFraudConnector {}
 ```
 
-#### 2.2 EvaluatePostAuthorization Flow (Post-Auth)
+Repeat for all 6 flows:
+1. `FraudEvaluatePreAuthorization`
+2. `FraudEvaluatePostAuthorization`
+3. `FraudRecordTransactionData`
+4. `FraudRecordFulfillmentData`
+5. `FraudRecordReturnData`
+6. `FraudGet`
 
-```rust
-use interfaces::fraud::FraudEvaluatePostAuthorizationV2;
+**Note**: There is NO `FraudCancel` flow. Cancel is handled via webhooks or status updates.
 
-impl ConnectorIntegrationV2<
-    connector_flow::FraudEvaluatePostAuthorization,
-    FraudFlowData<T>,
-    FraudEvaluatePostAuthorizationData<T>,
-    FraudEvaluatePostAuthorizationResponse,
-> for MyFraudConnector {
-    // Implementation includes authorization result
-    // May include error codes from payment processor
-}
-
-impl<T: PaymentMethodDataTypes> FraudEvaluatePostAuthorizationV2<T> for MyFraudConnector {}
-```
-
-#### 2.3 RecordTransactionData Flow
-
-```rust
-use interfaces::fraud::FraudRecordTransactionDataV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudRecordTransactionData,
-    FraudFlowData<T>,
-    FraudRecordTransactionDataData<T>,
-    FraudRecordTransactionDataResponse,
-> for MyFraudConnector {
-    // Implementation similar to post-auth
-    // Used for post-hoc fraud evaluation
-}
-
-impl<T: PaymentMethodDataTypes> FraudRecordTransactionDataV2<T> for MyFraudConnector {}
-```
-
-#### 2.4 RecordFulfillmentData Flow
-
-```rust
-use interfaces::fraud::FraudRecordFulfillmentDataV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudRecordFulfillmentData,
-    FraudFlowData<T>,
-    FraudRecordFulfillmentDataData,
-    FraudRecordFulfillmentDataResponse,
-> for MyFraudConnector {
-    // Send shipping/fulfillment information
-    // Include tracking numbers
-    // Update case status
-}
-
-impl<T: PaymentMethodDataTypes> FraudRecordFulfillmentDataV2<T> for MyFraudConnector {}
-```
-
-#### 2.5 RecordReturn Flow
-
-```rust
-use interfaces::fraud::FraudRecordReturnDataV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudRecordReturnData,
-    FraudFlowData<T>,
-    FraudRecordReturnDataData,
-    FraudRecordReturnDataResponse,
-> for MyFraudConnector {
-    // Record return/refund information
-    // Update fraud model
-}
-
-impl<T: PaymentMethodDataTypes> FraudRecordReturnDataV2<T> for MyFraudConnector {}
-```
-
-#### 2.6 Get Flow (Status Sync)
-
-```rust
-use interfaces::fraud::FraudGetV2;
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudGet,
-    FraudFlowData<T>,
-    FraudGetData,
-    FraudGetResponse,
-> for MyFraudConnector {
-    // Query current fraud check status
-    // Used for polling when webhooks unavailable
-}
-
-impl<T: PaymentMethodDataTypes> FraudGetV2<T> for MyFraudConnector {}
-```
-
-**Note**: Exactly 6 flows implemented (no Cancel). Cancel is handled via webhooks or status updates.
-
-### Step 3: Implement Combined Trait
-
-```rust
-use interfaces::fraud::FraudConnectorTrait;
-
-impl FraudConnectorTrait for MyFraudConnector {}
-```
-
-### Step 4: Register Connector
+### Step 3: Register Connector
 
 Add to `crates/integrations/connector-integration/src/connectors.rs`:
 
 ```rust
-pub mod my_connector;
+pub mod signifyd;
+pub mod riskified;
 
-// In the connector registry function
-pub fn get_fraud_connector(name: &str) -> Option<Box<dyn FraudConnectorTrait>> {
-    match name {
-        "my_connector" => Some(Box::new(my_connector::MyFraudConnector)),
-        _ => None,
-    }
-}
+// In the connector registry function if needed
 ```
 
 ## Data Transformation Patterns
 
 ### Request Transformation
 
+Transform internal types directly in the connector implementation:
+
 ```rust
-// Transform internal type to connector request
-impl<T: PaymentMethodDataTypes> From<FraudEvaluatePreAuthorizationData<T>> 
-    for MyConnectorPreAuthRequest 
-{
-    fn from(data: FraudEvaluatePreAuthorizationData<T>) -> Self {
-        Self {
-            amount: data.amount as f64 / 100.0,  // Convert minor to base
-            currency: data.currency.to_string(),
-            customer_email: data.customer.and_then(|c| c.email),
-            device_fingerprint: data.device_fingerprint,
-            session_id: data.session_id,
-            // ... other fields
-        }
-    }
+fn build_request(
+    &self,
+    req: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, ...>,
+) -> CustomResult<Option<Request>, ConnectorError> {
+    let connector_request = MyConnectorPreAuthRequest {
+        amount: req.request.amount as f64 / 100.0,
+        currency: req.request.currency.to_string(),
+        device_fingerprint: req.request.device_fingerprint.clone(),
+        session_id: req.request.session_id.clone(),
+        // ... other fields
+    };
+    
+    Ok(Some(Request {
+        body: Some(RequestContent::Json(Box::new(connector_request))),
+        // ...
+    }))
 }
 ```
 
 ### Response Transformation
 
 ```rust
-// Transform connector response to internal type
-impl From<MyConnectorPreAuthResponse> for FraudEvaluatePreAuthorizationResponse {
-    fn from(res: MyConnectorPreAuthResponse) -> Self {
-        Self {
-            fraud_check_id: res.check_id,
-            status: res.decision.into(),           // Maps to FraudCheckStatus
-            recommended_action: res.action.into(), // Maps to FraudAction (ACCEPT/REJECT)
-            score: res.risk_score.map(|s| FraudScore {
-                score: s,
-                risk_level: res.risk_level,
-                threshold: None,
-            }),
-            reasons: res.signals.into_iter().map(|s| FraudReason {
-                code: s.code,
-                message: s.description,
-                description: None,
-            }).collect(),
-            case_id: res.case_id,
-            redirect_url: None,
-            connector_metadata: None,
-        }
-    }
+fn handle_response(
+    &self,
+    _data: &RouterDataV2<..., FraudEvaluatePreAuthorizationRequest, FraudEvaluatePreAuthorizationResponse>,
+    res: Response,
+) -> CustomResult<FraudEvaluatePreAuthorizationResponse, ConnectorError> {
+    let connector_response: MyConnectorPreAuthResponse = res
+        .response
+        .parse_struct("MyConnectorPreAuthResponse")
+        .change_context(ConnectorError::ResponseDeserializationFailed)?;
+    
+    Ok(FraudEvaluatePreAuthorizationResponse {
+        fraud_id: connector_response.check_id,
+        status: map_status(connector_response.decision),
+        recommended_action: map_action(connector_response.action),
+        score: connector_response.risk_score.map(|s| FraudScore {
+            score: s,
+            risk_level: connector_response.risk_level,
+            threshold: None,
+        }),
+        reasons: connector_response.signals.into_iter().map(|s| FraudReason {
+            code: s.code,
+            message: s.description,
+            description: None,
+        }).collect(),
+        case_id: connector_response.case_id,
+        redirect_url: None,
+        connector_metadata: None,
+    })
 }
 ```
 
 ## Error Handling
-
-### Common Error Patterns
 
 ```rust
 fn build_error_response(
@@ -302,7 +218,6 @@ fn build_error_response(
     res: Response,
     _event_builder: Option<&mut Event>,
 ) -> CustomResult<ErrorResponse, ConnectorError> {
-    // Parse connector error format
     let error_body: MyConnectorError = res
         .response
         .parse_struct("MyConnectorError")
@@ -324,10 +239,10 @@ fn build_error_response(
 
 ## Webhook Handling
 
-If the fraud provider supports webhooks:
+If the fraud provider supports webhooks, implement `IncomingWebhook`:
 
 ```rust
-use interfaces::connector_types::IncomingWebhook;
+use interfaces::webhooks::IncomingWebhook;
 
 impl IncomingWebhook for MyFraudConnector {
     fn get_event_type(
@@ -337,8 +252,7 @@ impl IncomingWebhook for MyFraudConnector {
         _config: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorError>> {
         // Parse webhook payload
-        // Determine event type
-        // Return appropriate EventType
+        // Determine event type (FRM_APPROVED, FRM_REJECTED, etc.)
     }
 
     fn process_fraud_webhook(
@@ -348,7 +262,6 @@ impl IncomingWebhook for MyFraudConnector {
         _config: Option<ConnectorSpecificConfig>,
     ) -> Result<FraudWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         // Parse fraud-specific webhook
-        // Return FraudWebhookDetailsResponse
     }
 }
 ```
@@ -363,17 +276,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_checkout_request_transformation() {
-        let data = FraudCheckoutData {
+    fn test_pre_auth_request_transformation() {
+        let request = FraudEvaluatePreAuthorizationRequest {
             amount: 10000,
             currency: Currency::USD,
+            device_fingerprint: "fp_abc123".to_string(),
+            session_id: "sess_xyz789".to_string(),
+            synchronous: true,
             // ...
         };
 
-        let request: MyConnectorCheckoutRequest = data.into();
+        // Test transformation logic
+    }
 
-        assert_eq!(request.amount, 100.0);
-        assert_eq!(request.currency, "USD");
+    #[test]
+    fn test_status_mapping() {
+        assert_eq!(map_status("ACCEPT"), FraudCheckStatus::Legit);
+        assert_eq!(map_status("REJECT"), FraudCheckStatus::Fraud);
+        assert_eq!(map_status("REVIEW"), FraudCheckStatus::ManualReview);
     }
 }
 ```
@@ -383,114 +303,75 @@ mod tests {
 Create test scenarios in `crates/internal/ucs-connector-tests/scenarios/fraud/my_connector/`:
 
 ```yaml
-# checkout_approved.yaml
-name: "Fraud Checkout - Approved"
-flow: FraudCheckout
+# evaluate_pre_auth_approved.yaml
+name: "Fraud Evaluate Pre-Authorization - Approved"
+flow: FraudEvaluatePreAuthorization
 connector: my_connector
 request:
   amount:
     minor_amount: 10000
     currency: USD
-  # ... other fields
+  device_fingerprint: "fp_test123"
+  session_id: "sess_test456"
+  synchronous: true
 expected:
-  status: APPROVED
+  status: LEGIT
   recommended_action: ACCEPT
-```
-
-## Best Practices
-
-### 1. Idempotency
-Ensure requests can be safely retried:
-```rust
-fn get_headers(&self, ...) -> CustomResult<...> {
-    let mut headers = vec![
-        ("Idempotency-Key".to_string(), req.idempotency_key.masked()),
-    ];
-    // ...
-}
-```
-
-### 2. Timeouts
-Respect provider timeout requirements:
-```rust
-fn build_request(&self, ...) -> CustomResult<Option<Request>> {
-    Ok(Some(Request {
-        // ...
-        timeout: Some(Duration::from_secs(30)),
-    }))
-}
-```
-
-### 3. Logging
-Use structured logging for debugging:
-```rust
-fn handle_response(&self, data, res) -> CustomResult<...> {
-    logger::debug!("Fraud provider response: {:?}", res);
-    // ...
-}
-```
-
-### 4. Connector State
-Use `ConnectorState` for session management:
-```rust
-fn handle_response(&self, data, res) -> CustomResult<FraudCheckoutResponse> {
-    let mut response: FraudCheckoutResponse = /* ... */;
-    
-    // Pass through state for next request
-    response.connector_state = data.connector_state.clone();
-    
-    Ok(response)
-}
-```
-
-## Common Pitfalls
-
-### 1. Currency Units
-Always verify if provider uses base or minor currency units:
-```rust
-// Wrong
-amount: data.amount as f64  // If data.amount is in minor units
-
-// Correct
-amount: data.amount as f64 / 100.0  // Convert minor to base
-```
-
-### 2. Time Zones
-Ensure timestamps are in the correct format:
-```rust
-// ISO 8601 format
-created_at: Utc::now().to_rfc3339(),
-```
-
-### 3. Empty vs Missing Fields
-Distinguish between null and not present:
-```rust
-// Use Option for truly optional fields
-optional_field: Option<String>,
-
-// Use default value for fields that should always exist
-required_field: String,
 ```
 
 ## Provider-Specific Notes
 
 ### Signifyd
-- Uses team-based authentication
-- Checkout API returns synchronous decision
-- Fulfillment updates are asynchronous
+- **Authentication**: Team-based API key in header
+- **Endpoints**:
+  - Pre-Auth: `/v3/checkouts`
+  - Post-Auth: `/v3/transactions`
+  - Sales: `/v3/sales`
+  - Fulfillments: `/v3/fulfillments`
+  - Returns: `/v3/returns`
+  - Decisions: `/v3/decisions/{orderId}`
+- **Required Fields**: `device_fingerprint`, `session_id`
 
 ### Riskified
-- Requires HMAC signature for authentication
-- Supports pre-auth and post-auth flows
-- Case management through dashboard
+- **Authentication**: HMAC-SHA256 signature
+- **Endpoints**:
+  - Submit (async): `/api/orders/submit`
+  - Decide (sync): `/api/orders/decide`
+  - Update: `/api/orders/update`
+  - Fulfill: `/api/orders/fulfill`
+  - Partial Refund: `/api/orders/partial_refund`
+- **Mode Selection**: Use `synchronous` flag (true=decide, false=submit)
 
-### CyberSource Decision Manager
-- Integrated with payment processing
-- Uses merchant ID + API key auth
-- Supports custom rules
+## Common Pitfalls
+
+### 1. NO Trait File in interfaces
+**Wrong**: Creating `interfaces/src/fraud.rs` with `FraudConnectorTrait`
+**Correct**: Implement `ConnectorIntegrationV2` directly in connector files
+
+### 2. Flow Markers Location
+**Wrong**: Defining flow markers in `fraud_types.rs`
+**Correct**: Define in `connector_flow.rs` (following existing pattern)
+
+### 3. Folder Structure
+**Wrong**: Creating `fraud.rs` at `domain_types/src/fraud_types.rs`
+**Correct**: Create `fraud/` subdirectory following payouts pattern
+
+### 4. Flow Marker Derives
+**Wrong**: `#[derive(Debug, Clone, Copy)]` (Copy is unnecessary)
+**Correct**: `#[derive(Debug, Clone)]` (matching existing flow markers)
+
+### 5. Missing Required Fields
+**Signifyd**: Always include `device_fingerprint` and `session_id`
+**Riskified**: Always include `session_id` and respect `synchronous` flag
+
+### 6. build.rs Update
+**Wrong**: Forgetting to add `"proto/fraud.proto"` to build.rs
+**Correct**: Update `crates/types-traits/grpc-api-types/build.rs` compilation list
 
 ## Resources
 
-- **Existing Connectors**: Reference `crates/integrations/connector-integration/src/connectors/`
-- **Test Examples**: Reference `crates/internal/ucs-connector-tests/scenarios/`
-- **Hyperswitch FRM Docs**: https://docs.hyperswitch.io/integration-guide/workflows/fraud-and-risk-management
+- **Payouts Pattern Reference**: `crates/types-traits/domain_types/src/payouts/`
+- **Flow Markers Reference**: `crates/types-traits/domain_types/src/connector_flow.rs`
+- **Existing Connectors**: `crates/integrations/connector-integration/src/connectors/`
+- **Spec Document**: `docs/plans/fraud/01-fraud-interface-specification.md`
+- **Implementation Plan**: `docs/plans/fraud/02-implementation-plan.md`
