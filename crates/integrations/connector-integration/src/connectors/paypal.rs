@@ -51,10 +51,11 @@ use super::macros;
 use crate::{
     connectors::paypal::transformers::{
         self as paypal, auth_headers, PaypalAuthResponse, PaypalAuthUpdateRequest,
-        PaypalAuthUpdateResponse, PaypalCaptureResponse, PaypalPaymentsCancelResponse,
-        PaypalPaymentsCaptureRequest, PaypalPaymentsRequest, PaypalRefundRequest,
-        PaypalRepeatPaymentRequest, PaypalRepeatPaymentResponse, PaypalSetupMandatesResponse,
-        PaypalSyncResponse, PaypalZeroMandateRequest, RefundResponse, RefundSyncResponse,
+        PaypalAuthUpdateResponse, PaypalCaptureResponse, PaypalOrderCreateRequest,
+        PaypalOrderCreateResponse, PaypalPaymentsCancelResponse, PaypalPaymentsCaptureRequest,
+        PaypalPaymentsRequest, PaypalRefundRequest, PaypalRepeatPaymentRequest,
+        PaypalRepeatPaymentResponse, PaypalSetupMandatesResponse, PaypalSyncResponse,
+        PaypalZeroMandateRequest, RefundResponse, RefundSyncResponse,
     },
     types::ResponseRouterData,
     utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
@@ -137,6 +138,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paypal<T>
 {
     fn should_do_access_token(&self, _payment_method: Option<common_enums::PaymentMethod>) -> bool {
+        true
+    }
+    fn should_do_order_create(&self) -> bool {
         true
     }
 }
@@ -492,6 +496,12 @@ macros::create_all_prerequisites!(
     connector_name: Paypal,
     generic_type: T,
     api: [
+        (
+            flow: CreateOrder,
+            request_body: PaypalOrderCreateRequest,
+            response_body: PaypalOrderCreateResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
         (
             flow: Authorize,
             request_body: PaypalPaymentsRequest<T>,
@@ -1260,15 +1270,57 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     for Paypal<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Paypal<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type],
+    connector: Paypal,
+    curl_request: Json(PaypalOrderCreateRequest),
+    curl_response: PaypalOrderCreateResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            let access_token = req.resource_common_data.access_token.clone().ok_or(
+                IntegrationError::FailedToObtainAuthType {
+                    context: Default::default(),
+                },
+            )?;
+            let connector_metadata = req
+                .resource_common_data
+                .connector_feature_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token.expose(),
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_config,
+                connector_metadata.as_ref(),
+            )
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}v2/checkout/orders", self.connector_base_url_payments(req)))
+        }
+
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+            self.get_order_error_response(res, event_builder)
+        }
+    }
+);
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         ServerSessionAuthenticationToken,

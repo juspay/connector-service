@@ -13,12 +13,13 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
     },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        MandateReference, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId,
         ServerAuthenticationTokenResponseData, SetupMandateRequestData,
         VerifyWebhookSourceFlowData,
     },
@@ -666,6 +667,170 @@ pub enum PaymentSourceItemResponse {
     Eps(EpsRedirectionResponse),
     Ideal(IdealRedirectionResponse),
 }
+
+// ============================================================================
+// CreateOrder Request/Response Types
+// ============================================================================
+
+/// CreateOrder request — creates a PayPal order without payment source.
+/// The order_id returned is then used in the Authorize step.
+#[derive(Debug, Serialize)]
+pub struct PaypalOrderCreateRequest {
+    intent: PaypalPaymentIntent,
+    purchase_units: Vec<PaypalOrderCreatePurchaseUnit>,
+}
+
+/// Simplified purchase unit for CreateOrder (no payment-method-specific fields).
+#[derive(Debug, Serialize)]
+pub struct PaypalOrderCreatePurchaseUnit {
+    reference_id: Option<String>,
+    invoice_id: Option<String>,
+    amount: PaypalOrderCreateAmount,
+}
+
+/// Amount block for CreateOrder (no breakdown required).
+#[derive(Debug, Serialize)]
+pub struct PaypalOrderCreateAmount {
+    currency_code: common_enums::Currency,
+    value: StringMajorUnit,
+}
+
+/// CreateOrder response — we only need the order id and status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaypalOrderCreateResponse {
+    pub id: String,
+    pub status: PaypalOrderStatus,
+}
+
+// --- TryFrom: RouterDataV2 -> PaypalOrderCreateRequest (via macro wrapper) ---
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for PaypalOrderCreateRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        let value = item
+            .connector
+            .amount_converter
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(IntegrationError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
+
+        let connector_request_reference_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let purchase_units = vec![PaypalOrderCreatePurchaseUnit {
+            reference_id: Some(connector_request_reference_id.clone()),
+            invoice_id: Some(connector_request_reference_id),
+            amount: PaypalOrderCreateAmount {
+                currency_code: router_data.request.currency,
+                value,
+            },
+        }];
+
+        // Default to Authorize intent so we can capture later
+        let intent = PaypalPaymentIntent::Authorize;
+
+        Ok(Self {
+            intent,
+            purchase_units,
+        })
+    }
+}
+
+// --- TryFrom: PaypalOrderCreateResponse -> PaymentCreateOrderResponse ---
+
+impl TryFrom<PaypalOrderCreateResponse> for PaymentCreateOrderResponse {
+    type Error = Report<ConnectorResponseTransformationError>;
+
+    fn try_from(response: PaypalOrderCreateResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            order_id: response.id,
+            session_data: None,
+        })
+    }
+}
+
+// --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaypalOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            PaypalOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+        let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
+
+        // Extract order_id before moving
+        let order_id = order_response.order_id.clone();
+
+        Ok(Self {
+            response: Ok(order_response),
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::Pending,
+                // KEY: Store order ID so Authorize flow can use it via reference_id
+                reference_id: Some(order_id),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct PaypalPaymentsRequest<
