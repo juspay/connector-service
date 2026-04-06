@@ -65,3 +65,18 @@ tasks.named<JavaExec>("run") {
     systemProperty("jna.library.path",
         file("../src/main/resources/native").absolutePath)
 }
+
+// Task to run the composite smoke test (direct SDK calls, no reflection)
+tasks.register<JavaExec>("runComposite") {
+    group = "application"
+    description = "Run the composite smoke test (typed exception contract validation)"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("SmokeTestCompositeKt")
+
+    environment("FORCE_COLOR", "1")
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    systemProperty("jna.library.path",
+        file("../src/main/resources/native").absolutePath)
+
+    args = project.properties["args"]?.toString()?.split(" ") ?: emptyList()
+}

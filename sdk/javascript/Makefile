@@ -159,6 +159,7 @@ install: install-deps generate-all build-ts
 # ---------------------------------------------------------------------------
 # test-package
 # End-to-end test: build FFI → pack → install in temp dir → run smoke test.
+# Also runs composite flow tests.
 # ---------------------------------------------------------------------------
 test-package: build-ffi-lib generate-all build-ts pack-archive
 	@echo "Testing in isolation..."
@@ -176,6 +177,21 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 		NODE_PATH=/tmp/test-hyperswitch-js/node_modules npx tsx test_smoke.ts \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@rm -rf /tmp/test-hyperswitch-js
+	@echo "Testing composite flows in isolation..."
+	@rm -rf /tmp/test-hyperswitch-js-composite
+	@mkdir -p /tmp/test-hyperswitch-js-composite
+	@test -f $(JS_TARBALL) || (echo "Error: Tarball not found: $(JS_TARBALL)" && exit 1)
+	@cd /tmp/test-hyperswitch-js-composite && npm init -y --silent && \
+		npm install $(JS_TARBALL) typescript @types/node --silent
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js-composite/
+	@cp $(SDK_ROOT)/smoke-test/tsconfig.json      /tmp/test-hyperswitch-js-composite/
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js-composite/; \
+	fi
+	@cd /tmp/test-hyperswitch-js-composite && npx tsc && \
+		NODE_PATH=/tmp/test-hyperswitch-js-composite/node_modules node test_smoke_composite.js \
+		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
+	@rm -rf /tmp/test-hyperswitch-js-composite
 
 # ---------------------------------------------------------------------------
 # test-composite

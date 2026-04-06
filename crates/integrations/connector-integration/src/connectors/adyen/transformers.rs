@@ -52,7 +52,7 @@ use crate::{
         to_connector_meta_from_secret,
     },
 };
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, WebhookError};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -3983,7 +3983,7 @@ pub trait ForeignTryFrom<F>: Sized {
 }
 
 impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn foreign_try_from(
         (is_manual_capture, adyen_webhook_status): (bool, AdyenWebhookStatus),
     ) -> Result<Self, Self::Error> {
@@ -4006,7 +4006,7 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             //Webhooks with Payment Events only should try to consume this resource object.
             AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => {
                 Err(error_stack::report!(
-                    ConnectorResponseTransformationError::response_handling_failed_http_status_unknown()
+                    ConnectorError::response_handling_failed_http_status_unknown()
                 ))
             }
         }
@@ -4052,7 +4052,7 @@ where
     F: Clone,
     Req: Clone,
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn foreign_try_from(
         (value, capture_method, is_multiple_capture_psync_flow, payment_method_type): (
@@ -4124,7 +4124,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 where
     F: Clone,
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         value: ResponseRouterData<AdyenPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -4144,7 +4144,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
 where
     F: Clone,
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: ResponseRouterData<AdyenPSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Extract the inner AdyenPaymentResponse from AdyenPSyncResponse
         let adyen_payment_response = value.response.0;
@@ -4178,7 +4178,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<AdyenRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         value: ResponseRouterData<AdyenRepeatPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -4250,7 +4250,7 @@ pub enum AdyenVoidStatus {
 }
 
 impl ForeignTryFrom<AdyenVoidStatus> for AttemptStatus {
-    type Error = ConnectorResponseTransformationError;
+    type Error = ConnectorError;
     fn foreign_try_from(item: AdyenVoidStatus) -> Result<Self, Self::Error> {
         match item {
             AdyenVoidStatus::Received => Ok(Self::Voided),
@@ -4262,7 +4262,7 @@ impl ForeignTryFrom<AdyenVoidStatus> for AttemptStatus {
 impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: ResponseRouterData<AdyenVoidResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -4298,7 +4298,7 @@ pub fn get_adyen_response(
     is_capture_manual: bool,
     status_code: u16,
     pmt: Option<common_enums::PaymentMethodType>,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = get_adyen_payment_status(is_capture_manual, response.result_code, pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
@@ -4419,7 +4419,7 @@ pub fn get_present_to_shopper_response(
     is_manual_capture: bool,
     status_code: u16,
     pmt: Option<common_enums::PaymentMethodType>,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = get_adyen_payment_status(is_manual_capture, response.result_code.clone(), pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
@@ -4482,7 +4482,7 @@ pub fn get_redirection_error_response(
     is_manual_capture: bool,
     status_code: u16,
     pmt: Option<common_enums::PaymentMethodType>,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = get_adyen_payment_status(is_manual_capture, response.result_code, pmt);
     let error = {
         let (network_decline_code, network_error_message) = response
@@ -4553,7 +4553,7 @@ pub fn get_qr_code_response(
     is_manual_capture: bool,
     status_code: u16,
     pmt: Option<common_enums::PaymentMethodType>,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = get_adyen_payment_status(is_manual_capture, response.result_code.clone(), pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
@@ -4613,11 +4613,10 @@ pub fn get_qr_code_response(
 /// Matches Hyperswitch's get_qr_metadata implementation
 fn get_qr_metadata(
     response: &QrCodeResponseResponse,
-) -> CustomResult<Option<serde_json::Value>, ConnectorResponseTransformationError> {
+) -> CustomResult<Option<serde_json::Value>, ConnectorError> {
     // Generate QR code image from qr_code_data
-    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone()).change_context(
-        ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
-    )?;
+    let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())?;
 
     let image_data_url = Url::parse(image_data.data.as_str()).ok();
     let qr_code_url = response.action.qr_code_url.clone();
@@ -4652,9 +4651,7 @@ fn get_qr_metadata(
     qr_code_info
         .map(|info| info.encode_to_value())
         .transpose()
-        .change_context(
-            ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
-        )
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())
 }
 
 pub fn get_webhook_response(
@@ -4662,7 +4659,7 @@ pub fn get_webhook_response(
     is_manual_capture: bool,
     is_multiple_capture_psync_flow: bool,
     status_code: u16,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = AttemptStatus::foreign_try_from((is_manual_capture, response.status.clone()))?;
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
@@ -4813,7 +4810,7 @@ pub fn get_redirection_response(
     is_manual_capture: bool,
     status_code: u16,
     pmt: Option<common_enums::PaymentMethodType>,
-) -> CustomResult<AdyenPaymentsResponseData, ConnectorResponseTransformationError> {
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
     let status = get_adyen_payment_status(is_manual_capture, response.result_code.clone(), pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
@@ -4911,7 +4908,7 @@ pub struct WaitScreenData {
 
 pub fn get_wait_screen_metadata(
     next_action: &RedirectionResponse,
-) -> CustomResult<Option<serde_json::Value>, ConnectorResponseTransformationError> {
+) -> CustomResult<Option<serde_json::Value>, ConnectorError> {
     match next_action.action.payment_method_type {
         PaymentType::Blik => {
             let current_time = OffsetDateTime::now_utc().unix_timestamp_nanos();
@@ -5655,7 +5652,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: ResponseRouterData<AdyenRefundResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -5743,7 +5740,7 @@ pub struct AdyenCaptureResponse {
 impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         value: ResponseRouterData<AdyenCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -6001,7 +5998,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         value: ResponseRouterData<SetupMandateResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -6487,7 +6484,7 @@ pub struct AdyenDisputeAcceptResponse {
 impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         value: ResponseRouterData<AdyenDisputeAcceptResponse, Self>,
@@ -6691,7 +6688,7 @@ pub struct AdyenSubmitEvidenceResponse {
 impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         value: ResponseRouterData<AdyenSubmitEvidenceResponse, Self>,
@@ -6823,7 +6820,7 @@ pub struct DisputeServiceResult {
 impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,
@@ -7118,7 +7115,7 @@ fn get_line_items<
 
 pub fn get_present_to_shopper_metadata(
     response: &PresentToShopperResponse,
-) -> CustomResult<Option<serde_json::Value>, ConnectorResponseTransformationError> {
+) -> CustomResult<Option<serde_json::Value>, ConnectorError> {
     let reference = response.action.reference.clone();
     let expires_at = response
         .action
@@ -7148,10 +7145,7 @@ pub fn get_present_to_shopper_metadata(
 
             Some(voucher_data.encode_to_value())
                 .transpose()
-                .change_context(
-                ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(
-                ),
-            )
+                .change_context(ConnectorError::response_handling_failed_http_status_unknown())
         }
         // NOTE: Support for other payment methods will be added in future iterations
         // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)
