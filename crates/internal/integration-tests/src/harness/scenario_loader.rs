@@ -32,35 +32,17 @@ pub fn connector_spec_dir(connector: &str) -> PathBuf {
     connector_specs_root().join(connector)
 }
 
-/// Normalizes a suite name alias to the canonical name whose `_suite/` directory
-/// exists on disk.  The scenario_api dispatch accepts both old and new names for
-/// certain suites (e.g. `"create_access_token"` and `"server_authentication_token"`
-/// both route to the same gRPC method).  However, only one `_suite/` directory
-/// exists for each group.  This helper maps the old alias to the current
-/// directory name so that `scenario_file_path` and `suite_spec_file_path`
-/// resolve correctly.
-fn normalize_suite_name(suite: &str) -> &str {
-    match suite {
-        "create_access_token" => "server_authentication_token",
-        "create_sdk_session_token" => "client_authentication_token",
-        "create_session_token" => "server_session_authentication_token",
-        other => other,
-    }
-}
-
 /// Absolute path to the suite scenario file.
 pub fn scenario_file_path(suite: &str) -> PathBuf {
-    let canonical = normalize_suite_name(suite);
     scenario_root()
-        .join(format!("{canonical}_suite"))
+        .join(format!("{suite}_suite"))
         .join("scenario.json")
 }
 
 /// Absolute path to the suite specification file.
 pub fn suite_spec_file_path(suite: &str) -> PathBuf {
-    let canonical = normalize_suite_name(suite);
     scenario_root()
-        .join(format!("{canonical}_suite"))
+        .join(format!("{suite}_suite"))
         .join("suite_spec.json")
 }
 
@@ -120,30 +102,40 @@ pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
 }
 
 /// Loads optional connector-specific browser automation hooks.
+///
+/// Returns `None` when the spec file does not exist or cannot be read/parsed.
+/// Read and parse failures are logged as warnings rather than propagated.
 pub fn load_connector_browser_automation_spec(
     connector: &str,
-) -> Result<Option<ConnectorBrowserAutomationSpec>, ScenarioError> {
+) -> Option<ConnectorBrowserAutomationSpec> {
     let path = connector_browser_automation_spec_file_path(connector);
     if !path.exists() {
-        return Ok(None);
+        return None;
     }
 
-    let content = fs::read_to_string(&path).map_err(|source| {
-        ScenarioError::ConnectorBrowserAutomationSpecRead {
-            path: path.clone(),
-            source,
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(source) => {
+            tracing::warn!(
+                path = %path.display(),
+                %source,
+                "failed to read browser automation spec"
+            );
+            return None;
         }
-    })?;
+    };
 
-    let spec =
-        serde_json::from_str::<ConnectorBrowserAutomationSpec>(&content).map_err(|source| {
-            ScenarioError::ConnectorBrowserAutomationSpecParse {
-                path: path.clone(),
-                source,
-            }
-        })?;
-
-    Ok(Some(spec))
+    match serde_json::from_str::<ConnectorBrowserAutomationSpec>(&content) {
+        Ok(spec) => Some(spec),
+        Err(source) => {
+            tracing::warn!(
+                path = %path.display(),
+                %source,
+                "failed to parse browser automation spec"
+            );
+            None
+        }
+    }
 }
 
 /// Returns the unique default scenario name for a suite.
@@ -255,27 +247,37 @@ pub fn load_supported_suites_for_connector(connector: &str) -> Result<Vec<String
 
 /// Loads the full connector spec (`specs.json`) for a connector.
 ///
-/// Returns `None` when no spec file exists rather than an error, so callers
-/// can gracefully fall back to default behaviour.
-pub fn load_connector_spec(connector: &str) -> Result<Option<ConnectorSuiteSpec>, ScenarioError> {
+/// Returns `None` when no spec file exists or when reading/parsing fails.
+/// Read and parse failures are logged as warnings rather than propagated.
+pub fn load_connector_spec(connector: &str) -> Option<ConnectorSuiteSpec> {
     let path = connector_spec_file_path(connector);
     if !path.exists() {
-        return Ok(None);
+        return None;
     }
 
-    let content = fs::read_to_string(&path).map_err(|source| ScenarioError::ConnectorSpecRead {
-        path: path.clone(),
-        source,
-    })?;
-
-    let spec = serde_json::from_str::<ConnectorSuiteSpec>(&content).map_err(|source| {
-        ScenarioError::ConnectorSpecParse {
-            path: path.clone(),
-            source,
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(source) => {
+            tracing::warn!(
+                path = %path.display(),
+                %source,
+                "failed to read connector spec"
+            );
+            return None;
         }
-    })?;
+    };
 
-    Ok(Some(spec))
+    match serde_json::from_str::<ConnectorSuiteSpec>(&content) {
+        Ok(spec) => Some(spec),
+        Err(source) => {
+            tracing::warn!(
+                path = %path.display(),
+                %source,
+                "failed to parse connector spec"
+            );
+            None
+        }
+    }
 }
 
 /// Discovers connector names by scanning `connector_specs/`.
@@ -347,13 +349,10 @@ pub fn configured_all_connectors() -> Vec<String> {
     }
 
     discover_all_connectors().unwrap_or_else(|err| {
-        #[allow(clippy::print_stderr)]
-        {
-            eprintln!(
-                "warning: failed to discover connectors in connector_specs/: {}",
-                err
-            );
-        }
+        tracing::warn!(
+            %err,
+            "failed to discover connectors in connector_specs/"
+        );
         Vec::new()
     })
 }

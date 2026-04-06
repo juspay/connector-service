@@ -323,16 +323,6 @@ pub enum ScenarioError {
         path: PathBuf,
         source: serde_json::Error,
     },
-    #[error("failed to read connector browser automation spec '{path}': {source}")]
-    ConnectorBrowserAutomationSpecRead {
-        path: PathBuf,
-        source: std::io::Error,
-    },
-    #[error("failed to parse connector browser automation spec '{path}': {source}")]
-    ConnectorBrowserAutomationSpecParse {
-        path: PathBuf,
-        source: serde_json::Error,
-    },
     #[error("failed to read connector override file '{path}': {source}")]
     ConnectorOverrideRead {
         path: PathBuf,

@@ -293,13 +293,13 @@ fn suite_display_name(suite: &str) -> String {
         "setup_recurring" => "Setup Mandate",
         "recurring_charge" => "Mandate Pay",
         "revoke_mandate" => "Revoke Mandate",
-        "server_authentication_token" | "create_access_token" => "Create Token",
+        "server_authentication_token" => "Create Token",
         "create_customer" => "Customer",
         "pre_authenticate" => "Pre Auth",
         "authenticate" => "Auth",
         "post_authenticate" => "Post Auth",
-        "server_session_authentication_token" | "create_session_token" => "Session Token",
-        "client_authentication_token" | "create_sdk_session_token" => "SDK Session",
+        "server_session_authentication_token" => "Session Token",
+        "client_authentication_token" => "SDK Session",
         "tokenize_payment_method" => "Tokenize PM",
         "incremental_authorization" => "Incremental Auth",
         "create_order" => "Create Order",
@@ -375,7 +375,7 @@ fn build_suite_service_cache() -> BTreeMap<String, String> {
     // This is done once at cache initialization rather than per-call.
     if let Ok(all_connectors) = discover_all_connectors() {
         for connector in all_connectors {
-            if let Ok(Some(spec)) = load_connector_spec(&connector) {
+            if let Some(spec) = load_connector_spec(&connector) {
                 for suite in spec.supported_suites {
                     if !cache.contains_key(&suite) {
                         if let Ok(suite_spec) = load_suite_spec(&suite) {
@@ -674,7 +674,7 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
     let mut connector_supported_suites: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut all_suites_set = BTreeSet::new();
     for connector in &all_connectors {
-        if let Ok(Some(spec)) = load_connector_spec(connector) {
+        if let Some(spec) = load_connector_spec(connector) {
             let suite_set: BTreeSet<String> = spec.supported_suites.into_iter().collect();
             for suite in &suite_set {
                 all_suites_set.insert(suite.clone());

@@ -4037,6 +4037,7 @@ dependencies = [
  "tokio-stream",
  "tonic 0.14.5",
  "tower 0.5.3",
+ "tracing",
  "ucs_env",
  "uuid",
 ]
