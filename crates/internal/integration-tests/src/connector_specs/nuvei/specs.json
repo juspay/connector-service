@@ -3,7 +3,7 @@
   "supported_suites": [
     "authorize",
     "capture",
-    "create_session_token",
+    "server_session_authentication_token",
     "get",
     "refund",
     "refund_sync",

@@ -2,7 +2,7 @@
   "connector": "braintree",
   "supported_suites": [
     "capture",
-    "create_sdk_session_token",
+    "client_authentication_token",
     "get",
     "recurring_charge",
     "refund",

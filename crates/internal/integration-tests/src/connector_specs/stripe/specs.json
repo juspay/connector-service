@@ -5,7 +5,7 @@
     "capture",
     "complete_authorize",
     "create_customer",
-    "create_sdk_session_token",
+    "client_authentication_token",
     "get",
     "handle_event",
     "incremental_authorization",

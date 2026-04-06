@@ -4,7 +4,6 @@
     "authorize",
     "capture",
     "complete_authorize",
-    "create_access_token",
     "get",
     "handle_event",
     "recurring_charge",

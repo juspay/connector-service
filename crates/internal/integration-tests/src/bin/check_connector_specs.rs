@@ -75,8 +75,8 @@ fn flow_to_suites(flow: &str) -> Option<&'static [&'static str]> {
         "PaymentMethodToken" => Some(&["tokenize_payment_method"]),
         // Authentication flows (now have test suites!)
         "ServerAuthenticationToken" => Some(&["server_authentication_token"]),
-        "ClientAuthenticationToken" => Some(&["create_sdk_session_token"]),
-        "ServerSessionAuthenticationToken" => Some(&["create_session_token"]),
+        "ClientAuthenticationToken" => Some(&["client_authentication_token"]),
+        "ServerSessionAuthenticationToken" => Some(&["server_session_authentication_token"]),
         "PreAuthenticate" => Some(&["pre_authenticate"]),
         "Authenticate" => Some(&["authenticate"]),
         "PostAuthenticate" => Some(&["post_authenticate"]),

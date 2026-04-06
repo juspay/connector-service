@@ -273,7 +273,7 @@ const SUITE_ORDER: &[&str] = &[
     "recurring_charge",
     "revoke_mandate",
     // Auxiliary / setup flows
-    "create_access_token",
+    "server_authentication_token",
     "create_customer",
     "pre_authenticate",
     "authenticate",
@@ -293,13 +293,13 @@ fn suite_display_name(suite: &str) -> String {
         "setup_recurring" => "Setup Mandate",
         "recurring_charge" => "Mandate Pay",
         "revoke_mandate" => "Revoke Mandate",
-        "create_access_token" => "Create Token",
+        "server_authentication_token" | "create_access_token" => "Create Token",
         "create_customer" => "Customer",
         "pre_authenticate" => "Pre Auth",
         "authenticate" => "Auth",
         "post_authenticate" => "Post Auth",
-        "create_session_token" => "Session Token",
-        "create_sdk_session_token" => "SDK Session",
+        "server_session_authentication_token" | "create_session_token" => "Session Token",
+        "client_authentication_token" | "create_sdk_session_token" => "SDK Session",
         "tokenize_payment_method" => "Tokenize PM",
         "incremental_authorization" => "Incremental Auth",
         "create_order" => "Create Order",
@@ -330,8 +330,8 @@ fn build_suite_service_cache() -> BTreeMap<String, String> {
 
     // Hardcoded mappings for core suites (always present).
     cache.insert(
-        "create_access_token".to_string(),
-        "MerchantAuthenticationService/CreateAccessToken".to_string(),
+        "server_authentication_token".to_string(),
+        "MerchantAuthenticationService/CreateServerAuthenticationToken".to_string(),
     );
     cache.insert(
         "create_customer".to_string(),
@@ -1200,8 +1200,8 @@ mod tests {
         assert!(suite_sort_key("refund_sync") < suite_sort_key("setup_recurring"));
         assert!(suite_sort_key("setup_recurring") < suite_sort_key("recurring_charge"));
         // Auxiliary flows come last
-        assert!(suite_sort_key("recurring_charge") < suite_sort_key("create_access_token"));
-        assert!(suite_sort_key("create_access_token") < suite_sort_key("create_customer"));
+        assert!(suite_sort_key("recurring_charge") < suite_sort_key("server_authentication_token"));
+        assert!(suite_sort_key("server_authentication_token") < suite_sort_key("create_customer"));
         assert!(suite_sort_key("create_customer") < suite_sort_key("pre_authenticate"));
         assert!(suite_sort_key("pre_authenticate") < suite_sort_key("authenticate"));
         assert!(suite_sort_key("authenticate") < suite_sort_key("post_authenticate"));

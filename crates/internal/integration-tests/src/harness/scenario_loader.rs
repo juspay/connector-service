@@ -36,13 +36,14 @@ pub fn connector_spec_dir(connector: &str) -> PathBuf {
 /// exists on disk.  The scenario_api dispatch accepts both old and new names for
 /// certain suites (e.g. `"create_access_token"` and `"server_authentication_token"`
 /// both route to the same gRPC method).  However, only one `_suite/` directory
-/// exists for each group.  This helper maps the new alias back to the directory
-/// name so that `scenario_file_path` and `suite_spec_file_path` resolve correctly.
+/// exists for each group.  This helper maps the old alias to the current
+/// directory name so that `scenario_file_path` and `suite_spec_file_path`
+/// resolve correctly.
 fn normalize_suite_name(suite: &str) -> &str {
     match suite {
-        "server_authentication_token" => "create_access_token",
-        "client_authentication_token" => "create_sdk_session_token",
-        "server_session_authentication_token" => "create_session_token",
+        "create_access_token" => "server_authentication_token",
+        "create_sdk_session_token" => "client_authentication_token",
+        "create_session_token" => "server_session_authentication_token",
         other => other,
     }
 }

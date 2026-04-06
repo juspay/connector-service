@@ -2,7 +2,7 @@
   "connector": "paytm",
   "supported_suites": [
     "authorize",
-    "create_session_token",
+    "server_session_authentication_token",
     "get"
   ]
 }

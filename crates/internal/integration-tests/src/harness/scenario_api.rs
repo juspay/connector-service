@@ -2151,7 +2151,7 @@ pub fn execute_tonic_request_from_payload(
             .unwrap_or(suite);
 
         match effective_suite {
-            "create_access_token" | "server_authentication_token" => {
+            "server_authentication_token" | "create_access_token" => {
                 let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest =
                     parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
                 let mut request = tonic::Request::new(payload);
@@ -2503,7 +2503,7 @@ pub fn execute_tonic_request_from_payload(
                 })?;
                 serialize_tonic_response(&response.into_inner())
             }
-            "create_session_token" | "server_session_authentication_token" => {
+            "server_session_authentication_token" | "create_session_token" => {
                 let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest =
                     parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
                 let mut request = tonic::Request::new(payload);
@@ -2525,7 +2525,7 @@ pub fn execute_tonic_request_from_payload(
                 })?;
                 serialize_tonic_response(&response.into_inner())
             }
-            "create_sdk_session_token" | "client_authentication_token" => {
+            "client_authentication_token" | "create_sdk_session_token" => {
                 let payload: grpc_api_types::payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest =
                     parse_tonic_payload(suite, scenario, &connector, &grpc_req)?;
                 let mut request = tonic::Request::new(payload);
@@ -2802,11 +2802,13 @@ fn normalize_tonic_request_json(
             }
         }
 
-        // create_sdk_session_token: flat scenario fields → nested proto shape.
+        // create_sdk_session_token / client_authentication_token: flat scenario fields → nested proto shape.
         // Proto: merchant_client_session_id (string),
         //        domain_context.Payment { amount, order_tax_amount,
         //        shipping_cost, payment_method_type, country_alpha2_code, customer, metadata }
-        if effective_suite == "create_sdk_session_token" {
+        if effective_suite == "client_authentication_token"
+            || effective_suite == "create_sdk_session_token"
+        {
             // Rename legacy field name → proto field name
             if let Some(val) = map.remove("merchant_sdk_session_id") {
                 map.entry("merchant_client_session_id".to_string())
@@ -2837,10 +2839,12 @@ fn normalize_tonic_request_json(
             }
         }
 
-        // create_session_token: flat scenario fields → nested proto shape.
+        // create_session_token / server_session_authentication_token: flat scenario fields → nested proto shape.
         // Proto: merchant_server_session_id (optional string), connector_feature_data,
         //        state, test_mode, domain_context.Payment { amount, metadata, browser_info }
-        if effective_suite == "create_session_token" {
+        if effective_suite == "server_session_authentication_token"
+            || effective_suite == "create_session_token"
+        {
             // Rename legacy field name → proto field name
             if let Some(val) = map.remove("merchant_session_id") {
                 map.entry("merchant_server_session_id".to_string())
@@ -4265,7 +4269,7 @@ fn grpc_method_for_suite(suite: &str, spec: Option<&SuiteSpec>) -> Result<String
     }
 
     let method = match suite {
-        "create_access_token" | "server_authentication_token" => {
+        "server_authentication_token" | "create_access_token" => {
             "types.MerchantAuthenticationService/CreateServerAuthenticationToken"
         }
         "create_customer" => "types.CustomerService/Create",
@@ -4286,10 +4290,10 @@ fn grpc_method_for_suite(suite: &str, spec: Option<&SuiteSpec>) -> Result<String
         "revoke_mandate" => "types.RecurringPaymentService/Revoke",
         "incremental_authorization" => "types.PaymentService/IncrementalAuthorization",
         "reverse" => "types.PaymentService/Reverse",
-        "create_session_token" | "server_session_authentication_token" => {
+        "server_session_authentication_token" | "create_session_token" => {
             "types.MerchantAuthenticationService/CreateServerSessionAuthenticationToken"
         }
-        "create_sdk_session_token" | "client_authentication_token" => {
+        "client_authentication_token" | "create_sdk_session_token" => {
             "types.MerchantAuthenticationService/CreateClientAuthenticationToken"
         }
         "verify_redirect_response" => "types.PaymentService/VerifyRedirectResponse",
@@ -4326,8 +4330,6 @@ pub fn all_known_suites() -> &'static [&'static str] {
         "complete_authorize",
         "create_customer",
         "create_order",
-        "create_sdk_session_token",
-        "create_session_token",
         "get",
         "handle_event",
         "incremental_authorization",
@@ -4424,7 +4426,7 @@ mod tests {
             .unwrap_or(suite);
 
         match effective_suite {
-            "create_access_token" | "server_authentication_token" => validate_tonic_payload_shape::<
+            "server_authentication_token" | "create_access_token" => validate_tonic_payload_shape::<
                 payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
             >(connector, suite, scenario, grpc_req),
             "create_customer" => validate_tonic_payload_shape::<
@@ -4477,10 +4479,10 @@ mod tests {
             "incremental_authorization" => validate_tonic_payload_shape::<
                 payments::PaymentServiceIncrementalAuthorizationRequest,
             >(connector, suite, scenario, grpc_req),
-            "create_session_token" | "server_session_authentication_token" => validate_tonic_payload_shape::<
+            "server_session_authentication_token" | "create_session_token" => validate_tonic_payload_shape::<
                 payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
             >(connector, suite, scenario, grpc_req),
-            "create_sdk_session_token" | "client_authentication_token" => validate_tonic_payload_shape::<
+            "client_authentication_token" | "create_sdk_session_token" => validate_tonic_payload_shape::<
                 payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
             >(connector, suite, scenario, grpc_req),
             "create_order" => validate_tonic_payload_shape::<
