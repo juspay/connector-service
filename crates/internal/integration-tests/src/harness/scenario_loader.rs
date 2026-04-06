@@ -32,17 +32,34 @@ pub fn connector_spec_dir(connector: &str) -> PathBuf {
     connector_specs_root().join(connector)
 }
 
+/// Normalizes a suite name alias to the canonical name whose `_suite/` directory
+/// exists on disk.  The scenario_api dispatch accepts both old and new names for
+/// certain suites (e.g. `"create_access_token"` and `"server_authentication_token"`
+/// both route to the same gRPC method).  However, only one `_suite/` directory
+/// exists for each group.  This helper maps the new alias back to the directory
+/// name so that `scenario_file_path` and `suite_spec_file_path` resolve correctly.
+fn normalize_suite_name(suite: &str) -> &str {
+    match suite {
+        "server_authentication_token" => "create_access_token",
+        "client_authentication_token" => "create_sdk_session_token",
+        "server_session_authentication_token" => "create_session_token",
+        other => other,
+    }
+}
+
 /// Absolute path to the suite scenario file.
 pub fn scenario_file_path(suite: &str) -> PathBuf {
+    let canonical = normalize_suite_name(suite);
     scenario_root()
-        .join(format!("{suite}_suite"))
+        .join(format!("{canonical}_suite"))
         .join("scenario.json")
 }
 
 /// Absolute path to the suite specification file.
 pub fn suite_spec_file_path(suite: &str) -> PathBuf {
+    let canonical = normalize_suite_name(suite);
     scenario_root()
-        .join(format!("{suite}_suite"))
+        .join(format!("{canonical}_suite"))
         .join("suite_spec.json")
 }
 
@@ -638,7 +655,7 @@ mod tests {
         let paypal =
             load_supported_suites_for_connector("paypal").expect("paypal suites should load");
         assert!(
-            paypal.contains(&"create_access_token".to_string())
+            paypal.contains(&"server_authentication_token".to_string())
                 && paypal.contains(&"setup_recurring".to_string())
                 && paypal.contains(&"recurring_charge".to_string()),
             "paypal should include token + recurring suites"

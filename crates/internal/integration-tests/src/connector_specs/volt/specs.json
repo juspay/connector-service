@@ -3,6 +3,7 @@
   "supported_suites": [
     "authorize",
     "get",
-    "refund"
+    "refund",
+    "server_authentication_token"
   ]
 }

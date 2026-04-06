@@ -1,9 +1,11 @@
 {
   "connector": "redsys",
   "supported_suites": [
+    "authenticate",
     "authorize",
     "capture",
-    "void",
-    "refund"
+    "pre_authenticate",
+    "refund",
+    "void"
   ]
 }

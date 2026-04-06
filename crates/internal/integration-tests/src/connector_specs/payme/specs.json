@@ -3,6 +3,7 @@
   "supported_suites": [
     "authorize",
     "capture",
+    "create_order",
     "get",
     "refund",
     "refund_sync",
