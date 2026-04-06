@@ -44,7 +44,7 @@
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Affirm": {
         "status": "supported",
@@ -61,6 +61,7 @@
           "address": {
             "billing_address": {
               "first_name": "John",
+              "last_name": "Doe",
               "email": "test@example.com",
               "phone_number": "4155552671",
               "phone_country_code": "+1"
@@ -77,7 +78,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"affirm\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\"},\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"+14155552671\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"affirm\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"+14155552671\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Afterpay": {
@@ -98,6 +99,7 @@
             },
             "billing_address": {
               "first_name": "John",
+              "last_name": "Doe",
               "country_alpha2_code": "US",
               "email": "test@example.com"
             }
@@ -113,7 +115,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"afterpaytouch\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\"},\"shopperEmail\":\"test@example.com\",\"countryCode\":\"US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"afterpaytouch\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperEmail\":\"test@example.com\",\"countryCode\":\"US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Alfamart": {
@@ -150,11 +152,11 @@
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "ApplePay": {
         "status": "supported",
@@ -244,7 +246,7 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Bacs": {
         "status": "supported",
@@ -283,7 +285,7 @@
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "BancontactCard": {
         "status": "supported",
@@ -366,7 +368,7 @@
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Bizum": {
         "status": "supported",
@@ -456,7 +458,7 @@
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "BniVaBankTransfer": {
         "status": "supported",
@@ -601,7 +603,7 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "CimbVaBankTransfer": {
         "status": "supported",
@@ -637,7 +639,7 @@
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "Crypto": {
         "status": "not_supported",
@@ -681,15 +683,15 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Eps": {
         "status": "supported",
@@ -771,7 +773,7 @@
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Givex": {
         "status": "not_supported",
@@ -892,7 +894,7 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Ideal": {
         "status": "supported",
@@ -970,23 +972,23 @@
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Klarna": {
         "status": "supported",
@@ -1059,11 +1061,11 @@
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "MandiriVaBankTransfer": {
         "status": "supported",
@@ -1099,11 +1101,11 @@
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "MiniStop": {
         "status": "supported",
@@ -1141,7 +1143,7 @@
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "OnlineBankingCzechRepublic": {
         "status": "supported",
@@ -1277,7 +1279,7 @@
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "OnlineBankingSlovakia": {
         "status": "supported",
@@ -1369,7 +1371,7 @@
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -1448,7 +1450,7 @@
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "PayEasy": {
         "status": "supported",
@@ -1490,11 +1492,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Paze": {
         "status": "not_supported",
@@ -1563,31 +1565,31 @@
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Seicomart": {
         "status": "supported",
@@ -1659,11 +1661,11 @@
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "SevenEleven": {
         "status": "supported",
@@ -1701,7 +1703,7 @@
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Adyen"
+        "error": "This feature is not implemented: Selected payment method through Adyen"
       },
       "Trustly": {
         "status": "supported",
@@ -1747,23 +1749,23 @@
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       }
     },
     "capture": {
@@ -1789,7 +1791,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1804,12 +1806,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1918,7 +1920,7 @@
     "get": {
       "default": {
         "status": "error",
-        "error": "Failed to deserialize connector response"
+        "error": "Failed to encode connector request"
       }
     },
     "handle_event": {
@@ -2183,13 +2185,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment method"
+        "error": "This feature is not implemented: payment method"
       }
     },
     "tokenize": {

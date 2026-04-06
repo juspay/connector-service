@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Card": {
         "status": "supported",
@@ -109,11 +109,9 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "email": "test@example.com"
-          },
           "address": {
             "billing_address": {
+              "email": "test@example.com",
               "phone_number": "4155552671",
               "phone_country_code": "+1"
             }
@@ -134,15 +132,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Crypto": {
         "status": "not_supported",
@@ -150,7 +148,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -158,27 +156,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Givex": {
         "status": "not_supported",
@@ -186,107 +184,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -294,19 +292,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -314,11 +312,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Paze": {
         "status": "not_supported",
@@ -326,87 +324,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       }
     },
     "capture": {
@@ -432,7 +430,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -447,12 +445,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -541,11 +539,9 @@
             "card_cvc": "123",
             "card_holder_name": "John Doe"
           },
-          "customer": {
-            "email": "test@example.com"
-          },
           "address": {
             "billing_address": {
+              "email": "test@example.com",
               "phone_number": "4155552671",
               "phone_country_code": "+1"
             }
@@ -639,7 +635,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through xendit"
+        "error": "This feature is not implemented: Selected payment method through xendit"
       }
     },
     "token_setup_recurring": {

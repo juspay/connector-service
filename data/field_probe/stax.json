@@ -43,39 +43,39 @@
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Bacs": {
         "status": "supported",
@@ -113,15 +113,15 @@
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Becs": {
         "status": "supported",
@@ -159,27 +159,27 @@
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Card": {
         "status": "supported",
@@ -219,15 +219,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Crypto": {
         "status": "not_supported",
@@ -235,7 +235,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -243,27 +243,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Givex": {
         "status": "not_supported",
@@ -271,107 +271,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -379,19 +379,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -399,11 +399,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Paze": {
         "status": "not_supported",
@@ -411,43 +411,43 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Sepa": {
         "status": "supported",
@@ -484,7 +484,7 @@
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "SepaGuaranteedDebit": {
         "status": "supported",
@@ -521,35 +521,35 @@
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       }
     },
     "capture": {
@@ -575,7 +575,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -606,12 +606,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -761,7 +761,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card and ACH bank debit payments are supported for Stax"
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       }
     },
     "token_setup_recurring": {

@@ -46,27 +46,27 @@
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "ApplePay": {
         "status": "supported",
@@ -117,51 +117,51 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Novalnet"
+        "error": "This feature is not implemented: Selected payment method through Novalnet"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Novalnet"
+        "error": "This feature is not implemented: Selected payment method through Novalnet"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Card": {
         "status": "supported",
@@ -206,15 +206,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Crypto": {
         "status": "not_supported",
@@ -222,7 +222,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -230,27 +230,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Givex": {
         "status": "not_supported",
@@ -308,99 +308,99 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -408,19 +408,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -463,7 +463,7 @@
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Paze": {
         "status": "not_supported",
@@ -471,43 +471,43 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Sepa": {
         "status": "supported",
@@ -547,43 +547,43 @@
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Novalnet"
+        "error": "This feature is not implemented: Selected payment method through Novalnet"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       }
     },
     "capture": {
@@ -609,7 +609,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -624,12 +624,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -934,13 +934,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through novalnet"
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       }
     },
     "tokenize": {

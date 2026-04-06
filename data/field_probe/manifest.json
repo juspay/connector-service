@@ -81,7 +81,7 @@
       "grpc_response": "RefundResponse"
     },
     {
-      "flow_key": "incremental_auth",
+      "flow_key": "incremental_authorization",
       "service_rpc": "PaymentService.IncrementalAuthorization",
       "description": "Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization.",
       "service_name": "PaymentService",
@@ -121,7 +121,7 @@
       "grpc_response": "RecurringPaymentServiceChargeResponse"
     },
     {
-      "flow_key": "mandate_revoke",
+      "flow_key": "recurring_revoke",
       "service_rpc": "RecurringPaymentService.Revoke",
       "description": "Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations.",
       "service_name": "RecurringPaymentService",
@@ -131,7 +131,7 @@
       "grpc_response": "RecurringPaymentServiceRevokeResponse"
     },
     {
-      "flow_key": "rsync",
+      "flow_key": "refund_get",
       "service_rpc": "RefundService.Get",
       "description": "Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.",
       "service_name": "RefundService",
@@ -211,34 +211,34 @@
       "grpc_response": "CustomerServiceCreateResponse"
     },
     {
-      "flow_key": "create_access_token",
-      "service_rpc": "MerchantAuthenticationService.CreateAccessToken",
+      "flow_key": "create_server_authentication_token",
+      "service_rpc": "MerchantAuthenticationService.CreateServerAuthenticationToken",
       "description": "Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.",
       "service_name": "MerchantAuthenticationService",
-      "rpc_name": "CreateAccessToken",
+      "rpc_name": "CreateServerAuthenticationToken",
       "category": "Authentication",
-      "grpc_request": "MerchantAuthenticationServiceCreateAccessTokenRequest",
-      "grpc_response": "MerchantAuthenticationServiceCreateAccessTokenResponse"
+      "grpc_request": "MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest",
+      "grpc_response": "MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse"
     },
     {
-      "flow_key": "create_session_token",
-      "service_rpc": "MerchantAuthenticationService.CreateSessionToken",
-      "description": "Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.",
+      "flow_key": "create_server_session_authentication_token",
+      "service_rpc": "MerchantAuthenticationService.CreateServerSessionAuthenticationToken",
+      "description": "Create a server-side session with the connector. Establishes session state for multi-step operations like 3DS verification or wallet authorization.",
       "service_name": "MerchantAuthenticationService",
-      "rpc_name": "CreateSessionToken",
+      "rpc_name": "CreateServerSessionAuthenticationToken",
       "category": "Authentication",
-      "grpc_request": "MerchantAuthenticationServiceCreateSessionTokenRequest",
-      "grpc_response": "MerchantAuthenticationServiceCreateSessionTokenResponse"
+      "grpc_request": "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest",
+      "grpc_response": "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse"
     },
     {
-      "flow_key": "sdk_session_token",
-      "service_rpc": "MerchantAuthenticationService.CreateSdkSessionToken",
-      "description": "Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification.",
+      "flow_key": "create_client_authentication_token",
+      "service_rpc": "MerchantAuthenticationService.CreateClientAuthenticationToken",
+      "description": "Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. Returns structured data the client SDK needs to render payment/verification UI.",
       "service_name": "MerchantAuthenticationService",
-      "rpc_name": "CreateSdkSessionToken",
+      "rpc_name": "CreateClientAuthenticationToken",
       "category": "Authentication",
-      "grpc_request": "MerchantAuthenticationServiceCreateSdkSessionTokenRequest",
-      "grpc_response": "MerchantAuthenticationServiceCreateSdkSessionTokenResponse"
+      "grpc_request": "MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest",
+      "grpc_response": "MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse"
     },
     {
       "flow_key": "pre_authenticate",
@@ -488,12 +488,12 @@
         "payment_method": "PaymentMethod"
       }
     },
-    "ApplepaySessionTokenResponse": {
+    "ApplepayClientAuthenticationResponse": {
       "comments": {},
       "field_types": {
         "payment_request_data": "ApplePayPaymentRequest",
         "sdk_next_action": "SdkNextAction",
-        "session_token_data": "ApplePaySessionResponse"
+        "session_response": "ApplePaySessionResponse"
       }
     },
     "AssuranceDetails": {
@@ -694,6 +694,15 @@
       "comments": {},
       "field_types": {}
     },
+    "ClientAuthenticationTokenData": {
+      "comments": {},
+      "field_types": {
+        "apple_pay": "ApplepayClientAuthenticationResponse",
+        "connector_specific": "ConnectorSpecificClientAuthenticationResponse",
+        "google_pay": "GpayClientAuthenticationResponse",
+        "paypal": "PaypalClientAuthenticationResponse"
+      }
+    },
     "CoinbaseConfig": {
       "comments": {},
       "field_types": {}
@@ -738,6 +747,12 @@
       },
       "field_types": {}
     },
+    "ConnectorSpecificClientAuthenticationResponse": {
+      "comments": {},
+      "field_types": {
+        "stripe": "StripeClientAuthenticationResponse"
+      }
+    },
     "ConnectorSpecificConfig": {
       "comments": {
         "adyen": "ADYEN = 3",
@@ -775,6 +790,7 @@
         "hipay": "HIPAY = 38",
         "hyperpg": "HYPERPG = 107",
         "iatapay": "IATAPAY = 41",
+        "itaubank": "ITAUBANKCONFIG = 115",
         "jpmorgan": "JPMORGAN = 43",
         "loonio": "LOONIO = 105",
         "mifinity": "MIFINITY = 46",
@@ -796,6 +812,7 @@
         "peachpayments": "PEACHPAYMENTS = 112",
         "phonepe": "PHONEPE = 92",
         "powertranz": "POWERTRANZ = 66",
+        "ppro": "PPRO = 113",
         "rapyd": "RAPYD = 68",
         "redsys": "REDSYS = 71",
         "revolut": "REVOLUT = 104",
@@ -853,6 +870,7 @@
         "hipay": "HipayConfig",
         "hyperpg": "HyperpgConfig",
         "iatapay": "IatapayConfig",
+        "itaubank": "ItaubankConfig",
         "jpmorgan": "JpmorganConfig",
         "loonio": "LoonioConfig",
         "mifinity": "MifinityConfig",
@@ -874,6 +892,7 @@
         "peachpayments": "PeachpaymentsConfig",
         "phonepe": "PhonepeConfig",
         "powertranz": "PowertranzConfig",
+        "ppro": "PproConfig",
         "rapyd": "RapydConfig",
         "redsys": "RedsysConfig",
         "revolut": "RevolutConfig",
@@ -1376,15 +1395,15 @@
         "format": "GpayBillingAddressFormat"
       }
     },
-    "GpayMerchantInfo": {
-      "comments": {},
-      "field_types": {}
-    },
-    "GpaySessionTokenResponse": {
+    "GpayClientAuthenticationResponse": {
       "comments": {},
       "field_types": {
         "google_pay_session": "GooglePaySessionResponse"
       }
+    },
+    "GpayMerchantInfo": {
+      "comments": {},
+      "field_types": {}
     },
     "GpayTokenParameters": {
       "comments": {},
@@ -1497,6 +1516,10 @@
       },
       "field_types": {}
     },
+    "ItaubankConfig": {
+      "comments": {},
+      "field_types": {}
+    },
     "JpmorganConfig": {
       "comments": {},
       "field_types": {}
@@ -1553,7 +1576,22 @@
         "single_use": "MandateAmountData"
       }
     },
-    "MerchantAuthenticationServiceCreateAccessTokenRequest": {
+    "MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest": {
+      "comments": {
+        "merchant_client_session_id": "Infrastructure"
+      },
+      "field_types": {
+        "payment": "PaymentClientAuthenticationContext"
+      }
+    },
+    "MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse": {
+      "comments": {},
+      "field_types": {
+        "error": "ErrorInfo",
+        "session_data": "ClientAuthenticationTokenData"
+      }
+    },
+    "MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest": {
       "comments": {
         "connector": "The connector to create the access token for",
         "metadata": "Additional metadata for the connector"
@@ -1562,7 +1600,7 @@
         "connector": "Connector"
       }
     },
-    "MerchantAuthenticationServiceCreateAccessTokenResponse": {
+    "MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse": {
       "comments": {
         "access_token": "The access token string",
         "status": "Status of the access token creation attempt",
@@ -1574,46 +1612,19 @@
         "status": "OperationStatus"
       }
     },
-    "MerchantAuthenticationServiceCreateSdkSessionTokenRequest": {
+    "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest": {
       "comments": {
-        "amount": "Amount Information",
-        "customer": "Customer Information",
-        "merchant_sdk_session_id": "Identification",
-        "metadata": "Additional metadata for the connector",
-        "payment_method_type": "Payment Method Type"
+        "merchant_server_session_id": "Infrastructure (about the session itself)"
       },
       "field_types": {
-        "amount": "Money",
-        "country_alpha2_code": "CountryAlpha2",
-        "customer": "Customer",
-        "payment_method_type": "PaymentMethodType"
-      }
-    },
-    "MerchantAuthenticationServiceCreateSdkSessionTokenResponse": {
-      "comments": {},
-      "field_types": {
-        "error": "ErrorInfo",
-        "session_token": "SessionToken"
-      }
-    },
-    "MerchantAuthenticationServiceCreateSessionTokenRequest": {
-      "comments": {
-        "amount": "Amount Information",
-        "browser_info": "Browser Information",
-        "merchant_session_id": "Identification",
-        "metadata": "Additional metadata for the connector",
-        "state": "State Information"
-      },
-      "field_types": {
-        "amount": "Money",
-        "browser_info": "BrowserInformation",
+        "payment": "PaymentSessionContext",
         "state": "ConnectorState"
       }
     },
-    "MerchantAuthenticationServiceCreateSessionTokenResponse": {
+    "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse": {
       "comments": {
         "error": "Error Information",
-        "session_token": "Session Token Details"
+        "session_token": "Session Details"
       },
       "field_types": {
         "error": "ErrorInfo"
@@ -1856,6 +1867,15 @@
       "field_types": {
         "billing_address": "Address",
         "shipping_address": "Address"
+      }
+    },
+    "PaymentClientAuthenticationContext": {
+      "comments": {},
+      "field_types": {
+        "amount": "Money",
+        "country_alpha2_code": "CountryAlpha2",
+        "customer": "Customer",
+        "payment_method_type": "PaymentMethodType"
       }
     },
     "PaymentCredential": {
@@ -2691,6 +2711,20 @@
         "status": "PaymentStatus"
       }
     },
+    "PaymentSessionContext": {
+      "comments": {},
+      "field_types": {
+        "amount": "Money",
+        "browser_info": "BrowserInformation"
+      }
+    },
+    "PaypalClientAuthenticationResponse": {
+      "comments": {},
+      "field_types": {
+        "sdk_next_action": "SdkNextAction",
+        "transaction_info": "PaypalTransactionInfo"
+      }
+    },
     "PaypalConfig": {
       "comments": {},
       "field_types": {}
@@ -2706,13 +2740,6 @@
         "token": "Payment token from PayPal SDK"
       },
       "field_types": {}
-    },
-    "PaypalSessionTokenResponse": {
-      "comments": {},
-      "field_types": {
-        "sdk_next_action": "SdkNextAction",
-        "transaction_info": "PaypalTransactionInfo"
-      }
     },
     "PaypalTransactionInfo": {
       "comments": {
@@ -2811,6 +2838,10 @@
       "field_types": {}
     },
     "PowertranzConfig": {
+      "comments": {},
+      "field_types": {}
+    },
+    "PproConfig": {
       "comments": {},
       "field_types": {}
     },
@@ -3000,18 +3031,6 @@
         "method": "HttpMethod"
       }
     },
-    "RequestError": {
-      "comments": {},
-      "field_types": {
-        "status": "PaymentStatus"
-      }
-    },
-    "ResponseError": {
-      "comments": {},
-      "field_types": {
-        "status": "PaymentStatus"
-      }
-    },
     "RevolutConfig": {
       "comments": {},
       "field_types": {}
@@ -3060,14 +3079,6 @@
       },
       "field_types": {}
     },
-    "SessionToken": {
-      "comments": {},
-      "field_types": {
-        "apple_pay": "ApplepaySessionTokenResponse",
-        "google_pay": "GpaySessionTokenResponse",
-        "paypal": "PaypalSessionTokenResponse"
-      }
-    },
     "SetupMandateDetails": {
       "comments": {
         "customer_acceptance": "Details of customer acceptance",
@@ -3097,6 +3108,10 @@
       }
     },
     "StaxConfig": {
+      "comments": {},
+      "field_types": {}
+    },
+    "StripeClientAuthenticationResponse": {
       "comments": {},
       "field_types": {}
     },

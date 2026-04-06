@@ -9,31 +9,31 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "ApplePay": {
         "status": "supported",
@@ -82,51 +82,51 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Card": {
         "status": "supported",
@@ -167,15 +167,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Crypto": {
         "status": "not_supported",
@@ -183,7 +183,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -191,27 +191,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Givex": {
         "status": "not_supported",
@@ -267,99 +267,99 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -367,19 +367,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -387,11 +387,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Paze": {
         "status": "not_supported",
@@ -399,87 +399,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through worldpay"
+        "error": "This feature is not implemented: Selected payment method through worldpay"
       }
     },
     "capture": {
@@ -507,7 +507,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -522,12 +522,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -595,13 +595,13 @@
     "post_authenticate": {
       "default": {
         "status": "error",
-        "error": "Failed to deserialize connector response"
+        "error": "Stuck on field: redirect_response.params — Missing required field: redirect_response.params"
       }
     },
     "pre_authenticate": {
       "default": {
         "status": "error",
-        "error": "Failed to deserialize connector response"
+        "error": "Stuck on field: redirect_response.params — Missing required field: redirect_response.params"
       }
     },
     "proxy_authorize": {

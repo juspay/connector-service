@@ -5,7 +5,7 @@
 // Stripe — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx stripe.ts checkout_autocapture
 
-import { PaymentClient, PayoutClient, CustomerClient, RecurringPaymentClient, PaymentMethodClient } from 'hyperswitch-prism';
+import { PaymentClient, PayoutClient, MerchantAuthenticationClient, CustomerClient, RecurringPaymentClient, PaymentMethodClient } from 'hyperswitch-prism';
 import { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } from 'hyperswitch-prism/types';
 
 const _defaultConfig: ConnectorConfig = {
@@ -56,6 +56,16 @@ function _buildCaptureRequest(connectorTransactionId: string): PaymentServiceCap
     };
 }
 
+function _buildCreateClientAuthenticationTokenRequest(): MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    return {
+        "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure
+        "domainContext": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        }
+    };
+}
+
 function _buildCreateCustomerRequest(): CustomerServiceCreateRequest {
     return {
         "merchantCustomerId": "cust_probe_123",  // Identification
@@ -67,10 +77,8 @@ function _buildCreateCustomerRequest(): CustomerServiceCreateRequest {
 
 function _buildRecurringChargeRequest(): RecurringPaymentServiceChargeRequest {
     return {
-        "connectorRecurringPaymentId": {  // Reference to existing mandate
-            "connectorMandateId": {  // mandate_id sent by the connector
-                "connectorMandateId": "probe-mandate-123"
-            }
+        "connectorRecurringPaymentId": {
+            "connectorMandateId": "probe-mandate-123"
         },
         "amount": {  // Amount Information
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
@@ -122,13 +130,13 @@ function _buildSetupRecurringRequest(): PaymentServiceSetupRecurringRequest {
             }
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used
-        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure
+        "enrolledFor3Ds": false,
         "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
-        "setupFutureUsage": FutureUsage.OFF_SESSION,  // Indicates future usage intention
-        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested
-        "customerAcceptance": {  // Details of customer acceptance
-            "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
-            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        "setupFutureUsage": "OFF_SESSION",
+        "requestIncrementalAuthorization": false,
+        "customerAcceptance": {
+            "acceptanceType": "OFFLINE",
+            "acceptedAt": 0
         }
     };
 }
@@ -302,6 +310,29 @@ export async function capture(merchantTransactionId: string, config: ConnectorCo
     return { status: captureResponse.status };
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+export async function createClientAuthenticationToken(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse> {
+    const merchantAuthenticationClient = new MerchantAuthenticationClient(config);
+
+    const createResponse = await merchantAuthenticationClient.createClientAuthenticationToken(_buildCreateClientAuthenticationTokenRequest());
+
+    return { status: createResponse.status };
+}
+
+// Flow: PaymentService.create_client_authentication_token_req_handler
+export async function createClientAuthenticationTokenReqHandler(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: create_client_authentication_token_req_handler
+    const createResponse = await paymentClient.createClientAuthenticationTokenReqHandler({
+        "merchantClientSessionId": "probe_sdk_session_001",
+        "domainContext": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        }
+    });
+
+    return { status: createResponse.status };
+}
+
 // Flow: CustomerService.Create
 export async function createCustomer(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<CustomerServiceCreateResponse> {
     const customerClient = new CustomerClient(config);
@@ -324,6 +355,22 @@ export async function get(merchantTransactionId: string, config: ConnectorConfig
     });
 
     return { status: getResponse.status };
+}
+
+// Flow: PaymentService.incremental_authorization
+export async function incrementalAuthorization(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: incremental_authorization
+    const incrementalResponse = await paymentClient.incrementalAuthorization({
+        "merchantAuthorizationId": "probe_auth_001",
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amount": {
+            "minorAmount": 1100,
+            "currency": "USD"
+        },
+        "reason": "incremental_auth_probe"
+    });
+
+    return { status: incrementalResponse.status };
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -352,6 +399,35 @@ export async function proxyAuthorize(merchantTransactionId: string, config: Conn
     return { status: proxyResponse.status };
 }
 
+// Flow: PaymentService.ProxySetupRecurring
+export async function proxySetupRecurring(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: proxy_setup_recurring
+    const proxyResponse = await paymentClient.proxySetupRecurring({
+        "merchantRecurringPaymentId": "probe_proxy_mandate_001",
+        "amount": {
+            "minorAmount": 0,
+            "currency": "USD"
+        },
+        "cardProxy": {
+            "cardNumber": "4111111111111111",
+            "cardExpMonth": "03",
+            "cardExpYear": "2030",
+            "cardCvc": "123",
+            "cardHolderName": "John Doe"
+        },
+        "address": {
+        },
+        "customerAcceptance": {
+            "acceptanceType": "OFFLINE",
+            "acceptedAt": 0
+        },
+        "authType": "NO_THREE_DS",
+        "setupFutureUsage": "OFF_SESSION"
+    });
+
+    return { status: proxyResponse.status };
+}
+
 // Flow: RecurringPaymentService.Charge
 export async function recurringCharge(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<RecurringPaymentServiceChargeResponse> {
     const recurringPaymentClient = new RecurringPaymentClient(config);
@@ -366,6 +442,18 @@ export async function refund(merchantTransactionId: string, config: ConnectorCon
     const paymentClient = new PaymentClient(config);
 
     const refundResponse = await paymentClient.refund(_buildRefundRequest('probe_connector_txn_001'));
+
+    return { status: refundResponse.status };
+}
+
+// Flow: PaymentService.refund_get
+export async function refundGet(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: refund_get
+    const refundResponse = await paymentClient.refundGet({
+        "merchantRefundId": "probe_refund_001",
+        "connectorTransactionId": "probe_connector_txn_001",
+        "refundId": "probe_refund_id_001"
+    });
 
     return { status: refundResponse.status };
 }
@@ -400,7 +488,7 @@ export async function voidPayment(merchantTransactionId: string, config: Connect
 }
 
 
-export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, get, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateCustomerRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest };
+export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createClientAuthenticationTokenReqHandler, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest };
 
 // CLI runner
 if (require.main === module) {

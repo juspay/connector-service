@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: ACH payments not yet implemented"
+        "error": "This feature is not implemented: ACH payments not yet implemented"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: ACH payments not yet implemented"
+        "error": "This feature is not implemented: ACH payments not yet implemented"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: ACH payments not yet implemented"
+        "error": "This feature is not implemented: ACH payments not yet implemented"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Card": {
         "status": "supported",
@@ -128,15 +128,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Crypto": {
         "status": "not_supported",
@@ -144,7 +144,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -152,27 +152,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Givex": {
         "status": "not_supported",
@@ -180,107 +180,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -288,19 +288,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -308,11 +308,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Paze": {
         "status": "not_supported",
@@ -320,87 +320,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: ACH payments not yet implemented"
+        "error": "This feature is not implemented: ACH payments not yet implemented"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: ACH payments not yet implemented"
+        "error": "This feature is not implemented: ACH payments not yet implemented"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       }
     },
     "capture": {
@@ -426,7 +426,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -441,12 +441,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -627,7 +627,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported"
+        "error": "This feature is not implemented: Payment method not supported"
       }
     },
     "token_setup_recurring": {

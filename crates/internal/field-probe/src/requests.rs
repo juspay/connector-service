@@ -30,12 +30,13 @@ use cards::CardNumber;
 use grpc_api_types::payments::{
     self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
     AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails,
-    ConnectorMandateReferenceId, CustomerAcceptance, CustomerServiceCreateRequest,
+    ConnectorMandateReferenceId, CustomerAcceptance, CustomerServiceCreateRequest, merchant_authentication_service_create_client_authentication_token_request::DomainContext,
     DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
-    EventServiceHandleRequest, EvidenceDocument, EvidenceType, HttpMethod, MandateReference,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
-    MerchantAuthenticationServiceCreateSessionTokenRequest, PaymentAddress, PaymentMethod,
+    EvidenceDocument, EventServiceHandleRequest, EvidenceType, HttpMethod, MandateReference,
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
+    MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest, PaymentAddress,
+    PaymentClientAuthenticationContext, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
@@ -228,17 +229,40 @@ pub(crate) fn base_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
     }
 }
 
-pub(crate) fn base_create_access_token_request(
-) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
-    MerchantAuthenticationServiceCreateAccessTokenRequest {
+pub(crate) fn base_create_server_authentication_token_request(
+) -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
         ..Default::default()
     }
 }
 
-pub(crate) fn base_create_session_token_request(
-) -> MerchantAuthenticationServiceCreateSessionTokenRequest {
-    MerchantAuthenticationServiceCreateSessionTokenRequest {
-        amount: Some(usd_money(1000)),
+pub(crate) fn base_create_server_session_authentication_token_request(
+) -> MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest {
+    MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest {
+        domain_context: Some(
+            grpc_api_types::payments::merchant_authentication_service_create_server_session_authentication_token_request::DomainContext::Payment(
+                grpc_api_types::payments::PaymentSessionContext {
+                    amount: Some(usd_money(1000)),
+                    ..Default::default()
+                },
+            ),
+        ),
+        ..Default::default()
+    }
+}
+
+pub(crate) fn base_create_client_authentication_token_request(
+) -> MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+        merchant_client_session_id: "probe_sdk_session_001".to_string(),
+        domain_context: Some(
+            DomainContext::Payment(
+                PaymentClientAuthenticationContext {
+                    amount: Some(usd_money(1000)),
+                    ..Default::default()
+                },
+            ),
+        ),
         ..Default::default()
     }
 }
@@ -434,15 +458,6 @@ pub(crate) fn base_refund_get_request() -> RefundServiceGetRequest {
         merchant_refund_id: Some("probe_refund_001".to_string()),
         connector_transaction_id: "probe_connector_txn_001".to_string(),
         refund_id: "probe_refund_id_001".to_string(),
-        ..Default::default()
-    }
-}
-
-pub(crate) fn base_create_sdk_session_token_request(
-) -> MerchantAuthenticationServiceCreateSdkSessionTokenRequest {
-    MerchantAuthenticationServiceCreateSdkSessionTokenRequest {
-        merchant_sdk_session_id: "probe_sdk_session_001".to_string(),
-        amount: Some(usd_money(1000)),
         ..Default::default()
     }
 }

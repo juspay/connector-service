@@ -45,83 +45,83 @@
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
+        "error": "This feature is not implemented: BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
+        "error": "This feature is not implemented: BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Card": {
         "status": "supported",
@@ -163,15 +163,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Crypto": {
         "status": "not_supported",
@@ -179,7 +179,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -187,27 +187,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Givex": {
         "status": "not_supported",
@@ -215,107 +215,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -323,19 +323,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -343,11 +343,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Paze": {
         "status": "not_supported",
@@ -355,87 +355,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
+        "error": "This feature is not implemented: SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
+        "error": "This feature is not implemented: SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       }
     },
     "capture": {
@@ -444,7 +444,7 @@
         "error": "Stuck on field: amount — Missing required field: amount"
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -459,12 +459,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -594,7 +594,7 @@
     "refund": {
       "default": {
         "status": "error",
-        "error": "Connector meta data not found"
+        "error": "Connector metadata not found"
       }
     },
     "refund_get": {
@@ -631,7 +631,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Forte"
+        "error": "This feature is not implemented: Selected payment method through Forte"
       }
     },
     "token_setup_recurring": {

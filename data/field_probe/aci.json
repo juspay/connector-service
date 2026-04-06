@@ -9,11 +9,11 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Affirm": {
         "status": "supported",
@@ -75,7 +75,7 @@
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "AliPayRedirect": {
         "status": "supported",
@@ -108,63 +108,63 @@
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Card": {
         "status": "supported",
@@ -205,15 +205,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Crypto": {
         "status": "not_supported",
@@ -221,7 +221,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -229,11 +229,11 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Eft": {
         "status": "supported",
@@ -301,7 +301,7 @@
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Giropay": {
         "status": "supported",
@@ -340,15 +340,15 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Ideal": {
         "status": "supported",
@@ -385,23 +385,23 @@
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Interac": {
         "status": "supported",
@@ -466,63 +466,63 @@
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -530,19 +530,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -550,11 +550,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Paze": {
         "status": "not_supported",
@@ -562,11 +562,11 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Przelewy24": {
         "status": "supported",
@@ -601,47 +601,47 @@
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "Sofort": {
         "status": "supported",
@@ -710,23 +710,23 @@
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method"
+        "error": "This feature is not implemented: Payment method"
       }
     },
     "capture": {
@@ -752,7 +752,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -767,12 +767,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1043,7 +1043,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Aci"
+        "error": "This feature is not implemented: Selected payment method through Aci"
       }
     },
     "token_setup_recurring": {

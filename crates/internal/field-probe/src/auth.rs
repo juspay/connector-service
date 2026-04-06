@@ -457,7 +457,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             access_token: Secret::new("probe_access_token".to_string()),
             campaign_id: id(),
             base_url: None,
-            site: None,
+            site: Some("probe_site".to_string()),
         },
         ConnectorEnum::Hyperpg => ConnectorSpecificConfig::Hyperpg {
             username: u(),

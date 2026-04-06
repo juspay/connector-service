@@ -9,23 +9,23 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "AliPayRedirect": {
         "status": "supported",
@@ -61,63 +61,63 @@
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Card": {
         "status": "supported",
@@ -159,15 +159,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Crypto": {
         "status": "not_supported",
@@ -175,7 +175,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -183,15 +183,15 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Eps": {
         "status": "supported",
@@ -227,7 +227,7 @@
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Giropay": {
         "status": "supported",
@@ -360,7 +360,7 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Ideal": {
         "status": "supported",
@@ -396,91 +396,91 @@
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -488,19 +488,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -542,7 +542,7 @@
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Paze": {
         "status": "not_supported",
@@ -550,59 +550,90 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Sepa": {
-        "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "sepa": {
+              "iban": "DE89370400440532013000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "email": "test@example.com"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "description": "Probe payment"
+        },
+        "sample": {
+          "url": "https://testapi.multisafepay.com/v1/json/orders?api_key=probe_key",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"type\":\"direct\",\"order_id\":\"probe_txn_001\",\"gateway\":\"DIRDEB\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"gateway_info\":{\"account_id\":\"DE89370400440532013000\",\"account_holder_name\":\"John Doe\",\"account_holder_iban\":\"DE89370400440532013000\"},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
+        }
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Sofort": {
         "status": "supported",
@@ -670,23 +701,23 @@
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       }
     },
     "capture": {
@@ -694,7 +725,7 @@
         "status": "not_implemented"
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -709,12 +740,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -895,7 +926,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       }
     },
     "token_setup_recurring": {

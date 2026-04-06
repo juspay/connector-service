@@ -29,23 +29,23 @@
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Bacs": {
         "status": "not_supported",
@@ -77,7 +77,7 @@
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "BniVaBankTransfer": {
         "status": "not_supported",
@@ -136,7 +136,7 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "CimbVaBankTransfer": {
         "status": "not_supported",
@@ -188,15 +188,15 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Ideal": {
         "status": "not_supported",
@@ -248,11 +248,11 @@
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "MiniStop": {
         "status": "not_supported",
@@ -316,11 +316,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Paze": {
         "status": "not_supported",
@@ -352,15 +352,15 @@
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Seicomart": {
         "status": "not_supported",
@@ -404,11 +404,11 @@
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       }
     },
     "capture": {
@@ -439,7 +439,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -454,12 +454,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -748,13 +748,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+        "error": "This feature is not implemented: Payment method supported by connector but not yet implemented"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Payment method not supported for SetupMandate"
+        "error": "This feature is not implemented: Payment method not supported for SetupMandate"
       }
     },
     "tokenize": {

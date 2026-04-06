@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Card": {
         "status": "supported",
@@ -135,15 +135,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Crypto": {
         "status": "not_supported",
@@ -151,7 +151,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -159,27 +159,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Givex": {
         "status": "not_supported",
@@ -187,107 +187,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -295,19 +295,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -315,11 +315,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Paze": {
         "status": "not_supported",
@@ -327,67 +327,67 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "UpiCollect": {
         "status": "supported",
@@ -486,11 +486,11 @@
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       }
     },
     "capture": {
@@ -516,7 +516,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -549,12 +549,12 @@
         }
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -742,7 +742,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Only card payments are supported"
+        "error": "This feature is not implemented: Only card payments are supported"
       }
     },
     "token_setup_recurring": {

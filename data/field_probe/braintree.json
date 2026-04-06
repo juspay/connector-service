@@ -9,39 +9,39 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "ApplePayThirdPartySdk": {
         "status": "supported",
@@ -77,47 +77,47 @@
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Card": {
         "status": "supported",
@@ -158,15 +158,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Crypto": {
         "status": "not_supported",
@@ -174,7 +174,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -182,27 +182,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Givex": {
         "status": "not_supported",
@@ -210,11 +210,11 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "GooglePayThirdPartySdk": {
         "status": "supported",
@@ -250,95 +250,95 @@
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -346,19 +346,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -366,7 +366,7 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "PaypalSdk": {
         "status": "supported",
@@ -406,87 +406,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       }
     },
     "capture": {
@@ -513,29 +513,18 @@
         }
       }
     },
-    "create_access_token": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_customer": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_order": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_sdk_session_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "supported",
         "proto_request": {
-          "merchant_sdk_session_id": "probe_sdk_session_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
           }
         },
         "sample": {
@@ -551,7 +540,22 @@
         }
       }
     },
-    "create_session_token": {
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_server_authentication_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -639,7 +643,7 @@
     "recurring_charge": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       }
     },
     "recurring_revoke": {
@@ -708,7 +712,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through braintree"
+        "error": "This feature is not implemented: Selected payment method through braintree"
       }
     },
     "token_setup_recurring": {

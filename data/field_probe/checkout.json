@@ -42,31 +42,31 @@
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "ApplePayDecrypted": {
         "status": "supported",
@@ -117,51 +117,51 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Card": {
         "status": "supported",
@@ -200,15 +200,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Crypto": {
         "status": "not_supported",
@@ -216,7 +216,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -224,27 +224,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Givex": {
         "status": "not_supported",
@@ -301,99 +301,99 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -401,19 +401,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -421,11 +421,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Paze": {
         "status": "not_supported",
@@ -433,87 +433,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       }
     },
     "capture": {
@@ -539,7 +539,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -554,12 +554,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -843,13 +843,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through checkout"
+        "error": "This feature is not implemented: Selected payment method through checkout"
       }
     },
     "tokenize": {

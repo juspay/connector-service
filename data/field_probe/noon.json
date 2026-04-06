@@ -9,31 +9,31 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "ApplePay": {
         "status": "error",
@@ -45,51 +45,51 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Card": {
         "status": "supported",
@@ -130,15 +130,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Crypto": {
         "status": "not_supported",
@@ -146,7 +146,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -154,27 +154,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Givex": {
         "status": "not_supported",
@@ -273,99 +273,99 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -373,19 +373,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -426,7 +426,7 @@
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Paze": {
         "status": "not_supported",
@@ -434,87 +434,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       }
     },
     "capture": {
@@ -540,7 +540,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -555,12 +555,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -826,13 +826,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Noon"
+        "error": "This feature is not implemented: Selected payment method through Noon"
       }
     },
     "tokenize": {

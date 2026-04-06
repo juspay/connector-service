@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Card": {
         "status": "supported",
@@ -138,15 +138,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Crypto": {
         "status": "not_supported",
@@ -154,7 +154,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -162,15 +162,15 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Eps": {
         "status": "supported",
@@ -216,7 +216,7 @@
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Giropay": {
         "status": "supported",
@@ -266,15 +266,15 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Ideal": {
         "status": "supported",
@@ -320,91 +320,91 @@
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -412,19 +412,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -518,59 +518,59 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Sofort": {
         "status": "supported",
@@ -616,27 +616,27 @@
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       }
     },
     "capture": {
@@ -672,7 +672,22 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_server_authentication_token": {
       "default": {
         "status": "supported",
         "proto_request": {},
@@ -688,22 +703,7 @@
         }
       }
     },
-    "create_customer": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_order": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_sdk_session_token": {
-      "default": {
-        "status": "not_implemented"
-      }
-    },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1058,13 +1058,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Paypal"
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       }
     },
     "tokenize": {

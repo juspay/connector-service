@@ -21,7 +21,7 @@
 # Some connectors (e.g. gigadat) call get_phone_with_country_code() and emit a
 # single "billing_address.phone" error when either field is absent.
 # Patch both number and country code simultaneously.
-aliases = ["billing_address.phone"]
+aliases = ["billing_address.phone", "billing.phone", "billing.phone_number"]
 patches = [
   { path = "address.billing_address.phone_number",       type = "secret_string", value = "4155552671" },
   { path = "address.billing_address.phone_country_code", type = "string",        value = "+1" },
@@ -30,7 +30,7 @@ patches = [
 [[multi]]
 # Some connectors emit a combined "first_name or last_name" error when either
 # name field is absent. Patch both simultaneously.
-aliases = ["billing_address.first_name or billing_address.last_name", "billing_address.first_name and billing_address.last_name or customer_name"]
+aliases = ["billing_address.first_name or billing_address.last_name", "billing_address.first_name and billing_address.last_name or customer_name", "billing.full_name"]
 patches = [
   { path = "address.billing_address.first_name", type = "secret_string", value = "John" },
   { path = "address.billing_address.last_name",  type = "secret_string", value = "Doe" },
@@ -50,6 +50,7 @@ aliases = [
   "address.country",
   "address.country_code",
   "billing_address.country",
+  "billing.country",
   "billing_address.country_code",
   "payment_method_data.billing.address.country",
   "country_code",
@@ -59,6 +60,8 @@ type = "country_us"
 ["address.billing_address.email"]
 aliases = [
   "billing_address.email",
+  "billing.email",
+  "billing.address",
   "billing_email",
   "payment_method_data.billing.email",
   "billing_address.email or email",
@@ -102,7 +105,6 @@ aliases = [
   "payment_method_data.billing.phone",
   "contact",
   "phone",
-  "billing.phone",
 ]
 type = "secret_string"
 value = "4155552671"
@@ -262,8 +264,7 @@ aliases = [
   "company_name",
   "customer.name",
   "customer_name",
-  "shopper_name",
-  "customer.name",
+  "shopper_name"
 ]
 type = "string"
 value = "John Doe"

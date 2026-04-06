@@ -68,6 +68,10 @@ fn discover_flows_from_ffi() -> Vec<FlowInfo> {
                 if fn_name == "authorize_req_transformer" {
                     continue;
                 }
+                // Skip req_handler and res_handler variants - they're handled by the base transformer
+                if fn_name.contains("_req_handler") || fn_name.contains("_res_handler") {
+                    continue;
+                }
                 if let Some(flow) = parse_flow_info(&fn_name, &request_type) {
                     flows.push(flow);
                 }
@@ -146,8 +150,8 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
     // Some flows don't have a connector_feature_data field in their request type
     let needs_feature_data = !matches!(
         final_key.as_str(),
-        "create_access_token"
-            | "create_session_token"
+        "server_authentication_token"
+            | "server_session_authentication_token"
             | "dispute_accept"
             | "dispute_submit_evidence"
             | "dispute_defend"
@@ -208,7 +212,11 @@ fn generate_flow_runners(flows: &[FlowInfo]) {
     writeln!(f, "    use crate::registry::mock_connector_state;").unwrap();
     writeln!(f, "    use crate::requests::*;").unwrap();
     writeln!(f, "    use crate::types::*;").unwrap();
-    writeln!(f, "    use crate::patcher::{{smart_patch, apply_connector_flow_overrides}};").unwrap();
+    writeln!(
+        f,
+        "    use crate::patcher::{{smart_patch, apply_connector_flow_overrides}};"
+    )
+    .unwrap();
     writeln!(f).unwrap();
 
     // Generate probe functions
@@ -347,7 +355,11 @@ fn generate_authorize_probe(f: &mut fs::File) {
         "        let connector_meta = connector_feature_data_json(connector);"
     )
     .unwrap();
-    writeln!(f, "        let mut req = if is_oauth_connector(connector) {{").unwrap();
+    writeln!(
+        f,
+        "        let mut req = if is_oauth_connector(connector) {{"
+    )
+    .unwrap();
     writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state(Some(connector)))").unwrap();
     writeln!(f, "        }} else {{").unwrap();
     writeln!(

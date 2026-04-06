@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Card": {
         "status": "supported",
@@ -141,15 +141,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Crypto": {
         "status": "not_supported",
@@ -157,7 +157,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -165,27 +165,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Givex": {
         "status": "not_supported",
@@ -193,107 +193,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -301,19 +301,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -321,11 +321,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Paze": {
         "status": "not_supported",
@@ -333,87 +333,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       }
     },
     "capture": {
@@ -438,7 +438,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -453,12 +453,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -649,7 +649,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       }
     },
     "token_setup_recurring": {

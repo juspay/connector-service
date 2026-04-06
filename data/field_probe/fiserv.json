@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Card": {
         "status": "supported",
@@ -132,15 +132,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Crypto": {
         "status": "not_supported",
@@ -148,7 +148,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -156,27 +156,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Givex": {
         "status": "not_supported",
@@ -184,107 +184,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -292,19 +292,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -312,11 +312,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Paze": {
         "status": "not_supported",
@@ -324,87 +324,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       }
     },
     "capture": {
@@ -434,7 +434,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -449,12 +449,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -651,7 +651,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through fiserv"
+        "error": "This feature is not implemented: Selected payment method through fiserv"
       }
     },
     "token_setup_recurring": {

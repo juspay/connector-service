@@ -547,21 +547,9 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
-        "status": "supported",
-        "proto_request": {},
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/authentication/login",
-          "method": "Post",
-          "headers": {
-            "content-type": "application/json",
-            "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "x-client-id": "probe_id"
-          },
-          "body": "{}"
-        }
+        "status": "not_implemented"
       }
     },
     "create_customer": {
@@ -598,12 +586,24 @@
         }
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {},
+        "sample": {
+          "url": "https://api-demo.airwallex.com/api/v1/authentication/login",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-client-id": "probe_id"
+          },
+          "body": "{}"
+        }
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }

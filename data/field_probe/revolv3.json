@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Card": {
         "status": "supported",
@@ -128,15 +128,15 @@
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Crypto": {
         "status": "not_supported",
@@ -144,7 +144,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -152,27 +152,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Givex": {
         "status": "not_supported",
@@ -180,107 +180,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -288,19 +288,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -308,11 +308,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Paze": {
         "status": "not_supported",
@@ -320,87 +320,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       }
     },
     "capture": {
@@ -426,7 +426,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -441,12 +441,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -578,7 +578,7 @@
     "recurring_charge": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       }
     },
     "recurring_revoke": {
@@ -682,13 +682,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through revolv3"
+        "error": "This feature is not implemented: Selected payment method through revolv3"
       }
     },
     "tokenize": {

@@ -138,7 +138,7 @@
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "AliPayRedirect": {
         "status": "supported",
@@ -292,7 +292,7 @@
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Bacs": {
         "status": "supported",
@@ -395,7 +395,7 @@
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Becs": {
         "status": "supported",
@@ -433,7 +433,7 @@
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Blik": {
         "status": "supported",
@@ -469,19 +469,19 @@
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Card": {
         "status": "supported",
@@ -551,11 +551,11 @@
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Crypto": {
         "status": "not_supported",
@@ -563,7 +563,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -571,15 +571,15 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Eps": {
         "status": "supported",
@@ -613,7 +613,7 @@
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Giropay": {
         "status": "supported",
@@ -698,7 +698,7 @@
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Ideal": {
         "status": "supported",
@@ -732,27 +732,27 @@
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Klarna": {
         "status": "supported",
@@ -786,31 +786,31 @@
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "MultibancoBankTransfer": {
         "status": "supported",
@@ -846,31 +846,31 @@
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -878,19 +878,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -898,11 +898,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Paze": {
         "status": "not_supported",
@@ -910,11 +910,11 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Przelewy24": {
         "status": "supported",
@@ -948,15 +948,15 @@
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "RevolutPay": {
         "status": "supported",
@@ -990,15 +990,15 @@
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Sepa": {
         "status": "supported",
@@ -1067,31 +1067,31 @@
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       },
       "WeChatPayQr": {
         "status": "supported",
@@ -1125,7 +1125,7 @@
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       }
     },
     "capture": {
@@ -1152,9 +1152,31 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api.stripe.com/v1/payment_intents",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
+          },
+          "body": "amount=1000&currency=usd&automatic_payment_methods%5Benabled%5D=true&metadata%5Border_id%5D=probe_sdk_session_001"
+        }
       }
     },
     "create_customer": {
@@ -1184,12 +1206,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1500,13 +1522,13 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       }
     },
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through stripe"
+        "error": "This feature is not implemented: Selected payment method through stripe"
       }
     },
     "tokenize": {

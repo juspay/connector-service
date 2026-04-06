@@ -9,23 +9,23 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "AliPayRedirect": {
         "status": "supported",
@@ -173,31 +173,31 @@
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Bluecode": {
         "status": "supported",
@@ -233,15 +233,15 @@
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Card": {
         "status": "supported",
@@ -315,11 +315,11 @@
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Crypto": {
         "status": "not_supported",
@@ -327,7 +327,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -335,27 +335,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Givex": {
         "status": "not_supported",
@@ -446,51 +446,51 @@
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "MbWay": {
         "status": "supported",
@@ -561,39 +561,39 @@
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -601,19 +601,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -693,27 +693,27 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "RevolutPay": {
         "status": "supported",
@@ -825,43 +825,43 @@
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       },
       "WeChatPayQr": {
         "status": "supported",
@@ -954,7 +954,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -969,12 +969,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -1167,7 +1167,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: payment_method"
+        "error": "This feature is not implemented: payment_method"
       }
     },
     "token_setup_recurring": {

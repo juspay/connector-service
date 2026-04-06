@@ -9,103 +9,103 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Card": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Crypto": {
         "status": "not_supported",
@@ -113,7 +113,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -121,27 +121,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Givex": {
         "status": "not_supported",
@@ -149,39 +149,39 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Interac": {
         "status": "supported",
@@ -223,67 +223,67 @@
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -291,19 +291,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -311,11 +311,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Paze": {
         "status": "not_supported",
@@ -323,87 +323,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       }
     },
     "capture": {
@@ -411,7 +411,7 @@
         "status": "not_implemented"
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -426,12 +426,12 @@
         "status": "not_implemented"
       }
     },
-    "create_sdk_session_token": {
+    "create_server_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -508,7 +508,7 @@
     "proxy_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       }
     },
     "proxy_setup_recurring": {
@@ -549,7 +549,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This step has not been implemented for: Selected payment method through Loonio"
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       }
     },
     "token_setup_recurring": {

@@ -10,6 +10,7 @@ import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
 from payments import PayoutClient
+from payments import MerchantAuthenticationClient
 from payments import CustomerClient
 from payments import RecurringPaymentClient
 from payments import PaymentMethodClient
@@ -67,6 +68,18 @@ def _build_capture_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceCaptureRequest(),
     )
 
+def _build_create_client_authentication_token_request():
+    return ParseDict(
+        {
+            "merchant_client_session_id": "probe_sdk_session_001",  # Infrastructure
+            "domain_context": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+        payment_pb2.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest(),
+    )
+
 def _build_create_customer_request():
     return ParseDict(
         {
@@ -81,10 +94,8 @@ def _build_create_customer_request():
 def _build_recurring_charge_request():
     return ParseDict(
         {
-            "connector_recurring_payment_id": {  # Reference to existing mandate
-                "connector_mandate_id": {  # mandate_id sent by the connector
-                    "connector_mandate_id": "probe-mandate-123"
-                }
+            "connector_recurring_payment_id": {
+                "connector_mandate_id": "probe-mandate-123"
             },
             "amount": {  # Amount Information
                 "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
@@ -140,13 +151,13 @@ def _build_setup_recurring_request():
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
+            "enrolled_for_3ds": False,
             "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
-            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
-            "customer_acceptance": {  # Details of customer acceptance
-                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
-                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            "setup_future_usage": "OFF_SESSION",
+            "request_incremental_authorization": False,
+            "customer_acceptance": {
+                "acceptance_type": "OFFLINE",
+                "accepted_at": 0
             }
         },
         payment_pb2.PaymentServiceSetupRecurringRequest(),
@@ -322,6 +333,33 @@ async def capture(merchant_transaction_id: str, config: sdk_config_pb2.Connector
     return {"status": capture_response.status}
 
 
+async def create_client_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: MerchantAuthenticationService.CreateClientAuthenticationToken"""
+    merchantauthentication_client = MerchantAuthenticationClient(config)
+
+    create_response = await merchantauthentication_client.create_client_authentication_token(_build_create_client_authentication_token_request())
+
+    return {"status": create_response.status}
+
+
+async def create_client_authentication_token_req_handler(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.create_client_authentication_token_req_handler"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: create_client_authentication_token_req_handler
+    create_response = await payment_client.create_client_authentication_token_req_handler(ParseDict(
+        {
+            "merchant_client_session_id": "probe_sdk_session_001",
+            "domain_context": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+    ))
+
+    return {"status": create_response.status}
+
+
 async def create_customer(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: CustomerService.Create"""
     customer_client = CustomerClient(config)
@@ -348,6 +386,26 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     ))
 
     return {"status": get_response.status}
+
+
+async def incremental_authorization(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.incremental_authorization"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: incremental_authorization
+    incremental_response = await payment_client.incremental_authorization(ParseDict(
+        {
+            "merchant_authorization_id": "probe_auth_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "amount": {
+                "minor_amount": 1100,
+                "currency": "USD"
+            },
+            "reason": "incremental_auth_probe"
+        },
+    ))
+
+    return {"status": incremental_response.status}
 
 
 async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -380,6 +438,39 @@ async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.C
     return {"status": proxy_response.status}
 
 
+async def proxy_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.ProxySetupRecurring"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: proxy_setup_recurring
+    proxy_response = await payment_client.proxy_setup_recurring(ParseDict(
+        {
+            "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+            "amount": {
+                "minor_amount": 0,
+                "currency": "USD"
+            },
+            "card_proxy": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "123",
+                "card_holder_name": "John Doe"
+            },
+            "address": {
+            },
+            "customer_acceptance": {
+                "acceptance_type": "OFFLINE",
+                "accepted_at": 0
+            },
+            "auth_type": "NO_THREE_DS",
+            "setup_future_usage": "OFF_SESSION"
+        },
+    ))
+
+    return {"status": proxy_response.status}
+
+
 async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RecurringPaymentService.Charge"""
     recurringpayment_client = RecurringPaymentClient(config)
@@ -394,6 +485,22 @@ async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorC
     payment_client = PaymentClient(config)
 
     refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+
+    return {"status": refund_response.status}
+
+
+async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.refund_get"""
+    payment_client = PaymentClient(config)
+
+    # Step 1: refund_get
+    refund_response = await payment_client.refund_get(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "refund_id": "probe_refund_id_001"
+        },
+    ))
 
     return {"status": refund_response.status}
 
