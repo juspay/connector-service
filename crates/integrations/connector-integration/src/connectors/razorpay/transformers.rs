@@ -164,6 +164,10 @@ pub struct RazorpayPaymentRequest<
     pub ip: Secret<String>,
     pub referer: String,
     pub user_agent: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub save: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -434,6 +438,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|info| info.get_referer().ok())
             .unwrap_or_else(|| "https://example.com".to_string());
 
+        let save = item
+            .router_data
+            .request
+            .setup_future_usage
+            .as_ref()
+            .and_then(|usage| match usage {
+                common_enums::FutureUsage::OffSession => Some(1),
+                _ => None,
+            });
+
+        let customer_id = item
+            .router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| id.get_string_repr().to_string());
+
         Ok(Self {
             amount,
             currency,
@@ -447,6 +468,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ip,
             referer,
             user_agent,
+            save,
+            customer_id,
         })
     }
 }
@@ -1347,6 +1370,8 @@ pub struct RazorpayWebCollectRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurring: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub save: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_id: Option<String>,
     #[serde(rename = "upi[expiry_time]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_expiry_time_93_: Option<i64>,
@@ -1514,7 +1539,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(|v| v.parse::<i64>().ok()),
             __upi_91_vpa_93_: metadata_map.get("__upi_91_vpa_93_").cloned(),
             recurring: None,
-            customer_id: None,
+            save: item
+                .router_data
+                .request
+                .setup_future_usage
+                .as_ref()
+                .and_then(|usage| match usage {
+                    common_enums::FutureUsage::OffSession => Some(1),
+                    _ => None,
+                }),
+            customer_id: item
+                .router_data
+                .resource_common_data
+                .customer_id
+                .as_ref()
+                .map(|id| id.get_string_repr().to_string()),
             __upi_91_expiry_time_93_: metadata_map
                 .get("__upi_91_expiry_time_93_")
                 .and_then(|v| v.parse::<i64>().ok()),
