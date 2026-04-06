@@ -5,7 +5,7 @@
 // Stripe — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx stripe.ts checkout_autocapture
 
-import { PaymentClient, CustomerClient, RecurringPaymentClient, PaymentMethodClient } from 'hyperswitch-prism';
+import { PaymentClient, PayoutClient, CustomerClient, RecurringPaymentClient, PaymentMethodClient } from 'hyperswitch-prism';
 import { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } from 'hyperswitch-prism/types';
 
 const _defaultConfig: ConnectorConfig = {
@@ -62,17 +62,6 @@ function _buildCreateCustomerRequest(): CustomerServiceCreateRequest {
         "customerName": "John Doe",  // Name of the customer
         "email": {"value": "test@example.com"},  // Email address of the customer
         "phoneNumber": "4155552671"  // Phone number of the customer
-    };
-}
-
-function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequest {
-    return {
-        "merchantTransactionId": "probe_merchant_txn_001",  // Identification
-        "connectorTransactionId": connectorTransactionId,
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
     };
 }
 
@@ -166,13 +155,6 @@ function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
     };
 }
 
-function _buildVoidRequest(connectorTransactionId: string): PaymentServiceVoidRequest {
-    return {
-        "merchantVoidId": "probe_void_001",  // Identification
-        "connectorTransactionId": connectorTransactionId
-    };
-}
-
 
 // ANCHOR: scenario_functions
 // One-step Payment (Authorize + Capture)
@@ -248,8 +230,9 @@ export async function processRefund(merchantTransactionId: string, config: Conne
 
 // Void Payment
 // Cancel an authorized but not-yet-captured payment.
-export async function processVoidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceVoidResponse> {
+export async function processVoidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
     const paymentClient = new PaymentClient(config);
+    const payoutClient = new PayoutClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
     const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest(CaptureMethod.MANUAL));
@@ -263,15 +246,19 @@ export async function processVoidPayment(merchantTransactionId: string, config: 
     }
 
     // Step 2: Void — release reserved funds (cancel authorization)
-    const voidResponse = await paymentClient.void(_buildVoidRequest(authorizeResponse.connectorTransactionId));
+    const voidResponse = await payoutClient.void({
+        "merchantVoidId": "probe_void_001",
+        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
+    });
 
     return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: voidResponse.error };
 }
 
 // Get Payment Status
 // Retrieve current payment status from the connector.
-export async function processGetPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
+export async function processGetPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
     const paymentClient = new PaymentClient(config);
+    const payoutClient = new PayoutClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
     const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest(CaptureMethod.MANUAL));
@@ -285,7 +272,14 @@ export async function processGetPayment(merchantTransactionId: string, config: C
     }
 
     // Step 2: Get — retrieve current payment status from the connector
-    const getResponse = await paymentClient.get(_buildGetRequest(authorizeResponse.connectorTransactionId));
+    const getResponse = await payoutClient.get({
+        "merchantTransactionId": "probe_merchant_txn_001",
+        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        }
+    });
 
     return { status: getResponse.status, transactionId: getResponse.connectorTransactionId, error: getResponse.error };
 }
@@ -317,16 +311,22 @@ export async function createCustomer(merchantTransactionId: string, config: Conn
     return { status: createResponse.status };
 }
 
-// Flow: PaymentService.Get
-export async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
+// Flow: PayoutService.Get
+export async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: Get — retrieve current payment status from the connector
+    const getResponse = await payoutClient.get({
+        "merchantTransactionId": "probe_merchant_txn_001",
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        }
+    });
 
     return { status: getResponse.status };
 }
 
-// Flow: PaymentService.proxy_authorize
+// Flow: PaymentService.ProxyAuthorize
 export async function proxyAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
     // Step 1: proxy_authorize
     const proxyResponse = await paymentClient.proxyAuthorize({
@@ -388,17 +388,19 @@ export async function tokenize(merchantTransactionId: string, config: ConnectorC
     return { status: tokenizeResponse.status };
 }
 
-// Flow: PaymentService.Void
-export async function voidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceVoidResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const voidResponse = await paymentClient.void(_buildVoidRequest('probe_connector_txn_001'));
+// Flow: PayoutService.Void
+export async function voidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: Void — release reserved funds (cancel authorization)
+    const voidResponse = await payoutClient.void({
+        "merchantVoidId": "probe_void_001",
+        "connectorTransactionId": "probe_connector_txn_001"
+    });
 
     return { status: voidResponse.status };
 }
 
 
-export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, get, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest };
+export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, get, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateCustomerRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest };
 
 // CLI runner
 if (require.main === module) {

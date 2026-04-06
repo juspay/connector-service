@@ -17,6 +17,8 @@ from payments.generated.payment_pb2 import (
     EventServiceHandleResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSdkSessionTokenResponse,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenResponse,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
@@ -35,6 +37,8 @@ from payments.generated.payment_pb2 import (
     PaymentServiceCreateOrderResponse,
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
+    PaymentServiceIncrementalAuthorizationRequest,
+    PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceProxyAuthorizeRequest,
     PaymentServiceProxySetupRecurringRequest,
     PaymentServiceRefundRequest,
@@ -44,6 +48,8 @@ from payments.generated.payment_pb2 import (
     PaymentServiceSetupRecurringResponse,
     PaymentServiceTokenAuthorizeRequest,
     PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
     PayoutServiceCreateLinkRequest,
@@ -64,7 +70,10 @@ from payments.generated.payment_pb2 import (
     PayoutServiceVoidResponse,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
+    RecurringPaymentServiceRevokeRequest,
+    RecurringPaymentServiceRevokeResponse,
     RefundResponse,
+    RefundServiceGetRequest,
 )
 
 class _ConnectorClientBase:
@@ -99,6 +108,10 @@ class EventClient(_ConnectorClientBase):
 class MerchantAuthenticationClient(_ConnectorClientBase):
     def create_access_token(self, request: MerchantAuthenticationServiceCreateAccessTokenRequest, options: RequestConfig | None = ...) -> MerchantAuthenticationServiceCreateAccessTokenResponse:
         """MerchantAuthenticationService.CreateAccessToken — Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side."""
+        ...
+
+    def create_sdk_session_token(self, request: MerchantAuthenticationServiceCreateSdkSessionTokenRequest, options: RequestConfig | None = ...) -> MerchantAuthenticationServiceCreateSdkSessionTokenResponse:
+        """MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification."""
         ...
 
     def create_session_token(self, request: MerchantAuthenticationServiceCreateSessionTokenRequest, options: RequestConfig | None = ...) -> MerchantAuthenticationServiceCreateSessionTokenResponse:
@@ -143,6 +156,10 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking."""
         ...
 
+    def incremental_authorization(self, request: PaymentServiceIncrementalAuthorizationRequest, options: RequestConfig | None = ...) -> PaymentServiceIncrementalAuthorizationResponse:
+        """PaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization."""
+        ...
+
     def proxy_authorize(self, request: PaymentServiceProxyAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
         """PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
         ...
@@ -173,6 +190,10 @@ class PaymentClient(_ConnectorClientBase):
 
     def void(self, request: PaymentServiceVoidRequest, options: RequestConfig | None = ...) -> PaymentServiceVoidResponse:
         """PaymentService.Void — Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed."""
+        ...
+
+    def verify_redirect_response(self, request: PaymentServiceVerifyRedirectResponseRequest, options: RequestConfig | None = ...) -> PaymentServiceVerifyRedirectResponseResponse:
+        """PaymentService.VerifyRedirectResponse — Verify and process redirect responses from 3D Secure or other external flows. Validates authentication results and updates payment state accordingly."""
         ...
 
 
@@ -213,4 +234,14 @@ class PayoutClient(_ConnectorClientBase):
 class RecurringPaymentClient(_ConnectorClientBase):
     def charge(self, request: RecurringPaymentServiceChargeRequest, options: RequestConfig | None = ...) -> RecurringPaymentServiceChargeResponse:
         """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
+        ...
+
+    def recurring_revoke(self, request: RecurringPaymentServiceRevokeRequest, options: RequestConfig | None = ...) -> RecurringPaymentServiceRevokeResponse:
+        """RecurringPaymentService.Revoke — Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations."""
+        ...
+
+
+class RefundClient(_ConnectorClientBase):
+    def refund_get(self, request: RefundServiceGetRequest, options: RequestConfig | None = ...) -> RefundResponse:
+        """RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication."""
         ...

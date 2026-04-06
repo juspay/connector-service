@@ -101,6 +101,7 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         (("CustomerService", "Create"), "create_customer"),
         // PaymentMethodService
         (("PaymentMethodService", "Tokenize"), "tokenize"),
+        (("PaymentMethodService", "Eligibility"), "eligibility"),
         // MerchantAuthenticationService
         (
             ("MerchantAuthenticationService", "CreateAccessToken"),

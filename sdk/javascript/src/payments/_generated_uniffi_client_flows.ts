@@ -140,6 +140,23 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('create_order', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for create_sdk_session_token flow. */
+  createSdkSessionTokenReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('create_sdk_session_token', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for create_sdk_session_token flow. */
+  createSdkSessionTokenRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('create_sdk_session_token', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for create_session_token flow. */
   createSessionTokenReq(
     requestBytes: Buffer | Uint8Array,
@@ -189,6 +206,23 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('get', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for incremental_authorization flow. */
+  incrementalAuthorizationReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('incremental_authorization', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for incremental_authorization flow. */
+  incrementalAuthorizationRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('incremental_authorization', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for payout_create flow. */
@@ -395,6 +429,23 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('proxy_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for recurring_revoke flow. */
+  recurringRevokeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('recurring_revoke', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for recurring_revoke flow. */
+  recurringRevokeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('recurring_revoke', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for refund flow. */
   refundReq(
     requestBytes: Buffer | Uint8Array,
@@ -410,6 +461,23 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('refund', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for refund_get flow. */
+  refundGetReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('refund_get', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for refund_get flow. */
+  refundGetRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('refund_get', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for reverse flow. */
@@ -537,6 +605,14 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callDirect('handle_event', requestBytes, optionsBytes);
+  }
+
+  /** Direct single-step transform for verify_redirect_response (no HTTP round-trip). */
+  verifyRedirectResponseDirect(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callDirect('verify_redirect_response', requestBytes, optionsBytes);
   }
 
 }

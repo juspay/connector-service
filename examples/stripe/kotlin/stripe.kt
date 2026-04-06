@@ -8,14 +8,13 @@
 package examples.stripe
 
 import payments.PaymentClient
+import payments.PayoutClient
 import payments.CustomerClient
 import payments.RecurringPaymentClient
 import payments.PaymentMethodClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
-import payments.PaymentServiceVoidRequest
-import payments.PaymentServiceGetRequest
 import payments.CustomerServiceCreateRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceSetupRecurringRequest
@@ -68,17 +67,6 @@ private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServi
     }.build()
 }
 
-private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
-    return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
-        connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    }.build()
-}
-
 private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
     return PaymentServiceRefundRequest.newBuilder().apply {
         merchantRefundId = "probe_refund_001"  // Identification
@@ -89,13 +77,6 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         reason = "customer_request"  // Reason for the refund
-    }.build()
-}
-
-private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceVoidRequest {
-    return PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification
-        connectorTransactionId = connectorTransactionIdStr
     }.build()
 }
 
@@ -169,6 +150,7 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
 // Cancel an authorized but not-yet-captured payment.
 fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
     val paymentClient = PaymentClient(config)
+    val payoutClient = PayoutClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
     val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
@@ -179,7 +161,10 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
     }
 
     // Step 2: Void — release reserved funds (cancel authorization)
-    val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
+    val voidResponse = payoutClient.void(.newBuilder().apply {
+        merchantVoidId = "probe_void_001"
+        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
+    }.build())
 
     return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to voidResponse.error)
 }
@@ -188,6 +173,7 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
 // Retrieve current payment status from the connector.
 fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
     val paymentClient = PaymentClient(config)
+    val payoutClient = PayoutClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
     val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
@@ -198,7 +184,12 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     }
 
     // Step 2: Get — retrieve current payment status from the connector
-    val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
+    val getResponse = payoutClient.get(.newBuilder().apply {
+        merchantTransactionId = "probe_merchant_txn_001"
+        minorAmount = 1000L
+        currency = "USD"
+        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
+    }.build())
 
     return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
@@ -236,14 +227,6 @@ fun createCustomer(txnId: String) {
     }.build()
     val response = client.create(request)
     println("Customer: ${response.connectorCustomerId}")
-}
-
-// Flow: PaymentService.Get
-fun get(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = buildGetRequest("probe_connector_txn_001")
-    val response = client.get(request)
-    println("Status: ${response.status.name}")
 }
 
 // Flow: RecurringPaymentService.Charge
@@ -352,16 +335,6 @@ fun tokenize(txnId: String) {
     println("Token: ${response.paymentMethodToken}")
 }
 
-// Flow: PaymentService.Void
-fun void(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = buildVoidRequest("probe_connector_txn_001")
-    val response = client.void(request)
-    if (response.status.name == "FAILED")
-        throw RuntimeException("Void failed: ${response.error.unifiedDetails.message}")
-    println("Done: ${response.status.name}")
-}
-
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
@@ -375,12 +348,10 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "createCustomer" -> createCustomer(txnId)
-        "get" -> get(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
-        "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createCustomer, recurringCharge, refund, setupRecurring, tokenize")
     }
 }

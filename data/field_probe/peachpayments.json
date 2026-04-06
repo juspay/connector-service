@@ -1,5 +1,5 @@
 {
-  "connector": "paybox",
+  "connector": "peachpayments",
   "flows": {
     "authenticate": {
       "default": {
@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "AchBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Affirm": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Afterpay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Alfamart": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "AliPayRedirect": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "AmazonPayRedirect": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "ApplePay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "ApplePayDecrypted": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Bacs": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "BacsBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "BancontactCard": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "BcaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Becs": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Bizum": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Blik": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Bluecode": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "BniVaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Boleto": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "BriVaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Card": {
         "status": "supported",
@@ -116,26 +116,29 @@
           "return_url": "https://example.com/return"
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/create-and-confirm",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
+          "body": "{\"paymentMethod\":\"ecommerce_card_payment_only\",\"referenceId\":\"probe_txn_001\",\"ecommerceCardPaymentOnlyTransactionData\":{\"merchantInformation\":{\"clientMerchantReferenceId\":\"probe_merchant_ref_001\"},\"routingReference\":{\"merchantPaymentMethodRouteId\":\"probe_route_001\"},\"card\":{\"pan\":\"4111111111111111\",\"cardholderName\":\"John Doe\",\"expiryYear\":\"30\",\"expiryMonth\":\"03\",\"cvv\":\"737\"},\"amount\":{\"amount\":1000,\"currencyCode\":\"USD\"}},\"sendDateTime\":\"2020-01-01T00:00:00+00:00\"}"
         }
       },
       "CashappQr": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "CimbVaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "ClassicReward": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Crypto": {
         "status": "not_supported",
@@ -143,7 +146,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -151,27 +154,27 @@
       },
       "EVoucher": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Efecty": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Eft": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Eps": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "FamilyMart": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Giropay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Givex": {
         "status": "not_supported",
@@ -179,107 +182,107 @@
       },
       "GooglePay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "GooglePayDecrypted": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Ideal": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Indomaret": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "IndonesianBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "InstantBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "InstantBankTransferFinland": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "InstantBankTransferPoland": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Interac": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Klarna": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Lawson": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "LocalBankRedirect": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "LocalBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "MandiriVaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "MbWay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Mifinity": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "MiniStop": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "MultibancoBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingFinland": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingFpx": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingPoland": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingSlovakia": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OnlineBankingThailand": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OpenBanking": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -287,19 +290,19 @@
       },
       "OpenBankingUk": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Oxxo": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "PagoEfectivo": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "PayEasy": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -307,11 +310,11 @@
       },
       "PaypalRedirect": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "PaypalSdk": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Paze": {
         "status": "not_supported",
@@ -319,87 +322,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Pix": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Przelewy24": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Pse": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "RedCompra": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "RedPagos": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "RevolutPay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "SamsungPay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Satispay": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Seicomart": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Sepa": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "SepaBankTransfer": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "SepaGuaranteedDebit": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "SevenEleven": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Sofort": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Trustly": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "UpiCollect": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "UpiIntent": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "UpiQr": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "WeChatPayQr": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       },
       "Wero": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       }
     },
     "capture": {
@@ -414,13 +417,16 @@
           }
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/authorization/probe_connector_txn_001/capture",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00002&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_capture_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
+          "body": "{\"amount\":{\"amount\":1000,\"currencyCode\":\"USD\"}}"
         }
       }
     },
@@ -486,19 +492,22 @@
           }
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
-          "method": "Post",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/by-reference/probe_merchant_txn_001",
+          "method": "Get",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00017&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
+          "body": null
         }
       }
     },
     "handle_event": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported"
       }
     },
     "incremental_authorization": {
@@ -540,13 +549,16 @@
           "return_url": "https://example.com/return"
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/create-and-confirm",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_proxy_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=123&ACTIVITE=024"
+          "body": "{\"paymentMethod\":\"ecommerce_card_payment_only\",\"referenceId\":\"probe_proxy_txn_001\",\"ecommerceCardPaymentOnlyTransactionData\":{\"merchantInformation\":{\"clientMerchantReferenceId\":\"probe_merchant_ref_001\"},\"routingReference\":{\"merchantPaymentMethodRouteId\":\"probe_route_001\"},\"card\":{\"pan\":\"4111111111111111\",\"cardholderName\":\"John Doe\",\"expiryYear\":\"30\",\"expiryMonth\":\"03\",\"cvv\":\"123\"},\"amount\":{\"amount\":1000,\"currencyCode\":\"USD\"}},\"sendDateTime\":\"2020-01-01T00:00:00+00:00\"}"
         }
       }
     },
@@ -579,13 +591,16 @@
           "reason": "customer_request"
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00014&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_refund_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001&ACTIVITE=024"
+          "body": "{\"referenceId\":\"probe_refund_001\",\"ecommerceCardPaymentOnlyTransactionData\":{\"amount\":{\"amount\":1000,\"currencyCode\":\"USD\"}}}"
         }
       }
     },
@@ -598,13 +613,16 @@
           "refund_id": "probe_refund_id_001"
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
-          "method": "Post",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/by-reference/probe_refund_001",
+          "method": "Get",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00017&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&DATEQ=00000000000000&NUMTRANS=probe_refund_id_001&NUMAPPEL=probe_connector_txn_001"
+          "body": null
         }
       }
     },
@@ -621,7 +639,7 @@
     "token_authorize": {
       "default": {
         "status": "not_supported",
-        "error": "Only card payments are supported is not supported by Paybox"
+        "error": "Payment method not supported is not supported by peachpayments"
       }
     },
     "token_setup_recurring": {
@@ -651,13 +669,16 @@
           }
         },
         "sample": {
-          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "url": "https://apitest.bankint.ppay.io/v/1/transactions/authorization/probe_connector_txn_001/reverse",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key",
+            "x-exi-auth-ver": "v1",
+            "x-tenant-id": "probe_secret"
           },
-          "body": "VERSION=00104&TYPE=00005&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_void_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
+          "body": "{\"amount\":{\"amount\":1000,\"currencyCode\":\"USD\"}}"
         }
       }
     }

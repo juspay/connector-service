@@ -4165,6 +4165,9 @@ message PaymentServiceProxyAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 21;
   optional string merchant_order_id = 22;
   optional bool test_mode = 23;
+  // Order Details
+  optional string order_category = 24; // Category of the order/service
+  optional string description = 25; // Description of the transaction
 }
 
 message PaymentServiceProxySetupRecurringRequest {
@@ -4184,5 +4187,8 @@ message PaymentServiceProxySetupRecurringRequest {
   optional AuthenticationData authentication_data = 13;
   optional FutureUsage setup_future_usage = 14;
   optional BrowserInformation browser_info = 15;
+  // Order Details
+  optional string order_category = 16; // Category of the order/service
+  optional string description = 17; // Description of the mandate setup
 }
 

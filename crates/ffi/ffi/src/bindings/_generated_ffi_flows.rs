@@ -7,6 +7,7 @@ use grpc_api_types::payments::{
     DisputeServiceDefendRequest,
     DisputeServiceSubmitEvidenceRequest,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
@@ -16,6 +17,7 @@ use grpc_api_types::payments::{
     PaymentServiceCaptureRequest,
     PaymentServiceCreateOrderRequest,
     PaymentServiceGetRequest,
+    PaymentServiceIncrementalAuthorizationRequest,
     PaymentServiceProxyAuthorizeRequest,
     PaymentServiceProxySetupRecurringRequest,
     PaymentServiceRefundRequest,
@@ -25,6 +27,8 @@ use grpc_api_types::payments::{
     PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVoidRequest,
     RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceRevokeRequest,
+    RefundServiceGetRequest,
 };
 use grpc_api_types::payouts::{
     PayoutServiceCreateLinkRequest,
@@ -46,9 +50,11 @@ use crate::handlers::payments::{
     create_req_handler, create_res_handler,
     create_access_token_req_handler, create_access_token_res_handler,
     create_order_req_handler, create_order_res_handler,
+    create_sdk_session_token_req_handler, create_sdk_session_token_res_handler,
     create_session_token_req_handler, create_session_token_res_handler,
     defend_req_handler, defend_res_handler,
     get_req_handler, get_res_handler,
+    incremental_authorization_req_handler, incremental_authorization_res_handler,
     payout_create_req_handler, payout_create_res_handler,
     payout_create_link_req_handler, payout_create_link_res_handler,
     payout_create_recipient_req_handler, payout_create_recipient_res_handler,
@@ -61,7 +67,9 @@ use crate::handlers::payments::{
     pre_authenticate_req_handler, pre_authenticate_res_handler,
     proxy_authorize_req_handler, proxy_authorize_res_handler,
     proxy_setup_recurring_req_handler, proxy_setup_recurring_res_handler,
+    recurring_revoke_req_handler, recurring_revoke_res_handler,
     refund_req_handler, refund_res_handler,
+    refund_get_req_handler, refund_get_res_handler,
     reverse_req_handler, reverse_res_handler,
     setup_recurring_req_handler, setup_recurring_res_handler,
     submit_evidence_req_handler, submit_evidence_res_handler,
@@ -87,12 +95,16 @@ define_ffi_flow!(create, CustomerServiceCreateRequest, create_req_handler, creat
 define_ffi_flow!(create_access_token, MerchantAuthenticationServiceCreateAccessTokenRequest, create_access_token_req_handler, create_access_token_res_handler);
 // create_order: PaymentService.CreateOrder — Create a payment order for later processing. Establishes a transaction context that can be authorized or captured in subsequent API calls.
 define_ffi_flow!(create_order, PaymentServiceCreateOrderRequest, create_order_req_handler, create_order_res_handler);
+// create_sdk_session_token: MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification.
+define_ffi_flow!(create_sdk_session_token, MerchantAuthenticationServiceCreateSdkSessionTokenRequest, create_sdk_session_token_req_handler, create_sdk_session_token_res_handler);
 // create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
 define_ffi_flow!(create_session_token, MerchantAuthenticationServiceCreateSessionTokenRequest, create_session_token_req_handler, create_session_token_res_handler);
 // defend: DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
 define_ffi_flow!(defend, DisputeServiceDefendRequest, defend_req_handler, defend_res_handler);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler);
+// incremental_authorization: PaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization.
+define_ffi_flow!(incremental_authorization, PaymentServiceIncrementalAuthorizationRequest, incremental_authorization_req_handler, incremental_authorization_res_handler);
 // payout_create: PayoutService.Create — Creates a payout.
 define_ffi_flow!(payout_create, PayoutServiceCreateRequest, payout_create_req_handler, payout_create_res_handler);
 // payout_create_link: PayoutService.CreateLink — Creates a link between the recipient and the payout.
@@ -117,8 +129,12 @@ define_ffi_flow!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenti
 define_ffi_flow!(proxy_authorize, PaymentServiceProxyAuthorizeRequest, proxy_authorize_req_handler, proxy_authorize_res_handler);
 // proxy_setup_recurring: PaymentService.ProxySetupRecurring — Setup recurring mandate using vault-aliased card data.
 define_ffi_flow!(proxy_setup_recurring, PaymentServiceProxySetupRecurringRequest, proxy_setup_recurring_req_handler, proxy_setup_recurring_res_handler);
+// recurring_revoke: RecurringPaymentService.Revoke — Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations.
+define_ffi_flow!(recurring_revoke, RecurringPaymentServiceRevokeRequest, recurring_revoke_req_handler, recurring_revoke_res_handler);
 // refund: PaymentService.Refund — Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 define_ffi_flow!(refund, PaymentServiceRefundRequest, refund_req_handler, refund_res_handler);
+// refund_get: RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+define_ffi_flow!(refund_get, RefundServiceGetRequest, refund_get_req_handler, refund_get_res_handler);
 // reverse: PaymentService.Reverse — Reverse a captured payment in full. Initiates a complete refund when you need to cancel a settled transaction rather than just an authorization.
 define_ffi_flow!(reverse, PaymentServiceReverseRequest, reverse_req_handler, reverse_res_handler);
 // setup_recurring: PaymentService.SetupRecurring — Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.

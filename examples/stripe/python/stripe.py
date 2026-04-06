@@ -9,6 +9,7 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
+from payments import PayoutClient
 from payments import CustomerClient
 from payments import RecurringPaymentClient
 from payments import PaymentMethodClient
@@ -75,19 +76,6 @@ def _build_create_customer_request():
             "phone_number": "4155552671"  # Phone number of the customer
         },
         payment_pb2.CustomerServiceCreateRequest(),
-    )
-
-def _build_get_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification
-            "connector_transaction_id": connector_transaction_id,
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            }
-        },
-        payment_pb2.PaymentServiceGetRequest(),
     )
 
 def _build_recurring_charge_request():
@@ -187,15 +175,6 @@ def _build_tokenize_request():
         },
         payment_pb2.PaymentMethodServiceTokenizeRequest(),
     )
-
-def _build_void_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_void_id": "probe_void_001",  # Identification
-            "connector_transaction_id": connector_transaction_id
-        },
-        payment_pb2.PaymentServiceVoidRequest(),
-    )
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """One-step Payment (Authorize + Capture)
 
@@ -271,6 +250,7 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
     Cancel an authorized but not-yet-captured payment.
     """
     payment_client = PaymentClient(config)
+    payout_client = PayoutClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
     authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
@@ -282,7 +262,12 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Void — release reserved funds (cancel authorization)
-    void_response = await payment_client.void(_build_void_request(authorize_response.connector_transaction_id))
+    void_response = await payout_client.void(ParseDict(
+        {
+            "merchant_void_id": "probe_void_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+        },
+    ))
 
     return {"status": getattr(void_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(void_response, "error", None)}
 
@@ -293,6 +278,7 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
     Retrieve current payment status from the connector.
     """
     payment_client = PaymentClient(config)
+    payout_client = PayoutClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
     authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
@@ -304,7 +290,16 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Get — retrieve current payment status from the connector
-    get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
+    get_response = await payout_client.get(ParseDict(
+        {
+            "merchant_transaction_id": "probe_merchant_txn_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+    ))
 
     return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}
 
@@ -337,16 +332,26 @@ async def create_customer(merchant_transaction_id: str, config: sdk_config_pb2.C
 
 
 async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Get"""
-    payment_client = PaymentClient(config)
+    """Flow: PayoutService.Get"""
+    payout_client = PayoutClient(config)
 
-    get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
+    # Step 1: Get — retrieve current payment status from the connector
+    get_response = await payout_client.get(ParseDict(
+        {
+            "merchant_transaction_id": "probe_merchant_txn_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+    ))
 
     return {"status": get_response.status}
 
 
 async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.proxy_authorize"""
+    """Flow: PaymentService.ProxyAuthorize"""
     payment_client = PaymentClient(config)
 
     # Step 1: proxy_authorize
@@ -412,10 +417,16 @@ async def tokenize(merchant_transaction_id: str, config: sdk_config_pb2.Connecto
 
 
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Void"""
-    payment_client = PaymentClient(config)
+    """Flow: PayoutService.Void"""
+    payout_client = PayoutClient(config)
 
-    void_response = await payment_client.void(_build_void_request("probe_connector_txn_001"))
+    # Step 1: Void — release reserved funds (cancel authorization)
+    void_response = await payout_client.void(ParseDict(
+        {
+            "merchant_void_id": "probe_void_001",
+            "connector_transaction_id": "probe_connector_txn_001"
+        },
+    ))
 
     return {"status": void_response.status}
 

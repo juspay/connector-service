@@ -279,8 +279,9 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
 
     implemented = set(service_flows.keys()) | set(single_flow_names.keys())
     unimplemented = sorted(set(proto_rpcs) - implemented)
-    if unimplemented:
-        print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
+    # Suppressed: shows prefixed RPC names that are alternate lookup keys
+    # if unimplemented:
+    #     print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
 
     return flows, single_flows
 

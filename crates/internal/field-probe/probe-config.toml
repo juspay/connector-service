@@ -94,6 +94,7 @@ truelayer = '{"merchant_account_id":"probe_merchant_acct","account_holder_name":
 cybersource = '{"merchant_id":"probe_merchant","merchant_key_id":"probe_key_id","merchant_secret_key":"probe_secret"}'
 bankofamerica = '{"merchant_id":"probe_merchant"}'
 nexinets = '{"transaction_id":"probe_txn_001","order_id":"probe_order_001","psync_flow":"DEBIT"}'
+nexixpay = '{"operationId":"probe_op_id_001","authorization_operation_id":"probe_op_id_001","capture_operation_id":"probe_op_id_001","cancel_operation_id":"probe_op_id_001"}'
 paypal = '{"authorize_id":"probe_auth_001","capture_id":"probe_cap_001","psync_flow":"CAPTURE","order_id":"probe_order_001"}'
 forte = '{"auth_id":"probe_auth_001"}'
 authorizedotnet = '{"creditCard":{"cardNumber":"4111111111111111","expirationDate":"2025-12"}}'
@@ -103,17 +104,23 @@ peachpayments = '{"client_merchant_reference_id":"probe_merchant_ref_001","merch
 default = '{}'
 
 # Per-connector request field overrides.
-# Some connectors require specific field formats that differ from the probe defaults.
-# For example, Zift and Placetopay parse connector_transaction_id as i64/u64,
+# Format: [connector_overrides."flow1,flow2,...".connector]
+# Zift, Placetopay and Helcim parse connector_transaction_id as i64/u64,
 # so they need a numeric string instead of the default "probe_connector_txn_001".
-[connector_overrides.zift]
-connector_transaction_id = "12345"
+[connector_overrides."capture,void,get,refund,reverse,refund_get".zift]
+"connector_transaction_id" = "12345"
 
-[connector_overrides.placetopay]
-connector_transaction_id = "12345"
+[connector_overrides."capture,void,get,refund,reverse,refund_get".placetopay]
+"connector_transaction_id" = "12345"
 
-[connector_overrides.helcim]
-connector_transaction_id = "12345"
+[connector_overrides."capture,void,get,refund,reverse,refund_get".helcim]
+"connector_transaction_id" = "12345"
+
+# Braintree's refund_get (RSync) reads `currency` and `merchant_account_id` from
+# `refund_metadata` (a Secret<String> JSON blob) rather than top-level fields.
+# Pre-populate it so the probe never gets stuck on "Missing required field: currency".
+[connector_overrides.refund_get.braintree]
+"refund_metadata" = '{"currency":"USD"}'
 
 # Header fields whose values are always random/dynamic and should be replaced
 # with a static placeholder in sample output.

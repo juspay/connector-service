@@ -23,12 +23,16 @@ import uniffi.connector_service_ffi.createAccessTokenReqTransformer
 import uniffi.connector_service_ffi.createAccessTokenResTransformer
 import uniffi.connector_service_ffi.createOrderReqTransformer
 import uniffi.connector_service_ffi.createOrderResTransformer
+import uniffi.connector_service_ffi.createSdkSessionTokenReqTransformer
+import uniffi.connector_service_ffi.createSdkSessionTokenResTransformer
 import uniffi.connector_service_ffi.createSessionTokenReqTransformer
 import uniffi.connector_service_ffi.createSessionTokenResTransformer
 import uniffi.connector_service_ffi.defendReqTransformer
 import uniffi.connector_service_ffi.defendResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
+import uniffi.connector_service_ffi.incrementalAuthorizationReqTransformer
+import uniffi.connector_service_ffi.incrementalAuthorizationResTransformer
 import uniffi.connector_service_ffi.payoutCreateReqTransformer
 import uniffi.connector_service_ffi.payoutCreateResTransformer
 import uniffi.connector_service_ffi.payoutCreateLinkReqTransformer
@@ -53,8 +57,12 @@ import uniffi.connector_service_ffi.proxyAuthorizeReqTransformer
 import uniffi.connector_service_ffi.proxyAuthorizeResTransformer
 import uniffi.connector_service_ffi.proxySetupRecurringReqTransformer
 import uniffi.connector_service_ffi.proxySetupRecurringResTransformer
+import uniffi.connector_service_ffi.recurringRevokeReqTransformer
+import uniffi.connector_service_ffi.recurringRevokeResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
+import uniffi.connector_service_ffi.refundGetReqTransformer
+import uniffi.connector_service_ffi.refundGetResTransformer
 import uniffi.connector_service_ffi.reverseReqTransformer
 import uniffi.connector_service_ffi.reverseResTransformer
 import uniffi.connector_service_ffi.setupRecurringReqTransformer
@@ -81,9 +89,11 @@ object FlowRegistry {
         "create" to ::createReqTransformer,
         "create_access_token" to ::createAccessTokenReqTransformer,
         "create_order" to ::createOrderReqTransformer,
+        "create_sdk_session_token" to ::createSdkSessionTokenReqTransformer,
         "create_session_token" to ::createSessionTokenReqTransformer,
         "defend" to ::defendReqTransformer,
         "get" to ::getReqTransformer,
+        "incremental_authorization" to ::incrementalAuthorizationReqTransformer,
         "payout_create" to ::payoutCreateReqTransformer,
         "payout_create_link" to ::payoutCreateLinkReqTransformer,
         "payout_create_recipient" to ::payoutCreateRecipientReqTransformer,
@@ -96,7 +106,9 @@ object FlowRegistry {
         "pre_authenticate" to ::preAuthenticateReqTransformer,
         "proxy_authorize" to ::proxyAuthorizeReqTransformer,
         "proxy_setup_recurring" to ::proxySetupRecurringReqTransformer,
+        "recurring_revoke" to ::recurringRevokeReqTransformer,
         "refund" to ::refundReqTransformer,
+        "refund_get" to ::refundGetReqTransformer,
         "reverse" to ::reverseReqTransformer,
         "setup_recurring" to ::setupRecurringReqTransformer,
         "submit_evidence" to ::submitEvidenceReqTransformer,
@@ -115,9 +127,11 @@ object FlowRegistry {
         "create" to ::createResTransformer,
         "create_access_token" to ::createAccessTokenResTransformer,
         "create_order" to ::createOrderResTransformer,
+        "create_sdk_session_token" to ::createSdkSessionTokenResTransformer,
         "create_session_token" to ::createSessionTokenResTransformer,
         "defend" to ::defendResTransformer,
         "get" to ::getResTransformer,
+        "incremental_authorization" to ::incrementalAuthorizationResTransformer,
         "payout_create" to ::payoutCreateResTransformer,
         "payout_create_link" to ::payoutCreateLinkResTransformer,
         "payout_create_recipient" to ::payoutCreateRecipientResTransformer,
@@ -130,7 +144,9 @@ object FlowRegistry {
         "pre_authenticate" to ::preAuthenticateResTransformer,
         "proxy_authorize" to ::proxyAuthorizeResTransformer,
         "proxy_setup_recurring" to ::proxySetupRecurringResTransformer,
+        "recurring_revoke" to ::recurringRevokeResTransformer,
         "refund" to ::refundResTransformer,
+        "refund_get" to ::refundGetResTransformer,
         "reverse" to ::reverseResTransformer,
         "setup_recurring" to ::setupRecurringResTransformer,
         "submit_evidence" to ::submitEvidenceResTransformer,
@@ -197,6 +213,10 @@ class MerchantAuthenticationClient(
     fun create_access_token(request: MerchantAuthenticationServiceCreateAccessTokenRequest, options: RequestConfig? = null): MerchantAuthenticationServiceCreateAccessTokenResponse =
         executeFlow("create_access_token", request.toByteArray(), MerchantAuthenticationServiceCreateAccessTokenResponse.parser(), options)
 
+    // create_sdk_session_token: MerchantAuthenticationService.CreateSdkSessionToken — Initialize wallet payment sessions for Apple Pay, Google Pay, etc. Sets up secure context for tokenized wallet payments with device verification.
+    fun create_sdk_session_token(request: MerchantAuthenticationServiceCreateSdkSessionTokenRequest, options: RequestConfig? = null): MerchantAuthenticationServiceCreateSdkSessionTokenResponse =
+        executeFlow("create_sdk_session_token", request.toByteArray(), MerchantAuthenticationServiceCreateSdkSessionTokenResponse.parser(), options)
+
     // create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
     fun create_session_token(request: MerchantAuthenticationServiceCreateSessionTokenRequest, options: RequestConfig? = null): MerchantAuthenticationServiceCreateSessionTokenResponse =
         executeFlow("create_session_token", request.toByteArray(), MerchantAuthenticationServiceCreateSessionTokenResponse.parser(), options)
@@ -253,6 +273,10 @@ class PaymentClient(
     // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
     fun get(request: PaymentServiceGetRequest, options: RequestConfig? = null): PaymentServiceGetResponse =
         executeFlow("get", request.toByteArray(), PaymentServiceGetResponse.parser(), options)
+
+    // incremental_authorization: PaymentService.IncrementalAuthorization — Increase the authorized amount for an existing payment. Enables you to capture additional funds when the transaction amount changes after initial authorization.
+    fun incremental_authorization(request: PaymentServiceIncrementalAuthorizationRequest, options: RequestConfig? = null): PaymentServiceIncrementalAuthorizationResponse =
+        executeFlow("incremental_authorization", request.toByteArray(), PaymentServiceIncrementalAuthorizationResponse.parser(), options)
 
     // proxy_authorize: PaymentService.ProxyAuthorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
     fun proxy_authorize(request: PaymentServiceProxyAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
@@ -335,5 +359,20 @@ class RecurringPaymentClient(
     // charge: RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
     fun charge(request: RecurringPaymentServiceChargeRequest, options: RequestConfig? = null): RecurringPaymentServiceChargeResponse =
         executeFlow("charge", request.toByteArray(), RecurringPaymentServiceChargeResponse.parser(), options)
+
+    // recurring_revoke: RecurringPaymentService.Revoke — Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations.
+    fun recurring_revoke(request: RecurringPaymentServiceRevokeRequest, options: RequestConfig? = null): RecurringPaymentServiceRevokeResponse =
+        executeFlow("recurring_revoke", request.toByteArray(), RecurringPaymentServiceRevokeResponse.parser(), options)
+
+}
+
+class RefundClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // refund_get: RefundService.Get — Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+    fun refund_get(request: RefundServiceGetRequest, options: RequestConfig? = null): RefundResponse =
+        executeFlow("refund_get", request.toByteArray(), RefundResponse.parser(), options)
 
 }
