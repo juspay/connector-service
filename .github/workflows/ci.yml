@@ -256,7 +256,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests
+          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests grpcio-tools
 
       - name: Check if connector documentation is up to date
         shell: bash

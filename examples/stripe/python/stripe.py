@@ -30,27 +30,27 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 def _build_authorize_request(capture_method: str):
     return ParseDict(
         {
-            "merchant_transaction_id": "probe_txn_001",  # Identification
-            "amount": {  # The amount for the payment
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "merchant_transaction_id": "probe_txn_001",  # Identification.
+            "amount": {  # The amount for the payment.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "payment_method": {  # Payment method to be used
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
+            "payment_method": {  # Payment method to be used.
+                "card": {  # Generic card payment.
+                    "card_number": {"value": "4111111111111111"},  # Card Identification.
                     "card_exp_month": {"value": "03"},
                     "card_exp_year": {"value": "2030"},
                     "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
                 }
             },
-            "capture_method": capture_method,  # Method for capturing the payment
-            "address": {  # Address Information
+            "capture_method": capture_method,  # Method for capturing the payment.
+            "address": {  # Address Information.
                 "billing_address": {
                 }
             },
-            "auth_type": "NO_THREE_DS",  # Authentication Details
-            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
+            "auth_type": "NO_THREE_DS",  # Authentication Details.
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks.
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
@@ -58,11 +58,11 @@ def _build_authorize_request(capture_method: str):
 def _build_capture_request(connector_transaction_id: str):
     return ParseDict(
         {
-            "merchant_capture_id": "probe_capture_001",  # Identification
+            "merchant_capture_id": "probe_capture_001",  # Identification.
             "connector_transaction_id": connector_transaction_id,
-            "amount_to_capture": {  # Capture Details
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount_to_capture": {  # Capture Details.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             }
         },
         payment_pb2.PaymentServiceCaptureRequest(),
@@ -71,7 +71,7 @@ def _build_capture_request(connector_transaction_id: str):
 def _build_create_client_authentication_token_request():
     return ParseDict(
         {
-            "merchant_client_session_id": "probe_sdk_session_001",  # Infrastructure
+            "merchant_client_session_id": "probe_sdk_session_001",  # Infrastructure.
             "domain_context": {
                 "minor_amount": 1000,
                 "currency": "USD"
@@ -83,10 +83,10 @@ def _build_create_client_authentication_token_request():
 def _build_create_customer_request():
     return ParseDict(
         {
-            "merchant_customer_id": "cust_probe_123",  # Identification
-            "customer_name": "John Doe",  # Name of the customer
-            "email": {"value": "test@example.com"},  # Email address of the customer
-            "phone_number": "4155552671"  # Phone number of the customer
+            "merchant_customer_id": "cust_probe_123",  # Identification.
+            "customer_name": "John Doe",  # Name of the customer.
+            "email": {"value": "test@example.com"},  # Email address of the customer.
+            "phone_number": "4155552671"  # Phone number of the customer.
         },
         payment_pb2.CustomerServiceCreateRequest(),
     )
@@ -94,11 +94,11 @@ def _build_create_customer_request():
 def _build_get_request(connector_transaction_id: str):
     return ParseDict(
         {
-            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification
+            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification.
             "connector_transaction_id": connector_transaction_id,
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             }
         },
         payment_pb2.PaymentServiceGetRequest(),
@@ -107,38 +107,93 @@ def _build_get_request(connector_transaction_id: str):
 def _build_incremental_authorization_request():
     return ParseDict(
         {
-            "merchant_authorization_id": "probe_auth_001",  # Identification
+            "merchant_authorization_id": "probe_auth_001",  # Identification.
             "connector_transaction_id": "probe_connector_txn_001",
-            "amount": {  # new amount to be authorized (in minor currency units)
-                "minor_amount": 1100,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount": {  # new amount to be authorized (in minor currency units).
+                "minor_amount": 1100,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "reason": "incremental_auth_probe"  # Optional Fields
+            "reason": "incremental_auth_probe"  # Optional Fields.
         },
         payment_pb2.PaymentServiceIncrementalAuthorizationRequest(),
+    )
+
+def _build_proxy_authorize_request():
+    return ParseDict(
+        {
+            "merchant_transaction_id": "probe_proxy_txn_001",
+            "amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "card_proxy": {  # Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+                "card_number": {"value": "4111111111111111"},  # Card Identification.
+                "card_exp_month": {"value": "03"},
+                "card_exp_year": {"value": "2030"},
+                "card_cvc": {"value": "123"},
+                "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+            },
+            "address": {
+                "billing_address": {
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return"
+        },
+        payment_pb2.PaymentServiceProxyAuthorizeRequest(),
+    )
+
+def _build_proxy_setup_recurring_request():
+    return ParseDict(
+        {
+            "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+            "amount": {
+                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "card_proxy": {  # Card proxy for vault-aliased payments.
+                "card_number": {"value": "4111111111111111"},  # Card Identification.
+                "card_exp_month": {"value": "03"},
+                "card_exp_year": {"value": "2030"},
+                "card_cvc": {"value": "123"},
+                "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+            },
+            "address": {
+                "billing_address": {
+                }
+            },
+            "customer_acceptance": {
+                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
+                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            },
+            "auth_type": "NO_THREE_DS",
+            "setup_future_usage": "OFF_SESSION"
+        },
+        payment_pb2.PaymentServiceProxySetupRecurringRequest(),
     )
 
 def _build_recurring_charge_request():
     return ParseDict(
         {
-            "connector_recurring_payment_id": {  # Reference to existing mandate
-                "connector_mandate_id": {  # mandate_id sent by the connector
+            "connector_recurring_payment_id": {  # Reference to existing mandate.
+                "connector_mandate_id": {  # mandate_id sent by the connector.
                     "connector_mandate_id": "probe-mandate-123"
                 }
             },
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "payment_method": {  # Optional payment Method Information (for network transaction flows)
-                "token": {  # Payment tokens
+            "payment_method": {  # Optional payment Method Information (for network transaction flows).
+                "token": {  # Payment tokens.
                     "token": {"value": "probe_pm_token"}  # The token string representing a payment method.
                 }
             },
             "return_url": "https://example.com/recurring-return",
             "connector_customer_id": "cust_probe_123",
             "payment_method_type": "PAY_PAL",
-            "off_session": True  # Behavioral Flags and Preferences
+            "off_session": True  # Behavioral Flags and Preferences.
         },
         payment_pb2.RecurringPaymentServiceChargeRequest(),
     )
@@ -146,14 +201,14 @@ def _build_recurring_charge_request():
 def _build_refund_request(connector_transaction_id: str):
     return ParseDict(
         {
-            "merchant_refund_id": "probe_refund_001",  # Identification
+            "merchant_refund_id": "probe_refund_001",  # Identification.
             "connector_transaction_id": connector_transaction_id,
-            "payment_amount": 1000,  # Amount Information
+            "payment_amount": 1000,  # Amount Information.
             "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
-            "reason": "customer_request"  # Reason for the refund
+            "reason": "customer_request"  # Reason for the refund.
         },
         payment_pb2.PaymentServiceRefundRequest(),
     )
@@ -161,7 +216,7 @@ def _build_refund_request(connector_transaction_id: str):
 def _build_refund_get_request():
     return ParseDict(
         {
-            "merchant_refund_id": "probe_refund_001",  # Identification
+            "merchant_refund_id": "probe_refund_001",  # Identification.
             "connector_transaction_id": "probe_connector_txn_001",
             "refund_id": "probe_refund_id_001"
         },
@@ -171,30 +226,30 @@ def _build_refund_get_request():
 def _build_setup_recurring_request():
     return ParseDict(
         {
-            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
-            "amount": {  # Mandate Details
-                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification.
+            "amount": {  # Mandate Details.
+                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
             "payment_method": {
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
+                "card": {  # Generic card payment.
+                    "card_number": {"value": "4111111111111111"},  # Card Identification.
                     "card_exp_month": {"value": "03"},
                     "card_exp_year": {"value": "2030"},
                     "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
                 }
             },
-            "address": {  # Address Information
+            "address": {  # Address Information.
                 "billing_address": {
                 }
             },
-            "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
-            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
-            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
-            "customer_acceptance": {  # Details of customer acceptance
+            "auth_type": "NO_THREE_DS",  # Type of authentication to be used.
+            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure.
+            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup.
+            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention.
+            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested.
+            "customer_acceptance": {  # Details of customer acceptance.
                 "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
                 "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
             }
@@ -205,20 +260,20 @@ def _build_setup_recurring_request():
 def _build_tokenize_request():
     return ParseDict(
         {
-            "amount": {  # Payment Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            "amount": {  # Payment Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             },
             "payment_method": {
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
+                "card": {  # Generic card payment.
+                    "card_number": {"value": "4111111111111111"},  # Card Identification.
                     "card_exp_month": {"value": "03"},
                     "card_exp_year": {"value": "2030"},
                     "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
                 }
             },
-            "address": {  # Address Information
+            "address": {  # Address Information.
                 "billing_address": {
                 }
             }
@@ -229,7 +284,7 @@ def _build_tokenize_request():
 def _build_void_request(connector_transaction_id: str):
     return ParseDict(
         {
-            "merchant_void_id": "probe_void_001",  # Identification
+            "merchant_void_id": "probe_void_001",  # Identification.
             "connector_transaction_id": connector_transaction_id
         },
         payment_pb2.PaymentServiceVoidRequest(),
@@ -405,28 +460,7 @@ async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.C
     """Flow: PaymentService.ProxyAuthorize"""
     payment_client = PaymentClient(config)
 
-    # Step 1: proxy_authorize
-    proxy_response = await payment_client.proxy_authorize(ParseDict(
-        {
-            "merchant_transaction_id": "probe_proxy_txn_001",
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-            },
-            "card_proxy": {
-                "card_number": "4111111111111111",
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "123",
-                "card_holder_name": "John Doe"
-            },
-            "address": {
-            },
-            "capture_method": "AUTOMATIC",
-            "auth_type": "NO_THREE_DS",
-            "return_url": "https://example.com/return"
-        },
-    ))
+    proxy_response = await payment_client.proxy_authorize(_build_proxy_authorize_request())
 
     return {"status": proxy_response.status}
 
@@ -435,31 +469,7 @@ async def proxy_setup_recurring(merchant_transaction_id: str, config: sdk_config
     """Flow: PaymentService.ProxySetupRecurring"""
     payment_client = PaymentClient(config)
 
-    # Step 1: proxy_setup_recurring
-    proxy_response = await payment_client.proxy_setup_recurring(ParseDict(
-        {
-            "merchant_recurring_payment_id": "probe_proxy_mandate_001",
-            "amount": {
-                "minor_amount": 0,
-                "currency": "USD"
-            },
-            "card_proxy": {
-                "card_number": "4111111111111111",
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "123",
-                "card_holder_name": "John Doe"
-            },
-            "address": {
-            },
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",
-                "accepted_at": 0
-            },
-            "auth_type": "NO_THREE_DS",
-            "setup_future_usage": "OFF_SESSION"
-        },
-    ))
+    proxy_response = await payment_client.proxy_setup_recurring(_build_proxy_setup_recurring_request())
 
     return {"status": proxy_response.status}
 
