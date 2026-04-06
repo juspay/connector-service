@@ -18,7 +18,9 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    connectors::imerchantsolutions::ImerchantsolutionsRouterData, types::ResponseRouterData, utils,
+    connectors::imerchantsolutions::ImerchantsolutionsRouterData,
+    types::ResponseRouterData,
+    utils::{self, is_manual_capture},
 };
 
 pub struct ImerchantsolutionsAuthType {
@@ -199,7 +201,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_optional_billing_phone_number(),
                     billing,
                     delivery_address,
-                    manual_capture: !item.router_data.request.is_auto_capture(),
+                    manual_capture: is_manual_capture(item.router_data.request.capture_method),
                 })
             }
             PaymentMethodData::CardRedirect(_)
@@ -381,7 +383,7 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
     ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(
             item.response.status.clone(),
-            item.router_data.request.is_auto_capture(),
+            item.router_data.request.capture_method,
         );
 
         if is_payment_failure(status) {
@@ -831,23 +833,25 @@ fn get_payment_status(item: ResultCode, is_auto_capture: bool) -> AttemptStatus 
 
 fn get_attempt_status(
     item: ImerchantsolutionsPaymentStatus,
-    is_auto_capture: bool,
+    capture_method: Option<common_enums::CaptureMethod>,
 ) -> AttemptStatus {
     match item {
         ImerchantsolutionsPaymentStatus::Authorised
-        | ImerchantsolutionsPaymentStatus::Authorized => {
-            if is_auto_capture {
-                AttemptStatus::Charged
-            } else {
-                AttemptStatus::Authorized
-            }
-        }
+        | ImerchantsolutionsPaymentStatus::Authorized => match capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | Some(common_enums::CaptureMethod::SequentialAutomatic)
+            | None => AttemptStatus::Charged,
+            _ => AttemptStatus::Authorized,
+        },
         ImerchantsolutionsPaymentStatus::PendingCapture => AttemptStatus::Authorized,
         ImerchantsolutionsPaymentStatus::Pending3ds => AttemptStatus::AuthenticationPending,
         ImerchantsolutionsPaymentStatus::Cancelled => AttemptStatus::Voided,
-        ImerchantsolutionsPaymentStatus::PartiallyCaptured => {
-            AttemptStatus::PartialChargedAndChargeable
-        }
+        ImerchantsolutionsPaymentStatus::PartiallyCaptured => match capture_method {
+            Some(common_enums::CaptureMethod::ManualMultiple) => {
+                AttemptStatus::PartialChargedAndChargeable
+            }
+            _ => AttemptStatus::PartialCharged,
+        },
         ImerchantsolutionsPaymentStatus::Captured
         | ImerchantsolutionsPaymentStatus::PartiallyRefunded
         | ImerchantsolutionsPaymentStatus::Refunded => AttemptStatus::Charged,
