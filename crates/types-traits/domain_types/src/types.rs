@@ -12019,7 +12019,10 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         connector_types::MandateRevokeResponseData,
     >,
-) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<IntegrationError>> {
+) -> Result<
+    RecurringPaymentServiceRevokeResponse,
+    error_stack::Report<ConnectorResponseTransformationError>,
+> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data
