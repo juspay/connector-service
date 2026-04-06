@@ -567,11 +567,17 @@ pub struct GooglePayRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GooglePayPaymentMethod {
+    Card,
+}
+
+#[derive(Debug, Serialize)]
 pub struct GooglePayDecryptedToken {
     pub message_id: String,
     pub message_expiration: String,
-    pub payment_method: String,
-    pub authentication_method: String,
+    pub payment_method: GooglePayPaymentMethod,
+    pub authentication_method: common_enums::GooglePayAuthMethod,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptogram: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1105,9 +1111,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 context: Default::default(),
                             })?;
                         let authentication_method = if decrypted_data.cryptogram.is_some() {
-                            "CRYPTOGRAM_3DS".to_string()
+                            common_enums::GooglePayAuthMethod::Cryptogram
                         } else {
-                            "PAN_ONLY".to_string()
+                            common_enums::GooglePayAuthMethod::PanOnly
                         };
                         let payment_source = Some(PaymentSourceItem::GooglePay(GooglePayRequest {
                             decrypted_token: GooglePayDecryptedToken {
@@ -1116,7 +1122,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 // forward this field from the decrypted GPay payload through the gRPC
                                 // interface. Tracked in https://github.com/juspay/hyperswitch/issues/11684
                                 message_expiration: "9999999999999".to_string(),
-                                payment_method: "CARD".to_string(),
+                                payment_method: GooglePayPaymentMethod::Card,
                                 authentication_method,
                                 cryptogram: decrypted_data.cryptogram.clone(),
                                 eci_indicator: decrypted_data.eci_indicator.clone(),
