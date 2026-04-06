@@ -467,11 +467,11 @@ use common_utils::events::{ApiEventMetric, ApiEventsType};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    connector_types::ConnectorCustomerData,
-    payment_address::{Address, OrderDetailsWithAmount},
+    connector_types::{ConnectorCustomerData, ConnectorResponseHeaders, RawConnectorRequestResponse},
+    payment_address::{Address, OrderDetailsWithAmount, PhoneDetails},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_request_types::BrowserInformation,
-    types::ConnectorState,
+    types::{ConnectorState, Connectors},
 };
 
 // ============================================================================
@@ -497,18 +497,117 @@ pub struct FraudRecordReturnData;
 pub struct FraudGet;
 
 // ============================================================================
-// REQUEST/RESPONSE DATA TYPES
+// CORE FRAUD DATA TYPES
 // ============================================================================
 
+/// Product information for fraud analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FraudProduct {
+    pub product_id: String,
+    pub product_name: String,
+    pub product_type: String,
+    pub quantity: i64,
+    pub unit_price: i64,
+    pub total_amount: i64,
+    pub brand: Option<String>,
+    pub category: Option<String>,
+    pub sub_category: Option<String>,
+    pub sku: Option<String>,
+    pub requires_shipping: Option<bool>,
+}
+
+/// Shipment destination information
 #[derive(Debug, Clone)]
-pub struct FraudFlowData {
+pub struct FraudDestination {
+    pub full_name: hyperswitch_masking::Secret<String>,
+    pub organization: Option<String>,
+    pub email: Option<hyperswitch_masking::Secret<String>>,
+    pub address: Address,
+    pub phone: Option<PhoneDetails>,
+}
+
+/// Fulfillment shipment details
+#[derive(Debug, Clone)]
+pub struct FraudShipment {
+    pub shipment_id: String,
+    pub products: Vec<FraudProduct>,
+    pub destination: FraudDestination,
+    pub tracking_company: Option<String>,
+    pub tracking_numbers: Vec<String>,
+    pub tracking_urls: Vec<String>,
+    pub carrier: Option<String>,
+    pub fulfillment_method: Option<String>,
+    pub shipment_status: Option<String>,
+    pub shipped_at: Option<i64>,
+}
+
+// ============================================================================
+// FLOW DATA AND REQUEST/RESPONSE TYPES
+// ============================================================================
+
+/// Shared flow data for all fraud operations
+#[derive(Debug, Clone)]
+pub struct FraudFlowData<T: PaymentMethodDataTypes> {
     pub merchant_fraud_check_id: Option<String>,
     pub order_id: Option<String>,
     pub connector_fraud_check_id: Option<String>,
     pub connector_state: Option<ConnectorState>,
+    pub connectors: Connectors,
+    pub raw_connector_response: Option<hyperswitch_masking::Secret<String>>,
+    pub raw_connector_request: Option<hyperswitch_masking::Secret<String>>,
+    pub connector_response_headers: Option<http::HeaderMap>,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-/// Generic over PaymentMethodDataTypes to support PCI and vault modes
+impl<T: PaymentMethodDataTypes> FraudFlowData<T> {
+    pub fn new(connectors: Connectors) -> Self {
+        Self {
+            merchant_fraud_check_id: None,
+            order_id: None,
+            connector_fraud_check_id: None,
+            connector_state: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> RawConnectorRequestResponse for FraudFlowData<T> {
+    fn set_raw_connector_response(&mut self, response: Option<hyperswitch_masking::Secret<String>>) {
+        self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<hyperswitch_masking::Secret<String>> {
+        self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<hyperswitch_masking::Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<hyperswitch_masking::Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+}
+
+impl<T: PaymentMethodDataTypes> ConnectorResponseHeaders for FraudFlowData<T> {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
+// ============================================================================
+// REQUEST/RESPONSE DATA TYPES
+// ============================================================================
+
+/// Request data for pre-authorization fraud evaluation
 #[derive(Debug, Clone)]
 pub struct FraudEvaluatePreAuthorizationData<T: PaymentMethodDataTypes> {
     pub amount: i64,
@@ -521,9 +620,12 @@ pub struct FraudEvaluatePreAuthorizationData<T: PaymentMethodDataTypes> {
     pub billing_address: Option<Address>,
     pub connector_name: Option<String>,
     pub previous_fraud_check_id: Option<String>,
-    pub device_fingerprint: String,  // NEW - Signifyd requirement
-    pub session_id: String,          // NEW - Session tracking
-    pub synchronous: bool,           // NEW - Riskified mode
+    /// Signifyd device fingerprint for tracking
+    pub device_fingerprint: String,
+    /// Session identifier for tracking
+    pub session_id: String,
+    /// Whether to use synchronous (Riskified decide) or async mode
+    pub synchronous: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -625,6 +727,9 @@ pub struct FraudGetData {
     pub connector_fraud_check_id: Option<String>,
     pub case_id: Option<String>,
 }
+
+/// Generic type alias for fraud router data
+pub type FraudRouterData<T, Req, Resp> = crate::router_data::RouterData<T, FraudFlowData<T>, Req, Resp>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudGetResponse {
@@ -736,12 +841,22 @@ impl ApiEventMetric for FraudGetResponse {
 }
 ```
 
+**Module Registration**:
+
+Add to `crates/types-traits/domain_types/src/lib.rs`:
+
+```rust
+pub mod fraud_types;
+```
+
 **Verification Steps**:
-1. Add module to `domain_types/src/lib.rs`
-2. Run `cargo check` to verify compilation
+1. Add `pub mod fraud_types;` to `domain_types/src/lib.rs`
+2. Run `cargo check -p domain_types` to verify compilation
 3. Confirm FraudCheckStatus has exactly 5 variants (not counting UNSPECIFIED)
 4. Confirm FraudAction has exactly 2 variants (not counting UNSPECIFIED)
-5. Perform final validations by running `rustc` and fixing the errors
+5. Verify FraudShipment, FraudDestination, FraudProduct are defined
+6. Verify FraudFlowData<T> implements RawConnectorRequestResponse and ConnectorResponseHeaders
+7. Verify no compiler warnings about unused types
 
 **Commit Message**: `feat(domain): add fraud check domain types with Hyperswitch-aligned enums`
 
@@ -750,26 +865,26 @@ impl ApiEventMetric for FraudGetResponse {
 ### Step 2.2: Add Connector Flow Types
 **File**: `crates/types-traits/domain_types/src/connector_flow.rs`
 
-Add the fraud flow marker structs before the `FlowName` enum:
+Add the fraud flow marker structs before the `FlowName` enum (must match derives in `fraud_types.rs`):
 
 ```rust
 // Fraud flows - Phase 2
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudEvaluatePreAuthorization;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudEvaluatePostAuthorization;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudRecordTransactionData;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudRecordFulfillmentData;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudRecordReturnData;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FraudGet;
 ```
 
@@ -793,14 +908,18 @@ pub enum FlowName {
 }
 ```
 
+**Important**: The `Copy` derive is required because these types are used as phantom markers in the type system and must be `Copy` to satisfy trait bounds.
+
 **Verification Steps**:
-1. Verify `cargo check -p domain_types` compiles
-2. Check that all flow types are unique
-3. Confirm exactly 6 fraud flow types (no Cancel)
-4. Verify `FlowName` derives display as snake_case
+1. Verify flow markers have `#[derive(Debug, Clone, Copy)]`
+2. Run `cargo check -p domain_types` compiles
+3. Check that all flow types are unique
+4. Confirm exactly 6 fraud flow types (no Cancel)
+5. Verify `FlowName` derives display as snake_case
 
 **Commit Message**: `feat(domain): add fraud connector flow types`
 
+---
 ---
 
 ## Phase 3: Interface Traits (Week 2)
