@@ -313,7 +313,6 @@ fn main() {
     for connector_name in &allowed_connectors {
         let rs_file = examples_dir
             .join(connector_name)
-            .join("rust")
             .join(format!("{connector_name}.rs"));
         if !rs_file.exists() {
             continue;
