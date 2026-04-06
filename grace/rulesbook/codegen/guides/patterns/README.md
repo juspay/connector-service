@@ -65,6 +65,7 @@ The flat pattern files in this directory are being migrated to the new `flows/` 
 | **PaymentMethodToken** | [`flows/payment_method_token/`](./flows/payment_method_token/) | ✅ Complete | Payment method tokenization |
 | **CreateOrder** | [`flows/createorder/`](./flows/createorder/) | ✅ Complete | Multi-step payment initiation |
 | **SessionToken** | [`flows/session_token/`](./flows/session_token/) | ✅ Complete | Secure session management |
+| **ClientAuthentication** | [`pattern_client_authentication.md`](./pattern_client_authentication.md) | ✅ Complete | Client-side SDK initialization (e.g., Stripe client_secret) |
 | **DefendDispute** | [`flows/defend_dispute/`](./flows/defend_dispute/) | ✅ Complete | Defend against disputes |
 | **AcceptDispute** | [`flows/accept_dispute/`](./flows/accept_dispute/) | ✅ Complete | Accept chargeback |
 | **DSync** | [`flows/dsync/`](./flows/dsync/) | ✅ Complete | Dispute status sync |

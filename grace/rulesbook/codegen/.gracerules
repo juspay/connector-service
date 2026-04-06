@@ -83,6 +83,7 @@ This workflow is designed for NEW CONNECTOR INTEGRATIONS ONLY where:
    - **CreateConnectorCustomer**: Connector requires customer creation before payment
    - **PaymentMethodToken**: Connector requires tokenizing payment method before authorization
    - **CreateSessionToken**: Connector requires session initialization before payment
+   - **ClientAuthentication**: Connector provides a client-side SDK that needs initialization data (e.g., client_secret) for browser-side payment confirmation
    - Record which pre-auth flows are needed — these will be implemented BEFORE Authorize in Phase 3
 
 ### PHASE 2: FOUNDATION SETUP (Subagent Delegation)
@@ -111,6 +112,7 @@ Execute flows in EXACT sequence - each must complete before next begins.
 - IF CreateConnectorCustomer needed: **DELEGATE TO**: CreateConnectorCustomer Flow Subagent → **WAIT FOR COMPLETION**
 - IF PaymentMethodToken needed: **DELEGATE TO**: PaymentMethodToken Flow Subagent → **WAIT FOR COMPLETION**
 - IF CreateSessionToken needed: **DELEGATE TO**: CreateSessionToken Flow Subagent → **WAIT FOR COMPLETION**
+   - IF ClientAuthentication needed: **DELEGATE TO**: ClientAuthentication Flow Subagent → **WAIT FOR COMPLETION**
 
 **Core flows** (always executed):
 1. **DELEGATE TO**: Authorize Flow Subagent → **WAIT FOR COMPLETION**
