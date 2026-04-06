@@ -140,7 +140,7 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 #### **Node.js**
 
 ```typescript
-import { PaymentClient, types, IntegrationError, ConnectorResponseTransformationError } from 'hyperswitch-prism';
+import { PaymentClient, types, IntegrationError, ConnectorError } from 'hyperswitch-prism';
 
 let config: types.ConnectorConfig = {
     connectorConfig: {
@@ -187,7 +187,7 @@ const main = async () => {
                 console.error("Error", e);
                 break;
             }
-            case (e instanceof ConnectorResponseTransformationError): {
+            case (e instanceof ConnectorError): {
                 console.error("Error", e);
                 break;
             }

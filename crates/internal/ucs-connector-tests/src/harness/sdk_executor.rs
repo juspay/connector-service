@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ConnectorResponseTransformationError, ConnectorSpecificConfig,
-    Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
+    self, connector_specific_config, ConnectorError, ConnectorSpecificConfig, Environment,
+    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, IntegrationError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -252,7 +252,7 @@ where
 
     let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|decode_error| {
         if let Ok(response_transformation_error) =
-            ConnectorResponseTransformationError::decode(proto_response_bytes.as_slice())
+            ConnectorError::decode(proto_response_bytes.as_slice())
         {
             return map_response_transformation_error(
                 "response transformer",
@@ -473,7 +473,7 @@ fn map_response_transformation_error(
     stage: &str,
     suite: &str,
     scenario: &str,
-    error: ConnectorResponseTransformationError,
+    error: ConnectorError,
 ) -> ScenarioError {
     let mut details = Vec::new();
     details.push(error.error_message);

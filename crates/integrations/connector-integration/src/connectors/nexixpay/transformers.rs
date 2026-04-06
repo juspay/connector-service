@@ -15,7 +15,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -500,7 +500,7 @@ impl From<NexixpayPaymentStatus> for AttemptStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPaymentsResponse, Self>,
@@ -613,7 +613,7 @@ pub struct NexixpaySyncResponse {
 impl TryFrom<ResponseRouterData<NexixpaySyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NexixpaySyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map operation result to payment status using From trait
@@ -690,7 +690,7 @@ pub struct NexixpayCaptureResponse {
 impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayCaptureResponse, Self>,
@@ -807,7 +807,7 @@ pub struct NexixpayRefundResponse {
 impl TryFrom<ResponseRouterData<NexixpayRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayRefundResponse, Self>,
@@ -904,7 +904,7 @@ pub struct NexixpayVoidResponse {
 impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NexixpayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay void response is minimal (only operationId and time)
@@ -1028,7 +1028,7 @@ impl From<NexixpayRefundResultStatus> for RefundStatus {
 impl TryFrom<ResponseRouterData<NexixpayRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayRSyncResponse, Self>,
@@ -1333,7 +1333,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPreAuthenticateResponse, Self>,
@@ -1558,7 +1558,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NexixpayPostAuthenticateResponse, Self>,

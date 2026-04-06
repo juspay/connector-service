@@ -1,6 +1,5 @@
 use domain_types::errors::{
-    ApiClientError, ConnectorFlowError, ConnectorResponseTransformationError, IntegrationError,
-    WebhookError,
+    ApiClientError, ConnectorError, ConnectorFlowError, IntegrationError, WebhookError,
 };
 use tonic::Status;
 
@@ -92,11 +91,12 @@ pub enum ConfigurationError {
 }
 
 /// Direct gRPC status mapping for `IntegrationError` (request phase).
-/// Missing/invalid input → invalid_argument (400)
-/// Flow/feature unsupported → failed_precondition (400)
-/// Auth / credential resolution failures → unauthenticated (401)
-/// Connector or merchant configuration problems → failed_precondition (not 401; avoids blaming client auth)
-/// Internal build/encode failures → internal (500)
+///
+/// `invalid_argument` — caller sent a missing or invalid field in this request (UCS is stateless;
+///   every required ID/field must be supplied by the caller on every call).
+/// `failed_precondition` — connector/merchant configuration problem; not a client credential failure.
+/// `unauthenticated` — credential / auth resolution failure.
+/// `internal` — UCS machinery failure (encoding, URL building, serialization); caller cannot fix.
 impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
@@ -112,7 +112,15 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
             | IntegrationError::CurrencyNotSupported { .. }
             | IntegrationError::AmountConversionFailed { .. }
             | IntegrationError::MandatePaymentDataMismatch { .. }
-            | IntegrationError::MissingApplePayTokenData { .. } => Status::invalid_argument(msg),
+            | IntegrationError::MissingApplePayTokenData { .. }
+            // UCS is stateless — the caller must supply these IDs on every request.
+            | IntegrationError::MissingConnectorTransactionID { .. }
+            | IntegrationError::MissingConnectorRefundID { .. }
+            | IntegrationError::MissingConnectorMandateID { .. }
+            | IntegrationError::MissingConnectorMandateMetadata { .. }
+            | IntegrationError::MissingConnectorRelatedTransactionID { .. }
+            // Caller supplied a field value that exceeds the connector's length limit.
+            | IntegrationError::MaxFieldLengthViolated { .. } => Status::invalid_argument(msg),
             IntegrationError::FlowNotSupported { .. }
             | IntegrationError::NotSupported { .. }
             | IntegrationError::CaptureMethodNotSupported { .. }
@@ -122,13 +130,7 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
             | IntegrationError::NoConnectorMetaData { .. } => Status::failed_precondition(msg),
             IntegrationError::FailedToObtainAuthType { .. } => Status::unauthenticated(msg),
             IntegrationError::SourceVerificationFailed { .. } => Status::unauthenticated(msg),
-            IntegrationError::MissingConnectorTransactionID { .. }
-            | IntegrationError::MissingConnectorRefundID { .. }
-            | IntegrationError::MissingConnectorMandateID { .. }
-            | IntegrationError::MissingConnectorMandateMetadata { .. }
-            | IntegrationError::MissingConnectorRelatedTransactionID { .. }
-            | IntegrationError::MaxFieldLengthViolated { .. }
-            | IntegrationError::FailedToObtainIntegrationUrl { .. }
+            IntegrationError::FailedToObtainIntegrationUrl { .. }
             | IntegrationError::RequestEncodingFailed { .. }
             | IntegrationError::HeaderMapConstructionFailed { .. }
             | IntegrationError::BodySerializationFailed { .. }
@@ -138,13 +140,35 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
     }
 }
 
-/// Direct gRPC status mapping for `ConnectorResponseTransformationError` (response phase).
-/// All response-phase failures are internal errors — the request reached the connector
-/// but we failed to process its response.
-impl IntoGrpcStatus for error_stack::Report<ConnectorResponseTransformationError> {
+/// Direct gRPC status mapping for `ConnectorError` (response phase).
+///
+/// - `ConnectorErrorResponse`: connector returned a 4xx/5xx; mapped per HTTP status code
+///   following the standard HTTP → gRPC status code translation.
+/// - All UCS-side transformation failures → `internal` (UCS machinery failed).
+impl IntoGrpcStatus for error_stack::Report<ConnectorError> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
-        Status::internal(self.current_context().to_string())
+        let msg = self.current_context().to_string();
+        match self.current_context() {
+            ConnectorError::ConnectorErrorResponse(error_response) => {
+                match error_response.status_code {
+                    400 => Status::invalid_argument(msg),
+                    401 => Status::unauthenticated(msg),
+                    403 => Status::permission_denied(msg),
+                    404 => Status::not_found(msg),
+                    429 => Status::resource_exhausted(msg),
+                    500 => Status::internal(msg),
+                    501 => Status::unimplemented(msg),
+                    503 => Status::unavailable(msg),
+                    504 => Status::deadline_exceeded(msg),
+                    _ => Status::unknown(msg),
+                }
+            }
+            ConnectorError::ResponseDeserializationFailed { .. }
+            | ConnectorError::ResponseHandlingFailed { .. }
+            | ConnectorError::UnexpectedResponseError { .. }
+            | ConnectorError::IntegrityCheckFailed { .. } => Status::internal(msg),
+        }
     }
 }
 
@@ -191,9 +215,11 @@ impl IntoGrpcStatus for error_stack::Report<WebhookError> {
             | WebhookError::WebhookReferenceIdNotFound
             | WebhookError::WebhookResourceObjectNotFound
             | WebhookError::WebhookVerificationSecretNotFound => Status::not_found(msg),
-            WebhookError::WebhookBodyDecodingFailed
-            | WebhookError::WebhookSourceVerificationFailed
-            | WebhookError::WebhookVerificationSecretInvalid => Status::invalid_argument(msg),
+            // Bad body from the webhook sender — genuinely bad argument.
+            WebhookError::WebhookBodyDecodingFailed => Status::invalid_argument(msg),
+            // Signature mismatch or configured secret is wrong — authentication failure.
+            WebhookError::WebhookSourceVerificationFailed
+            | WebhookError::WebhookVerificationSecretInvalid => Status::unauthenticated(msg),
             WebhookError::WebhookProcessingFailed
             | WebhookError::WebhookAmountConversionFailed { .. }
             | WebhookError::WebhookResponseEncodingFailed => Status::internal(msg),
