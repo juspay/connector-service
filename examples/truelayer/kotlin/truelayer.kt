@@ -9,8 +9,12 @@ package examples.truelayer
 
 import payments.MerchantAuthenticationClient
 import payments.PaymentClient
-import payments.MerchantAuthenticationServiceCreateAccessTokenRequest
+import payments.EventClient
+import payments.RefundClient
+import payments.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest
 import payments.PaymentServiceGetRequest
+import payments.EventServiceHandleRequest
+import payments.RefundServiceGetRequest
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -19,16 +23,16 @@ import payments.Environment
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        stateBuilder.apply {  // State Information
-            accessTokenBuilder.apply {  // Access token obtained from connector
+        stateBuilder.apply {  // State Information.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
-                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
@@ -41,14 +45,14 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .build()
 
 
-// Flow: MerchantAuthenticationService.CreateAccessToken
-fun createAccessToken(txnId: String) {
+// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
+fun createServerAuthenticationToken(txnId: String) {
     val client = MerchantAuthenticationClient(_defaultConfig)
-    val request = MerchantAuthenticationServiceCreateAccessTokenRequest.newBuilder().apply {
+    val request = MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest.newBuilder().apply {
 
     }.build()
-    val response = client.create_access_token(request)
-    println("Access token obtained (statusCode=${response.statusCode})")
+    val response = client.create_server_authentication_token(request)
+    println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.Get
@@ -59,13 +63,44 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: EventService.HandleEvent
+fun handleEvent(txnId: String) {
+    val client = EventClient(_defaultConfig)
+    val request = EventServiceHandleRequest.newBuilder().apply {
+
+    }.build()
+    val response = client.handle_event(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: RefundService.Get
+fun refundGet(txnId: String) {
+    val client = RefundClient(_defaultConfig)
+    val request = RefundServiceGetRequest.newBuilder().apply {
+        merchantRefundId = "probe_refund_001"  // Identification.
+        connectorTransactionId = "probe_connector_txn_001"
+        refundId = "probe_refund_id_001"
+        stateBuilder.apply {  // State Information.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
+                tokenBuilder.value = "probe_access_token"  // The token string.
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
+                tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    }.build()
+    val response = client.refund_get(request)
+    println("Status: ${response.status.name}")
+}
+
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "createAccessToken"
+    val flow = args.firstOrNull() ?: "createServerAuthenticationToken"
     when (flow) {
-        "createAccessToken" -> createAccessToken(txnId)
+        "createServerAuthenticationToken" -> createServerAuthenticationToken(txnId)
         "get" -> get(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: createAccessToken, get")
+        "handleEvent" -> handleEvent(txnId)
+        "refundGet" -> refundGet(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: createServerAuthenticationToken, get, handleEvent, refundGet")
     }
 }

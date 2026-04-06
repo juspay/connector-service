@@ -9,10 +9,12 @@ package examples.iatapay
 
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
+import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
-import payments.MerchantAuthenticationServiceCreateAccessTokenRequest
+import payments.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentServiceRefundRequest
+import payments.RefundServiceGetRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
@@ -23,27 +25,27 @@ import payments.Environment
 
 private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
     return PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        merchantTransactionId = "probe_txn_001"  // Identification.
+        amountBuilder.apply {  // The amount for the payment.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        paymentMethodBuilder.apply {  // Payment method to be used
+        paymentMethodBuilder.apply {  // Payment method to be used.
             idealBuilder.apply {
             }
         }
-        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        addressBuilder.apply {  // Address Information
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
+        addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
             }
         }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
+        authType = AuthenticationType.NO_THREE_DS  // Authentication Details.
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks.
         webhookUrl = "https://example.com/webhook"
-        stateBuilder.apply {  // State Information
-            accessTokenBuilder.apply {  // Access token obtained from connector
+        stateBuilder.apply {  // State Information.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
-                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
@@ -52,38 +54,38 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        stateBuilder.apply {  // State Information
-            accessTokenBuilder.apply {  // Access token obtained from connector
+        stateBuilder.apply {  // State Information.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
-                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
-        connectorOrderReferenceId = "probe_order_ref_001"  // Connector Reference Id
+        connectorOrderReferenceId = "probe_order_ref_001"  // Connector Reference Id.
     }.build()
 }
 
 private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
     return PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
+        merchantRefundId = "probe_refund_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        paymentAmount = 1000L  // Amount Information
+        paymentAmount = 1000L  // Amount Information.
         refundAmountBuilder.apply {
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-        reason = "customer_request"  // Reason for the refund
-        webhookUrl = "https://example.com/webhook"  // URL for webhook notifications
-        stateBuilder.apply {  // State data for access token storage and other connector-specific state
-            accessTokenBuilder.apply {  // Access token obtained from connector
+        reason = "customer_request"  // Reason for the refund.
+        webhookUrl = "https://example.com/webhook"  // URL for webhook notifications.
+        stateBuilder.apply {  // State data for access token storage and.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
-                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
@@ -108,14 +110,14 @@ fun authorize(txnId: String) {
     }
 }
 
-// Flow: MerchantAuthenticationService.CreateAccessToken
-fun createAccessToken(txnId: String) {
+// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
+fun createServerAuthenticationToken(txnId: String) {
     val client = MerchantAuthenticationClient(_defaultConfig)
-    val request = MerchantAuthenticationServiceCreateAccessTokenRequest.newBuilder().apply {
+    val request = MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest.newBuilder().apply {
 
     }.build()
-    val response = client.create_access_token(request)
-    println("Access token obtained (statusCode=${response.statusCode})")
+    val response = client.create_server_authentication_token(request)
+    println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.Get
@@ -136,15 +138,35 @@ fun refund(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
+// Flow: RefundService.Get
+fun refundGet(txnId: String) {
+    val client = RefundClient(_defaultConfig)
+    val request = RefundServiceGetRequest.newBuilder().apply {
+        merchantRefundId = "probe_refund_001"  // Identification.
+        connectorTransactionId = "probe_connector_txn_001"
+        refundId = "probe_refund_id_001"
+        stateBuilder.apply {  // State Information.
+            accessTokenBuilder.apply {  // Access token obtained from connector.
+                tokenBuilder.value = "probe_access_token"  // The token string.
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
+                tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    }.build()
+    val response = client.refund_get(request)
+    println("Status: ${response.status.name}")
+}
+
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
     val flow = args.firstOrNull() ?: "authorize"
     when (flow) {
         "authorize" -> authorize(txnId)
-        "createAccessToken" -> createAccessToken(txnId)
+        "createServerAuthenticationToken" -> createServerAuthenticationToken(txnId)
         "get" -> get(txnId)
         "refund" -> refund(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: authorize, createAccessToken, get, refund")
+        "refundGet" -> refundGet(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: authorize, createServerAuthenticationToken, get, refund, refundGet")
     }
 }

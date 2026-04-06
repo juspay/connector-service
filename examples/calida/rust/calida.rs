@@ -21,14 +21,20 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
     "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
+    })).unwrap_or_default()
+}
+
+pub fn build_handle_event_request() -> EventServiceHandleRequest {
+    serde_json::from_value::<EventServiceHandleRequest>(serde_json::json!({
+
     })).unwrap_or_default()
 }
 
@@ -40,6 +46,12 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: EventService.HandleEvent
+#[allow(dead_code)]
+pub async fn handle_event(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.handle_event(build_handle_event_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
 
 #[allow(dead_code)]
 #[tokio::main]
@@ -48,7 +60,8 @@ async fn main() {
     let flow = std::env::args().nth(1).unwrap_or_else(|| "get".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
         "get" => get(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: get", flow); return; }
+        "handle_event" => handle_event(&client, "order_001").await,
+        _ => { eprintln!("Unknown flow: {}. Available: get, handle_event", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

@@ -97,6 +97,7 @@ let config = ConnectorConfig {
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
 
 ### Payments
 
@@ -109,4 +110,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L36) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L38)
+**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L38) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L44)

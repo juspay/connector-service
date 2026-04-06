@@ -21,38 +21,52 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification
-    "amount": {  // The amount for the payment
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "merchant_transaction_id": "probe_txn_001",  // Identification.
+    "amount": {  // The amount for the payment.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "payment_method": {  // Payment method to be used
+    "payment_method": {  // Payment method to be used.
         "payment_method": {
-            "upi_collect": {  // UPI Collect
-                "vpa_id": "test@upi",  // Virtual Payment Address
+            "upi_collect": {  // UPI Collect.
+                "vpa_id": "test@upi",  // Virtual Payment Address.
             },
         }
     },
-    "capture_method": capture_method,  // Method for capturing the payment
-    "address": {  // Address Information
+    "capture_method": capture_method,  // Method for capturing the payment.
+    "address": {  // Address Information.
         "billing_address": {
         },
     },
-    "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-    "session_token": "probe_session_token",  // Session and Token Information
+    "auth_type": "NO_THREE_DS",  // Authentication Details.
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
+    "session_token": "probe_session_token",  // Session and Token Information.
+    "order_details": []  // Order Details.
     })).unwrap_or_default()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_create_server_session_authentication_token_request() -> MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest {
+    serde_json::from_value::<MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest>(serde_json::json!({
+    "domain_context": {
+        "payment": {
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD",
+            },
+        },
+    },
+    })).unwrap_or_default()
+}
+
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
     "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
     })).unwrap_or_default()
 }
@@ -70,16 +84,11 @@ pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str)
     }
 }
 
-// Flow: MerchantAuthenticationService.CreateSessionToken
+// Flow: MerchantAuthenticationService.CreateServerSessionAuthenticationToken
 #[allow(dead_code)]
-pub async fn create_session_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_session_token(serde_json::from_value::<MerchantAuthenticationServiceCreateSessionTokenRequest>(serde_json::json!({
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("Session token obtained (statusCode={})", response.status_code))
+pub async fn create_server_session_authentication_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.create_server_session_authentication_token(build_create_server_session_authentication_token_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Get
@@ -89,7 +98,6 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
-
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
@@ -97,9 +105,9 @@ async fn main() {
     let flow = std::env::args().nth(1).unwrap_or_else(|| "authorize".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
         "authorize" => authorize(&client, "order_001").await,
-        "create_session_token" => create_session_token(&client, "order_001").await,
+        "create_server_session_authentication_token" => create_server_session_authentication_token(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: authorize, create_session_token, get", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: authorize, create_server_session_authentication_token, get", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

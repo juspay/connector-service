@@ -8,7 +8,9 @@
 package examples.calida
 
 import payments.PaymentClient
+import payments.EventClient
 import payments.PaymentServiceGetRequest
+import payments.EventServiceHandleRequest
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -17,11 +19,11 @@ import payments.Environment
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
-        merchantTransactionId = "probe_merchant_txn_001"  // Identification
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
     }.build()
 }
@@ -40,12 +42,23 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: EventService.HandleEvent
+fun handleEvent(txnId: String) {
+    val client = EventClient(_defaultConfig)
+    val request = EventServiceHandleRequest.newBuilder().apply {
+
+    }.build()
+    val response = client.handle_event(request)
+    println("Status: ${response.status.name}")
+}
+
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
     val flow = args.firstOrNull() ?: "get"
     when (flow) {
         "get" -> get(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: get")
+        "handleEvent" -> handleEvent(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: get, handleEvent")
     }
 }

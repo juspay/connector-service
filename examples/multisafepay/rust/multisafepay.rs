@@ -21,65 +21,102 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification
-    "amount": {  // The amount for the payment
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "merchant_transaction_id": "probe_txn_001",  // Identification.
+    "amount": {  // The amount for the payment.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "payment_method": {  // Payment method to be used
+    "payment_method": {  // Payment method to be used.
         "payment_method": {
-            "card": {  // Generic card payment
-                "card_number": "4111111111111111",  // Card Identification
+            "card": {  // Generic card payment.
+                "card_number": "4111111111111111",  // Card Identification.
                 "card_exp_month": "03",
                 "card_exp_year": "2030",
                 "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information
+                "card_holder_name": "John Doe",  // Cardholder Information.
             },
         }
     },
-    "capture_method": capture_method,  // Method for capturing the payment
-    "customer": {  // Customer Information
-        "email": "test@example.com",  // Customer's email address
+    "capture_method": capture_method,  // Method for capturing the payment.
+    "customer": {  // Customer Information.
+        "email": "test@example.com",  // Customer's email address.
     },
-    "address": {  // Address Information
+    "address": {  // Address Information.
         "billing_address": {
         },
     },
-    "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
+    "auth_type": "NO_THREE_DS",  // Authentication Details.
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
     "description": "Probe payment",
+    "order_details": []  // Order Details.
     })).unwrap_or_default()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
     "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
     })).unwrap_or_default()
 }
 
-fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_proxy_txn_001",
+    "amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "card_proxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+        "card_number": "4111111111111111",  // Card Identification.
+        "card_exp_month": "03",
+        "card_exp_year": "2030",
+        "card_cvc": "123",
+        "card_holder_name": "John Doe",  // Cardholder Information.
+    },
+    "customer": {
+        "email": "test@example.com",  // Customer's email address.
+    },
+    "address": {
+        "billing_address": {
+        },
+    },
+    "capture_method": "AUTOMATIC",
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "description": "Probe payment",  // Description of the transaction.
+    })).unwrap_or_default()
+}
+
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification
+    "merchant_refund_id": "probe_refund_001",  // Identification.
     "connector_transaction_id": connector_transaction_id,
-    "payment_amount": 1000,  // Amount Information
+    "payment_amount": 1000,  // Amount Information.
     "refund_amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "reason": "customer_request",  // Reason for the refund
+    "reason": "customer_request",  // Reason for the refund.
+    })).unwrap_or_default()
+}
+
+pub fn build_refund_get_request() -> RefundServiceGetRequest {
+    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",  // Identification.
+    "connector_transaction_id": "probe_connector_txn_001",
+    "refund_id": "probe_refund_id_001",
     })).unwrap_or_default()
 }
 
 
-// Scenario: Card Payment (Automatic Capture)
-// Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+// Scenario: One-step Payment (Authorize + Capture)
+// Simple payment that authorizes and captures in one call. Use for immediate charges.
 #[allow(dead_code)]
 pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
@@ -94,59 +131,8 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_tr
     Ok(format!("Payment: {:?} — {}", authorize_response.status(), authorize_response.connector_transaction_id.as_deref().unwrap_or("")))
 }
 
-// Scenario: Wallet Payment (Google Pay / Apple Pay)
-// Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
-#[allow(dead_code)]
-pub async fn process_checkout_wallet(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    // Step 1: Authorize — reserve funds on the payment method
-    let authorize_response = client.authorize(serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-        "merchant_transaction_id": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "payment_method": {  // Payment method to be used
-            "payment_method": {
-                "google_pay": {  // Google Pay
-                    "type": "CARD",  // Type of payment method
-                    "description": "Visa 1111",  // User-facing description of the payment method
-                    "info": {
-                        "card_network": "VISA",  // Card network name
-                        "card_details": "1111",  // Card details (usually last 4 digits)
-                    },
-                    "tokenization_data": {
-                        "encrypted_data": {  // Encrypted Google Pay payment data
-                            "token_type": "PAYMENT_GATEWAY",  // The type of the token
-                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}",  // Token generated for the wallet
-                        },
-                    },
-                },
-            }
-        },
-        "capture_method": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "email": "test@example.com",  // Customer's email address
-        },
-        "address": {  // Address Information
-            "billing_address": {
-            },
-        },
-        "auth_type": "NO_THREE_DS",  // Authentication Details
-        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "description": "Probe payment",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-
-    match authorize_response.status() {
-        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed => return Err(format!("Payment failed: {:?}", authorize_response.error).into()),
-        PaymentStatus::Pending => return Ok("pending — awaiting webhook".to_string()),
-        _                      => {},
-    }
-
-    Ok(format!("Payment: {:?} — {}", authorize_response.status(), authorize_response.connector_transaction_id.as_deref().unwrap_or("")))
-}
-
-// Scenario: Refund a Payment
-// Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+// Scenario: Refund
+// Return funds to the customer for a completed payment.
 #[allow(dead_code)]
 pub async fn process_refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
@@ -169,7 +155,7 @@ pub async fn process_refund(client: &ConnectorClient, _merchant_transaction_id: 
 }
 
 // Scenario: Get Payment Status
-// Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+// Retrieve current payment status from the connector.
 #[allow(dead_code)]
 pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
@@ -206,6 +192,13 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: PaymentService.ProxyAuthorize
+#[allow(dead_code)]
+pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.proxy_authorize(build_proxy_authorize_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Refund
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -213,6 +206,12 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: RefundService.Get
+#[allow(dead_code)]
+pub async fn refund_get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.refund_get(build_refund_get_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
 
 #[allow(dead_code)]
 #[tokio::main]
@@ -221,13 +220,14 @@ async fn main() {
     let flow = std::env::args().nth(1).unwrap_or_else(|| "process_checkout_autocapture".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
         "process_checkout_autocapture" => process_checkout_autocapture(&client, "order_001").await,
-        "process_checkout_wallet" => process_checkout_wallet(&client, "order_001").await,
         "process_refund" => process_refund(&client, "order_001").await,
         "process_get_payment" => process_get_payment(&client, "order_001").await,
         "authorize" => authorize(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
+        "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_wallet, process_refund, process_get_payment, authorize, get, refund", flow); return; }
+        "refund_get" => refund_get(&client, "order_001").await,
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_refund, process_get_payment, authorize, get, proxy_authorize, refund, refund_get", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),
