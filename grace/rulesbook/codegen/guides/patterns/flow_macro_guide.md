@@ -200,6 +200,58 @@ macros::macro_connector_implementation!(
 
 ---
 
+### ClientAuthenticationToken Flow
+
+**Flow Definition:**
+```rust
+(
+    flow: ClientAuthenticationToken,
+    request_body: {{ConnectorName}}ClientAuthRequest,
+    response_body: {{ConnectorName}}ClientAuthResponse,
+    router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+),
+```
+
+**Flow Implementation:**
+```rust
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: {{ConnectorName}},
+    curl_request: Json({{ConnectorName}}ClientAuthRequest),  // Or FormUrlEncoded
+    curl_response: {{ConnectorName}}ClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::IntegrationError> {
+            Ok(format!("{}/v1/sessions", self.connector_base_url_payments(req)))
+        }
+    }
+);
+```
+
+**Key differences from other flows:**
+- Response type is `PaymentsResponseData` (not a dedicated response data type)
+- Response must be wrapped in `PaymentsResponseData::ClientAuthenticationTokenResponse { session_data, status_code }`
+- `session_data` is `ClientAuthenticationTokenData::ConnectorSpecific(Box::new(...))`
+- No generic `<T>` needed on request type (no payment method data involved)
+- See `pattern_client_authentication.md` for full implementation details
+
+---
+
 ### Capture Flow
 
 **Flow Definition:**

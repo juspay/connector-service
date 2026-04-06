@@ -145,6 +145,7 @@ Some flows have dependencies that must be implemented first:
 | SetupMandate | Authorize |
 | RepeatPayment | SetupMandate |
 | IncomingWebhook | PSync (for fallback polling) |
+| ClientAuthentication | None (independent SDK init flow) |
 
 ## MULTIPLE FLOW PARSING & DEPENDENCY RESOLUTION
 
