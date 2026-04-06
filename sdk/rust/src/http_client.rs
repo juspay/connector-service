@@ -187,7 +187,7 @@ impl HttpClient {
             }
         }
 
-        builder.build().map_err(|e| {
+        let client = builder.build().map_err(|e| {
             let msg = e.to_string();
             let code = if msg.to_lowercase().contains("proxy") {
                 NetworkErrorCode::InvalidProxyConfiguration
@@ -199,7 +199,9 @@ impl HttpClient {
                 message: format!("Failed to build HTTP client: {}", e),
                 status_code: Some(500),
             }
-        }).map(|client| Self { client, options })
+        })?;
+
+        Ok(Self { client, options })
     }
 
     /// Execute an HTTP request, applying per-call behavioral overrides if provided.
@@ -226,17 +228,14 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
-        // Apply per-request total timeout override inline (like Python's httpx.Timeout per call).
-        // Proxy/CA overrides at the per-request level are not supported — those are client-level
-        // infrastructure settings that should be fixed at ConnectorClient construction time.
-        if let Some(ref ov) = override_options {
-            let effective_total_timeout = ov
-                .total_timeout_ms
-                .or(self.options.total_timeout_ms)
-                .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
-            req_builder =
-                req_builder.timeout(Duration::from_millis(effective_total_timeout as u64));
-        }
+        // Resolve and apply effective total timeout for this request.
+        // reqwest 0.11 supports only total timeout (.timeout()) at request level.
+        let effective_total_timeout = override_options
+            .as_ref()
+            .and_then(|o| o.total_timeout_ms)
+            .or(self.options.total_timeout_ms)
+            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+        req_builder = req_builder.timeout(Duration::from_millis(effective_total_timeout as u64));
 
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
