@@ -250,7 +250,7 @@ jobs:
         run: |
           if [ ! -f target/debug/libconnector_service_ffi.so ] && [ ! -f target/debug/libconnector_service_ffi.dylib ]; then
             echo "Building FFI library (cache miss)..."
-            cargo build -p connector_service_ffi
+            cargo build -p ffi
           else
             echo "Using cached FFI library"
           fi
