@@ -12,8 +12,11 @@ CONNECTORS ?= stripe
 include $(SDK_ROOT)/../common.mk
 
 # SDK-specific paths continued
-GENERATED_OUT := $(SDK_ROOT)/src/payments/generated
-PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-python
+GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
+PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-python
+PACKAGE_NAME     := $(shell python3 -c "t = open('$(SDK_ROOT)/pyproject.toml').read(); print([l.split('=')[1].strip().strip('\"') for l in t.split('\n') if l.startswith('name =')][0])")
+PACKAGE_VERSION  := $(shell python3 -c "t = open('$(SDK_ROOT)/pyproject.toml').read(); print([l.split('=')[1].strip().strip('\"') for l in t.split('\n') if l.startswith('version =')][0])")
+WHEEL_FILE       := $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-$(PACKAGE_VERSION)-py3-none-any.whl
 
 # Note: BINDGEN is defined in common.mk
 
@@ -119,8 +122,9 @@ generate-flows: install-codegen-deps
 # ---------------------------------------------------------------------------
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
+	@rm -f $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-*.whl
 	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
-	@echo "Wheel built in $(PACKAGE_DIR)/"
+	@echo "Wheel built: $(WHEEL_FILE)"
 
 # ---------------------------------------------------------------------------
 # install
@@ -151,7 +155,7 @@ test-package: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
-		$(PACKAGE_DIR)/hs_paylib-*.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
@@ -176,7 +180,7 @@ test-composite: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-composite \
-		$(PACKAGE_DIR)/hs_paylib-*.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py-composite && python3 test_smoke_composite.py --creds-file creds.json
 	@rm -rf /tmp/test-hyperswitch-py-composite
@@ -197,7 +201,7 @@ test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-grpc
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-grpc \
-		$(PACKAGE_DIR)/hs_paylib-*.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
@@ -224,7 +228,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-grpc
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-grpc \
-		$(PACKAGE_DIR)/hs_paylib-*.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
@@ -273,10 +277,10 @@ publish: pack-archive
 		echo "  export TWINE_PASSWORD=pypi-xxxxx"; \
 		exit 1; \
 	fi
-	@echo "Publishing hs-paylib to PyPI..."
+	@echo "Publishing hyperswitch-prism to PyPI..."
 	@python3 -m pip install twine --quiet
-	@python3 -m twine upload $(PACKAGE_DIR)/hs_paylib-*.whl
-	@echo "Published hs-paylib to PyPI."
+	@python3 -m twine upload $(WHEEL_FILE)
+	@echo "Published hyperswitch-prism to PyPI."
 
 clean:
 	@rm -rf $(GENERATED_OUT)

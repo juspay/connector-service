@@ -117,7 +117,7 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hs-paylib-0.1.0.jar
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-0.1.0.jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
-	@echo "Published to ~/.m2/repository/com/hyperswitch/hs-paylib/0.1.0/"
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/0.1.0/"
 
 # ---------------------------------------------------------------------------
 # test-package
@@ -214,9 +214,9 @@ publish: pack-archive
 		echo "  export OSSRH_PASSWORD=your_token"; \
 		exit 1; \
 	fi
-	@echo "Publishing hs-paylib to Maven Central..."
+	@echo "Publishing hyperswitch-prism to Maven Central..."
 	@$(SDK_ROOT)/gradlew publish
-	@echo "Published com.hyperswitch:hs-paylib to Maven Central."
+	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)
