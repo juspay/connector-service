@@ -1558,14 +1558,15 @@ def _kt_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, message_schema
 
 def render_consolidated_python(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one Python file containing all scenario functions (and flow functions) for a connector."""
+    """Return one Python file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — collect every service needed across scenarios AND flows
     all_service_names: list[str] = []
@@ -1792,14 +1793,15 @@ if __name__ == "__main__":
 
 def render_consolidated_javascript(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one JavaScript file containing all scenario functions (and flow functions) for a connector."""
+    """Return one JavaScript/TypeScript file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — scenarios + flows
     all_service_names: list[str] = []
@@ -2188,10 +2190,10 @@ def render_scenario_section(
     # Link to example files with line numbers if available
     scenario_key = scenario.key
     camel_scenario = "".join(w.capitalize() for w in scenario_key.split("_"))
-    base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
-    base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
-    base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
-    base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+    base_py = f"../../examples/{connector_name}/{connector_name}.py"
+    base_js = f"../../examples/{connector_name}/{connector_name}.js"
+    base_kt = f"../../examples/{connector_name}/{connector_name}.kt"
+    base_rs = f"../../examples/{connector_name}/{connector_name}.rs"
     
     # Get line numbers from the generated files
     ln_py = line_numbers.get("python", 0) if line_numbers else 0
@@ -3473,7 +3475,7 @@ def render_llms_txt_entry(
         if any(v.get("status") == "supported" for v in fdata.values())
     ]
     scenario_keys = [s.key for s in scenarios]
-    example_paths = [f"examples/{connector_name}/python/{connector_name}.py"] if scenario_keys else []
+    example_paths = [f"examples/{connector_name}/{connector_name}.py"] if scenario_keys else []
 
     lines = [
         f"## {display_name}",

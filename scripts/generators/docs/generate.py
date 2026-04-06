@@ -748,6 +748,7 @@ def _find_func_line(content: str, search: str) -> int:
 _SCENARIO_FUNC_SEARCH: dict[str, str] = {
     "python":     "async def process_{key}(",
     "javascript": "async function process{camel}(",
+    "typescript": "async function process{camel}(",
     "kotlin":     "fun process{camel}(",
     "rust":       "fn process_{key}(",
 }
@@ -756,6 +757,7 @@ _SCENARIO_FUNC_SEARCH: dict[str, str] = {
 _FLOW_FUNC_SEARCH: dict[str, str] = {
     "python":     "async def {key}(",
     "javascript": "async function {camel}(",
+    "typescript": "async function {camel}(",
     "kotlin":     "fun {camel}(",
     "rust":       "fn {key}(",
 }
@@ -785,8 +787,8 @@ def generate_scenario_files(
     examples_dir: Path,
 ) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write one consolidated examples/{connector}/python/{connector}.py and
-    examples/{connector}/javascript/{connector}.js containing all scenarios
+    Write one consolidated examples/{connector}/{connector}.py and
+    examples/{connector}/{connector}.ts containing all scenarios
     plus individual flow functions.  Deletes stale per-scenario files.
 
     Returns (paths, scenario_lines, flow_lines) where:
@@ -817,39 +819,6 @@ def generate_scenario_files(
     # flow_lines[flow_key][sdk] = 1-based line number of flow function (py/js)
     flow_lines: dict[str, dict[str, int]] = {}
 
-    for sdk, ext, render_fn in [
-        ("python",     "py", snippets.render_consolidated_python),
-        ("javascript", "ts", snippets.render_consolidated_javascript),
-    ]:
-        out_dir  = examples_dir / connector_name / sdk
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out_path = out_dir / f"{connector_name}.{ext}"
-        content  = render_fn(connector_name, scenarios_with_payloads, flow_metadata, _MESSAGE_SCHEMAS, flow_items)
-        out_path.write_text(content, encoding="utf-8")
-        written.append(out_path)
-
-        # Record line numbers for each scenario function
-        for scenario, _ in scenarios_with_payloads:
-            lineno = _find_func_line(content, _scenario_search(sdk, scenario.key))
-            if lineno:
-                scenario_lines.setdefault(scenario.key, {})[sdk] = lineno
-
-        # Record line numbers for each flow function (py/js only; kt/rs from generate_flow_files)
-        for flow_key, _, _ in flow_items:
-            lineno = _find_func_line(content, _flow_search(sdk, flow_key))
-            if lineno:
-                flow_lines.setdefault(flow_key, {})[sdk] = lineno
-
-        # Remove stale per-scenario and per-flow files
-        for scenario, _ in scenarios_with_payloads:
-            stale = out_dir / f"{scenario.key}.{ext}"
-            if stale.exists():
-                stale.unlink()
-        for flow_key, _, _ in flow_items:
-            stale = out_dir / f"{flow_key}.{ext}"
-            if stale.exists():
-                stale.unlink()
-
     return written, scenario_lines, flow_lines
 
 
@@ -867,8 +836,8 @@ def generate_flow_files(
     examples_dir: Path,
 ) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write one consolidated examples/{connector}/kotlin/{connector}.kt and
-    examples/{connector}/rust/{connector}.rs containing all scenario and flow functions.
+    Write one consolidated examples/{connector}/{connector}.kt and
+    examples/{connector}/{connector}.rs containing all scenario and flow functions.
     Deletes stale per-flow files for all languages.
 
     Returns (list_of_written_paths, flow_line_numbers, scenario_line_numbers_kt_rs) where:
@@ -902,10 +871,12 @@ def generate_flow_files(
     all_flow_keys = set(probe_connector.get("flows", {}).keys())
 
     for sdk, ext, render_fn in [
-        ("kotlin", "kt", snippets.render_consolidated_kotlin),
-        ("rust",   "rs", snippets.render_consolidated_rust),
+        ("python",     "py", snippets.render_consolidated_python),
+        ("kotlin",     "kt", snippets.render_consolidated_kotlin),
+        ("rust",       "rs", snippets.render_consolidated_rust),
+        ("typescript", "ts", snippets.render_consolidated_javascript),
     ]:
-        out_dir  = examples_dir / connector_name / sdk
+        out_dir  = examples_dir / connector_name
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{connector_name}.{ext}"
         content  = render_fn(
@@ -1126,25 +1097,25 @@ def generate_connector_doc(
                 )
             )
             if has_payload:
-                base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
-                base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
-                base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
-                base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+                base_py = f"../../examples/{connector_name}/{connector_name}.py"
+                base_ts = f"../../examples/{connector_name}/{connector_name}.ts"
+                base_kt = f"../../examples/{connector_name}/{connector_name}.kt"
+                base_rs = f"../../examples/{connector_name}/{connector_name}.rs"
                 
                 # Get line numbers from flow_line_numbers
                 flow_lines = flow_line_numbers.get(f, {}) if flow_line_numbers else {}
                 ln_py = flow_lines.get("python", 0)
-                ln_js = flow_lines.get("javascript", 0)
+                ln_ts = flow_lines.get("typescript", 0)
                 ln_kt = flow_lines.get("kotlin", 0)
                 ln_rs = flow_lines.get("rust", 0)
                 
                 # Build links with line numbers when available
                 py_link = f"{base_py}#L{ln_py}" if ln_py else base_py
-                js_link = f"{base_js}#L{ln_js}" if ln_js else base_js
+                ts_link = f"{base_ts}#L{ln_ts}" if ln_ts else base_ts
                 kt_link = f"{base_kt}#L{ln_kt}" if ln_kt else base_kt
                 rs_link = f"{base_rs}#L{ln_rs}" if ln_rs else base_rs
                 
-                a(f"**Examples:** [Python]({py_link}) · [JavaScript]({js_link}) · [Kotlin]({kt_link}) · [Rust]({rs_link})")
+                a(f"**Examples:** [Python]({py_link}) · [TypeScript]({ts_link}) · [Kotlin]({kt_link}) · [Rust]({rs_link})")
                 a("")
 
     return "\n".join(out)
