@@ -722,6 +722,14 @@
         "options": "SdkOptions"
       }
     },
+    "ConnectorError": {
+      "comments": {
+        "error_code": "Machine-readable code (e.g., \"CONNECTOR_ERROR_RESPONSE\")",
+        "error_message": "Human-readable description (e.g., \"Expected JSON response, got HTML\")",
+        "http_status_code": "HTTP status from connector (set for all variants when known)"
+      },
+      "field_types": {}
+    },
     "ConnectorErrorDetails": {
       "comments": {
         "code": "Connector-specific error code",
@@ -737,14 +745,6 @@
     "ConnectorResponseData": {
       "comments": {
         "is_overcapture_enabled": "Additional payment method specific data Extended authorization data Whether overcapture is enabled"
-      },
-      "field_types": {}
-    },
-    "ConnectorError": {
-      "comments": {
-        "error_code": "Machine-readable code (e.g., \"RESPONSE_DESERIALIZATION_FAILED\")",
-        "error_message": "Human-readable description of parsing failure (e.g., \"Expected JSON response, got HTML\")",
-        "http_status_code": "HTTP status from connector before parsing failed (e.g., 401, 500, 200)"
       },
       "field_types": {}
     },
@@ -1259,7 +1259,7 @@
     "FfiResult": {
       "comments": {},
       "field_types": {
-        "connector_response_transformation_error": "ConnectorError",
+        "connector_error": "ConnectorError",
         "http_request": "FfiConnectorHttpRequest",
         "http_response": "FfiConnectorHttpResponse",
         "integration_error": "IntegrationError",
