@@ -44,42 +44,36 @@ npm install hyperswitch-prism
 ```typescript
 import { PaymentClient, types } from 'hyperswitch-prism';
 
-const { ConnectorConfig, RequestConfig, Environment, Connector } = types;
-
 // Configure connector identity and authentication
-const config = ConnectorConfig.create({
-  connector: Connector.STRIPE,
-  auth: {
+let stripeConfig: types.ConnectorConfig = {
+  connectorConfig: {
     stripe: {
-      apiKey: { value: 'sk_test_your_stripe_key' }
+      apiKey: { value: process.env.STRIPE_API_KEY! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 
 // Optional: Request defaults for timeouts
-const defaults = RequestConfig.create({
+let requestConfig: types.RequestConfig = {
   http: {
     totalTimeoutMs: 30000,
     connectTimeoutMs: 10000,
   }
-});
+};
 ```
 
 ### 2. Process a Payment
 
 ```typescript
-const client = new PaymentClient(config, defaults);
+const client = new PaymentClient(stripeConfig, requestConfig);
 
-const { PaymentServiceAuthorizeRequest, Currency, CaptureMethod } = types;
-
-const request = PaymentServiceAuthorizeRequest.create({
+let authorizeRequest: types.PaymentServiceAuthorizeRequest = {
   merchantTransactionId: 'txn_order_001',
   amount: {
     minorAmount: 1000,  // $10.00
-    currency: Currency.USD,
+    currency: types.Currency.USD,
   },
-  captureMethod: CaptureMethod.AUTOMATIC,
+  captureMethod: types.CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
       cardNumber: { value: '4111111111111111' },
@@ -94,9 +88,9 @@ const request = PaymentServiceAuthorizeRequest.create({
     name: 'John Doe',
   },
   testMode: true,
-});
+};
 
-const response = await client.authorize(request);
+const response = await client.authorize(authorizeRequest);
 console.log('Status:', response.status);
 console.log('Transaction ID:', response.connectorTransactionId);
 ```
@@ -124,30 +118,26 @@ The SDK provides specialized clients for different service domains:
 ### Stripe (HeaderKey)
 
 ```typescript
-const config = ConnectorConfig.create({
-  connector: Connector.STRIPE,
-  auth: {
+let stripeConfig: types.ConnectorConfig = {
+  connectorConfig: {
     stripe: {
-      apiKey: { value: 'sk_test_xxx' }
+      apiKey: { value: process.env.STRIPE_API_KEY! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 ```
 
 ### PayPal (SignatureKey)
 
 ```typescript
-const config = ConnectorConfig.create({
-  connector: Connector.PAYPAL,
-  auth: {
+let paypalConfig: types.ConnectorConfig = {
+  connectorConfig: {
     paypal: {
-      clientId: { value: 'client_id' },
-      clientSecret: { value: 'client_secret' }
+      clientId: { value: process.env.PAYPAL_CLIENT_ID! },
+      clientSecret: { value: process.env.PAYPAL_CLIENT_SECRET! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 ```
 
 ---
@@ -157,14 +147,14 @@ const config = ConnectorConfig.create({
 ### Proxy Settings
 
 ```typescript
-const defaults = RequestConfig.create({
+let proxyConfig: types.RequestConfig = {
   http: {
     proxy: {
       httpsUrl: 'https://proxy.company.com:8443',
       bypassUrls: ['http://localhost']
     }
   }
-});
+};
 ```
 
 ### Per-Request Overrides
@@ -236,37 +226,33 @@ import {
   types
 } from 'hyperswitch-prism';
 
-const { ConnectorConfig, Environment, Connector, Currency,
-        CaptureMethod, SecretString, AccessToken, ConnectorState } = types;
-
-const config = ConnectorConfig.create({
-  connector: Connector.PAYPAL,
-  auth: {
+// Configure PayPal
+let paypalConfig: types.ConnectorConfig = {
+  connectorConfig: {
     paypal: {
-      clientId: { value: 'YOUR_CLIENT_ID' },
-      clientSecret: { value: 'YOUR_CLIENT_SECRET' }
+      clientId: { value: process.env.PAYPAL_CLIENT_ID! },
+      clientSecret: { value: process.env.PAYPAL_CLIENT_SECRET! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 
 // Step 1: Get access token
-const authClient = new MerchantAuthenticationClient(config);
+const authClient = new MerchantAuthenticationClient(paypalConfig);
 const tokenResponse = await authClient.createServerAuthenticationToken({
   merchantAccessTokenId: 'token_001',
-  connector: Connector.PAYPAL,
+  connector: types.Connector.PAYPAL,
   testMode: true,
 });
 
 // Step 2: Authorize with access token
-const paymentClient = new PaymentClient(config);
+const paymentClient = new PaymentClient(paypalConfig);
 const paymentResponse = await paymentClient.authorize({
   merchantTransactionId: 'txn_001',
   amount: {
     minorAmount: 1000,
-    currency: Currency.USD,
+    currency: types.Currency.USD,
   },
-  captureMethod: CaptureMethod.AUTOMATIC,
+  captureMethod: types.CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
       cardNumber: { value: '4111111111111111' },
@@ -275,13 +261,13 @@ const paymentResponse = await paymentClient.authorize({
       cardCvc: { value: '123' },
     }
   },
-  state: ConnectorState.create({
-    accessToken: AccessToken.create({
-      token: SecretString.create({ value: tokenResponse.accessToken.value }),
+  state: {
+    accessToken: {
+      token: { value: tokenResponse.accessToken.value },
       tokenType: 'Bearer',
       expiresInSeconds: tokenResponse.expiresInSeconds,
-    }),
-  }),
+    },
+  },
   testMode: true,
 });
 
