@@ -705,6 +705,10 @@ pub enum ConnectorSpecificConfig {
         client_secret: Secret<String>,
         base_url: Option<String>,
     },
+    Archipel {
+        api_key: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -999,7 +1003,8 @@ impl ConnectorSpecificConfig {
             Itaubank {
                 client_id,
                 client_secret
-            }
+            },
+            Archipel { api_key },
         )
     }
 
@@ -1382,7 +1387,8 @@ impl ConnectorSpecificConfig {
                 Itaubank {
                     client_id,
                     client_secret
-                }
+                },
+                Archipel { api_key }
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -1879,6 +1885,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: ppro.api_key.ok_or_else(err)?,
                 merchant_id: ppro.merchant_id.ok_or_else(err)?,
                 base_url: ppro.base_url,
+            }),
+            AuthType::Archipel(archipel) => Ok(Self::Archipel {
+                api_key: archipel.ca_certificate.ok_or_else(err)?,
+                base_url: archipel.base_url,
             }),
         }
     }
@@ -2857,6 +2867,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Itaubank {
                     client_id: api_key.clone(),
                     client_secret: key1.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Archipel => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Archipel {
+                    api_key: api_key.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),
