@@ -18,7 +18,7 @@ use interfaces::webhooks::IncomingWebhookEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::volt::VoltRouterData, types::ResponseRouterData};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 // Type alias for refunds router data following existing patterns
 pub type RefundsResponseRouterData<F, T> =
@@ -367,7 +367,7 @@ pub struct VoltAuthUpdateResponse {
 impl<F, T> TryFrom<ResponseRouterData<VoltAuthUpdateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, ServerAuthenticationTokenResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<VoltAuthUpdateResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -457,7 +457,7 @@ pub struct VoltRedirect {
 impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<VoltPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let url = item
             .response
@@ -537,7 +537,7 @@ pub struct VoltPsyncResponse {
 impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<VoltPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
@@ -676,7 +676,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: RefundsResponseRouterData<F, RefundResponse>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {

@@ -1,5 +1,5 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-grpc-bindings \
-        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist clean
+        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -14,7 +14,8 @@ include $(SDK_ROOT)/../common.mk
 # SDK-specific paths continued
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
-JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-0.0.1.tgz
+PACKAGE_VERSION  := $(shell node -p "require('$(SDK_ROOT)/package.json').version")
+JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).tgz
 
 # ---------------------------------------------------------------------------
 # install-deps
@@ -102,31 +103,13 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
-# codegen script. Assumes descriptor is already generated.
+# codegen script.
 # Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows: install-codegen-deps generate-descriptor
+generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
 	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
-
-# ---------------------------------------------------------------------------
-# generate-descriptor
-# Generates the proto descriptor file used by all SDK codegen scripts.
-# ---------------------------------------------------------------------------
-generate-descriptor:
-	@echo "Generating proto descriptor..."
-	@mkdir -p $(REPO_ROOT)/scripts/generators/code
-	@protoc \
-		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
-		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
-		--include_source_info \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
-	@echo "Descriptor written to scripts/generators/code/services.desc"
 
 # ---------------------------------------------------------------------------
 # build-ts
@@ -159,6 +142,7 @@ install: install-deps generate-all build-ts
 # ---------------------------------------------------------------------------
 # test-package
 # End-to-end test: build FFI → pack → install in temp dir → run smoke test.
+# Also runs composite flow tests.
 # ---------------------------------------------------------------------------
 test-package: build-ffi-lib generate-all build-ts pack-archive
 	@echo "Testing in isolation..."
@@ -176,6 +160,21 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 		NODE_PATH=/tmp/test-hyperswitch-js/node_modules npx tsx test_smoke.ts \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@rm -rf /tmp/test-hyperswitch-js
+	@echo "Testing composite flows in isolation..."
+	@rm -rf /tmp/test-hyperswitch-js-composite
+	@mkdir -p /tmp/test-hyperswitch-js-composite
+	@test -f $(JS_TARBALL) || (echo "Error: Tarball not found: $(JS_TARBALL)" && exit 1)
+	@cd /tmp/test-hyperswitch-js-composite && npm init -y --silent && \
+		npm install $(JS_TARBALL) typescript @types/node --silent
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js-composite/
+	@cp $(SDK_ROOT)/smoke-test/tsconfig.json      /tmp/test-hyperswitch-js-composite/
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js-composite/; \
+	fi
+	@cd /tmp/test-hyperswitch-js-composite && npx tsc && \
+		NODE_PATH=/tmp/test-hyperswitch-js-composite/node_modules node test_smoke_composite.js \
+		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
+	@rm -rf /tmp/test-hyperswitch-js-composite
 
 # ---------------------------------------------------------------------------
 # test-composite
@@ -253,6 +252,23 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings 
 		pkill -f grpc-server 2>/dev/null || true; \
 		rm -rf /tmp/test-hyperswitch-js-grpc; \
 		exit $$EXIT
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes the package to npm registry.
+# Requires NPM_TOKEN to be set or logged in via npm login.
+# ---------------------------------------------------------------------------
+publish: build-ts
+	@if [ -z "$(NPM_TOKEN)" ]; then \
+		echo "Error: NPM_TOKEN is not set"; \
+		echo "Set it with: export NPM_TOKEN=npm_xxxxx"; \
+		exit 1; \
+	fi
+	@echo "Configuring npm with authentication token..."
+	@npm config set //registry.npmjs.org/:_authToken=$(NPM_TOKEN)
+	@echo "Publishing hyperswitch-prism to npm..."
+	@npm publish --access public
+	@echo "Published hyperswitch-prism to npm registry."
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules

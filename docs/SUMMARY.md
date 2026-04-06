@@ -20,6 +20,10 @@
   - [Money Struct](architecture/frameworks/money-struct.md)
   - [Versioning](architecture/versioning.md)
 
+
+
+  
+
 - [API Reference Overview](api-reference/README.md)
     - [Payment Service Overview](api-reference/services/payment-service/README.md)
     - [Authorize](api-reference/services/payment-service/authorize.md)
