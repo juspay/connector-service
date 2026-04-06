@@ -135,7 +135,7 @@ The unified representation cures the complexity of errors and enables you to mak
 
 When using Prism SDK, errors are exposed in two fundamentally different ways:
 
-- **SDK errors** (`IntegrationError`, `NetworkError`, `ConnectorResponseTransformationError`) — thrown as **exceptions**. The call never returns a response.
+- **SDK errors** (`IntegrationError`, `NetworkError`, `ConnectorError`) — thrown as **exceptions**. The call never returns a response.
 - **Business errors** — returned inside the **response object** as `response.error`. The call succeeds (no exception), but the payment was declined or failed at the connector.
 
 You must handle both.
@@ -154,7 +154,7 @@ The SDK exposes three main error types:
    - **Python:** `code` (numeric enum), `error_code` (string property), `str(error)` for message, `status_code`
    - **Rust:** `code` (`NetworkErrorCode` enum), `error_code()` (method, returns `&'static str`), `message` (`String`), `status_code` (`Option<u32>`)
 
-3. **ConnectorResponseTransformationError** - Occurs after calling the connector (response parsing issues)
+3. **ConnectorError** - Occurs after calling the connector (response parsing issues)
    - **JS/Kotlin:** Access fields via `error.proto` — `error.proto.errorCode`, `error.proto.errorMessage`, `error.proto.httpStatusCode`
    - **Python:** Fields are delegated via `__getattr__` — `error.error_code`, `error.error_message`, `error.http_status_code`
    - **Rust:** Direct struct fields — `error.error_code`, `error.error_message`, `error.http_status_code`
@@ -304,7 +304,7 @@ Response transformation errors occur **after** calling the connector when Prism 
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, ConnectorResponseTransformationError } from 'hyperswitch-prism';
+import { PaymentClient, ConnectorError } from 'hyperswitch-prism';
 
 try {
   const payment = await client.createPayment({
@@ -314,7 +314,7 @@ try {
   });
   console.log('Payment created:', payment.connectorOrderId);
 } catch (error) {
-  if (error instanceof ConnectorResponseTransformationError) {
+  if (error instanceof ConnectorError) {
     // Response parsing error - payment MAY have succeeded at connector
     // CRITICAL: Do NOT retry without investigation
 
@@ -337,7 +337,7 @@ try {
 #### **Python**
 
 ```python
-from hyperswitch_prism import PaymentClient, ConnectorResponseTransformationError
+from hyperswitch_prism import PaymentClient, ConnectorError
 
 try:
     payment = await client.create_payment(
@@ -346,7 +346,7 @@ try:
         # ... other fields
     )
     print(f'Payment created: {payment.connector_order_id}')
-except ConnectorResponseTransformationError as error:
+except ConnectorError as error:
     # Response parsing error - payment MAY have succeeded at connector
     # CRITICAL: Do NOT retry without investigation
 
@@ -371,7 +371,7 @@ Here's a complete example showing proper error handling for payment creation:
 #### **JavaScript/TypeScript**
 
 ```typescript
-import { PaymentClient, IntegrationError, ConnectorResponseTransformationError, NetworkError } from 'hyperswitch-prism';
+import { PaymentClient, IntegrationError, ConnectorError, NetworkError } from 'hyperswitch-prism';
 
 async function createPayment(client: PaymentClient, orderData: any) {
   try {
@@ -414,7 +414,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
       // Consider checking payment status via connector dashboard/webhooks
       throw error;
 
-    } else if (error instanceof ConnectorResponseTransformationError) {
+    } else if (error instanceof ConnectorError) {
       // Response phase errors - payment may have succeeded at connector
       console.error('⚠️  Response processing failed');
       console.error(`Error: ${error.proto.errorCode}`);
@@ -442,7 +442,7 @@ async function createPayment(client: PaymentClient, orderData: any) {
 from hyperswitch_prism import (
     PaymentClient,
     IntegrationError,
-    ConnectorResponseTransformationError,
+    ConnectorError,
     NetworkError
 )
 
@@ -485,7 +485,7 @@ async def create_payment(client: PaymentClient, order_data: dict):
         # Consider checking payment status via connector dashboard/webhooks
         raise
 
-    except ConnectorResponseTransformationError as error:
+    except ConnectorError as error:
         # Response phase errors - payment may have succeeded at connector
         print('⚠️  Response processing failed')
         print(f'Error: {error.error_code}')
@@ -589,7 +589,7 @@ else:
 1. **Always distinguish between error types before retrying**
    - `IntegrationError` = request never sent — safe to fix and retry
    - `NetworkError` = request may have been sent — do not retry without idempotency verification
-   - `ConnectorResponseTransformationError` = payment may have succeeded at connector — do not retry without checking payment status
+   - `ConnectorError` = payment may have succeeded at connector — do not retry without checking payment status
 
 2. **Never retry response transformation errors blindly**
    - The connector may have processed the payment successfully even if Prism failed to parse the response
@@ -616,7 +616,7 @@ else:
 
 7. **Monitor error rates**
    - Track `IntegrationError` rates to catch configuration issues
-   - Track `ConnectorResponseTransformationError` rates to detect connector API changes
+   - Track `ConnectorError` rates to detect connector API changes
    - Track `unified_details.code` frequencies to identify top decline reasons
 
 ## See Also

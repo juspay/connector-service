@@ -353,7 +353,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 macros::create_amount_converter_wrapper!(connector_name: Billwerk, amount_type: MinorUnit);
 
 use super::macros;
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 macros::create_all_prerequisites!(
     connector_name: Billwerk,
@@ -482,7 +482,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: billwerk::BillwerkErrorResponse = res
             .response
             .parse_struct("BillwerkErrorResponse")

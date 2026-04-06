@@ -18,10 +18,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 type Error = error_stack::Report<IntegrationError>;
-type ResponseError = error_stack::Report<ConnectorResponseTransformationError>;
+type ResponseError = error_stack::Report<ConnectorError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
