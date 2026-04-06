@@ -110,4 +110,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L38) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L44)
+**Examples:** [Python](../../examples/cryptopay/cryptopay.py) · [JavaScript](../../examples/cryptopay/cryptopay.js) · [Kotlin](../../examples/cryptopay/cryptopay.kt#L38) · [Rust](../../examples/cryptopay/cryptopay.rs#L44)

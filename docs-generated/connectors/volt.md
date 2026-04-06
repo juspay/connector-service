@@ -208,7 +208,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Seicomart | ⚠ |
 | Pay Easy | ⚠ |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt) · [Rust](../../examples/volt/rust/volt.rs)
+**Examples:** [Python](../../examples/volt/volt.py) · [JavaScript](../../examples/volt/volt.js) · [Kotlin](../../examples/volt/volt.kt) · [Rust](../../examples/volt/volt.rs)
 
 #### PaymentService.Get
 
@@ -219,7 +219,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L76) · [Rust](../../examples/volt/rust/volt.rs#L78)
+**Examples:** [Python](../../examples/volt/volt.py) · [JavaScript](../../examples/volt/volt.js) · [Kotlin](../../examples/volt/volt.kt#L76) · [Rust](../../examples/volt/volt.rs#L78)
 
 #### PaymentService.Refund
 
@@ -230,7 +230,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L84) · [Rust](../../examples/volt/rust/volt.rs#L85)
+**Examples:** [Python](../../examples/volt/volt.py) · [JavaScript](../../examples/volt/volt.js) · [Kotlin](../../examples/volt/volt.kt#L84) · [Rust](../../examples/volt/volt.rs#L85)
 
 ### Authentication
 
@@ -243,4 +243,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L66) · [Rust](../../examples/volt/rust/volt.rs#L71)
+**Examples:** [Python](../../examples/volt/volt.py) · [JavaScript](../../examples/volt/volt.js) · [Kotlin](../../examples/volt/volt.kt#L66) · [Rust](../../examples/volt/volt.rs#L71)

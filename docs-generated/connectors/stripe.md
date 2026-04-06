@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L292) · [JavaScript](../../examples/stripe/javascript/stripe.js#L261) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L117) · [Rust](../../examples/stripe/rust/stripe.rs#L278)
+**Examples:** [Python](../../examples/stripe/stripe.py#L292) · [JavaScript](../../examples/stripe/stripe.js#L261) · [Kotlin](../../examples/stripe/stripe.kt#L117) · [Rust](../../examples/stripe/stripe.rs#L278)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L311) · [JavaScript](../../examples/stripe/javascript/stripe.js#L280) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L133) · [Rust](../../examples/stripe/rust/stripe.rs#L294)
+**Examples:** [Python](../../examples/stripe/stripe.py#L311) · [JavaScript](../../examples/stripe/stripe.js#L280) · [Kotlin](../../examples/stripe/stripe.kt#L133) · [Rust](../../examples/stripe/stripe.rs#L294)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L336) · [JavaScript](../../examples/stripe/javascript/stripe.js#L306) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L155) · [Rust](../../examples/stripe/rust/stripe.rs#L317)
+**Examples:** [Python](../../examples/stripe/stripe.py#L336) · [JavaScript](../../examples/stripe/stripe.js#L306) · [Kotlin](../../examples/stripe/stripe.kt#L155) · [Rust](../../examples/stripe/stripe.rs#L317)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L361) · [JavaScript](../../examples/stripe/javascript/stripe.js#L332) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L177) · [Rust](../../examples/stripe/rust/stripe.rs#L340)
+**Examples:** [Python](../../examples/stripe/stripe.py#L361) · [JavaScript](../../examples/stripe/stripe.js#L332) · [Kotlin](../../examples/stripe/stripe.kt#L177) · [Rust](../../examples/stripe/stripe.rs#L340)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L383) · [JavaScript](../../examples/stripe/javascript/stripe.js#L354) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L196) · [Rust](../../examples/stripe/rust/stripe.rs#L359)
+**Examples:** [Python](../../examples/stripe/stripe.py#L383) · [JavaScript](../../examples/stripe/stripe.js#L354) · [Kotlin](../../examples/stripe/stripe.kt#L196) · [Rust](../../examples/stripe/stripe.rs#L359)
 
 ## API Reference
 
@@ -416,7 +416,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L405) · [JavaScript](../../examples/stripe/javascript/stripe.js#L375) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L214) · [Rust](../../examples/stripe/rust/stripe.rs#L377)
+**Examples:** [Python](../../examples/stripe/stripe.py#L405) · [JavaScript](../../examples/stripe/stripe.js#L375) · [Kotlin](../../examples/stripe/stripe.kt#L214) · [Rust](../../examples/stripe/stripe.rs#L377)
 
 #### PaymentService.Capture
 
@@ -427,7 +427,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L414) · [JavaScript](../../examples/stripe/javascript/stripe.js#L384) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L226) · [Rust](../../examples/stripe/rust/stripe.rs#L389)
+**Examples:** [Python](../../examples/stripe/stripe.py#L414) · [JavaScript](../../examples/stripe/stripe.js#L384) · [Kotlin](../../examples/stripe/stripe.kt#L226) · [Rust](../../examples/stripe/stripe.rs#L389)
 
 #### PaymentService.Get
 
@@ -438,7 +438,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L441) · [JavaScript](../../examples/stripe/javascript/stripe.js#L411) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L265) · [Rust](../../examples/stripe/rust/stripe.rs#L410)
+**Examples:** [Python](../../examples/stripe/stripe.py#L441) · [JavaScript](../../examples/stripe/stripe.js#L411) · [Kotlin](../../examples/stripe/stripe.kt#L265) · [Rust](../../examples/stripe/stripe.rs#L410)
 
 #### PaymentService.IncrementalAuthorization
 
@@ -449,7 +449,7 @@ Increase the authorized amount for an existing payment. Enables you to capture a
 | **Request** | `PaymentServiceIncrementalAuthorizationRequest` |
 | **Response** | `PaymentServiceIncrementalAuthorizationResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L450) · [JavaScript](../../examples/stripe/javascript/stripe.js#L420) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L273) · [Rust](../../examples/stripe/rust/stripe.rs#L417)
+**Examples:** [Python](../../examples/stripe/stripe.py#L450) · [JavaScript](../../examples/stripe/stripe.js#L420) · [Kotlin](../../examples/stripe/stripe.kt#L273) · [Rust](../../examples/stripe/stripe.rs#L417)
 
 #### PaymentService.ProxyAuthorize
 
@@ -460,7 +460,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L459) · [JavaScript](../../examples/stripe/javascript/stripe.js#L429) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L289) · [Rust](../../examples/stripe/rust/stripe.rs#L424)
+**Examples:** [Python](../../examples/stripe/stripe.py#L459) · [JavaScript](../../examples/stripe/stripe.js#L429) · [Kotlin](../../examples/stripe/stripe.kt#L289) · [Rust](../../examples/stripe/stripe.rs#L424)
 
 #### PaymentService.ProxySetupRecurring
 
@@ -471,7 +471,7 @@ Setup recurring mandate using vault-aliased card data.
 | **Request** | `PaymentServiceProxySetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L468) · [JavaScript](../../examples/stripe/javascript/stripe.js#L438) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L317) · [Rust](../../examples/stripe/rust/stripe.rs#L431)
+**Examples:** [Python](../../examples/stripe/stripe.py#L468) · [JavaScript](../../examples/stripe/stripe.js#L438) · [Kotlin](../../examples/stripe/stripe.kt#L317) · [Rust](../../examples/stripe/stripe.rs#L431)
 
 #### PaymentService.Refund
 
@@ -482,7 +482,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L486) · [JavaScript](../../examples/stripe/javascript/stripe.js#L456) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L379) · [Rust](../../examples/stripe/rust/stripe.rs#L445)
+**Examples:** [Python](../../examples/stripe/stripe.py#L486) · [JavaScript](../../examples/stripe/stripe.js#L456) · [Kotlin](../../examples/stripe/stripe.kt#L379) · [Rust](../../examples/stripe/stripe.rs#L445)
 
 #### PaymentService.SetupRecurring
 
@@ -493,7 +493,7 @@ Configure a payment method for recurring billing. Sets up the mandate and paymen
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L504) · [JavaScript](../../examples/stripe/javascript/stripe.js#L474) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L401) · [Rust](../../examples/stripe/rust/stripe.rs#L459)
+**Examples:** [Python](../../examples/stripe/stripe.py#L504) · [JavaScript](../../examples/stripe/stripe.js#L474) · [Kotlin](../../examples/stripe/stripe.kt#L401) · [Rust](../../examples/stripe/stripe.rs#L459)
 
 #### PaymentMethodService.Tokenize
 
@@ -504,7 +504,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L513) · [JavaScript](../../examples/stripe/javascript/stripe.js#L483) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L440) · [Rust](../../examples/stripe/rust/stripe.rs#L469)
+**Examples:** [Python](../../examples/stripe/stripe.py#L513) · [JavaScript](../../examples/stripe/stripe.js#L483) · [Kotlin](../../examples/stripe/stripe.kt#L440) · [Rust](../../examples/stripe/stripe.rs#L469)
 
 #### PaymentService.Void
 
@@ -515,7 +515,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L522) · [JavaScript](../../examples/stripe/javascript/stripe.js#L492) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L466) · [Rust](../../examples/stripe/rust/stripe.rs#L476)
+**Examples:** [Python](../../examples/stripe/stripe.py#L522) · [JavaScript](../../examples/stripe/stripe.js#L492) · [Kotlin](../../examples/stripe/stripe.kt#L466) · [Rust](../../examples/stripe/stripe.rs#L476)
 
 ### Refunds
 
@@ -528,7 +528,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L495) · [JavaScript](../../examples/stripe/javascript/stripe.js#L465) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L389) · [Rust](../../examples/stripe/rust/stripe.rs#L452)
+**Examples:** [Python](../../examples/stripe/stripe.py#L495) · [JavaScript](../../examples/stripe/stripe.js#L465) · [Kotlin](../../examples/stripe/stripe.kt#L389) · [Rust](../../examples/stripe/stripe.rs#L452)
 
 ### Mandates
 
@@ -541,7 +541,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L477) · [JavaScript](../../examples/stripe/javascript/stripe.js#L447) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L348) · [Rust](../../examples/stripe/rust/stripe.rs#L438)
+**Examples:** [Python](../../examples/stripe/stripe.py#L477) · [JavaScript](../../examples/stripe/stripe.js#L447) · [Kotlin](../../examples/stripe/stripe.kt#L348) · [Rust](../../examples/stripe/stripe.rs#L438)
 
 ### Customers
 
@@ -554,7 +554,7 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L432) · [JavaScript](../../examples/stripe/javascript/stripe.js#L402) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L252) · [Rust](../../examples/stripe/rust/stripe.rs#L403)
+**Examples:** [Python](../../examples/stripe/stripe.py#L432) · [JavaScript](../../examples/stripe/stripe.js#L402) · [Kotlin](../../examples/stripe/stripe.kt#L252) · [Rust](../../examples/stripe/stripe.rs#L403)
 
 ### Authentication
 
@@ -567,4 +567,4 @@ Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. R
 | **Request** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/stripe/python/stripe.py#L423) · [JavaScript](../../examples/stripe/javascript/stripe.js#L393) · [Kotlin](../../examples/stripe/kotlin/stripe.kt#L236) · [Rust](../../examples/stripe/rust/stripe.rs#L396)
+**Examples:** [Python](../../examples/stripe/stripe.py#L423) · [JavaScript](../../examples/stripe/stripe.js#L393) · [Kotlin](../../examples/stripe/stripe.kt#L236) · [Rust](../../examples/stripe/stripe.rs#L396)
