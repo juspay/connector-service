@@ -1100,8 +1100,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     GpayTokenizationData::Decrypted(decrypted_data) => {
                         let four_digit_year = decrypted_data
                             .get_four_digit_expiry_year()
-                            .change_context(ConnectorError::InvalidWalletToken {
+                            .change_context(IntegrationError::InvalidWalletToken {
                                 wallet_name: "Google Pay".to_string(),
+                                context: Default::default(),
                             })?;
                         let expiry = Secret::new(format!(
                             "{}-{:0>2}",
@@ -1140,7 +1141,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             payment_source,
                         })
                     }
-                    GpayTokenizationData::Encrypted(_) => Err(ConnectorError::NotImplemented(
+                    GpayTokenizationData::Encrypted(_) => Err(IntegrationError::not_implemented(
                         "PayPal GooglePay encrypted flow".to_string(),
                     )
                     .into()),
