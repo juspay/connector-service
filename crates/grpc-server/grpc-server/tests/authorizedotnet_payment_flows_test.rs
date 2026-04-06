@@ -407,6 +407,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         connector_order_reference_id: None,
         test_mode: None,
         payment_experience: None,
+        connector_metadata: HashMap::new(),
     }
 }
 
