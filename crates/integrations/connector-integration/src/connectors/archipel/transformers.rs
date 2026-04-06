@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use common_enums::{self, AttemptStatus, CaptureMethod, Currency, FutureUsage};
 use common_utils::{consts, date_time, ext_traits::Encode, types::MinorUnit, CustomResult};
 use domain_types::{
@@ -8,7 +7,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::ConnectorError,
+    errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_address::AddressDetails,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -45,7 +44,7 @@ pub struct ArchipelAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for ArchipelAuthType {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(config: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match config {
             ConnectorSpecificConfig::Archipel { api_key, .. } => {
@@ -58,7 +57,7 @@ impl TryFrom<&ConnectorSpecificConfig> for ArchipelAuthType {
                 };
                 Ok(Self { ca_certificate })
             }
-            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(IntegrationError::FailedToObtainAuthType { context: Default::default() }.into()),
         }
     }
 }
@@ -70,7 +69,7 @@ pub struct ArchipelConfigData {
 }
 
 impl TryFrom<&Option<Value>> for ArchipelConfigData {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(connector_metadata: &Option<Value>) -> Result<Self, Self::Error> {
         let config_data = to_connector_meta(connector_metadata.clone())?;
         Ok(config_data)
@@ -78,7 +77,7 @@ impl TryFrom<&Option<Value>> for ArchipelConfigData {
 }
 
 impl TryFrom<&Option<Secret<Value>>> for ArchipelConfigData {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(connector_metadata: &Option<Secret<Value>>) -> Result<Self, Self::Error> {
         let metadata_value = connector_metadata.as_ref().map(|s| s.clone().expose());
         let config_data = to_connector_meta(metadata_value)?;
@@ -88,8 +87,8 @@ impl TryFrom<&Option<Secret<Value>>> for ArchipelConfigData {
 
 fn to_connector_meta(
     connector_meta: Option<Value>,
-) -> CustomResult<ArchipelConfigData, ConnectorError> {
-    let meta_obj = connector_meta.ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
+) -> CustomResult<ArchipelConfigData, IntegrationError> {
+    let meta_obj = connector_meta.ok_or_else(|| IntegrationError::NoConnectorMetaData { context: Default::default() })?;
 
     // Handle three cases:
     // Case 1: Direct String (for Refund flow)
@@ -110,16 +109,18 @@ fn to_connector_meta(
         meta_obj
             .get("connector_meta_data")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| ConnectorError::InvalidDataFormat {
+            .ok_or_else(|| IntegrationError::InvalidDataFormat {
                 field_name: "connector_meta_data",
+                context: Default::default(),
             })?
             .to_string()
     };
 
     // Parse the JSON string to get ArchipelConfigData
     let config_data: ArchipelConfigData = serde_json::from_str(&connector_meta_str)
-        .change_context(ConnectorError::InvalidDataFormat {
+        .change_context(IntegrationError::InvalidDataFormat {
             field_name: "ArchipelConfigData",
+            context: Default::default(),
         })?;
 
     Ok(config_data)
@@ -296,7 +297,7 @@ pub struct ArchipelCard<
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(Option<Secret<String>>, Option<ArchipelCardHolder>, &Card<T>)> for ArchipelCard<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         (card_holder_name, card_holder_billing, ccard): (
             Option<Secret<String>>,
@@ -312,7 +313,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|_| ccard.card_holder_name.clone().or(card_holder_name.clone()));
 
         let raw_card = serde_json::to_string(&ccard.card_number.0)
-            .change_context(ConnectorError::RequestEncodingFailed)
+            .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })
             .attach_printable("Failed to serialize card number")?
             .trim_matches('"')
             .to_string();
@@ -393,7 +394,7 @@ pub enum ArchipelPaymentStatus {
 }
 
 impl TryFrom<(AttemptStatus, CaptureMethod)> for ArchipelPaymentFlow {
-    type Error = ConnectorError;
+    type Error = ConnectorResponseTransformationError;
 
     fn try_from(
         (status, capture_method): (AttemptStatus, CaptureMethod),
@@ -422,11 +423,9 @@ impl TryFrom<(AttemptStatus, CaptureMethod)> for ArchipelPaymentFlow {
                     Ok(Self::Authorize)
                 }
             }
-            _ => Err(ConnectorError::ProcessingStepFailed(Some(
-                Bytes::from_static(
-                    "Impossible to determine Archipel flow from AttemptStatus".as_bytes(),
-                ),
-            ))),
+            _ => Err(ConnectorResponseTransformationError::UnexpectedResponseError {
+                context: Default::default(),
+            }),
         }
     }
 }
@@ -622,7 +621,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ArchipelCaptureRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ArchipelRouterData<
@@ -641,7 +640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<ArchipelCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ArchipelCaptureResponse, Self>,
@@ -690,7 +689,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     )> for ArchipelPaymentInformation
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         (amount, router_data): (
@@ -810,7 +809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ArchipelCardAuthorizationRequest<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ArchipelRouterData<
             RouterDataV2<
@@ -849,8 +848,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(..)
             | PaymentMethodData::OpenBanking(..)
             | PaymentMethodData::NetworkToken(..)
-            | PaymentMethodData::MobilePayment(..) => Err(ConnectorError::NotImplemented(
+            | PaymentMethodData::MobilePayment(..) => Err(IntegrationError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Archipel"),
+                Default::default(),
             ))?,
         };
 
@@ -924,7 +924,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<ArchipelPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ArchipelPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -939,7 +939,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .capture_method
-            .ok_or_else(|| ConnectorError::CaptureMethodNotSupported)?;
+            .ok_or_else(|| ConnectorResponseTransformationError::UnexpectedResponseError { context: Default::default() })?;
 
         let (archipel_flow, is_incremental_allowed) = match capture_method {
             CaptureMethod::Automatic => (ArchipelPaymentFlow::Pay, false),
@@ -988,7 +988,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<ArchipelPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ArchipelPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1004,9 +1004,7 @@ impl<F> TryFrom<ResponseRouterData<ArchipelPSyncResponse, Self>>
             .ok();
 
         let capture_method = item.router_data.request.capture_method.ok_or(
-            ConnectorError::MissingRequiredField {
-                field_name: "capture_method",
-            },
+            ConnectorResponseTransformationError::UnexpectedResponseError { context: Default::default() },
         )?;
 
         let archipel_flow = match capture_method {
@@ -1065,7 +1063,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ArchipelVoidRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ArchipelRouterData<
@@ -1092,7 +1090,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<ArchipelVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(item: ResponseRouterData<ArchipelVoidResponse, Self>) -> Result<Self, Self::Error> {
         if let Some(error) = item.response.0.error {
@@ -1236,7 +1234,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ArchipelRefundRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: ArchipelRouterData<
@@ -1260,7 +1258,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<ArchipelRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ArchipelRefundResponse, Self>,
@@ -1299,7 +1297,7 @@ impl std::ops::Deref for ArchipelRSyncResponse {
 impl<F> TryFrom<ResponseRouterData<ArchipelRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<ArchipelRSyncResponse, Self>,
@@ -1355,7 +1353,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for ArchipelSetupMandateRequest<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: ArchipelRouterData<
             RouterDataV2<
@@ -1411,8 +1409,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(..)
             | PaymentMethodData::OpenBanking(..)
             | PaymentMethodData::NetworkToken(..)
-            | PaymentMethodData::MobilePayment(..) => Err(ConnectorError::NotImplemented(
+            | PaymentMethodData::MobilePayment(..) => Err(IntegrationError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Archipel"),
+                Default::default(),
             ))?,
         };
 
@@ -1507,7 +1506,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<ArchipelSetupMandateResponse, Self>,
     ) -> Result<Self, Self::Error> {

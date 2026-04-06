@@ -209,10 +209,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_ca_certificate(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, IntegrationError> {
         Ok(None)
     }
 }

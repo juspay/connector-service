@@ -8,25 +8,27 @@ use common_enums::{self as enums, CurrencyUnit};
 use common_utils::{errors::CustomResult, events};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyWebhookSource, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
+        CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync,
+        Refund, RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken,
+        SetupMandate, SubmitEvidence, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
-    errors,
+    errors::{self, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -94,7 +96,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Archipel<T>
+    connector_types::ClientAuthentication for Archipel<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ServerSessionAuthentication for Archipel<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ServerAuthentication for Archipel<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -134,10 +144,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Archipel<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Archipel<T>
 {
 }
@@ -163,10 +169,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyWebhookSourceV2 for Archipel<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Archipel<T>
 {
 }
 
@@ -226,7 +228,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -242,7 +244,7 @@ macros::create_all_prerequisites!(
         pub fn get_ca_cert<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError>
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -262,7 +264,7 @@ macros::create_all_prerequisites!(
 fn build_env_specific_endpoint(
     base_url: &str,
     connector_metadata: &Option<Secret<serde_json::Value>>,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, IntegrationError> {
     let metadata_value = connector_metadata.as_ref().map(|s| s.clone().expose());
     let archipel_connector_metadata_object =
         transformers::ArchipelConfigData::try_from(&metadata_value)?;
@@ -314,10 +316,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     > for Archipel<T>
 {
 }
@@ -374,10 +376,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
     > for Archipel<T>
 {
 }
@@ -394,10 +396,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SdkSessionToken,
+        ServerAuthenticationToken,
         PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     > for Archipel<T>
 {
 }
@@ -456,7 +458,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         Ok(vec![])
     }
 
@@ -472,7 +474,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         _event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorResponseTransformationError> {
         let error_response =
             ArchipelErrorMessageWithHttpCode::from_response(&res.response, res.status_code);
         Ok(error_response.into())
@@ -495,18 +497,18 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let capture_method = req
                 .request
                 .capture_method
-                .ok_or_else(|| report!(errors::ConnectorError::CaptureMethodNotSupported))
-                .change_context(errors::ConnectorError::CaptureMethodNotSupported)
+                .ok_or_else(|| report!(IntegrationError::CaptureMethodNotSupported { context: Default::default() }))
+                .change_context(IntegrationError::CaptureMethodNotSupported { context: Default::default() })
                 .attach_printable("Capture method is required for Archipel authorize flow")?;
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_feature_data)?;
@@ -516,14 +518,14 @@ macros::macro_connector_implementation!(
                 }
                 enums::CaptureMethod::Manual => Ok(format!("{}{}", base_url, "/authorize")),
                 enums::CaptureMethod::ManualMultiple | enums::CaptureMethod::Scheduled => {
-                    Err(error_stack::report!(errors::ConnectorError::CaptureMethodNotSupported))
+                    Err(error_stack::report!(IntegrationError::CaptureMethodNotSupported { context: Default::default() }))
                 }
             }
         }
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
@@ -544,20 +546,20 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_feature_data)?;
 
             // Get transaction ID from connector_transaction_id
             let connector_transaction_id = match &req.request.connector_transaction_id {
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => Err(errors::ConnectorError::MissingConnectorTransactionID)?,
+                _ => Err(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?,
             };
 
             Ok(format!(
@@ -568,7 +570,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
                 &self,
                 req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+            ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
                 self.get_ca_cert(req)
             }
     }
@@ -590,20 +592,20 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_feature_data)?;
 
             // Extract the connector transaction ID from ResponseId
             let connector_transaction_id = match &req.request.connector_transaction_id {
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => Err(errors::ConnectorError::MissingConnectorTransactionID)?,
+                _ => Err(IntegrationError::MissingConnectorTransactionID { context: Default::default() })?,
             };
 
             Ok(format!(
@@ -614,7 +616,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
@@ -636,13 +638,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
 
@@ -657,7 +659,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
@@ -679,13 +681,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url_str = &req.resource_common_data.connectors.archipel.base_url;
 
             let base_url =
@@ -702,7 +704,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
@@ -723,13 +725,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url_str = &req.resource_common_data.connectors.archipel.base_url;
 
             // Build environment-specific endpoint by replacing {{merchant_endpoint_prefix}}
@@ -739,8 +741,9 @@ macros::macro_connector_implementation!(
             let connector_refund_id = req.request.connector_refund_id.clone();
             (!connector_refund_id.is_empty())
                 .then_some(())
-                .ok_or_else(|| report!(errors::ConnectorError::MissingRequiredField {
+                .ok_or_else(|| report!(IntegrationError::MissingRequiredField {
                     field_name: "connector_refund_id",
+                    context: Default::default(),
                 }))
                 .attach_printable("connector_refund_id cannot be empty for refund sync")?;
 
@@ -752,7 +755,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
@@ -774,13 +777,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, IntegrationError> {
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
             Ok(format!("{}{}", base_url, "/verify"))
@@ -788,7 +791,7 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+        ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
             self.get_ca_cert(req)
         }
     }
