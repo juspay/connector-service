@@ -49,7 +49,7 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 // Local headers module
@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: Result<NuveiErrorResponse, Report<common_utils::errors::ParsingError>> =
             res.response.parse_struct("nuvei ErrorResponse");
 

@@ -31,7 +31,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
@@ -40,7 +40,7 @@ pub const XMLNS_WEB_URL: &str = "http://webservices.apl02.redsys.es";
 pub const REDSYS_SOAP_ACTION: &str = "consultaOperaciones";
 
 type Error = Report<IntegrationError>;
-type ResponseError = Report<ConnectorResponseTransformationError>;
+type ResponseError = Report<ConnectorError>;
 
 // Specifies the type of transaction for XML requests
 pub mod transaction_type {
@@ -395,7 +395,7 @@ fn get_redsys_attempt_status(
             }
             Some(enums::CaptureMethod::Manual) => Ok(common_enums::AttemptStatus::Authorized),
             _ => Err(Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     http_status,
                     Some("capture method not supported".to_string()),
                 ),
@@ -555,12 +555,10 @@ fn build_threeds_invoke_response(
     let notification_url = continue_redirection_url
         .map(|url| url.to_string())
         .ok_or_else(|| {
-            Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
-                    http_status,
-                    Some("continue_redirection_url missing for 3DS method URL".to_string()),
-                ),
-            )
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                http_status,
+                Some("continue_redirection_url missing for 3DS method URL".to_string()),
+            ))
         })?;
 
     let threeds_invoke_request = requests::RedsysThreedsInvokeRequest {

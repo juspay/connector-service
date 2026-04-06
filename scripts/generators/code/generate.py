@@ -110,7 +110,7 @@ def to_snake_case(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s).lower()
 
 
-def _service_flow_prefix(service_name: str) -> str | None:
+def _service_flow_prefix(service_name: str) -> Optional[str]:
     """
     Derive the transformer name prefix for services whose RPCs collide with
     PaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
