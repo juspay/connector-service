@@ -1339,11 +1339,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
         // Only set brand for cobadged cards
-        let brand = if card.card_number.is_cobadged_card().change_context(
-            IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
-            },
-        )? {
+        let brand = if card.card_number.is_cobadged_card()? {
             // Use the detected card network from the card data
             card.card_network.clone().and_then(get_adyen_card_network)
         } else {
@@ -1878,12 +1874,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .get_connector_testing_data()
                     .map(AdyenTestingData::try_from)
-                    .transpose()
-                    .map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })?;
+                    .transpose()?;
                 let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
                 Ok(Self::BacsDirectDebit(Box::new(BacsDirectDebitData {
                     bank_account_number: account_number.clone(),
@@ -3627,71 +3618,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         {
             Some(_mandate_ref) => Err(IntegrationError::not_implemented("payment_method").into()),
             None => match item.router_data.request.payment_method_data.clone() {
-                PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
-                    err.change_context(IntegrationError::RequestEncodingFailed {
-                        context: Default::default(),
-                    })
-                }),
+                PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
                 PaymentMethodData::CardRedirect(ref card_redirect_data) => {
-                    Self::try_from((item, card_redirect_data)).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, card_redirect_data))
                 }
-                PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data))
-                    .map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    }),
+                PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data)),
                 PaymentMethodData::BankRedirect(ref bank_redirect) => {
-                    Self::try_from((item, bank_redirect)).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, bank_redirect))
                 }
                 PaymentMethodData::BankTransfer(ref bank_transfer) => {
-                    Self::try_from((item, bank_transfer.as_ref())).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, bank_transfer.as_ref()))
                 }
-                PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit))
-                    .map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    }),
+                PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit)),
                 PaymentMethodData::GiftCard(ref gift_card) => {
-                    Self::try_from((item, gift_card.as_ref())).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, gift_card.as_ref()))
                 }
                 PaymentMethodData::Voucher(ref voucher_data) => {
-                    Self::try_from((item, voucher_data)).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, voucher_data))
                 }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
-                    Self::try_from((item, pay_later_data)).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, pay_later_data))
                 }
                 PaymentMethodData::NetworkToken(ref token_data) => {
-                    Self::try_from((item, token_data)).map_err(|err| {
-                        err.change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })
-                    })
+                    Self::try_from((item, token_data))
                 }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
@@ -6018,11 +5967,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         {
             Some(_mandate_ref) => Err(IntegrationError::not_implemented("payment_method").into()),
             None => match item.router_data.request.payment_method_data.clone() {
-                PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
-                    err.change_context(IntegrationError::RequestEncodingFailed {
-                        context: Default::default(),
-                    })
-                }),
+                PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
                 | PaymentMethodData::BankRedirect(_)
@@ -6326,11 +6271,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
                 let adyen_mandate = AdyenMandate {
                     payment_type: match payment_method_type {
-                        Some(pm_type) => PaymentType::try_from(&pm_type).change_context(
-                            IntegrationError::RequestEncodingFailed {
-                                context: Default::default(),
-                            },
-                        )?,
+                        Some(pm_type) => PaymentType::try_from(&pm_type)?,
                         None => PaymentType::Scheme,
                     },
                     stored_payment_method_id: Secret::new(
@@ -6357,16 +6298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         {
                             Some(card_network) => card_network,
                             None => CardBrand::try_from(
-                                &card_details_for_network_transaction_id
-                                    .get_card_issuer()
-                                    .change_context(IntegrationError::RequestEncodingFailed {
-                                        context: Default::default(),
-                                    })?,
-                            )
-                            .change_context(
-                                IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
-                                },
+                                &card_details_for_network_transaction_id.get_card_issuer()?,
                             )?,
                         };
                         let card_holder_name = item
@@ -6405,16 +6337,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::NetworkTokenWithNTI(network_mandate_id) => {
                 match &item.router_data.request.payment_method_data {
                     PaymentMethodData::NetworkToken(ref token_data) => {
-                        let card_issuer = token_data.get_card_issuer().change_context(
-                            IntegrationError::RequestEncodingFailed {
-                                context: Default::default(),
-                            },
-                        )?;
-                        let brand = CardBrand::try_from(&card_issuer).change_context(
-                            IntegrationError::RequestEncodingFailed {
-                                context: Default::default(),
-                            },
-                        )?;
+                        let card_issuer = token_data.get_card_issuer()?;
+                        let brand = CardBrand::try_from(&card_issuer)?;
                         let card_holder_name = item
                             .router_data
                             .resource_common_data

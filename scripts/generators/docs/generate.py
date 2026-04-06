@@ -206,6 +206,58 @@ for _category, pms in _PROBE_PM_BY_CATEGORY:
     _PROBE_PM_DISPLAY.update(dict(pms))
 
 
+def _supplement_flow_metadata_from_proto(proto_dir: Path) -> None:
+    """
+    Add any proto-defined flows from services.proto that are missing from
+    the manifest's flow_metadata (e.g. Eligibility not yet probed by field-probe).
+    Missing flows get a generated flow_key (snake_case of RPC name) and will
+    appear with '?' status in the coverage table since no probe data exists.
+    """
+    import re as _re
+    global _FLOW_METADATA
+
+    services_proto = proto_dir / "services.proto"
+    if not services_proto.exists():
+        return
+
+    text = services_proto.read_text(encoding="utf-8")
+    text = _re.sub(r"//[^\n]*", "", text)
+    text = _re.sub(r"/\*.*?\*/", "", text, flags=_re.DOTALL)
+
+    # Build set of (service_name, rpc_name) already in metadata
+    existing = {(m["service_name"], m["rpc_name"]) for m in _FLOW_METADATA}
+    # Also track which flow_keys already exist so supplemental entries from other
+    # services (e.g. PayoutService.Void → flow_key "void") don't silently overwrite
+    # canonical entries already probed under the same key (e.g. PaymentService.Void).
+    existing_flow_keys = {m["flow_key"] for m in _FLOW_METADATA}
+
+    def _to_snake(name: str) -> str:
+        s = _re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
+        s = _re.sub(r"([a-z\d])([A-Z])", r"\1_\2", s)
+        return s.lower()
+
+    service_blocks = _re.findall(r"service\s+(\w+)\s*\{(.*?)\}", text, _re.DOTALL)
+    for service_name, body in service_blocks:
+        rpcs = _re.findall(r"rpc\s+(\w+)\s*\(", body)
+        for rpc_name in rpcs:
+            if (service_name, rpc_name) not in existing:
+                flow_key = _to_snake(rpc_name)
+                # Skip if a canonical entry with this flow_key already exists from
+                # another service (prevents PayoutService.Void clobbering PaymentService.Void).
+                if flow_key in existing_flow_keys:
+                    existing.add((service_name, rpc_name))
+                    continue
+                _FLOW_METADATA.append({
+                    "flow_key": flow_key,
+                    "service_name": service_name,
+                    "rpc_name": rpc_name,
+                    "description": "",
+                    "service_rpc": f"{service_name}.{rpc_name}",
+                })
+                existing.add((service_name, rpc_name))
+                existing_flow_keys.add(flow_key)
+
+
 def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
     """
     Load probe JSON and index by connector name.
@@ -239,6 +291,7 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         proto_dir = probe_dir.parent.parent / "crates" / "types-traits" / "grpc-api-types" / "proto"
         if proto_dir.exists():
             snippets.load_proto_type_map(proto_dir)
+            _supplement_flow_metadata_from_proto(proto_dir)
 
         _PROBE_DATA = {}
         for conn_name in connector_names:
@@ -1124,13 +1177,14 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     # Group flows by service
     services_order = [
         "PaymentService",
-        "RecurringPaymentService", 
+        "RecurringPaymentService",
         "RefundService",
         "CustomerService",
         "PaymentMethodService",
         "MerchantAuthenticationService",
         "PaymentMethodAuthenticationService",
         "DisputeService",
+        "EventService",
     ]
     
     # Build service -> flows mapping from flow_metadata loaded from probe.json
@@ -1152,14 +1206,6 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
         flows_in_service = service_flows[service_name]
         
         for flow_key, rpc_name, description in flows_in_service:
-            # Check if any connector has data for this flow
-            has_data = any(
-                probe_data[c].get("flows", {}).get(flow_key)
-                for c in connectors_with_probe
-            )
-            if not has_data:
-                continue
-            
             if flow_key in _PM_AWARE_FLOWS:
                 pm_aware_flows_data.append((service_name, flow_key, rpc_name, description))
             else:
@@ -1265,6 +1311,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     a("| MerchantAuthenticationService | Generate access tokens and session credentials |")
     a("| PaymentMethodAuthenticationService | Execute 3D Secure authentication flows |")
     a("| DisputeService | Manage chargeback disputes |")
+    a("| EventService | Handle connector webhook events |")
     a("")
     
     # Write output

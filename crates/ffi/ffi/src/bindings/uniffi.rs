@@ -346,6 +346,109 @@ mod uniffi_bindings_inner {
             .encode_to_vec(),
         }
     }
+
+    /// verify_redirect_response — synchronous verification of redirect response (no outgoing HTTP call).
+    ///
+    /// Calls `decode_redirect_response_body`, `verify_redirect_response_source`, and
+    /// `process_redirect_response` on the connector, mirroring what the gRPC server does.
+    #[uniffi::export]
+    pub fn verify_redirect_response_transformer(
+        request_bytes: Vec<u8>,
+        options_bytes: Vec<u8>,
+    ) -> Vec<u8> {
+        use grpc_api_types::payments::PaymentServiceVerifyRedirectResponseRequest;
+        use prost::Message as _;
+
+        let payload =
+            match PaymentServiceVerifyRedirectResponseRequest::decode(Bytes::from(request_bytes)) {
+                Ok(p) => p,
+                Err(e) => {
+                    return FfiResult {
+                        r#type: ffi_result::Type::ConnectorError.into(),
+                        payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                            error_message: format!(
+                                "PaymentServiceVerifyRedirectResponseRequest decode failed: {e}"
+                            ),
+                            error_code: "DECODE_FAILED".to_string(),
+                            http_status_code: None,
+                        })),
+                    }
+                    .encode_to_vec();
+                }
+            };
+
+        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
+            Ok(o) => o,
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(e)),
+                }
+                .encode_to_vec()
+            }
+        };
+
+        let ffi_metadata = match parse_metadata(&ffi_options) {
+            Ok(m) => m,
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: e.error_message,
+                        error_code: e.error_code,
+                        http_status_code: None,
+                    })),
+                }
+                .encode_to_vec()
+            }
+        };
+
+        let connector = ffi_metadata.connector;
+        let connector_config = ffi_metadata.connector_config;
+        let metadata = &common_utils::metadata::MaskedMetadata::default();
+
+        let config = match ucs_env::configs::Config::new() {
+            Ok(cfg) => std::sync::Arc::new(cfg),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: format!("Failed to load config: {e}"),
+                        error_code: "CONFIG_LOAD_FAILED".to_string(),
+                        http_status_code: None,
+                    })),
+                }
+                .encode_to_vec()
+            }
+        };
+
+        match crate::services::payments::verify_redirect_response_transformer(
+            payload,
+            &config,
+            connector,
+            connector_config,
+            metadata,
+        ) {
+            Ok(response) => {
+                let response_bytes = response.encode_to_vec();
+                let http_response = FfiConnectorHttpResponse {
+                    status_code: 200,
+                    headers: HashMap::new(),
+                    body: response_bytes,
+                };
+                FfiResult {
+                    r#type: ffi_result::Type::HttpResponse.into(),
+                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
+                }
+                .encode_to_vec()
+            }
+            Err(e) => FfiResult {
+                r#type: ffi_result::Type::ConnectorError.into(),
+                payload: Some(ffi_result::Payload::ConnectorError(e)),
+            }
+            .encode_to_vec(),
+        }
+    }
 }
 
 #[cfg(feature = "uniffi")]
