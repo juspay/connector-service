@@ -1464,11 +1464,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(crate::utils::response_handling_fail(
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            crate::utils::response_handling_fail(
                 res.status_code,
                 "razorpay: MandateRevoke response handling",
-            ))
+            ),
+        )
     }
 
     fn get_error_response_v2(
