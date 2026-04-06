@@ -103,31 +103,13 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
-# codegen script. Assumes descriptor is already generated.
+# codegen script.
 # Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows: install-codegen-deps generate-descriptor
+generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
 	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
-
-# ---------------------------------------------------------------------------
-# generate-descriptor
-# Generates the proto descriptor file used by all SDK codegen scripts.
-# ---------------------------------------------------------------------------
-generate-descriptor:
-	@echo "Generating proto descriptor..."
-	@mkdir -p $(REPO_ROOT)/scripts/generators/code
-	@protoc \
-		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
-		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
-		--include_source_info \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
-	@echo "Descriptor written to scripts/generators/code/services.desc"
 
 # ---------------------------------------------------------------------------
 # build-ts
