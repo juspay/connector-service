@@ -428,6 +428,110 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Cashfree<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+        let auth = cashfree::CashfreeAuthType::try_from(&req.connector_config)?;
+        Ok(vec![
+            (headers::X_CLIENT_ID.to_string(), auth.app_id.into_masked()),
+            (
+                headers::X_CLIENT_SECRET.to_string(),
+                auth.secret_key.into_masked(),
+            ),
+            (
+                headers::X_API_VERSION.to_string(),
+                "2025-01-01".to_string().into(),
+            ),
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ),
+        ])
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, IntegrationError> {
+        let base_url = self.connector_base_url(req);
+        Ok(format!("{base_url}pg/subscriptions"))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, IntegrationError> {
+        let connector_req = cashfree::CashfreeSetupMandateRequest::try_from(req)?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            connector_req,
+        ))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        ConnectorResponseTransformationError,
+    > {
+        let response: cashfree::CashfreeSetupMandateResponse = res
+            .response
+            .parse_struct("CashfreeSetupMandateResponse")
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+        .change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
