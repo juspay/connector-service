@@ -232,3 +232,51 @@ jobs:
         shell: bash
         run: |
           git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
+
+  docs-check:
+    name: Check Connector Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2.7.8
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests
+
+      - name: Check if connector documentation is up to date
+        shell: bash
+        run: |
+          # Run field-probe to regenerate probe data (quick check mode)
+          echo "Running field-probe to check for documentation changes..."
+          cargo run -p field-probe -- --quick-check 2>&1 | head -20 || true
+          
+          # Generate documentation
+          make all-connectors-doc 2>&1 | tail -10
+          
+          # Check if any documentation files changed
+          if git diff --quiet data/field_probe/ docs-generated/all_connector.md; then
+            echo "✓ Connector documentation is up to date"
+          else
+            echo "ERROR: Connector documentation is out of date."
+            echo ""
+            echo "The following files have changes:"
+            git diff --name-only data/field_probe/ docs-generated/all_connector.md
+            echo ""
+            echo "Please run 'make all-connectors-doc' locally and commit the changes."
+            exit 1
+          fi

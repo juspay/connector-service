@@ -86,7 +86,7 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         (("PaymentService", "SetupRecurring"), "setup_recurring"),
         (
             ("PaymentService", "IncrementalAuthorization"),
-            "incremental_auth",
+            "incremental_authorization",
         ),
         (
             ("PaymentService", "VerifyRedirectResponse"),
@@ -94,34 +94,35 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         ),
         // RecurringPaymentService
         (("RecurringPaymentService", "Charge"), "recurring_charge"),
-        (("RecurringPaymentService", "Revoke"), "mandate_revoke"),
+        (("RecurringPaymentService", "Revoke"), "recurring_revoke"),
         // RefundService
-        (("RefundService", "Get"), "rsync"),
+        (("RefundService", "Get"), "refund_get"),
         // CustomerService
         (("CustomerService", "Create"), "create_customer"),
         // PaymentMethodService
         (("PaymentMethodService", "Tokenize"), "tokenize"),
+        (("PaymentMethodService", "Eligibility"), "eligibility"),
         // MerchantAuthenticationService
         (
             (
                 "MerchantAuthenticationService",
                 "CreateServerAuthenticationToken",
             ),
-            "server_authentication_token",
+            "create_server_authentication_token",
         ),
         (
             (
                 "MerchantAuthenticationService",
                 "CreateServerSessionAuthenticationToken",
             ),
-            "server_session_authentication_token",
+            "create_server_session_authentication_token",
         ),
         (
             (
                 "MerchantAuthenticationService",
                 "CreateClientAuthenticationToken",
             ),
-            "client_authentication_token",
+            "create_client_authentication_token",
         ),
         // PaymentMethodAuthenticationService
         (
@@ -682,8 +683,8 @@ service MerchantAuthenticationService {
 
         let server_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "server_authentication_token")
-            .expect("server_authentication_token metadata");
+            .find(|m| m.flow_key == "create_server_authentication_token")
+            .expect("create_server_authentication_token metadata");
         assert_eq!(
             server_auth.grpc_request,
             "MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest"
@@ -695,8 +696,8 @@ service MerchantAuthenticationService {
 
         let server_session_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "server_session_authentication_token")
-            .expect("server_session_authentication_token metadata");
+            .find(|m| m.flow_key == "create_server_session_authentication_token")
+            .expect("create_server_session_authentication_token metadata");
         assert_eq!(
             server_session_auth.grpc_request,
             "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest"
@@ -708,8 +709,8 @@ service MerchantAuthenticationService {
 
         let client_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "client_authentication_token")
-            .expect("client_authentication_token metadata");
+            .find(|m| m.flow_key == "create_client_authentication_token")
+            .expect("create_client_authentication_token metadata");
         assert_eq!(
             client_auth.grpc_request,
             "MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest"

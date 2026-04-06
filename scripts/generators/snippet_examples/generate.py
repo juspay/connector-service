@@ -108,6 +108,10 @@ def load_proto_type_map(proto_dir: Path) -> None:
                 i += 1
             body = text[body_start : i - 1]
 
+            # Normalize multi-line field definitions (e.g. "optional FutureUsage f =\n    19;")
+            # by joining the field number onto the same line as the type/name.
+            body = re.sub(r"=\s*\n\s*(\d+)", r"= \1", body)
+
             # Extract only top-level lines (not inside nested { })
             fields: dict[str, str] = {}
             repeated_fields: set[str] = set()
@@ -2311,14 +2315,15 @@ async function {func_name}(merchantTransactionId: string): Promise<{return_type}
 
 # Per-flow status block for flows that don't have a PaymentStatus status field.
 _KT_FLOW_STATUS_BLOCK: dict[str, str] = {
-    "tokenize":                  '    println("Token: ${response.paymentMethodToken}")',
-    "create_customer":           '    println("Customer: ${response.connectorCustomerId}")',
-    "dispute_accept":            '    println("Dispute status: ${response.disputeStatus.name}")',
-    "dispute_defend":            '    println("Dispute status: ${response.disputeStatus.name}")',
-    "dispute_submit_evidence":   '    println("Dispute status: ${response.disputeStatus.name}")',
-    "create_access_token":       '    println("Access token obtained (statusCode=${response.statusCode})")',
-    "create_session_token":      '    println("Session token obtained (statusCode=${response.statusCode})")',
-    "create_order":              '    println("Order: ${response.connectorOrderId}")',
+    "tokenize":                             '    println("Token: ${response.paymentMethodToken}")',
+    "create_customer":                      '    println("Customer: ${response.connectorCustomerId}")',
+    "dispute_accept":                       '    println("Dispute status: ${response.disputeStatus.name}")',
+    "dispute_defend":                       '    println("Dispute status: ${response.disputeStatus.name}")',
+    "dispute_submit_evidence":              '    println("Dispute status: ${response.disputeStatus.name}")',
+    "create_access_token":                  '    println("Access token obtained (statusCode=${response.statusCode})")',
+    "create_session_token":                 '    println("Session token obtained (statusCode=${response.statusCode})")',
+    "create_client_authentication_token":   '    println("StatusCode: ${response.statusCode}")',
+    "create_order":                         '    println("Order: ${response.connectorOrderId}")',
 }
 
 
@@ -3325,8 +3330,8 @@ def render_consolidated_rust(
             status_block = '    Ok(format!("customer_id: {}", response.connector_customer_id))'
         elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
             status_block = '    Ok(format!("dispute_status: {:?}", response.dispute_status()))'
-        elif flow_key in ("create_access_token", "create_session_token"):
-            status_block = '    Ok(format!("Session token obtained (statusCode={})", response.status_code))'
+        elif flow_key in ("create_access_token", "create_session_token", "create_client_authentication_token"):
+            status_block = '    Ok(format!("status: {:?}", response.status_code))'
         else:
             status_block = '    Ok(format!("status: {:?}", response.status()))'
 

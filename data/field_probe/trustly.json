@@ -1,5 +1,5 @@
 {
-  "connector": "calida",
+  "connector": "trustly",
   "flows": {
     "authenticate": {
       "default": {
@@ -9,103 +9,103 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Bluecode": {
-        "status": "error",
-        "error": "Invalid connector configuration: Deserializing CalidaMetadataObject from connector_meta_data value"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Card": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Crypto": {
         "status": "not_supported",
@@ -113,7 +113,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -121,27 +121,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Givex": {
         "status": "not_supported",
@@ -149,107 +149,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -257,19 +257,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -277,11 +277,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Paze": {
         "status": "not_supported",
@@ -289,87 +289,87 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Trustly": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "status": "error",
+        "error": "Stuck on field: country — Missing required field: country"
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       }
     },
     "capture": {
@@ -429,25 +429,7 @@
     },
     "get": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_merchant_txn_001",
-          "connector_transaction_id": "probe_connector_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          }
-        },
-        "sample": {
-          "url": "https://dev.eorder.reloadhero.com/api/v1/order/probe_connector_txn_001/status",
-          "method": "Get",
-          "headers": {
-            "authorization": "token probe_key",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": null
-        }
+        "status": "not_implemented"
       }
     },
     "handle_event": {
@@ -473,7 +455,7 @@
     "proxy_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       }
     },
     "proxy_setup_recurring": {
@@ -493,7 +475,8 @@
     },
     "refund": {
       "default": {
-        "status": "not_implemented"
+        "status": "error",
+        "error": "Failed to encode connector request"
       }
     },
     "refund_get": {
@@ -514,7 +497,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method"
+        "error": "This feature is not implemented: Selected payment method through Trustly"
       }
     },
     "token_setup_recurring": {
