@@ -1688,7 +1688,6 @@ pub struct RazorpayResendOtpSuccessV1 {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResendOtpNextAction {
     pub action: String,
-    #[allow(dead_code)]
     pub url: Option<String>,
 }
 
@@ -1726,17 +1725,16 @@ impl
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
-        _item: &RouterDataV2<
+        item: &RouterDataV2<
             ResendOtpForWallet,
             PaymentFlowData,
             ResendOtpForWalletData,
             ResendOtpForWalletResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // The Haskell implementation passes account_id extracted from order metadata.
-        // In connector-service, account_id is not yet available in ResendOtpForWalletData,
-        // so we send an empty body (valid per Razorpay API).
-        Ok(Self { account_id: None })
+        Ok(Self {
+            account_id: item.request.connector_transaction_id.clone(),
+        })
     }
 }
 

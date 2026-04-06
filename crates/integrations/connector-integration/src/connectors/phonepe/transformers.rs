@@ -1167,16 +1167,14 @@ pub struct PhonepeTriggerOtpRequest {
 
 /// Inner request payload (base64-encoded inside the `request` field)
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct PhonepeTriggerOtpInnerRequest {
-    #[serde(rename = "merchantId")]
     merchant_id: String,
-    #[serde(rename = "mobileNumber")]
     mobile_number: String,
-    #[serde(rename = "requestType")]
     request_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     email: Option<String>,
-    #[serde(rename = "shortName", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     short_name: Option<String>,
 }
 
@@ -1190,10 +1188,9 @@ pub struct PhonepeTriggerOtpResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PhonepeTriggerOtpData {
-    #[serde(rename = "merchantId")]
     pub merchant_id: Option<String>,
-    #[serde(rename = "otpToken")]
     pub otp_token: Option<String>,
 }
 
@@ -1244,9 +1241,9 @@ impl
 
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        let api_path = "/v3/merchant/otp/send";
+        let api_path = format!("/{}", constants::API_TRIGGER_OTP_ENDPOINT);
         let checksum =
-            generate_phonepe_checksum(&base64_payload, api_path, &auth.salt_key, &auth.key_index)?;
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
             request: base64_payload,
@@ -1313,10 +1310,9 @@ pub struct PhonepeVerifyOtpRequest {
 
 /// Inner request payload (base64-encoded inside the `request` field)
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct PhonepeVerifyOtpInnerRequest {
-    #[serde(rename = "merchantId")]
     merchant_id: String,
-    #[serde(rename = "otpToken")]
     otp_token: String,
     otp: String,
 }
@@ -1331,10 +1327,9 @@ pub struct PhonepeVerifyOtpResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PhonepeVerifyOtpData {
-    #[serde(rename = "merchantId")]
     pub merchant_id: Option<String>,
-    #[serde(rename = "userAuthToken")]
     pub user_auth_token: Option<String>,
 }
 
@@ -1392,9 +1387,9 @@ impl
 
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        let api_path = "/v3/merchant/otp/verify";
+        let api_path = format!("/{}", constants::API_VERIFY_OTP_ENDPOINT);
         let checksum =
-            generate_phonepe_checksum(&base64_payload, api_path, &auth.salt_key, &auth.key_index)?;
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
             request: base64_payload,
