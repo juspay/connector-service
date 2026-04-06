@@ -94,6 +94,24 @@ pub struct PayoutCreateRecipient;
 #[derive(Debug, Clone)]
 pub struct PayoutEnrollDisburseAccount;
 
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePreAuthorization;
+
+#[derive(Debug, Clone)]
+pub struct FraudEvaluatePostAuthorization;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordTransactionData;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordFulfillmentData;
+
+#[derive(Debug, Clone)]
+pub struct FraudRecordReturnData;
+
+#[derive(Debug, Clone)]
+pub struct FraudGet;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -130,4 +148,10 @@ pub enum FlowName {
     PayoutCreateLink,
     PayoutCreateRecipient,
     PayoutEnrollDisburseAccount,
+    FraudEvaluatePreAuthorization,
+    FraudEvaluatePostAuthorization,
+    FraudRecordTransactionData,
+    FraudRecordFulfillmentData,
+    FraudRecordReturnData,
+    FraudGet,
 }

@@ -4,6 +4,7 @@ pub mod api;
 pub mod connector_flow;
 pub mod connector_types;
 pub mod errors;
+pub mod fraud;
 pub mod mandates;
 pub mod payment_address;
 pub mod payment_method_data;
