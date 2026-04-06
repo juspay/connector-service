@@ -86,7 +86,7 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         (("PaymentService", "SetupRecurring"), "setup_recurring"),
         (
             ("PaymentService", "IncrementalAuthorization"),
-            "incremental_auth",
+            "incremental_authorization",
         ),
         (
             ("PaymentService", "VerifyRedirectResponse"),
@@ -94,34 +94,35 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         ),
         // RecurringPaymentService
         (("RecurringPaymentService", "Charge"), "recurring_charge"),
-        (("RecurringPaymentService", "Revoke"), "mandate_revoke"),
+        (("RecurringPaymentService", "Revoke"), "recurring_revoke"),
         // RefundService
-        (("RefundService", "Get"), "rsync"),
+        (("RefundService", "Get"), "refund_get"),
         // CustomerService
         (("CustomerService", "Create"), "create_customer"),
         // PaymentMethodService
         (("PaymentMethodService", "Tokenize"), "tokenize"),
+        (("PaymentMethodService", "Eligibility"), "eligibility"),
         // MerchantAuthenticationService
         (
             (
                 "MerchantAuthenticationService",
                 "CreateServerAuthenticationToken",
             ),
-            "server_authentication_token",
+            "create_server_authentication_token",
         ),
         (
             (
                 "MerchantAuthenticationService",
                 "CreateServerSessionAuthenticationToken",
             ),
-            "server_session_authentication_token",
+            "create_server_session_authentication_token",
         ),
         (
             (
                 "MerchantAuthenticationService",
                 "CreateClientAuthenticationToken",
             ),
-            "client_authentication_token",
+            "create_client_authentication_token",
         ),
         // PaymentMethodAuthenticationService
         (
@@ -431,12 +432,33 @@ fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
     let mut msg_path: Vec<String> = Vec::new();
     // Accumulated leading comment lines (reset after each field or blank line)
     let mut pending_comment = String::new();
+    // Accumulated field definition lines for multi-line fields
+    let mut pending_field_def = String::new();
 
     for line in content.lines() {
         let trimmed = line.trim();
 
         // ── Closing brace ────────────────────────────────────────────────────
         if trimmed == "}" {
+            // Clear any pending field definition before closing context
+            if !pending_field_def.is_empty() {
+                if let Some(current_msg) = msg_path.last() {
+                    if let Some((type_name, field_name, inline_comment)) =
+                        parse_field_line(&pending_field_def)
+                    {
+                        process_field(
+                            current_msg,
+                            &mut schemas,
+                            type_name,
+                            field_name,
+                            inline_comment,
+                            &pending_comment,
+                        );
+                    }
+                }
+                pending_field_def.clear();
+                pending_comment.clear();
+            }
             if let Some(kind) = context_stack.pop() {
                 if kind == "message" {
                     msg_path.pop();
@@ -457,6 +479,7 @@ fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
             context_stack.push("message");
             msg_path.push(name);
             pending_comment.clear();
+            pending_field_def.clear();
             continue;
         }
 
@@ -465,6 +488,7 @@ fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
         if trimmed.starts_with("oneof ") && trimmed.ends_with('{') {
             context_stack.push("oneof");
             pending_comment.clear();
+            pending_field_def.clear();
             continue;
         }
 
@@ -472,6 +496,7 @@ fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
         if trimmed.starts_with("enum ") && trimmed.ends_with('{') {
             context_stack.push("enum");
             pending_comment.clear();
+            pending_field_def.clear();
             continue;
         }
 
@@ -490,49 +515,141 @@ fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
             continue;
         }
 
-        // ── Field definition ─────────────────────────────────────────────────
+        // ── Field definition (may be multi-line) ──────────────────────────────
         // Enum values match the field regex but live inside enum blocks — skip them.
         let in_enum = context_stack.last() == Some(&"enum");
         if !in_enum {
-            if let Some((type_name, field_name, inline_comment)) = parse_field_line(trimmed) {
-                if let Some(current_msg) = msg_path.last() {
-                    let comment = if !inline_comment.is_empty() {
-                        inline_comment
-                    } else {
-                        pending_comment.clone()
-                    };
+            // Check if this looks like the start of a field definition
+            let is_field_start = looks_like_field_start(trimmed);
+            let has_semicolon = trimmed.contains(';');
 
-                    let schema = schemas.entry(current_msg.clone()).or_default();
-
-                    if !comment.is_empty() {
-                        schema.comments.insert(field_name.clone(), comment);
-                    }
-
-                    // Only record message-type fields (needed for recursive annotation)
-                    let is_msg_type = type_name
-                        .chars()
-                        .next()
-                        .map(|c| c.is_uppercase())
-                        .unwrap_or(false)
-                        && !SCALAR_TYPES.contains(&type_name.as_str())
-                        && !type_name.starts_with("map<");
-
-                    if is_msg_type {
-                        schema.field_types.insert(field_name, type_name);
-                    }
+            if is_field_start || !pending_field_def.is_empty() {
+                // Accumulate field definition lines
+                if !pending_field_def.is_empty() {
+                    pending_field_def.push(' ');
                 }
-                pending_comment.clear();
+                pending_field_def.push_str(trimmed);
+
+                // If we have a complete field definition (has semicolon), process it
+                if has_semicolon {
+                    if let Some(current_msg) = msg_path.last() {
+                        if let Some((type_name, field_name, inline_comment)) =
+                            parse_field_line(&pending_field_def)
+                        {
+                            process_field(
+                                current_msg,
+                                &mut schemas,
+                                type_name,
+                                field_name,
+                                inline_comment,
+                                &pending_comment,
+                            );
+                        }
+                    }
+                    pending_field_def.clear();
+                    pending_comment.clear();
+                }
                 continue;
             }
         }
 
         // ── Blank / other lines ──────────────────────────────────────────────
         if trimmed.is_empty() {
+            // If there's a pending field definition, try to process it before clearing
+            if !pending_field_def.is_empty() {
+                if let Some(current_msg) = msg_path.last() {
+                    if let Some((type_name, field_name, inline_comment)) =
+                        parse_field_line(&pending_field_def)
+                    {
+                        process_field(
+                            current_msg,
+                            &mut schemas,
+                            type_name,
+                            field_name,
+                            inline_comment,
+                            &pending_comment,
+                        );
+                    }
+                }
+                pending_field_def.clear();
+            }
             pending_comment.clear();
         }
     }
 
     schemas
+}
+
+/// Check if a line looks like the start of a field definition.
+/// This handles fields that may be split across multiple lines.
+fn looks_like_field_start(trimmed: &str) -> bool {
+    // Strip optional / repeated / map modifiers
+    let s = trimmed
+        .strip_prefix("optional ")
+        .or_else(|| trimmed.strip_prefix("repeated "))
+        .unwrap_or(trimmed);
+
+    // Check if it starts with a type-like token (uppercase for messages, lowercase for scalars)
+    // or map<...> syntax
+    let first_token = s.split_whitespace().next().unwrap_or("");
+
+    if first_token.starts_with("map<") {
+        return true;
+    }
+
+    // Check if first token is a scalar type or looks like a message type
+    // Also handle qualified type names like "google.protobuf.Empty" where the first part
+    // is lowercase but contains uppercase segments after dots
+    let is_type = SCALAR_TYPES.contains(&first_token)
+        || first_token
+            .chars()
+            .next()
+            .map(|c| c.is_uppercase())
+            .unwrap_or(false)
+        || first_token.contains('.')
+            && first_token.split('.').any(|seg| {
+                seg.chars()
+                    .next()
+                    .map(|c| c.is_uppercase())
+                    .unwrap_or(false)
+            });
+
+    is_type
+}
+
+/// Process a parsed field and add it to the schema.
+fn process_field(
+    current_msg: &str,
+    schemas: &mut BTreeMap<String, MessageSchema>,
+    type_name: String,
+    field_name: String,
+    inline_comment: String,
+    pending_comment: &str,
+) {
+    let comment = if !inline_comment.is_empty() {
+        inline_comment
+    } else {
+        pending_comment.to_string()
+    };
+
+    let schema = schemas.entry(current_msg.to_string()).or_default();
+
+    if !comment.is_empty() {
+        schema.comments.insert(field_name.clone(), comment);
+    }
+
+    // Only record message-type fields (needed for recursive annotation)
+    let is_msg_type = type_name
+        .chars()
+        .next()
+        .map(|c| c.is_uppercase())
+        .unwrap_or(false)
+        && !SCALAR_TYPES.contains(&type_name.as_str())
+        && !type_name.starts_with("map<");
+
+    if is_msg_type {
+        schema.field_types.insert(field_name, type_name);
+    }
 }
 
 /// Extract `(type_name, field_name, inline_comment)` from a single proto field line.
@@ -682,8 +799,8 @@ service MerchantAuthenticationService {
 
         let server_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "server_authentication_token")
-            .expect("server_authentication_token metadata");
+            .find(|m| m.flow_key == "create_server_authentication_token")
+            .expect("create_server_authentication_token metadata");
         assert_eq!(
             server_auth.grpc_request,
             "MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest"
@@ -695,8 +812,8 @@ service MerchantAuthenticationService {
 
         let server_session_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "server_session_authentication_token")
-            .expect("server_session_authentication_token metadata");
+            .find(|m| m.flow_key == "create_server_session_authentication_token")
+            .expect("create_server_session_authentication_token metadata");
         assert_eq!(
             server_session_auth.grpc_request,
             "MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest"
@@ -708,8 +825,8 @@ service MerchantAuthenticationService {
 
         let client_auth = metadata
             .iter()
-            .find(|m| m.flow_key == "client_authentication_token")
-            .expect("client_authentication_token metadata");
+            .find(|m| m.flow_key == "create_client_authentication_token")
+            .expect("create_client_authentication_token metadata");
         assert_eq!(
             client_auth.grpc_request,
             "MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest"
@@ -717,6 +834,92 @@ service MerchantAuthenticationService {
         assert_eq!(
             client_auth.grpc_response,
             "MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse"
+        );
+    }
+
+    #[test]
+    fn test_parse_proto_messages_handles_multiline_fields() {
+        let proto = r#"
+message ConnectorResponseData {
+  // Additional payment method specific data
+  optional AdditionalPaymentMethodConnectorResponse
+      additional_payment_method_data = 1;
+  // Extended authorization data
+  optional ExtendedAuthorizationResponseData
+      extended_authorization_response_data = 2;
+  // Whether overcapture is enabled
+  optional bool is_overcapture_enabled = 3;
+}
+"#;
+
+        let schemas = parse_proto_messages(proto);
+        let schema = schemas
+            .get("ConnectorResponseData")
+            .expect("ConnectorResponseData schema should exist");
+
+        // Check all three fields have correct comments
+        assert_eq!(
+            schema.comments.get("additional_payment_method_data"),
+            Some(&"Additional payment method specific data".to_string())
+        );
+        assert_eq!(
+            schema.comments.get("extended_authorization_response_data"),
+            Some(&"Extended authorization data".to_string())
+        );
+        assert_eq!(
+            schema.comments.get("is_overcapture_enabled"),
+            Some(&"Whether overcapture is enabled".to_string())
+        );
+
+        // Check field_types mapping exists for message types
+        assert_eq!(
+            schema.field_types.get("additional_payment_method_data"),
+            Some(&"AdditionalPaymentMethodConnectorResponse".to_string())
+        );
+        assert_eq!(
+            schema
+                .field_types
+                .get("extended_authorization_response_data"),
+            Some(&"ExtendedAuthorizationResponseData".to_string())
+        );
+        // bool is a scalar, so it shouldn't be in field_types
+        assert!(!schema.field_types.contains_key("is_overcapture_enabled"));
+    }
+
+    #[test]
+    fn test_parse_proto_messages_handles_fully_qualified_types() {
+        let proto = r#"
+message Identifier {
+  oneof id_type {
+    // Connector's transaction ID.
+    string id = 1;
+
+    // Encoded data representing the ID or related information.
+    string encoded_data = 2;
+
+    // Indicates that no specific ID is returned or applicable.
+    google.protobuf.Empty no_response_id_marker = 3;
+  }
+}
+"#;
+
+        let schemas = parse_proto_messages(proto);
+        let schema = schemas
+            .get("Identifier")
+            .expect("Identifier schema should exist");
+
+        // Check all three fields have correct comments
+        assert_eq!(
+            schema.comments.get("id"),
+            Some(&"Connector's transaction ID.".to_string())
+        );
+        assert_eq!(
+            schema.comments.get("encoded_data"),
+            Some(&"Encoded data representing the ID or related information.".to_string())
+        );
+        assert_eq!(
+            schema.comments.get("no_response_id_marker"),
+            Some(&"Indicates that no specific ID is returned or applicable.".to_string())
         );
     }
 }

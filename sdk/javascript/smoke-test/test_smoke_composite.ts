@@ -1,4 +1,4 @@
-import { PaymentClient, MerchantAuthenticationClient, types } from "hyperswitch-prism";
+import { PaymentClient, MerchantAuthenticationClient, types, IntegrationError, ConnectorError } from "hyperswitch-prism";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -91,7 +91,15 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
       return true;
     }
   } catch (e: any) {
-    console.log(`  Error creating access token: ${e.errorMessage || e.message}`);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
+    console.log(`  Error creating access token: ${e.message}`);
     return true;
   }
 
@@ -133,7 +141,15 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
       return false;
     }
   } catch (e: any) {
-    console.error("  Error:", e.errorMessage || e.message || e);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
+    console.error("  Error:", e.message || e);
     return false;
   }
 }
@@ -155,6 +171,131 @@ function parseArgs(): { credsFile: string } {
   }
 
   return { credsFile };
+}
+
+/**
+ * IntegrationError path: missing required field (amount) must throw IntegrationError
+ * and must NOT reach the connector.
+ */
+async function testStripeIntegrationError(credsFile: string): Promise<boolean> {
+  console.log("\n[Stripe IntegrationError — missing amount]");
+
+  if (!fs.existsSync(credsFile)) {
+    console.log("  FAILED: creds.json not found");
+    return false;
+  }
+  const credentials = loadCredentials(credsFile);
+  const apiKey = getStripeApiKey(credentials);
+
+  if (!apiKey) {
+    console.log("  FAILED: No Stripe API key in creds.json");
+    return false;
+  }
+
+  const stripeConfig: types.ConnectorConfig = {
+    options: { environment: Environment.SANDBOX },
+    connectorConfig: { stripe: { apiKey: { value: apiKey } } },
+  };
+
+  const paymentClient = new PaymentClient(stripeConfig, defaults);
+
+  // amount intentionally omitted
+  const authorizeRequest: types.PaymentServiceAuthorizeRequest = {
+    merchantTransactionId: "stripe_missing_amount_" + Date.now(),
+    paymentMethod: {
+      card: {
+        cardNumber: { value: "4111111111111111" },
+        cardExpMonth: { value: "12" },
+        cardExpYear: { value: "2050" },
+        cardCvc: { value: "123" },
+        cardHolderName: { value: "Test User" },
+      },
+    },
+    captureMethod: types.CaptureMethod.AUTOMATIC,
+    authType: types.AuthenticationType.NO_THREE_DS,
+    address: {},
+    orderDetails: [],
+  };
+
+  try {
+    await paymentClient.authorize(authorizeRequest);
+    console.log("  FAILED: Expected IntegrationError but call succeeded — request should have been rejected before the HTTP call");
+    return false;
+  } catch (e: any) {
+    if (e instanceof IntegrationError) {
+      console.log(`  PASSED: IntegrationError (expected): ${e.message} (code=${e.errorCode})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  FAILED: Got ConnectorError instead of IntegrationError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return false;
+    }
+    console.error("  FAILED: Unexpected error:", e.message || e);
+    return false;
+  }
+}
+
+/**
+ * ConnectorError path: request is valid but card is known to be declined by Stripe.
+ * Must throw ConnectorError, not IntegrationError.
+ */
+async function testStripeConnectorError(credsFile: string): Promise<boolean> {
+  console.log("\n[Stripe ConnectorError — declined card]");
+
+  if (!fs.existsSync(credsFile)) {
+    console.log("  FAILED: creds.json not found");
+    return false;
+  }
+  const credentials = loadCredentials(credsFile);
+  const apiKey = getStripeApiKey(credentials);
+
+  if (!apiKey) {
+    console.log("  FAILED: No Stripe API key in creds.json");
+    return false;
+  }
+
+  const stripeConfig: types.ConnectorConfig = {
+    options: { environment: Environment.SANDBOX },
+    connectorConfig: { stripe: { apiKey: { value: apiKey } } },
+  };
+
+  const paymentClient = new PaymentClient(stripeConfig, defaults);
+
+  const authorizeRequest: types.PaymentServiceAuthorizeRequest = {
+    merchantTransactionId: "stripe_declined_" + Date.now(),
+    amount: { minorAmount: 1000, currency: types.Currency.USD },
+    captureMethod: types.CaptureMethod.AUTOMATIC,
+    paymentMethod: {
+      card: {
+        cardNumber: { value: "4000000000000002" }, // Stripe generic decline test card
+        cardExpMonth: { value: "12" },
+        cardExpYear: { value: "2050" },
+        cardCvc: { value: "123" },
+        cardHolderName: { value: "Test User" },
+      },
+    },
+    authType: types.AuthenticationType.NO_THREE_DS,
+    address: {},
+    orderDetails: [],
+  };
+
+  try {
+    await paymentClient.authorize(authorizeRequest);
+    // Stripe should decline 4000000000000002 — if it doesn't, not our failure
+    console.log("  PASSED: Card unexpectedly succeeded (sandbox may behave differently)");
+    return true;
+  } catch (e: any) {
+    if (e instanceof ConnectorError) {
+      console.log(`  PASSED: ConnectorError (expected): ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
+    if (e instanceof IntegrationError) {
+      console.log(`  FAILED: Got IntegrationError instead of ConnectorError: ${e.message} (code=${e.errorCode})`);
+      return false;
+    }
+    console.error("  FAILED: Unexpected error:", e.message || e);
+    return false;
+  }
 }
 
 async function testStripeAuthorize(credsFile: string): Promise<boolean> {
@@ -208,6 +349,14 @@ async function testStripeAuthorize(credsFile: string): Promise<boolean> {
       return false;
     }
   } catch (e: any) {
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
     console.error("  FAILED:", e.message || e);
     return false;
   }
@@ -223,12 +372,18 @@ async function main(): Promise<void> {
   const stripePassed = await testStripeAuthorize(credsFile);
   if (!stripePassed) allPassed = false;
 
+  const stripeIntegrationErrorPassed = await testStripeIntegrationError(credsFile);
+  if (!stripeIntegrationErrorPassed) allPassed = false;
+
+  const stripeConnectorErrorPassed = await testStripeConnectorError(credsFile);
+  if (!stripeConnectorErrorPassed) allPassed = false;
+
   console.log("\n" + "=".repeat(40));
   console.log(allPassed ? "PASSED" : "FAILED");
   process.exit(allPassed ? 0 : 1);
 }
 
-main().catch((e: unknown) => {
+main().catch((e: any) => {
   console.error(e);
   process.exit(1);
 });

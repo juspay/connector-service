@@ -212,7 +212,7 @@ else
   BUILD_FLAGS = 
 endif
 
-GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
 
 # Internal target: wait for gRPC server to be ready (checks TCP port 8000)
 _wait-for-server:

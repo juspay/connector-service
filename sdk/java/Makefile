@@ -145,6 +145,8 @@ test-package: generate-all install
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
+	@echo "Running composite smoke test..."
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runComposite
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
@@ -153,14 +155,13 @@ test-package: generate-all install
 # Requires the grpc-server to be running (started by the top-level test-grpc).
 # ---------------------------------------------------------------------------
 GRPC_PROFILE    ?= release-fast
-GRPC_FFI_LIB    := $(REPO_ROOT)/target/$(GRPC_PROFILE)/libhyperswitch_grpc_ffi.$(LIB_EXT)
-GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
 
 # Run gRPC test assuming server is already running (used by top-level test-grpc)
 test-grpc-no-server: install
 	@echo "Running Kotlin gRPC smoke test..."
 	@mkdir -p $(SDK_ROOT)/smoke-test/src/main/resources/native
-	@cp -f $(GRPC_FFI_LIB) $(SDK_ROOT)/smoke-test/src/main/resources/native/
+	@cp -f $(GRPC_FFI_LIBRARY) $(SDK_ROOT)/smoke-test/src/main/resources/native/
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/; \
 	fi
