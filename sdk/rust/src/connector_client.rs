@@ -15,10 +15,12 @@ use grpc_api_types::payments::{
     DisputeServiceAcceptRequest, DisputeServiceAcceptResponse, DisputeServiceDefendRequest,
     DisputeServiceDefendResponse, DisputeServiceSubmitEvidenceRequest,
     DisputeServiceSubmitEvidenceResponse, FfiOptions,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse,
-    MerchantAuthenticationServiceCreateSessionTokenRequest,
-    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
+    MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
+    MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServiceAuthenticateResponse,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
@@ -28,11 +30,13 @@ use grpc_api_types::payments::{
     PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
-    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
-    RequestConfig,
+    PaymentServiceGetResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
+    PaymentServiceReverseRequest, PaymentServiceReverseResponse,
+    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
+    PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    RecurringPaymentServiceChargeResponse, RefundResponse, RequestConfig,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
@@ -376,18 +380,25 @@ impl ConnectorClient {
 
     // ── Authentication flows ──────────────────────────────────────────────────
     impl_flow_method!(
-        create_access_token,
-        MerchantAuthenticationServiceCreateAccessTokenRequest,
-        MerchantAuthenticationServiceCreateAccessTokenResponse,
-        create_access_token_req_handler,
-        create_access_token_res_handler
+        create_server_authentication_token,
+        MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
+        MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
+        create_server_authentication_token_req_handler,
+        create_server_authentication_token_res_handler
     );
     impl_flow_method!(
-        create_session_token,
-        MerchantAuthenticationServiceCreateSessionTokenRequest,
-        MerchantAuthenticationServiceCreateSessionTokenResponse,
-        create_session_token_req_handler,
-        create_session_token_res_handler
+        create_server_session_authentication_token,
+        MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
+        MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse,
+        create_server_session_authentication_token_req_handler,
+        create_server_session_authentication_token_res_handler
+    );
+    impl_flow_method!(
+        create_client_authentication_token,
+        MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+        MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
+        create_client_authentication_token_req_handler,
+        create_client_authentication_token_res_handler
     );
     impl_flow_method!(
         pre_authenticate,
@@ -409,6 +420,44 @@ impl ConnectorClient {
         PaymentMethodAuthenticationServicePostAuthenticateResponse,
         post_authenticate_req_handler,
         post_authenticate_res_handler
+    );
+
+    // ── Non-PCI: Tokenized payment methods ────────────────────────────────────
+    // For merchants holding connector-issued tokens (Stripe pm_xxx, Adyen stored
+    // refs, etc.). No raw card data fields are present in the request types.
+    impl_flow_method!(
+        token_authorize,
+        PaymentServiceTokenAuthorizeRequest,
+        PaymentServiceAuthorizeResponse,
+        token_authorize_req_handler,
+        token_authorize_res_handler
+    );
+    impl_flow_method!(
+        token_setup_recurring,
+        PaymentServiceTokenSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse,
+        token_setup_recurring_req_handler,
+        token_setup_recurring_res_handler
+    );
+
+    // ── Non-PCI: Proxied payment methods ──────────────────────────────────────
+    // For merchants using VGS, Basis Theory, or Spreedly. Card proxy fields
+    // hold vault alias tokens; the proxy substitutes real values before the
+    // connector sees them. 3DS flows are supported because the proxy substitutes
+    // aliases with the real PAN before forwarding to the 3DS server.
+    impl_flow_method!(
+        proxy_authorize,
+        PaymentServiceProxyAuthorizeRequest,
+        PaymentServiceAuthorizeResponse,
+        proxy_authorize_req_handler,
+        proxy_authorize_res_handler
+    );
+    impl_flow_method!(
+        proxy_setup_recurring,
+        PaymentServiceProxySetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse,
+        proxy_setup_recurring_req_handler,
+        proxy_setup_recurring_res_handler
     );
 }
 

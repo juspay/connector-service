@@ -1,10 +1,10 @@
-# hs-playlib
+# hyperswitch-prism
 
 **Universal Connector Service — Node.js SDK**
 
 A high-performance, type-safe Node.js SDK for payment processing through the Universal Connector Service. Connect to 50+ payment processors (Stripe, PayPal, Adyen, and more) through a single, unified API.
 
-[![npm version](https://badge.fury.io/js/hs-playlib.svg)](https://www.npmjs.com/package/hs-playlib)
+[![npm version](https://badge.fury.io/js/hyperswitch-prism.svg)](https://www.npmjs.com/package/hyperswitch-prism)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -23,7 +23,7 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 ## Installation
 
 ```bash
-npm install hs-playlib
+npm install hyperswitch-prism
 ```
 
 **Requirements:**
@@ -42,7 +42,7 @@ npm install hs-playlib
 ### 1. Configure the Client
 
 ```typescript
-import { PaymentClient, types } from 'hs-playlib';
+import { PaymentClient, types } from 'hyperswitch-prism';
 
 const { ConnectorConfig, RequestConfig, Environment, Connector } = types;
 
@@ -112,7 +112,7 @@ The SDK provides specialized clients for different service domains:
 | `PaymentClient` | Core payment operations | `authorize()`, `capture()`, `refund()`, `void()` |
 | `CustomerClient` | Customer management | `create()` |
 | `PaymentMethodClient` | Secure tokenization | `tokenize()` |
-| `MerchantAuthenticationClient` | Auth token management | `createAccessToken()`, `createSessionToken()` |
+| `MerchantAuthenticationClient` | Auth token management | `createServerAuthenticationToken()`, `createServerSessionAuthenticationToken()`, `createClientAuthenticationToken()` |
 | `EventClient` | Webhook processing | `handleEvent()` |
 | `RecurringPaymentClient` | Subscription billing | `charge()` |
 | `PaymentMethodAuthenticationClient` | 3DS authentication | `preAuthenticate()`, `authenticate()`, `postAuthenticate()` |
@@ -195,12 +195,18 @@ for (const payment of payments) {
 ## Error Handling
 
 ```typescript
-import { ConnectorError } from 'hs-playlib';
+import { IntegrationError, ConnectorResponseTransformationError } from 'hyperswitch-prism';
 
 try {
   const response = await client.authorize(request);
 } catch (error) {
-  if (error instanceof ConnectorError) {
+  if (error instanceof IntegrationError) {
+    // Request-phase error (auth, URL construction, serialization, etc.)
+    console.error('Code:', error.errorCode);
+    console.error('Status:', error.statusCode);
+    console.error('Message:', error.message);
+  } else if (error instanceof ConnectorResponseTransformationError) {
+    // Response-phase error (deserialization, transformation, etc.)
     console.error('Code:', error.errorCode);
     console.error('Status:', error.statusCode);
     console.error('Message:', error.message);
@@ -228,7 +234,7 @@ import {
   PaymentClient,
   MerchantAuthenticationClient,
   types
-} from 'hs-playlib';
+} from 'hyperswitch-prism';
 
 const { ConnectorConfig, Environment, Connector, Currency,
         CaptureMethod, SecretString, AccessToken, ConnectorState } = types;
@@ -246,7 +252,7 @@ const config = ConnectorConfig.create({
 
 // Step 1: Get access token
 const authClient = new MerchantAuthenticationClient(config);
-const tokenResponse = await authClient.createAccessToken({
+const tokenResponse = await authClient.createServerAuthenticationToken({
   merchantAccessTokenId: 'token_001',
   connector: Connector.PAYPAL,
   testMode: true,

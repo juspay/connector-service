@@ -14,7 +14,7 @@ package types;
 
 import "payment.proto";
 
-option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+option go_package = "github.com/juspay/connector-service/crates/types-traits/grpc-api-types/proto;proto";
 
 // ============================================================
 // ENUMERATIONS
@@ -175,22 +175,6 @@ message ConnectorResponseTransformationError {
   string error_message = 1;           // Human-readable description of parsing failure (e.g., "Expected JSON response, got HTML")
   string error_code = 2;              // Machine-readable code (e.g., "RESPONSE_DESERIALIZATION_FAILED")
   optional uint32 http_status_code = 3;        // HTTP status from connector before parsing failed (e.g., 401, 500, 200)
-}
-
-// Error returned by req_transformer FFI calls
-message RequestError {
-  PaymentStatus status = 1;
-  optional string error_message = 2;
-  optional string error_code = 3;
-  optional uint32 status_code = 4;
-}
-
-// Error returned by res_transformer FFI calls
-message ResponseError {
-  PaymentStatus status = 1;
-  optional string error_message = 2;
-  optional string error_code = 3;
-  optional uint32 status_code = 4;
 }
 
 // Result type for FFI operations with explicit type discrimination

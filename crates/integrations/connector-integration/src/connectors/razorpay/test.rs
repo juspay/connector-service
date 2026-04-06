@@ -86,6 +86,7 @@ mod tests {
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
@@ -302,6 +303,7 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     l2_l3_data: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
@@ -444,6 +446,7 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     l2_l3_data: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
@@ -608,6 +611,7 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     l2_l3_data: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
@@ -915,6 +919,7 @@ mod tests {
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
                 amount_captured: None,
+                amount: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
                 access_token: None,
@@ -1112,6 +1117,7 @@ mod tests {
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
+                amount: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
@@ -1246,8 +1252,8 @@ mod tests {
         let http_response = Response {
         headers: None,
         response: br#"{"razorpay_payment_id": "pay_xyz", "next": [ { "action": "redirect" "url": "https://api.razorpay.com/v1/payments/xyz/authenticate" } ]"#.to_vec().into(),
-        status_code: 200,
-    };
+        status_code: 200
+};
 
         let result = connector.handle_response_v2(&data, None, http_response);
 
@@ -1315,6 +1321,7 @@ mod tests {
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
@@ -1433,6 +1440,7 @@ mod tests {
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
@@ -1554,6 +1562,7 @@ mod tests {
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
+                    amount: None,
                     minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
@@ -1714,6 +1723,7 @@ mod tests {
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
+                amount: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
@@ -1844,6 +1854,7 @@ mod tests {
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
+                amount: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_capturable: None,
@@ -1963,6 +1974,7 @@ mod tests {
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
+                amount: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_capturable: None,
