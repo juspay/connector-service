@@ -35,7 +35,7 @@ use domain_types::{
     utils,
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use url::Url;
@@ -1098,17 +1098,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
                 WalletData::GooglePay(gpay_data) => match &gpay_data.tokenization_data {
                     GpayTokenizationData::Decrypted(decrypted_data) => {
-                        let four_digit_year = decrypted_data
-                            .get_four_digit_expiry_year()
+                        let expiry = decrypted_data
+                            .get_expiry_date_as_yyyymm("-")
                             .change_context(IntegrationError::InvalidWalletToken {
                                 wallet_name: "Google Pay".to_string(),
                                 context: Default::default(),
                             })?;
-                        let expiry = Secret::new(format!(
-                            "{}-{:0>2}",
-                            four_digit_year.peek(),
-                            decrypted_data.card_exp_month.peek()
-                        ));
                         let authentication_method = if decrypted_data.cryptogram.is_some() {
                             "CRYPTOGRAM_3DS".to_string()
                         } else {

@@ -992,6 +992,15 @@ impl GooglePayDecryptedData {
         Ok(Secret::new(format!("{month}{year}")))
     }
 
+    pub fn get_expiry_date_as_yyyymm(
+        &self,
+        delimiter: &str,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let year = self.get_four_digit_expiry_year()?.expose();
+        let month = self.get_expiry_month()?.clone().expose();
+        Ok(Secret::new(format!("{year}{delimiter}{month}")))
+    }
+
     pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
         let month_str = self.card_exp_month.peek();
         let month = month_str
