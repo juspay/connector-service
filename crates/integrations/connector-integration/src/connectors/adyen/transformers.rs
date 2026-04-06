@@ -11,11 +11,13 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, DefendDispute, PSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, ClientAuthenticationToken, DefendDispute, PSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, CardDetailUpdate, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, AdyenClientAuthenticationResponse as AdyenClientAuthenticationResponseDomain,
+        CardDetailUpdate, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateReference, MandateReferenceId, PaymentFlowData,
         PaymentMethodUpdate, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
@@ -7258,4 +7260,115 @@ fn get_adyen_split_request(
             (store, Some(splits))
         })
         .unwrap_or_else(|| (adyen_store.clone(), None))
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates an Adyen session for client-side SDK initialization.
+/// The session_id and session_data are returned to the frontend for
+/// Adyen Drop-in/Components initialization.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenClientAuthRequest {
+    pub amount: Amount,
+    pub merchant_account: Secret<String>,
+    pub reference: String,
+    pub return_url: String,
+    pub country_code: Option<common_enums::CountryAlpha2>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth_type = AdyenAuthType::try_from(&router_data.connector_config)?;
+
+        let amount = Amount {
+            currency: router_data.request.currency,
+            value: router_data.request.amount,
+        };
+
+        let reference = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            reference,
+            return_url,
+            country_code: router_data.request.country,
+        })
+    }
+}
+
+/// Adyen session response containing session_id and sessionData for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenClientAuthResponse {
+    pub id: String,
+    pub session_data: Secret<String>,
+}
+
+impl TryFrom<ResponseRouterData<AdyenClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<AdyenClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Adyen(
+                AdyenClientAuthenticationResponseDomain {
+                    session_id: response.id,
+                    session_data: response.session_data,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }
