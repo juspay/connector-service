@@ -1414,6 +1414,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
         let payment_id = &req.request.payment_id;
+        if payment_id.is_empty() {
+            return Err(IntegrationError::MissingRequiredField {
+                field_name: "payment_id",
+                context: Default::default(),
+            }
+            .into());
+        }
         Ok(format!("{base_url}v1/payments/{payment_id}/transfers"))
     }
 

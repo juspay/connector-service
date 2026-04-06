@@ -144,6 +144,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   RecurringPaymentServiceChargeRequest: ["metadata", "connectorFeatureData", "email", "merchantAccountId", "connectorTestingData"],
   RecurringPaymentServiceChargeResponse: ["connectorFeatureData", "rawConnectorResponse", "rawConnectorRequest"],
   RecurringPaymentServiceRevokeResponse: ["rawConnectorResponse", "rawConnectorRequest"],
+  PaymentServiceSplitSettlementResponse: ["rawConnectorResponse", "rawConnectorRequest"],
   PaymentMethodAuthenticationServicePreAuthenticateRequest: ["metadata", "connectorFeatureData"],
   PaymentMethodAuthenticationServicePreAuthenticateResponse: ["connectorFeatureData", "rawConnectorResponse"],
   PaymentMethodAuthenticationServiceAuthenticateRequest: ["metadata", "connectorFeatureData"],
@@ -344,6 +345,8 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   RecurringPaymentServiceChargeRequest: { "connectorRecurringPaymentId": "MandateReference", "amount": "Money", "paymentMethod": "PaymentMethod", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState", "originalPaymentAuthorizedAmount": "Money", "billingDescriptor": "BillingDescriptor", "authenticationData": "AuthenticationData", "customer": "Customer", "l2L3Data": "L2L3Data" },
   RecurringPaymentServiceChargeResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "mandateReference": "MandateReference", "state": "ConnectorState", "connectorResponse": "ConnectorResponseData" },
   RecurringPaymentServiceRevokeResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry" },
+  PaymentServiceSplitSettlementRequest: { "transfers": "SplitSettlementTransferItem" },
+  PaymentServiceSplitSettlementResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry" },
   PaymentMethodAuthenticationServicePreAuthenticateRequest: { "amount": "Money", "paymentMethod": "PaymentMethod", "customer": "Customer", "address": "PaymentAddress", "browserInfo": "BrowserInformation", "state": "ConnectorState" },
   PaymentMethodAuthenticationServicePreAuthenticateResponse: { "error": "ErrorInfo", "responseHeaders": "ResponseHeadersEntry", "redirectionData": "RedirectForm", "state": "ConnectorState", "authenticationData": "AuthenticationData" },
   PaymentMethodAuthenticationServiceAuthenticateRequest: { "amount": "Money", "paymentMethod": "PaymentMethod", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "redirectionResponse": "RedirectionResponse" },
@@ -624,6 +627,16 @@ export class GrpcPaymentClient {
   async setupRecurring(req: unknown): Promise<unknown> {
     return callGrpc(this.ffi, this.config, "payment/setup_recurring",
       req, types.PaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
+  /** PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type. */
+  async paymentHandleEvent(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payment/payment_handle_event",
+      req, types.EventServiceHandleRequest, types.EventServiceHandleResponse);
+  }
+  /** PaymentService.SplitSettlement — Split a captured payment into multiple transfers to linked accounts. Creates transfers on a payment to distribute funds across sub-merchants. */
+  async splitSettlement(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payment/split_settlement",
+      req, types.PaymentServiceSplitSettlementRequest, types.PaymentServiceSplitSettlementResponse);
   }
   /** PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token. */
   async tokenAuthorize(req: unknown): Promise<unknown> {

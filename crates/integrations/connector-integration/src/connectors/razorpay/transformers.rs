@@ -1737,8 +1737,11 @@ impl ForeignTryFrom<(RazorpaySplitSettlementResponse, Self, u16)>
         (response, data, http_code): (RazorpaySplitSettlementResponse, Self, u16),
     ) -> Result<Self, Self::Error> {
         let transfer_ids: Vec<String> = response.items.iter().map(|t| t.id.clone()).collect();
+        let has_any_failure = response.items.iter().any(|t| t.status == "failed");
         let status = if transfer_ids.is_empty() {
             "failed".to_string()
+        } else if has_any_failure {
+            "partially_failed".to_string()
         } else {
             response
                 .items

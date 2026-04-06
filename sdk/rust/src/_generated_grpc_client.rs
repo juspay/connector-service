@@ -59,6 +59,8 @@ use grpc_api_types::payments::{
     PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse,
+    PaymentServiceSplitSettlementRequest,
+    PaymentServiceSplitSettlementResponse,
     PaymentServiceTokenAuthorizeRequest,
     PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVerifyRedirectResponseRequest,
@@ -317,6 +319,18 @@ impl_grpc_client!(
         setup_recurring,
         PaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse
+    ),
+    (
+        payment_handle_event,
+        handle_event,
+        EventServiceHandleRequest,
+        EventServiceHandleResponse
+    ),
+    (
+        split_settlement,
+        split_settlement,
+        PaymentServiceSplitSettlementRequest,
+        PaymentServiceSplitSettlementResponse
     ),
     (
         token_authorize,

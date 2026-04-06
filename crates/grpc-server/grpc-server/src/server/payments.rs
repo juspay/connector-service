@@ -4025,22 +4025,25 @@ pub fn generate_split_settlement_response(
             raw_connector_request,
             response_headers,
         }),
-        Err(e) => Ok(PaymentServiceSplitSettlementResponse {
-            status: "failed".to_string(),
-            transfer_ids: vec![],
-            status_code: e.status_code.into(),
-            error: Some(grpc_api_types::payments::ErrorInfo {
-                unified_details: None,
-                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
-                    code: Some(e.code),
-                    message: Some(e.message.clone()),
-                    reason: e.reason.clone(),
+        Err(e) => {
+            let message = e.message;
+            Ok(PaymentServiceSplitSettlementResponse {
+                status: "failed".to_string(),
+                transfer_ids: vec![],
+                status_code: e.status_code.into(),
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                        code: Some(e.code),
+                        reason: e.reason,
+                        message: Some(message),
+                    }),
+                    issuer_details: None,
                 }),
-                issuer_details: None,
-            }),
-            raw_connector_response,
-            raw_connector_request,
-            response_headers,
-        }),
+                raw_connector_response,
+                raw_connector_request,
+                response_headers,
+            })
+        }
     }
 }
