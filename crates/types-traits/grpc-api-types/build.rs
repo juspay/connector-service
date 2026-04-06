@@ -45,6 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "proto/payment_methods.proto",
             "proto/sdk_config.proto",
             "proto/payouts.proto",
+            "proto/fraud.proto",
         ],
         &["proto"],
     )?;
