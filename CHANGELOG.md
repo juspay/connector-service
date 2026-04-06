@@ -19,6 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.06.0
+
+### Features
+
+- **connector:**
+  - Implement MIT for dlocal ([#878](https://github.com/juspay/connector-service/pull/878)) ([`63d1d55`](https://github.com/juspay/connector-service/commit/63d1d55cd67f1bab181d0c90fbd5d79abf16d63b))
+  - Implement MIT for Billwerk ([#871](https://github.com/juspay/connector-service/pull/871)) ([`878de3f`](https://github.com/juspay/connector-service/commit/878de3f8e9c328ec9b0987a2afbb8f0d069a3a83))
+  - Implement BankDebit for payload ([#873](https://github.com/juspay/connector-service/pull/873)) ([`2f1e86a`](https://github.com/juspay/connector-service/commit/2f1e86a9253d00475f80e4b7b570047e34c5b90a))
+  - Implement BankDebit for dlocal ([#889](https://github.com/juspay/connector-service/pull/889)) ([`ff25fc7`](https://github.com/juspay/connector-service/commit/ff25fc75a6fe7fefcb8359ed18c2f930e00d9e5b))
+  - Implement MIT and CreateCustomer for shift4 ([#882](https://github.com/juspay/connector-service/pull/882)) ([`2809784`](https://github.com/juspay/connector-service/commit/2809784065f1d229e2419a8cd2bb5488da297d5f))
+  - [Bluesnap] implement BankDebit (ACH + SEPA) with PSync alt-transactions routing ([#875](https://github.com/juspay/connector-service/pull/875)) ([`2fb4f37`](https://github.com/juspay/connector-service/commit/2fb4f377602c434ce5c16df26e0a0573325d9a84))
+  - Implement BankDebit for multisafepay ([#869](https://github.com/juspay/connector-service/pull/869)) ([`6d984ec`](https://github.com/juspay/connector-service/commit/6d984ec9cc6159687a1a8325356ed805cfc7e50b))
+
+### Refactors
+
+- **connector:** Added PproConfig ([#893](https://github.com/juspay/connector-service/pull/893)) ([`0043d77`](https://github.com/juspay/connector-service/commit/0043d778fd7436ad21ae1fdb2a565add16fde7b8))
+
+**Full Changelog:** [`2026.04.03.0...2026.04.06.0`](https://github.com/juspay/connector-service/compare/2026.04.03.0...2026.04.06.0)
+
+- - -
+
 ## 2026.04.03.0
 
 ### Features
