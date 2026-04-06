@@ -24,43 +24,51 @@ This document specifies the Fraud interface for Hyperswitch Prism, enabling unif
 
 ```protobuf
 service FraudService {
-  // EvaluatePreAuthorization evaluates fraud risk BEFORE payment authorization to prevent fraudulent transactions from being charged.
-  // Business use case: High-risk merchants who want to decline suspicious orders before processing payment, reducing chargeback fees.
-  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) returns (FraudServiceEvaluatePreAuthorizationResponse);
+  // EvaluatePreAuthorization evaluates fraud risk BEFORE payment authorization.
+  // Prevents fraudulent transactions from being submitted to payment processors.
+  // High-risk merchants who want to decline suspicious orders before processing payment, reducing chargeback fees.
+  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) 
+      returns (FraudServiceEvaluatePreAuthorizationResponse);
   
-  // EvaluatePostAuthorization evaluates fraud risk AFTER payment authorization using transaction results.
-  // Business use case: Merchants who process payment first then evaluate fraud, or want to enrich pre-auth decisions with auth results.
-  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) returns (FraudServiceEvaluatePostAuthorizationResponse);
+  // EvaluatePostAuthorization updates fraud case with payment authorization results including AVS/CVV verification.
+  // Enriching fraud decisions with actual payment gateway responses for model training and chargeback defense.
+  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) 
+      returns (FraudServiceEvaluatePostAuthorizationResponse);
   
-  // RecordTransactionData creates a complete fraud record after successful payment for post-hoc fraud evaluation.
-  // Business use case: Merchants using synchronous payment flows who need fraud protection without separate pre-auth checks.
-  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) returns (FraudServiceRecordTransactionDataResponse);
+  // RecordTransactionData records completed transaction for post-hoc fraud evaluation.
+  // Merchants using synchronous payment flows who need fraud protection without separate pre-auth checks.
+  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) 
+      returns (FraudServiceRecordTransactionDataResponse);
   
   // RecordFulfillmentData notifies the fraud provider when an order is shipped with tracking and delivery information.
-  // Business use case: Required for chargeback guarantee protection and improving fraud models with delivery confirmation.
-  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) returns (FraudServiceRecordFulfillmentDataResponse);
+  // Required for chargeback guarantee protection and improving fraud models with delivery confirmation.
+  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) 
+      returns (FraudServiceRecordFulfillmentDataResponse);
   
   // RecordReturnData captures customer return and refund information for fraud pattern analysis.
-  // Business use case: Identifying return fraud patterns and enabling fee adjustments on Riskified's chargeback guarantee.
-  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) returns (FraudServiceRecordReturnDataResponse);
+  // Identifying return fraud patterns and enabling fee adjustments on Riskified's chargeback guarantee.
+  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) 
+      returns (FraudServiceRecordReturnDataResponse);
   
   // Get retrieves the current fraud decision and case status from the provider for polling or reconciliation.
-  // Business use case: Recovering from webhook failures, manual review workflows, and syncing internal state with provider.
+  // Recovering from webhook failures, manual review workflows, and syncing internal state with provider.
   rpc Get(FraudServiceGetRequest) returns (FraudServiceGetResponse);
 }
 ```
 
+**Note**: Exactly 6 RPC methods (no Cancel). Cancel is not uniformly supported by providers and is handled via webhook updates.
+
 ### 2.2 Data Flow
 
-Two primary integration patterns:
+Three primary integration patterns:
 
 **Pattern A: Pre-Authorization Fraud Check (EvaluatePreAuthorization → EvaluatePostAuthorization)**
 ```
-Customer Checkout → EvaluatePreAuthorization → Fraud Decision → Payment Auth → EvaluatePostAuthorization → RecordFulfillmentData
-                              ↓                    ↓                              ↓
-                        [ACCEPT]             APPROVED                       [SUCCESS]
-                        [REJECT]             DECLINED                       [FAILURE]
-                        [REVIEW]             Manual Review
+Customer Checkout → Pre-Auth API → Fraud Decision → Payment Auth → Post-Auth API → Fulfillment
+                          ↓              ↓                              ↓
+                    [ACCEPT]      APPROVED                       [SUCCESS]
+                    [REJECT]      DECLINED                       [FAILURE]
+                    [REVIEW]      Manual Review
 
 Use EvaluatePreAuthorization when: Evaluating fraud BEFORE charging customer's card
 Use EvaluatePostAuthorization when: Updating fraud case with payment auth result (AVS/CVV)
@@ -68,17 +76,17 @@ Use EvaluatePostAuthorization when: Updating fraud case with payment auth result
 
 **Pattern B: Post-Authorization Fraud Check (RecordTransactionData)**
 ```
-Payment Auth → RecordTransactionData → RecordFulfillmentData
-                         ↓
-                   [Fraud Decision]
-                   (with full payment context)
+Payment Auth → RecordTransactionData API → Fulfillment
+                      ↓
+                [Fraud Decision]
+                (with full payment context)
 
 Use RecordTransactionData when: Payment already captured, evaluate fraud post-hoc
 ```
 
 **Pattern C: Status Synchronization (Get)**
 ```
-Get (poll) ←→ Webhook (async) ←→ Get (reconcile)
+Get API (poll) ←→ Webhook (async) ←→ Get API (reconcile)
 
 Use Get when: Webhook failed, manual review, or status reconciliation
 ```
@@ -121,6 +129,8 @@ option go_package = "github.com/juspay/connector-service/crates/types-traits/grp
 // FRAUD ENUMERATIONS (Package level - following payment.proto pattern)
 // ============================================================================
 
+// Status of a fraud check - MUST MATCH Hyperswitch FraudCheckStatus EXACTLY
+// From: crates/common_enums/src/enums.rs
 enum FraudCheckStatus {
   FRAUD_CHECK_STATUS_UNSPECIFIED = 0;
   FRAUD_CHECK_STATUS_PENDING = 1;
@@ -130,12 +140,7 @@ enum FraudCheckStatus {
   FRAUD_CHECK_STATUS_TRANSACTION_FAILURE = 5;
 }
 
-enum FraudCheckType {
-  FRAUD_CHECK_TYPE_UNSPECIFIED = 0;
-  FRAUD_CHECK_TYPE_PRE_AUTHORIZATION = 1;
-  FRAUD_CHECK_TYPE_POST_AUTHORIZATION = 2;
-}
-
+// Fraud check action recommendation
 enum FraudAction {
   FRAUD_ACTION_UNSPECIFIED = 0;
   FRAUD_ACTION_ACCEPT = 1;
@@ -213,14 +218,14 @@ message FraudReason {
 // ============================================================================
 
 message FraudServiceEvaluatePreAuthorizationRequest {
-  optional string merchant_fraud_check_id = 1;
-  optional string order_id = 2;
+  string merchant_fraud_check_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
   optional string connector_fraud_check_id = 3;
   Money amount = 4;
   optional PaymentMethod payment_method = 5;
-  optional Customer customer = 6;
+  Customer customer = 6;                     // REQUIRED
   repeated FraudProduct products = 7;
-  optional BrowserInformation browser_info = 8;
+  BrowserInformation browser_info = 8;       // REQUIRED
   optional Address shipping_address = 9;
   optional Address billing_address = 10;
   optional string connector_name = 11;
@@ -228,6 +233,9 @@ message FraudServiceEvaluatePreAuthorizationRequest {
   optional string webhook_url = 13;
   optional string previous_fraud_check_id = 14;
   optional ConnectorState connector_state = 15;
+  string device_fingerprint = 16;            // NEW
+  string session_id = 17;                    // NEW
+  bool synchronous = 18;                     // NEW
 }
 
 message FraudServiceEvaluatePreAuthorizationResponse {
@@ -253,10 +261,10 @@ message FraudServiceEvaluatePreAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceEvaluatePostAuthorizationRequest {
-  optional string merchant_fraud_check_id = 1;
-  optional string order_id = 2;
+  string merchant_fraud_check_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
   optional string connector_fraud_check_id = 3;
-  optional string connector_transaction_id = 4;
+  string connector_transaction_id = 4;       // REQUIRED
   Money amount = 5;
   optional PaymentMethod payment_method = 6;
   AuthorizationStatus authorization_status = 7;
@@ -266,6 +274,7 @@ message FraudServiceEvaluatePostAuthorizationRequest {
   optional SecretString connector_feature_data = 11;
   optional string webhook_url = 12;
   optional ConnectorState connector_state = 13;
+  string session_id = 14;                    // NEW
 }
 
 message FraudServiceEvaluatePostAuthorizationResponse {
@@ -290,10 +299,10 @@ message FraudServiceEvaluatePostAuthorizationResponse {
 // ============================================================================
 
 message FraudServiceRecordTransactionDataRequest {
-  optional string merchant_fraud_check_id = 1;
-  optional string order_id = 2;
+  string merchant_fraud_check_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
   Money amount = 3;
-  optional string session_id = 4;
+  string session_id = 4;                     // NEW - was optional
   optional Customer customer = 5;
   repeated FraudProduct products = 6;
   optional BrowserInformation browser_info = 7;
@@ -325,14 +334,15 @@ message FraudServiceRecordTransactionDataResponse {
 // ============================================================================
 
 message FraudServiceRecordFulfillmentDataRequest {
-  optional string merchant_fraud_check_id = 1;
-  optional string order_id = 2;
+  string merchant_fraud_check_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
   optional string connector_fraud_check_id = 3;
   FulfillmentStatus fulfillment_status = 4;
   repeated FraudShipment shipments = 5;
   optional SecretString connector_feature_data = 6;
   optional string webhook_url = 7;
   optional ConnectorState connector_state = 8;
+  string session_id = 9;                     // NEW
 }
 
 message FraudServiceRecordFulfillmentDataResponse {
@@ -354,9 +364,19 @@ message FraudServiceRecordFulfillmentDataResponse {
 // ============================================================================
 
 message FraudServiceRecordReturnDataRequest {
-  optional string merchant_fraud_check_id = 1;
-  optional string order_id = 2;
+  string merchant_fraud_check_id = 1;        // REQUIRED
+  string order_id = 2;                       // REQUIRED
   optional string connector_fraud_check_id = 3;
+  optional string refund_transaction_id = 4;
+  Money amount = 5;
+  RefundMethod refund_method = 6;
+  optional string return_reason = 7;
+  optional string return_reason_code = 8;
+  optional SecretString connector_feature_data = 9;
+  optional string webhook_url = 10;
+  optional ConnectorState connector_state = 11;
+  string session_id = 12;                    // NEW
+}
   optional string refund_transaction_id = 4;
   Money amount = 5;
   RefundMethod refund_method = 6;
@@ -410,6 +430,26 @@ message FraudServiceGetResponse {
 }
 
 // ============================================================================
+// CANCEL REQUEST/RESPONSE
+// ============================================================================
+
+message FraudServiceCancelRequest {
+  optional string merchant_fraud_check_id = 1;
+  optional string order_id = 2;
+  optional string connector_fraud_check_id = 3;
+  optional string cancel_reason = 4;
+}
+
+message FraudServiceCancelResponse {
+  optional string merchant_fraud_check_id = 1;
+  optional string order_id = 2;
+  optional string connector_fraud_check_id = 3;
+  FraudCheckStatus fraud_check_status = 4;
+  optional ErrorInfo error = 5;
+  uint32 status_code = 6;
+}
+
+// ============================================================================
 // FRAUD-SPECIFIC EVENT CONTENT (for webhooks)
 // ============================================================================
 
@@ -427,20 +467,27 @@ message FraudEventContent {
 }
 ```
 
-### 3.2 Service Registration (Update to `services.proto`)
+### 3.2 Service Registration (in `services.proto`)
 
 ```protobuf
 import "fraud.proto";
 
 service FraudService {
-  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) returns (FraudServiceEvaluatePreAuthorizationResponse);
-  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) returns (FraudServiceEvaluatePostAuthorizationResponse);
-  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) returns (FraudServiceRecordTransactionDataResponse);
-  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) returns (FraudServiceRecordFulfillmentDataResponse);
-  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) returns (FraudServiceRecordReturnDataResponse);
+  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) 
+      returns (FraudServiceEvaluatePreAuthorizationResponse);
+  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) 
+      returns (FraudServiceEvaluatePostAuthorizationResponse);
+  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) 
+      returns (FraudServiceRecordTransactionDataResponse);
+  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) 
+      returns (FraudServiceRecordFulfillmentDataResponse);
+  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) 
+      returns (FraudServiceRecordReturnDataResponse);
   rpc Get(FraudServiceGetRequest) returns (FraudServiceGetResponse);
 }
 ```
+
+**Note**: Exactly 6 RPC methods. No Cancel method (not uniformly supported by providers).
 
 ## 4. Rust Interface Traits
 
@@ -450,12 +497,15 @@ service FraudService {
 use domain_types::{
     connector_flow,
     fraud_types::{
-        FraudEvaluatePreAuthorizationData, FraudEvaluatePreAuthorizationResponse,
+        FraudEvaluatePreAuthorization, FraudEvaluatePreAuthorizationData,
+        FraudEvaluatePreAuthorizationResponse, FraudEvaluatePostAuthorization,
         FraudEvaluatePostAuthorizationData, FraudEvaluatePostAuthorizationResponse,
-        FraudRecordTransactionDataData, FraudRecordTransactionDataResponse,
-        FraudFlowData, FraudRecordFulfillmentDataData, FraudRecordFulfillmentDataResponse,
-        FraudGetData, FraudGetResponse, FraudRecordReturnDataData, FraudRecordReturnDataResponse,
+        FraudFlowData, FraudGet, FraudGetData, FraudGetResponse,
+        FraudRecordFulfillmentData, FraudRecordFulfillmentDataResponse,
+        FraudRecordReturnData, FraudRecordReturnDataData, FraudRecordReturnDataResponse,
+        FraudRecordTransactionData, FraudRecordTransactionDataData, FraudRecordTransactionDataResponse,
     },
+    payment_method_data::PaymentMethodDataTypes,
 };
 
 use crate::{
@@ -463,74 +513,81 @@ use crate::{
     connector_integration_v2::ConnectorIntegrationV2,
 };
 
-pub trait FraudEvaluatePreAuthorizationV2:
+/// Pre-authorization fraud evaluation
+pub trait FraudEvaluatePreAuthorizationV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudEvaluatePreAuthorization,
-    FraudFlowData,
-    FraudEvaluatePreAuthorizationData,
+    FraudFlowData<T>,
+    FraudEvaluatePreAuthorizationData<T>,
     FraudEvaluatePreAuthorizationResponse,
 >
 {
 }
 
-pub trait FraudEvaluatePostAuthorizationV2:
+/// Post-authorization fraud evaluation
+pub trait FraudEvaluatePostAuthorizationV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudEvaluatePostAuthorization,
-    FraudFlowData,
-    FraudEvaluatePostAuthorizationData,
+    FraudFlowData<T>,
+    FraudEvaluatePostAuthorizationData<T>,
     FraudEvaluatePostAuthorizationResponse,
 >
 {
 }
 
-pub trait FraudRecordTransactionDataV2:
+/// Record transaction data for post-hoc evaluation
+pub trait FraudRecordTransactionDataV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudRecordTransactionData,
-    FraudFlowData,
-    FraudRecordTransactionDataData,
+    FraudFlowData<T>,
+    FraudRecordTransactionDataData<T>,
     FraudRecordTransactionDataResponse,
 >
 {
 }
 
-pub trait FraudRecordFulfillmentDataV2:
+/// Record fulfillment/shipment data
+pub trait FraudRecordFulfillmentDataV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudRecordFulfillmentData,
-    FraudFlowData,
+    FraudFlowData<T>,
     FraudRecordFulfillmentDataData,
     FraudRecordFulfillmentDataResponse,
 >
 {
 }
 
-pub trait FraudRecordReturnDataV2:
+/// Record return/refund data
+pub trait FraudRecordReturnDataV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudRecordReturnData,
-    FraudFlowData,
+    FraudFlowData<T>,
     FraudRecordReturnDataData,
     FraudRecordReturnDataResponse,
 >
 {
 }
 
-pub trait FraudGetV2:
+/// Get fraud decision/status
+pub trait FraudGetV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::FraudGet,
-    FraudFlowData,
+    FraudFlowData<T>,
     FraudGetData,
     FraudGetResponse,
 >
 {
 }
 
-pub trait FraudConnectorTrait:
+/// Combined trait for fraud connectors (exactly 6 flows, no Cancel)
+pub trait FraudConnectorTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
-    + FraudEvaluatePreAuthorizationV2
-    + FraudEvaluatePostAuthorizationV2
-    + FraudRecordTransactionDataV2
-    + FraudRecordFulfillmentDataV2
-    + FraudRecordReturnDataV2
-    + FraudGetV2
+    + FraudEvaluatePreAuthorizationV2<T>
+    + FraudEvaluatePostAuthorizationV2<T>
+    + FraudRecordTransactionDataV2<T>
+    + FraudRecordFulfillmentDataV2<T>
+    + FraudRecordReturnDataV2<T>
+    + FraudGetV2<T>
     + Send
     + Sync
 {
@@ -580,7 +637,7 @@ message EventContent {
 
 ### 7.1 Synchronous vs Asynchronous
 The spec supports both:
-- **Synchronous**: EvaluatePreAuthorization returns immediate decisions
+- **Synchronous**: Checkout, Transaction return immediate decisions
 - **Asynchronous**: Webhook events for status updates
 
 ### 7.2 Provider-Specific Features
