@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L167) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L154) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L117) · [Rust](../../examples/placetopay/rust/placetopay.rs#L159)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L167) · [JavaScript](../../examples/placetopay/placetopay.js#L154) · [Kotlin](../../examples/placetopay/placetopay.kt#L117) · [Rust](../../examples/placetopay/placetopay.rs#L159)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L186) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L173) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L133) · [Rust](../../examples/placetopay/rust/placetopay.rs#L175)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L186) · [JavaScript](../../examples/placetopay/placetopay.js#L173) · [Kotlin](../../examples/placetopay/placetopay.kt#L133) · [Rust](../../examples/placetopay/placetopay.rs#L175)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L211) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L199) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L155) · [Rust](../../examples/placetopay/rust/placetopay.rs#L198)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L211) · [JavaScript](../../examples/placetopay/placetopay.js#L199) · [Kotlin](../../examples/placetopay/placetopay.kt#L155) · [Rust](../../examples/placetopay/placetopay.rs#L198)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L236) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L225) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L177) · [Rust](../../examples/placetopay/rust/placetopay.rs#L221)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L236) · [JavaScript](../../examples/placetopay/placetopay.js#L225) · [Kotlin](../../examples/placetopay/placetopay.kt#L177) · [Rust](../../examples/placetopay/placetopay.rs#L221)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L258) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L247) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L196) · [Rust](../../examples/placetopay/rust/placetopay.rs#L240)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L258) · [JavaScript](../../examples/placetopay/placetopay.js#L247) · [Kotlin](../../examples/placetopay/placetopay.kt#L196) · [Rust](../../examples/placetopay/placetopay.rs#L240)
 
 ## API Reference
 
@@ -277,7 +277,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L280) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L268) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L214) · [Rust](../../examples/placetopay/rust/placetopay.rs#L258)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L280) · [JavaScript](../../examples/placetopay/placetopay.js#L268) · [Kotlin](../../examples/placetopay/placetopay.kt#L214) · [Rust](../../examples/placetopay/placetopay.rs#L258)
 
 #### PaymentService.Capture
 
@@ -288,7 +288,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L289) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L277) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L226) · [Rust](../../examples/placetopay/rust/placetopay.rs#L270)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L289) · [JavaScript](../../examples/placetopay/placetopay.js#L277) · [Kotlin](../../examples/placetopay/placetopay.kt#L226) · [Rust](../../examples/placetopay/placetopay.rs#L270)
 
 #### PaymentService.Get
 
@@ -299,7 +299,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L298) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L286) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L236) · [Rust](../../examples/placetopay/rust/placetopay.rs#L277)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L298) · [JavaScript](../../examples/placetopay/placetopay.js#L286) · [Kotlin](../../examples/placetopay/placetopay.kt#L236) · [Rust](../../examples/placetopay/placetopay.rs#L277)
 
 #### PaymentService.ProxyAuthorize
 
@@ -310,7 +310,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L307) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L295) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L244) · [Rust](../../examples/placetopay/rust/placetopay.rs#L284)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L307) · [JavaScript](../../examples/placetopay/placetopay.js#L295) · [Kotlin](../../examples/placetopay/placetopay.kt#L244) · [Rust](../../examples/placetopay/placetopay.rs#L284)
 
 #### PaymentService.Refund
 
@@ -321,7 +321,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L316) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L304) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L286) · [Rust](../../examples/placetopay/rust/placetopay.rs#L291)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L316) · [JavaScript](../../examples/placetopay/placetopay.js#L304) · [Kotlin](../../examples/placetopay/placetopay.kt#L286) · [Rust](../../examples/placetopay/placetopay.rs#L291)
 
 #### PaymentService.Void
 
@@ -332,7 +332,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L334) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L322) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L308) · [Rust](../../examples/placetopay/rust/placetopay.rs#L305)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L334) · [JavaScript](../../examples/placetopay/placetopay.js#L322) · [Kotlin](../../examples/placetopay/placetopay.kt#L308) · [Rust](../../examples/placetopay/placetopay.rs#L305)
 
 ### Refunds
 
@@ -345,4 +345,4 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L325) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L313) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L296) · [Rust](../../examples/placetopay/rust/placetopay.rs#L298)
+**Examples:** [Python](../../examples/placetopay/placetopay.py#L325) · [JavaScript](../../examples/placetopay/placetopay.js#L313) · [Kotlin](../../examples/placetopay/placetopay.kt#L296) · [Rust](../../examples/placetopay/placetopay.rs#L298)

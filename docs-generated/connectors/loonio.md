@@ -206,7 +206,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Seicomart | ⚠ |
 | Pay Easy | ⚠ |
 
-**Examples:** [Python](../../examples/loonio/python/loonio.py) · [JavaScript](../../examples/loonio/javascript/loonio.js) · [Kotlin](../../examples/loonio/kotlin/loonio.kt) · [Rust](../../examples/loonio/rust/loonio.rs)
+**Examples:** [Python](../../examples/loonio/loonio.py) · [JavaScript](../../examples/loonio/loonio.js) · [Kotlin](../../examples/loonio/loonio.kt) · [Rust](../../examples/loonio/loonio.rs)
 
 #### PaymentService.Get
 
@@ -217,4 +217,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/loonio/python/loonio.py) · [JavaScript](../../examples/loonio/javascript/loonio.js) · [Kotlin](../../examples/loonio/kotlin/loonio.kt#L36) · [Rust](../../examples/loonio/rust/loonio.rs#L38)
+**Examples:** [Python](../../examples/loonio/loonio.py) · [JavaScript](../../examples/loonio/loonio.js) · [Kotlin](../../examples/loonio/loonio.kt#L36) · [Rust](../../examples/loonio/loonio.rs#L38)

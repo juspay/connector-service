@@ -110,4 +110,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/calida/python/calida.py) · [JavaScript](../../examples/calida/javascript/calida.js) · [Kotlin](../../examples/calida/kotlin/calida.kt#L38) · [Rust](../../examples/calida/rust/calida.rs#L44)
+**Examples:** [Python](../../examples/calida/calida.py) · [JavaScript](../../examples/calida/calida.js) · [Kotlin](../../examples/calida/calida.kt#L38) · [Rust](../../examples/calida/calida.rs#L44)
