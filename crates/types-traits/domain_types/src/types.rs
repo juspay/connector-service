@@ -9743,6 +9743,19 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Checkout(checkout_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Checkout(
+                        grpc_api_types::payments::CheckoutClientAuthenticationResponse {
+                            payment_session_id: checkout_data.payment_session_id,
+                            payment_session_token: Some(checkout_data.payment_session_token),
+                            payment_session_secret: Some(checkout_data.payment_session_secret),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

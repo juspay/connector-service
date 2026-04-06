@@ -5,12 +5,14 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, RepeatPayment, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        CheckoutClientAuthenticationResponse as CheckoutClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -2452,4 +2454,129 @@ fn convert_to_additional_payment_method_connector_response(
             auth_code: None,
         }
     })
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Checkout.com payment session for client-side SDK initialization.
+/// The payment_session_token is returned to the frontend for Frames/Flow initialization.
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct CheckoutClientAuthRequest {
+    pub amount: MinorUnit,
+    pub currency: common_enums::Currency,
+    pub reference: String,
+    pub billing: CheckoutClientAuthBilling,
+    pub success_url: String,
+    pub failure_url: String,
+    pub processing_channel_id: Secret<String>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct CheckoutClientAuthBilling {
+    pub address: CheckoutClientAuthBillingAddress,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct CheckoutClientAuthBillingAddress {
+    pub country: Option<common_enums::CountryAlpha2>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        CheckoutRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for CheckoutClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: CheckoutRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth_type = CheckoutAuthType::try_from(&router_data.connector_config)?;
+
+        let reference = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+
+        Ok(Self {
+            amount: router_data.request.amount,
+            currency: router_data.request.currency,
+            reference,
+            billing: CheckoutClientAuthBilling {
+                address: CheckoutClientAuthBillingAddress {
+                    country: router_data.request.country,
+                },
+            },
+            success_url: format!("{return_url}?status=success"),
+            failure_url: format!("{return_url}?status=failure"),
+            processing_channel_id: auth_type.processing_channel_id,
+        })
+    }
+}
+
+/// Checkout.com payment session response containing the token for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CheckoutClientAuthResponse {
+    pub id: String,
+    pub payment_session_token: Secret<String>,
+    pub payment_session_secret: Secret<String>,
+}
+
+impl TryFrom<ResponseRouterData<CheckoutClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<CheckoutClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Checkout(
+                CheckoutClientAuthenticationResponseDomain {
+                    payment_session_id: response.id,
+                    payment_session_token: response.payment_session_token,
+                    payment_session_secret: response.payment_session_secret,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }

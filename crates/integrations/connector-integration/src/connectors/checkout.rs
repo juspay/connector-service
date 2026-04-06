@@ -40,8 +40,9 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    CheckoutErrorResponse, PaymentCaptureRequest, PaymentCaptureResponse, PaymentVoidRequest,
-    PaymentVoidResponse, PaymentsRequest, PaymentsRequest as SetupMandateRequest,
+    CheckoutClientAuthRequest, CheckoutClientAuthResponse, CheckoutErrorResponse,
+    PaymentCaptureRequest, PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse,
+    PaymentsRequest, PaymentsRequest as SetupMandateRequest,
     PaymentsRequest as RepeatPaymentRequest, PaymentsResponse, PaymentsResponse as PSyncResponse,
     PaymentsResponse as SetupMandateResponse, PaymentsResponse as RepeatPaymentResponse,
     RSyncResponse, RefundRequest, RefundResponse,
@@ -252,6 +253,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: CheckoutClientAuthRequest,
+            response_body: CheckoutClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -728,15 +735,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Checkout<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
+    curl_request: Json(CheckoutClientAuthRequest),
+    curl_response: CheckoutClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}payment-sessions", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

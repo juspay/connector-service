@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
     Adyen(AdyenClientAuthenticationResponse),
+    /// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
+    Checkout(CheckoutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3447,6 +3449,17 @@ pub struct AdyenClientAuthenticationResponse {
     pub session_id: String,
     /// The session data required to initialize the Adyen SDK
     pub session_data: Secret<String>,
+}
+
+/// Checkout.com's payment_session_token and payment_session_secret for Frames/Flow SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckoutClientAuthenticationResponse {
+    /// The payment session identifier
+    pub payment_session_id: String,
+    /// The base64-encoded token for client-side SDK initialization
+    pub payment_session_token: Secret<String>,
+    /// The secret for secure client-side operations
+    pub payment_session_secret: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
