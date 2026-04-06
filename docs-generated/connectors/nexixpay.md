@@ -114,7 +114,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L233) · [JavaScript](../../examples/nexixpay/nexixpay.js#L221) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L78) · [Rust](../../examples/nexixpay/nexixpay.rs#L107)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py) · [JavaScript](../../examples/nexixpay/nexixpay.js) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L78) · [Rust](../../examples/nexixpay/nexixpay.rs#L107)
 
 #### PaymentService.Get
 
@@ -125,7 +125,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L242) · [JavaScript](../../examples/nexixpay/nexixpay.js#L230) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L88) · [Rust](../../examples/nexixpay/nexixpay.rs#L114)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py) · [JavaScript](../../examples/nexixpay/nexixpay.js) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L88) · [Rust](../../examples/nexixpay/nexixpay.rs#L114)
 
 #### PaymentService.Refund
 
@@ -147,7 +147,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L284) · [JavaScript](../../examples/nexixpay/nexixpay.js#L267) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L146) · [Rust](../../examples/nexixpay/nexixpay.rs#L142)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py) · [JavaScript](../../examples/nexixpay/nexixpay.js) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L146) · [Rust](../../examples/nexixpay/nexixpay.rs#L142)
 
 ### Refunds
 
@@ -173,4 +173,4 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L251) · [JavaScript](../../examples/nexixpay/nexixpay.js#L239) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L96) · [Rust](../../examples/nexixpay/nexixpay.rs#L121)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py) · [JavaScript](../../examples/nexixpay/nexixpay.js) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L96) · [Rust](../../examples/nexixpay/nexixpay.rs#L121)
