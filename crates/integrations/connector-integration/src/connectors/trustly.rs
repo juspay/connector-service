@@ -6,22 +6,24 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
+        CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -48,20 +50,26 @@ use error_stack::ResultExt;
 
 // Trait for types that can provide access tokens
 pub trait AccessTokenProvider {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError>;
+    fn get_access_token(&self) -> CustomResult<String, errors::IntegrationError>;
 }
 
 impl AccessTokenProvider for PaymentFlowData {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
-        self.get_access_token()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+    fn get_access_token(&self) -> CustomResult<String, errors::IntegrationError> {
+        self.get_access_token().change_context(
+            errors::IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
-        self.get_access_token()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+    fn get_access_token(&self) -> CustomResult<String, errors::IntegrationError> {
+        self.get_access_token().change_context(
+            errors::IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            },
+        )
     }
 }
 
@@ -80,7 +88,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Trustly<T>
+    connector_types::ClientAuthentication for Trustly<T>
 {
 }
 
@@ -169,11 +177,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Trustly<T>
+    connector_types::ServerSessionAuthentication for Trustly<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Trustly<T>
+    connector_types::ServerAuthentication for Trustly<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -212,9 +220,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SdkSessionToken,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        PaymentsSdkSessionTokenData,
+        ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     > for Trustly<T>
 {
@@ -248,7 +256,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn build_headers<F, FlowData, Req, Res>(
             &self,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError>
         where
             FlowData: AccessTokenProvider,
             Self: ConnectorIntegrationV2<F, FlowData, Req, Res>,
@@ -288,11 +296,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorResponseTransformationError> {
         let response: TrustlyErrorResponse = res
             .response
             .parse_struct("TrustlyErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(crate::utils::response_deserialization_fail(
+                res.status_code,
+                "trustly: response body did not match the expected format",
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -326,14 +337,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             Ok(Vec::new())
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url(req);
             Ok(base_url)
         }
@@ -356,14 +367,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
             Ok(Vec::new())
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, errors::IntegrationError> {
             Ok(req.resource_common_data.connectors.trustly.base_url.clone())
         }
     }
@@ -432,10 +443,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateSessionToken,
+        ServerSessionAuthenticationToken,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData,
     > for Trustly<T>
 {
 }
@@ -500,10 +511,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        ServerAuthenticationToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     > for Trustly<T>
 {
 }
@@ -526,11 +537,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<bool, error_stack::Report<errors::WebhookError>> {
         let webhook_body: TrustlyWebhookBody = request
             .body
             .parse_struct("TrustlyWebhookBody")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
         let webhook_secret = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
@@ -545,12 +556,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::WebhookError>>
     {
         let webhook_body: TrustlyWebhookBody = request
             .body
             .parse_struct("TrustlyWebhookBody")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(trustly::get_webhook_event(webhook_body.method))
     }
@@ -562,13 +573,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
+        error_stack::Report<errors::WebhookError>,
     > {
         let request_body_copy = request.body.clone();
         let details: TrustlyWebhookBody = request
             .body
             .parse_struct("TrustlyWebhookBody")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
         let status = trustly::get_trustly_payment_webhook_status(&details.method);
 
@@ -602,13 +613,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
+        error_stack::Report<errors::WebhookError>,
     > {
         let request_body_copy = request.body.clone();
         let details: TrustlyWebhookBody = request
             .body
             .parse_struct("TrustlyWebhookBody")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
         let status = trustly::get_trustly_refund_webhook_status(&details.method);
 
@@ -633,12 +644,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<errors::ConnectorError>,
+        error_stack::Report<errors::WebhookError>,
     > {
         let details: TrustlyWebhookBody = request
             .body
             .parse_struct("TrustlyWebhookBody")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
         Ok(Box::new(details))
     }
 }

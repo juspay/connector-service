@@ -40,7 +40,7 @@ pub struct TrustlyAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for TrustlyAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Trustly {
@@ -53,7 +53,10 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustlyAuthType {
                 password: password.clone(),
                 private_key: private_key.clone(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(errors::IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -192,25 +195,41 @@ fn generate_trustly_signature<T: Serialize>(
     uuid: &str,
     data: &T,
     private_key: &str,
-) -> Result<String, errors::ConnectorError> {
+) -> Result<String, errors::IntegrationError> {
     let algorithm = Algorithm::SHA256;
-    let pem = base64_decode(private_key.to_string())
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-    let rsa = Rsa::private_key_from_pem(&pem)
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+    let pem = base64_decode(private_key.to_string()).map_err(|_| {
+        errors::IntegrationError::RequestEncodingFailed {
+            context: Default::default(),
+        }
+    })?;
+    let rsa = Rsa::private_key_from_pem(&pem).map_err(|_| {
+        errors::IntegrationError::RequestEncodingFailed {
+            context: Default::default(),
+        }
+    })?;
     let private_key =
-        PKey::from_rsa(rsa).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+        PKey::from_rsa(rsa).map_err(|_| errors::IntegrationError::RequestEncodingFailed {
+            context: Default::default(),
+        })?;
 
     let plaintext = format!("{}{}{}", method.as_str(), uuid, trustly_serialize(data));
 
-    let mut signer = Signer::new(algorithm.message_digest(), &private_key)
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-    signer
-        .update(plaintext.as_bytes())
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-    let signature = signer
-        .sign_to_vec()
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+    let mut signer = Signer::new(algorithm.message_digest(), &private_key).map_err(|_| {
+        errors::IntegrationError::RequestEncodingFailed {
+            context: Default::default(),
+        }
+    })?;
+    signer.update(plaintext.as_bytes()).map_err(|_| {
+        errors::IntegrationError::RequestEncodingFailed {
+            context: Default::default(),
+        }
+    })?;
+    let signature =
+        signer
+            .sign_to_vec()
+            .map_err(|_| errors::IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
     Ok(format!(
         "{}{}",
@@ -232,7 +251,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustlyPaymentRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
     fn try_from(
         item: TrustlyRouterData<
             RouterDataV2<
@@ -253,8 +272,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .return_url
                     .clone()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(errors::IntegrationError::MissingRequiredField {
                         field_name: "return_url",
+                        context: Default::default(),
                     })?;
                 let uuid = uuid::Uuid::new_v4().to_string();
                 let attributes = TrustlyPaymentRequestAttributes {
@@ -265,7 +285,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data.request.minor_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                        .change_context(errors::IntegrationError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
                     country: item
                         .router_data
                         .resource_common_data
@@ -274,8 +296,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             item.router_data
                                 .resource_common_data
                                 .get_optional_shipping_country()
-                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                .ok_or(errors::IntegrationError::MissingRequiredField {
                                     field_name: "country",
+                                    context: Default::default(),
                                 })?,
                         ),
                     currency: item.router_data.request.currency,
@@ -288,8 +311,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .router_data
                             .resource_common_data
                             .get_optional_billing_email())
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                        .ok_or(errors::IntegrationError::MissingRequiredField {
                             field_name: "email",
+                            context: Default::default(),
                         })?,
                     fail_u_r_l: return_url.clone(),
                     firstname: item
@@ -305,8 +329,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .router_data
                         .request
                         .get_optional_language_from_browser_info()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                        .ok_or(errors::IntegrationError::MissingRequiredField {
                             field_name: "locale",
+                            context: Default::default(),
                         })?
                         .replace('-', "_"),
                     mobile: item
@@ -347,8 +372,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .connector_request_reference_id,
                     notification_u_r_l: item.router_data.request.webhook_url.clone().ok_or(
-                        errors::ConnectorError::MissingRequiredField {
+                        errors::IntegrationError::MissingRequiredField {
                             field_name: "webhook_url",
+                            context: Default::default(),
                         },
                     )?,
                     password: auth_details.password.clone(),
@@ -391,8 +417,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::MobilePayment(_) => Err(errors::ConnectorError::NotImplemented(
+            | PaymentMethodData::MobilePayment(_) => Err(errors::IntegrationError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Trustly"),
+                Default::default(),
             )
             .into()),
         }
@@ -429,7 +456,7 @@ pub struct TrustlyPaymentsResponseData {
 impl<F, T> TryFrom<ResponseRouterData<TrustlyPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
     fn try_from(
         item: ResponseRouterData<TrustlyPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -528,7 +555,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TrustlyRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::IntegrationError>;
 
     fn try_from(
         item: TrustlyRouterData<
@@ -544,8 +571,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .refund_id
                 .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(errors::IntegrationError::MissingRequiredField {
                     field_name: "refund_id",
+                    context: Default::default(),
                 })?,
         });
         let data = TrustlyRefundRequestData {
@@ -556,7 +584,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_refund_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                .change_context(errors::IntegrationError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
             attributes,
             currency: item.router_data.request.currency,
             order_i_d: item.router_data.request.connector_transaction_id.clone(),
@@ -630,7 +660,7 @@ impl From<TrustlyRefundResult> for common_enums::RefundStatus {
 impl TryFrom<ResponseRouterData<TrustlyRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
 
     fn try_from(
         item: ResponseRouterData<TrustlyRefundResponse, Self>,
@@ -738,7 +768,7 @@ pub struct TrustlyWebhookAttributes {
 pub fn verify_webhook_signature(
     webhook_body: TrustlyWebhookBody,
     public_key: Vec<u8>,
-) -> error_stack::Result<bool, errors::ConnectorError> {
+) -> error_stack::Result<bool, errors::WebhookError> {
     let method = webhook_body.method;
     let uuid = webhook_body.params.uuid;
     let data = &webhook_body.params.data;
@@ -746,12 +776,12 @@ pub fn verify_webhook_signature(
 
     let pem_bytes = general_purpose::STANDARD
         .decode(&public_key)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
 
     let rsa = Rsa::public_key_from_pem(&pem_bytes)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
     let public_key = PKey::from_rsa(rsa)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
 
     let (algorithm, signature_b64) = if signature.len() >= 10
         && signature.starts_with("alg=RS")
@@ -775,16 +805,16 @@ pub fn verify_webhook_signature(
 
     let signature_bytes = general_purpose::STANDARD
         .decode(signature_b64)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
 
     let mut verifier = Verifier::new(algorithm.message_digest(), &public_key)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
     verifier
         .update(plaintext.as_bytes())
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
     verifier
         .verify(&signature_bytes)
-        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+        .change_context(errors::WebhookError::WebhookSourceVerificationFailed)
 }
 
 pub fn get_webhook_event(event: TrustlyWebhookMethod) -> domain_types::connector_types::EventType {
