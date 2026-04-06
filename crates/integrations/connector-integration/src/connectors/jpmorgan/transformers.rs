@@ -523,12 +523,13 @@ fn map_transaction_state_to_attempt_status(
 impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
     type Error = ResponseError;
     fn try_from(item: &responses::JpmorganPaymentsResponse) -> Result<Self, Self::Error> {
-        // Extract networkTransactionId from card response for MIT flows
+        // Extract networkTransactionId from card.networkResponse for MIT flows
         let network_txn_id = item
             .payment_method_type
             .as_ref()
             .and_then(|pmt| pmt.card.as_ref())
-            .and_then(|card| card.network_transaction_id.clone());
+            .and_then(|card| card.network_response.as_ref())
+            .and_then(|nr| nr.network_transaction_id.clone());
 
         Ok(Self::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.transaction_id.clone()),
