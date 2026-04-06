@@ -11614,13 +11614,12 @@ impl ForeignTryFrom<PaymentServiceSplitSettlementRequest> for connector_types::S
             .into_iter()
             .map(|t| {
                 let currency = common_enums::Currency::from_str(&t.currency).map_err(|e| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    error_stack::Report::new(Self::Error::BadRequest(ApiError {
                         sub_code: "INVALID_CURRENCY".to_string(),
                         error_identifier: 400,
-                        error_message: format!("Invalid currency: {}", t.currency),
+                        error_message: format!("Invalid currency '{}': {}", t.currency, e),
                         error_object: None,
                     }))
-                    .attach_printable(format!("Currency parse error: {e}"))
                 })?;
                 Ok(connector_types::SplitSettlementTransfer {
                     account_id: t.account_id,
