@@ -1815,6 +1815,28 @@ def render_consolidated_javascript(
 
     client_imports = ", ".join(_client_class(svc) for svc in all_service_names)
 
+    # Collect enum types used in payload fields (for Currency.USD, CaptureMethod.MANUAL, etc.)
+    ts_enum_types: set[str] = set()
+    for scenario, flow_payloads in scenarios_with_payloads:
+        for fk in scenario.flows:
+            payload = dict(flow_payloads.get(fk, {}))
+            if fk == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+            grpc_req = flow_metadata.get(fk, {}).get("grpc_request", "")
+            ts_enum_types.update(_collect_ts_enum_types(payload, grpc_req, db))
+    for flow_key, proto_req, _ in (flow_items or []):
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+        ts_enum_types.update(_collect_ts_enum_types(proto_req, grpc_req, db))
+    
+    # Build enum imports string
+    enum_imports = ", ".join(sorted(ts_enum_types)) if ts_enum_types else ""
+    types_imports = "ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment"
+    if enum_imports:
+        types_imports += f", {enum_imports}"
+
     # Build one function block per scenario
     func_blocks:   list[str] = []
     func_names_js: list[str] = []
@@ -1973,7 +1995,7 @@ def render_consolidated_javascript(
         func_blocks.append(
             f"// {scenario.title}\n"
             f"// {scenario.description}\n"
-            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {scenario_return_type} {{\n"
+            f"async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {scenario_return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
@@ -2029,17 +2051,17 @@ def render_consolidated_javascript(
             return_type = "Promise<any>"
         func_blocks.append(
             f"// Flow: {svc}.{rpc_name}{pm_part}\n"
-            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {return_type} {{\n"
+            f"async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
 
     # Also export _build*Request helpers so the gRPC smoke test can call them directly.
-    builder_export_names = [
+    # Only export builder functions - scenario/flow functions are already exported individually
+    exports = ", ".join(
         "_build" + "".join(w.title() for w in fk.split("_")) + "Request"
         for fk in sorted(js_has_builder)
-    ]
-    exports          = ", ".join(func_names_js + builder_export_names)
+    )
     js_builders_text = "\n\n".join(js_builder_fns)
     js_builders_section = f"\n\n{js_builders_text}\n" if js_builder_fns else ""
     funcs_text       = "\n\n".join(func_blocks)
@@ -2053,8 +2075,8 @@ def render_consolidated_javascript(
 // {connector_name.title()} — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx {connector_name}.ts {first_scenario}
 
-import {{ {client_imports} }} from 'hyperswitch-prism';
-import {{ ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment }} from 'hyperswitch-prism/types';
+import {{ {client_imports}, types }} from 'hyperswitch-prism';
+const {{ {types_imports} }} = types;
 
 const _defaultConfig: ConnectorConfig = {{
     options: {{
@@ -2071,7 +2093,10 @@ const _defaultConfig: ConnectorConfig = {{
 {funcs_text}
 
 
-export {{ {exports} }};
+// Export all process* functions for the smoke test
+export {{
+    {exports}
+}};
 
 // CLI runner
 if (require.main === module) {{

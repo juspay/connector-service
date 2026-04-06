@@ -338,17 +338,21 @@ def grpc_method_path(service: str, rpc_name: str) -> str:
     return f"{service_to_grpc_field(service)}/{rpc_name}"
 
 
-# Special-case grpc_* function names for flows where the bare RPC name is
-# ambiguous or non-descriptive (e.g. CustomerService.Create → "create_customer").
-_GRPC_EXAMPLE_FN_OVERRIDES: dict[tuple[str, str], str] = {
-    ("CustomerService",        "create"): "create_customer",
-    ("RecurringPaymentService", "charge"): "recurring_charge",
+# Special-case flow names where the bare RPC name is ambiguous or non-descriptive.
+# Used for SDK method names and gRPC examples.
+_FLOW_NAME_OVERRIDES: dict[tuple[str, str], str] = {
+    ("CustomerService", "Create"): "create_customer",
+    ("RecurringPaymentService", "Charge"): "recurring_charge",
+    ("RefundService", "Get"): "refund_get",
+    ("PayoutService", "Get"): "payout_get",
+    ("PayoutService", "Create"): "payout_create",
+    ("PayoutService", "Void"): "payout_void",
 }
 
 
-def grpc_example_fn_name(service: str, rpc_name: str) -> str:
-    """Canonical grpc_* smoke-test function suffix for a (service, rpc) pair."""
-    return _GRPC_EXAMPLE_FN_OVERRIDES.get((service, rpc_name), rpc_name)
+def get_flow_method_name(service: str, rpc_name: str) -> str:
+    """Get the SDK method name for a flow, applying overrides if needed."""
+    return _FLOW_NAME_OVERRIDES.get((service, rpc_name), to_snake_case(rpc_name))
 
 
 # Register helpers as Jinja2 globals so templates can call them directly.
@@ -358,7 +362,7 @@ env.globals["service_to_grpc_struct"]    = service_to_grpc_struct
 env.globals["service_to_grpc_field"]     = service_to_grpc_field
 env.globals["service_to_grpc_js_field"]  = service_to_grpc_js_field
 env.globals["grpc_method_path"]          = grpc_method_path
-env.globals["grpc_example_fn_name"]      = grpc_example_fn_name
+env.globals["get_flow_method_name"]      = get_flow_method_name
 env.globals["to_camel"]      = to_camel
 env.globals["to_snake_case"] = to_snake_case
 
@@ -580,6 +584,37 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
     )
 
 
+RUST_CONNECTOR_CLIENT_OUT = SDK_ROOT / "rust/src/_generated_connector_client.rs"
+
+
+def gen_rust_connector_client(flows: list[dict], single_flows: list[dict] = []) -> None:
+    """Generate connector_client.rs — auto-generated ConnectorClient with all flow methods."""
+    import subprocess
+
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_services = sorted(set(groups) | set(single_groups))
+
+    render(
+        "rust/connector_client.rs.j2",
+        RUST_CONNECTOR_CLIENT_OUT,
+        flows=flows,
+        single_flows=single_flows,
+        all_services=all_services,
+        groups=groups,
+        single_groups=single_groups,
+    )
+
+    # Format with rustfmt so the file matches `cargo fmt` output exactly.
+    result = subprocess.run(
+        ["rustfmt", "--edition", "2021", str(RUST_CONNECTOR_CLIENT_OUT)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"  warning: rustfmt failed: {result.stderr.strip()}")
+
+
 def _grpc_groups() -> tuple[list[str], dict[str, list[dict]]]:
     """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators).
     
@@ -774,6 +809,8 @@ def main() -> None:
         print("Generating Rust FFI flow registrations...")
         gen_rust_handlers(flows)
         gen_rust_ffi_flows(flows)
+        print("Generating Rust connector client...")
+        gen_rust_connector_client(flows, single_flows)
 
     if args.lang in ("grpc", "all"):
         print("Generating Rust gRPC client...")
