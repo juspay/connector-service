@@ -134,6 +134,8 @@ pub struct FiservemeaPaymentsRequest<T: PaymentMethodDataTypes> {
     pub transaction_amount: TransactionAmount,
     pub order: OrderDetails,
     pub payment_method: PaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stored_credentials: Option<StoredCredentials>,
 }
 
 #[derive(Debug, Serialize)]
@@ -401,6 +403,18 @@ impl<T: PaymentMethodDataTypes>
             order_id: merchant_transaction_id.clone(),
         };
 
+        // Build storedCredentials for CIT FIRST when setup_future_usage is OFF_SESSION
+        let stored_credentials = if item.request.is_mandate_payment() {
+            Some(StoredCredentials {
+                sequence: StoredCredentialsSequence::First,
+                scheduled: false,
+                initiator: StoredCredentialsInitiator::Cardholder,
+                referenced_scheme_transaction_id: None,
+            })
+        } else {
+            None
+        };
+
         if is_manual_capture {
             Ok(Self {
                 request_type: FiservemeaRequestType::PaymentCardPreAuthTransaction,
@@ -408,6 +422,7 @@ impl<T: PaymentMethodDataTypes>
                 transaction_amount,
                 order,
                 payment_method,
+                stored_credentials,
             })
         } else {
             Ok(Self {
@@ -416,6 +431,7 @@ impl<T: PaymentMethodDataTypes>
                 transaction_amount,
                 order,
                 payment_method,
+                stored_credentials,
             })
         }
     }
@@ -750,7 +766,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaPaymentsRes
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
-                network_txn_id: item.response.api_trace_id.clone(),
+                network_txn_id: item
+                    .response
+                    .scheme_transaction_id
+                    .clone()
+                    .or_else(|| item.response.api_trace_id.clone()),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
