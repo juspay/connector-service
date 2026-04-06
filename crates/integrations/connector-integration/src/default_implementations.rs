@@ -226,6 +226,7 @@ default_impl_split_settlement_v2!(
     Silverflow,
     Stax,
     Stripe,
+    Trustly,
     Trustpay,
     Trustpayments,
     Truelayer,

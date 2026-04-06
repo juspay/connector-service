@@ -11581,7 +11581,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
 // SplitSettlement Flow Conversions
 // ============================================================================
 impl ForeignTryFrom<PaymentServiceSplitSettlementRequest> for connector_types::SplitSettlementData {
-    type Error = ApplicationErrorResponse;
+    type Error = IntegrationError;
 
     fn foreign_try_from(
         value: PaymentServiceSplitSettlementRequest,
@@ -11591,12 +11591,11 @@ impl ForeignTryFrom<PaymentServiceSplitSettlementRequest> for connector_types::S
             .into_iter()
             .map(|t| {
                 let currency = common_enums::Currency::from_str(&t.currency).map_err(|e| {
-                    error_stack::Report::new(Self::Error::BadRequest(ApiError {
-                        sub_code: "INVALID_CURRENCY".to_string(),
-                        error_identifier: 400,
-                        error_message: format!("Invalid currency '{}': {}", t.currency, e),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                        field_name: "currency",
+                        context: Default::default(),
+                    })
+                    .attach_printable(format!("Invalid currency '{}': {}", t.currency, e))
                 })?;
                 Ok(connector_types::SplitSettlementTransfer {
                     account_id: t.account_id,
@@ -11604,7 +11603,7 @@ impl ForeignTryFrom<PaymentServiceSplitSettlementRequest> for connector_types::S
                     currency,
                 })
             })
-            .collect::<Result<Vec<_>, error_stack::Report<ApplicationErrorResponse>>>()?;
+            .collect::<Result<Vec<_>, error_stack::Report<IntegrationError>>>()?;
 
         Ok(Self {
             payment_id: value.payment_id,
@@ -11620,7 +11619,7 @@ impl
         &MaskedMetadata,
     )> for connector_types::PaymentFlowData
 {
-    type Error = ApplicationErrorResponse;
+    type Error = IntegrationError;
 
     fn foreign_try_from(
         (value, connectors, metadata): (

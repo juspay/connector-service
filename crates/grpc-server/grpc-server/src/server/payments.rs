@@ -2961,7 +2961,7 @@ pub fn generate_split_settlement_response(
         SplitSettlementData,
         SplitSettlementResponseData,
     >,
-) -> Result<PaymentServiceSplitSettlementResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceSplitSettlementResponse, error_stack::Report<IntegrationError>> {
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
