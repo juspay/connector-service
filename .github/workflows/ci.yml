@@ -160,10 +160,12 @@ jobs:
 
   sdk-test:
     name: SDK Tests
-    runs-on: macos-latest
+    runs-on: ubuntu-latest  # OPTIMIZATION: Use Ubuntu instead of macOS (2-3x faster, cheaper)
 
     env:
       RUSTFLAGS: "-D warnings"
+      PROFILE: dev  # OPTIMIZATION: Use debug profile instead of release (5x faster compilation)
+      CARGO_INCREMENTAL: 1  # OPTIMIZATION: Enable incremental compilation for dev profile
 
     steps:
       - name: Checkout code
@@ -190,17 +192,47 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python codegen dependencies
-        run: make -C sdk install-deps
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'  # OPTIMIZATION: Cache npm dependencies
+          cache-dependency-path: |
+            sdk/javascript/package-lock.json
+            sdk/tests/package.json
+
+      - name: Cache pip dependencies  # OPTIMIZATION: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('sdk/python/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - uses: Swatinem/rust-cache@v2.7.8
         with:
           cache-on-failure: true
+          key: sdk-test-${{ runner.os }}  # OPTIMIZATION: Separate cache key for SDK tests
+
+      - name: Cache FFI library  # OPTIMIZATION: Cache compiled FFI library
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/libconnector_service_ffi.so
+            target/*/libconnector_service_ffi.dylib
+          key: ffi-lib-${{ runner.os }}-${{ hashFiles('crates/ffi/**/*.rs', 'crates/ffi/**/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            ffi-lib-${{ runner.os }}-
+
+      - name: Install Python codegen dependencies
+        run: |
+          pip install -r sdk/python/requirements.txt grpcio-tools protobuf
+          make -C sdk install-deps
+
+      - name: Install Node dependencies
+        run: |
+          cd sdk/javascript && npm ci && cd ../..
+          cd sdk/tests && npm ci && cd ../..
 
       - name: Create connector credentials for SDK tests
         shell: bash
@@ -214,6 +246,15 @@ jobs:
             echo "No CONNECTOR_SPECIFIC_AUTH secret found, will run in dry-run mode"
           fi
 
+      - name: Build FFI library once  # OPTIMIZATION: Build FFI once and reuse
+        run: |
+          if [ ! -f target/debug/libconnector_service_ffi.so ] && [ ! -f target/debug/libconnector_service_ffi.dylib ]; then
+            echo "Building FFI library (cache miss)..."
+            cargo build -p connector_service_ffi
+          else
+            echo "Using cached FFI library"
+          fi
+
       - name: Run SDK Tests
         shell: bash
         run: |
@@ -222,7 +263,8 @@ jobs:
           else
             echo "Running SDK tests without connector credentials (dry-run mode)"
           fi
-          make -C sdk test
+          # Skip FFI rebuild during test - already built above
+          make -C sdk test FFI_SKIP_BUILD=1
 
       - name: Regenerate SDK code
         shell: bash
