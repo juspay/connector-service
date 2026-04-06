@@ -131,11 +131,10 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
             Err(status) => {
-                assert!(
-                    status.code() == tonic::Code::InvalidArgument
-                        || status.code() == tonic::Code::Internal,
-                    "Unexpected gRPC status code: {:?}",
-                    status.code()
+                assert_eq!(
+                    status.code(),
+                    tonic::Code::InvalidArgument,
+                    "integration errors from authorize should map via IntoGrpcStatus (e.g. invalid_argument), not a generic INTERNAL: {status:?}"
                 );
             }
         }

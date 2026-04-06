@@ -3,6 +3,7 @@ use crate::payouts;
 use crate::types::Connectors;
 use crate::utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom};
 use common_utils::metadata::MaskedMetadata;
+use error_stack::ResultExt;
 use hyperswitch_masking::PeekInterface;
 use payouts::payouts_types::PayoutFlowData;
 
@@ -70,29 +71,25 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
 
         let destination_currency = {
             let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "destination_currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid destination currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "destination_currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid destination currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
@@ -113,14 +110,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
                 .priority
                 .map(|p| {
                     let pp = grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(p)
-                        .map_err(|_| {
-                            error_stack::report!(IntegrationError::InvalidDataFormat {
-                                field_name: "priority",
-                                context: IntegrationErrorContext {
-                                    additional_context: Some("Invalid payout priority".to_owned()),
-                                    ..Default::default()
-                                },
-                            })
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "priority",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Invalid payout priority".to_owned()),
+                                ..Default::default()
+                            },
                         })?;
                     common_enums::PayoutPriority::foreign_try_from(pp)
                 })
@@ -258,21 +253,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout>
     fn foreign_try_from(
         card: grpc_api_types::payouts::CardPayout,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let card_network = card
-            .card_network
-            .map(|n| {
-                let network = grpc_api_types::payments::CardNetwork::try_from(n).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "card_network",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid card network".to_owned()),
-                            ..Default::default()
-                        },
-                    })
-                })?;
-                common_enums::CardNetwork::foreign_try_from(network)
-            })
-            .transpose()?;
+        let card_network =
+            card.card_network
+                .map(|n| {
+                    let network = grpc_api_types::payments::CardNetwork::try_from(n)
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "card_network",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Invalid card network".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
+                    common_enums::CardNetwork::foreign_try_from(network)
+                })
+                .transpose()?;
         Ok(payouts::payout_method_data::CardPayout {
             card_number: std::str::FromStr::from_str(
                 &card
@@ -291,14 +285,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout>
                     .peek()
                     .clone(),
             )
-            .map_err(|_| {
-                error_stack::report!(IntegrationError::InvalidDataFormat {
-                    field_name: "card_number",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Invalid card number".to_owned()),
-                        ..Default::default()
-                    },
-                })
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "card_number",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Invalid card number".to_owned()),
+                    ..Default::default()
+                },
             })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 card.card_exp_month
@@ -353,32 +345,29 @@ impl ForeignTryFrom<grpc_api_types::payouts::AchBankTransferPayout>
                         .map(|b| b.as_str_name())
                         .unwrap_or_default(),
                 )
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "bank_name",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank name".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "bank_name",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid bank name".to_owned()),
+                        ..Default::default()
+                    },
                 })
             })
             .transpose()?;
-        let bank_country_code = ach
-            .bank_country_code
-            .map(|bcc| {
-                let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "country_code",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank country code".to_owned()),
-                            ..Default::default()
-                        },
-                    })
-                })?;
-                common_enums::CountryAlpha2::foreign_try_from(cc)
-            })
-            .transpose()?;
+        let bank_country_code =
+            ach.bank_country_code
+                .map(|bcc| {
+                    let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc)
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "country_code",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Invalid bank country code".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
+                    common_enums::CountryAlpha2::foreign_try_from(cc)
+                })
+                .transpose()?;
 
         Ok(payouts::payout_method_data::AchBankTransfer {
             bank_name,
@@ -431,32 +420,29 @@ impl ForeignTryFrom<grpc_api_types::payouts::BacsBankTransferPayout>
                         .map(|b| b.as_str_name())
                         .unwrap_or_default(),
                 )
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "bank_name",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank name".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "bank_name",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid bank name".to_owned()),
+                        ..Default::default()
+                    },
                 })
             })
             .transpose()?;
-        let bank_country_code = bacs
-            .bank_country_code
-            .map(|bcc| {
-                let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "country_code",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank country code".to_owned()),
-                            ..Default::default()
-                        },
-                    })
-                })?;
-                common_enums::CountryAlpha2::foreign_try_from(cc)
-            })
-            .transpose()?;
+        let bank_country_code =
+            bacs.bank_country_code
+                .map(|bcc| {
+                    let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc)
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "country_code",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Invalid bank country code".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
+                    common_enums::CountryAlpha2::foreign_try_from(cc)
+                })
+                .transpose()?;
         Ok(payouts::payout_method_data::BacsBankTransfer {
             bank_name,
             bank_country_code,
@@ -508,32 +494,29 @@ impl ForeignTryFrom<grpc_api_types::payouts::SepaBankTransferPayout>
                         .map(|b| b.as_str_name())
                         .unwrap_or_default(),
                 )
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "bank_name",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank name".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "bank_name",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid bank name".to_owned()),
+                        ..Default::default()
+                    },
                 })
             })
             .transpose()?;
-        let bank_country_code = sepa
-            .bank_country_code
-            .map(|bcc| {
-                let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "country_code",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank country code".to_owned()),
-                            ..Default::default()
-                        },
-                    })
-                })?;
-                common_enums::CountryAlpha2::foreign_try_from(cc)
-            })
-            .transpose()?;
+        let bank_country_code =
+            sepa.bank_country_code
+                .map(|bcc| {
+                    let cc = grpc_api_types::payments::CountryAlpha2::try_from(bcc)
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "country_code",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Invalid bank country code".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
+                    common_enums::CountryAlpha2::foreign_try_from(cc)
+                })
+                .transpose()?;
         Ok(payouts::payout_method_data::SepaBankTransfer {
             bank_name,
             bank_country_code,
@@ -576,14 +559,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                         .map(|b| b.as_str_name())
                         .unwrap_or_default(),
                 )
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "bank_name",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid bank name".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "bank_name",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid bank name".to_owned()),
+                        ..Default::default()
+                    },
                 })
             })
             .transpose()?;
@@ -637,15 +618,15 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
         let card_network = apple
             .card_network
             .map(|n| {
-                let network = grpc_api_types::payments::CardNetwork::try_from(n).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
+                let network = grpc_api_types::payments::CardNetwork::try_from(n).change_context(
+                    IntegrationError::InvalidDataFormat {
                         field_name: "card_network",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid card network".to_owned()),
                             ..Default::default()
                         },
-                    })
-                })?;
+                    },
+                )?;
                 common_enums::CardNetwork::foreign_try_from(network)
             })
             .transpose()?;
@@ -668,15 +649,15 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
                     .peek()
                     .clone(),
             )
-            .map_err(|_| {
-                error_stack::report!(IntegrationError::InvalidDataFormat {
+            .change_context(
+                    IntegrationError::InvalidDataFormat {
                     field_name: "dpan",
                     context: IntegrationErrorContext {
                         additional_context: Some("Invalid dpan".to_owned()),
                         ..Default::default()
                     },
-                })
-            })?,
+                },
+                )?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 apple
                     .expiry_month
@@ -726,15 +707,15 @@ impl ForeignTryFrom<grpc_api_types::payouts::Paypal> for payouts::payout_method_
             email: paypal
                 .email
                 .map(|e| {
-                    e.peek().to_string().parse().map_err(|_| {
-                        error_stack::report!(IntegrationError::InvalidDataFormat {
+                    e.peek().to_string().parse().change_context(
+                        IntegrationError::InvalidDataFormat {
                             field_name: "email",
                             context: IntegrationErrorContext {
                                 additional_context: Some("Invalid email".to_owned()),
                                 ..Default::default()
                             },
-                        })
-                    })
+                        },
+                    )
                 })
                 .transpose()?,
             telephone_number: paypal
@@ -782,14 +763,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::InteracPayout>
                 .peek()
                 .to_string()
                 .parse()
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "email",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "email",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid email".to_owned()),
+                        ..Default::default()
+                    },
                 })?,
         })
     }
@@ -845,14 +824,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::Passthrough>
         pt: grpc_api_types::payouts::Passthrough,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let token_type = grpc_api_types::payments::PaymentMethodType::try_from(pt.token_type)
-            .map_err(|_| {
-                error_stack::report!(IntegrationError::InvalidDataFormat {
-                    field_name: "recipient_type",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Invalid payout recipient type".to_owned()),
-                        ..Default::default()
-                    },
-                })
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "token_type",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Invalid pass through token type".to_owned()),
+                    ..Default::default()
+                },
             })?;
         let token_type_opt =
             Option::<common_enums::PaymentMethodType>::foreign_try_from(token_type)?;
@@ -881,9 +858,9 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethod>
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let data = value.payout_method_data.ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
-                field_name: "pix_key",
+                field_name: "payout_method_data",
                 context: IntegrationErrorContext {
-                    additional_context: Some("Pix key is required for Pix".to_owned()),
+                    additional_context: Some("Payout method data is required".to_owned()),
                     ..Default::default()
                 },
             })
@@ -977,29 +954,25 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
 
         let destination_currency = {
             let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "destination_currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid destination currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "destination_currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid destination currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
@@ -1012,17 +985,14 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
         let priority = value
             .priority
             .map(|priority| {
-                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority).map_err(
-                    |_| {
-                        error_stack::report!(IntegrationError::InvalidDataFormat {
-                            field_name: "priority",
-                            context: IntegrationErrorContext {
-                                additional_context: Some("Invalid payout priority".to_owned()),
-                                ..Default::default()
-                            },
-                        })
-                    },
-                )
+                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority)
+                    .change_context(IntegrationError::InvalidDataFormat {
+                        field_name: "priority",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Invalid payout priority".to_owned()),
+                            ..Default::default()
+                        },
+                    })
             })
             .transpose()?
             .map(common_enums::PayoutPriority::foreign_try_from)
@@ -1097,29 +1067,25 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceStageRequest>
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
 
         let destination_currency = {
             let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "destination_currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid destination currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "destination_currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid destination currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
@@ -1157,29 +1123,25 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateLinkRequest>
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
 
         let destination_currency = {
             let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
-                .map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "destination_currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid destination currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "destination_currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid destination currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
@@ -1192,17 +1154,14 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateLinkRequest>
         let priority = value
             .priority
             .map(|priority| {
-                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority).map_err(
-                    |_| {
-                        error_stack::report!(IntegrationError::InvalidDataFormat {
-                            field_name: "priority",
-                            context: IntegrationErrorContext {
-                                additional_context: Some("Invalid payout priority".to_owned()),
-                                ..Default::default()
-                            },
-                        })
-                    },
-                )
+                grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(priority)
+                    .change_context(IntegrationError::InvalidDataFormat {
+                        field_name: "priority",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Invalid payout priority".to_owned()),
+                            ..Default::default()
+                        },
+                    })
             })
             .transpose()?
             .map(common_enums::PayoutPriority::foreign_try_from)
@@ -1247,15 +1206,13 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRecipientRequest
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };
@@ -1269,14 +1226,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRecipientRequest
             grpc_api_types::payouts::payout_enums::PayoutRecipientType::try_from(
                 value.recipient_type,
             )
-            .map_err(|_| {
-                error_stack::report!(IntegrationError::MissingRequiredField {
-                    field_name: "payout_method_data",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Payout method data is required".to_owned()),
-                        ..Default::default()
-                    },
-                })
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "recipient_type",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Invalid payout recipient type".to_owned()),
+                    ..Default::default()
+                },
             })?;
 
         Ok(Self {
@@ -1315,15 +1270,13 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountR
         };
 
         let source_currency = {
-            let curr =
-                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
-                    error_stack::report!(IntegrationError::InvalidDataFormat {
-                        field_name: "currency",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Invalid currency".to_owned()),
-                            ..Default::default()
-                        },
-                    })
+            let curr = grpc_api_types::payments::Currency::try_from(amount.currency)
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "currency",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Invalid currency".to_owned()),
+                        ..Default::default()
+                    },
                 })?;
             common_enums::Currency::foreign_try_from(curr)?
         };

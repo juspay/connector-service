@@ -455,7 +455,7 @@ impl Payments {
         )
         .map_err(|e| {
             tracing::error!("Failed to resolve connector overrides: {:?}", e);
-            tonic::Status::internal(format!("Failed to resolve connector overrides: {e}"))
+            e.into_grpc_status()
         })?;
 
         // Create common request data
