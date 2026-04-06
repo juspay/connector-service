@@ -2056,12 +2056,12 @@ def render_consolidated_javascript(
             f"}}"
         )
 
-    # Also export _build*Request helpers so the gRPC smoke test can call them directly.
-    # Only export builder functions - scenario/flow functions are already exported individually
-    exports = ", ".join(
+    # Export both process* functions and _build*Request helpers
+    export_items = func_names_js + [
         "_build" + "".join(w.title() for w in fk.split("_")) + "Request"
         for fk in sorted(js_has_builder)
-    )
+    ]
+    exports = ", ".join(export_items)
     js_builders_text = "\n\n".join(js_builder_fns)
     js_builders_section = f"\n\n{js_builders_text}\n" if js_builder_fns else ""
     funcs_text       = "\n\n".join(func_blocks)
