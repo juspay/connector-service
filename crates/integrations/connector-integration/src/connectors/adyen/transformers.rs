@@ -1500,8 +1500,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let apple_pay_encrypted_data = data
                     .payment_data
                     .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
+                    .change_context(IntegrationError::MissingRequiredField {
                         field_name: "Apple pay encrypted data",
+                        context: Default::default(),
                     })?;
                 let apple_pay_data = AdyenApplePay {
                     apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()),

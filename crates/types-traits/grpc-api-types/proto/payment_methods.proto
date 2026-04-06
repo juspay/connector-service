@@ -74,10 +74,10 @@ message PaymentMethod {
     VippsRedirectWallet vipps_redirect = 162;           // Vipps Redirect
     SwishQrWallet swish_qr = 158;                       // Swish QR
     PazeWallet paze = 23;                               // Paze
-    SamsungWallet samsung_pay = 24;                     //Samsung
-    MBWay mb_way = 25;                                  // MB WAY 
-    Satispay satispay = 26;                             // Satispay 
-    Wero wero = 27;                                     // Wero 
+    SamsungWallet samsung_pay = 164;                     //Samsung
+    MBWay mb_way = 165;                                  // MB WAY
+    Satispay satispay = 166;                             // Satispay
+    Wero wero = 167;                                     // Wero
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
