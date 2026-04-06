@@ -139,8 +139,8 @@ async function testConnectorScenarios(
 
     let mod: any;
     try {
-        delete require.cache[require.resolve(consolidatedFile)];
-        mod = require(consolidatedFile);
+        // Use dynamic import for TypeScript files (tsx handles transpilation)
+        mod = await import(consolidatedFile);
     } catch (e: any) {
         console.log(`    IMPORT ERROR: ${e.message}`);
         result.status = "failed";

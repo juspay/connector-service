@@ -287,7 +287,7 @@ fun incrementalAuthorization(txnId: String) {
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
-        connectorRecurringPaymentIdBuilder.apply {
+        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
             connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
                 connectorMandateIdBuilder.apply {
                     connectorMandateId = "probe-mandate-123"
@@ -359,11 +359,11 @@ fun setupRecurring(txnId: String) {
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
-        enrolledFor3Ds = false
+        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
-        setupFutureUsage = FutureUsage.OFF_SESSION
-        requestIncrementalAuthorization = false
-        customerAcceptanceBuilder.apply {
+        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
+        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
+        customerAcceptanceBuilder.apply {  // Details of customer acceptance
             acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
             acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
         }

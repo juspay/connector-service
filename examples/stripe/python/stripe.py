@@ -121,7 +121,7 @@ def _build_incremental_authorization_request():
 def _build_recurring_charge_request():
     return ParseDict(
         {
-            "connector_recurring_payment_id": {
+            "connector_recurring_payment_id": {  # Reference to existing mandate
                 "connector_mandate_id": {  # mandate_id sent by the connector
                     "connector_mandate_id": "probe-mandate-123"
                 }
@@ -190,11 +190,11 @@ def _build_setup_recurring_request():
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-            "enrolled_for_3ds": False,
+            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure
             "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-            "setup_future_usage": "OFF_SESSION",
-            "request_incremental_authorization": False,
-            "customer_acceptance": {
+            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
+            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested
+            "customer_acceptance": {  # Details of customer acceptance
                 "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
                 "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
             }

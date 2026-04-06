@@ -792,7 +792,7 @@ macros::macro_connector_implementation!(
 
             headers.push((
                 "Revolut-Api-Version".to_string(),
-                "2025-10-16".to_string().into(),
+                "2024-09-01".to_string().into(),
             ));
             Ok(headers)
         }
