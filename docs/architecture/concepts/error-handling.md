@@ -109,112 +109,6 @@ try {
 
 ---
 
-### Network Errors
-
-These occur during HTTP communication with the connector — after the request may have been sent. This is where retry logic gets dangerous in payment systems.
-
-**Fields:**
-
-| Field | Description |
-|-------|-------------|
-| `errorCode` | String error code, e.g. `"CONNECT_TIMEOUT_EXCEEDED"` — use for logging and comparisons |
-| `message` | Human-readable description |
-| `statusCode` | HTTP status code if available (optional) |
-
-**Field access by language:**
-
-- **JS:** `error.errorCode`, `error.message`, `error.statusCode`
-- **Python:** `error.error_code`, `str(error)`, `error.status_code`
-- **Rust:** `error.error_code`, `error.message`, `error.status_code`
-
-> **Retry safety:** Most network errors happen after the request was already sent to the connector. Retrying without idempotency keys can cause double charges. Only retry `CONNECT_TIMEOUT_EXCEEDED` (connection never established) with confidence. For all others, verify payment status before retrying.
-
-{% tabs %}
-
-{% tab title="Node.js" %}
-
-```javascript
-const { PaymentClient, NetworkError } = require('hyperswitch-prism');
-
-try {
-    const response = await client.authorize(request);
-} catch (error) {
-    if (error instanceof NetworkError) {
-        console.error(error.errorCode);
-        console.error(error.message);
-        if (error.statusCode) {
-            console.error(error.statusCode);
-        }
-        // Do not retry blindly — verify payment status first
-        throw error;
-    }
-}
-```
-
-{% endtab %}
-
-{% tab title="Python" %}
-
-```python
-from hyperswitch_prism import PaymentClient, NetworkError
-
-try:
-    response = await client.authorize(request)
-except NetworkError as error:
-    print(error.error_code)
-    print(str(error))
-    if error.status_code:
-        print(error.status_code)
-    # Do not retry blindly — verify payment status first
-    raise
-```
-
-{% endtab %}
-
-{% tab title="Java" %}
-
-```java
-import payments.NetworkError;
-
-try {
-    PaymentServiceAuthorizeResponse response = client.authorize(request);
-} catch (NetworkError e) {
-    System.err.println(e.getErrorCode());
-    System.err.println(e.getMessage());
-    if (e.getStatusCode() != null) {
-        System.err.println(e.getStatusCode());
-    }
-    // Do not retry blindly — verify payment status first
-    throw e;
-}
-```
-
-{% endtab %}
-
-{% tab title="PHP" %}
-
-```php
-use HyperswitchPrism\Errors\NetworkError;
-
-try {
-    $response = $client->authorize($request);
-} catch (NetworkError $e) {
-    echo $e->getErrorCode() . "\n";
-    echo $e->getMessage() . "\n";
-    if ($e->getStatusCode()) {
-        echo $e->getStatusCode() . "\n";
-    }
-    // Do not retry blindly — verify payment status first
-    throw $e;
-}
-```
-
-{% endtab %}
-
-{% endtabs %}
-
----
-
 ### Connector Errors
 
 These occur when the connector returns a 4xx or 5xx response, or when the response cannot be parsed — for example, if the connector changed its contract. Either way, the connector had a problem processing the request.
@@ -311,6 +205,112 @@ try {
         echo $e->getHttpStatusCode() . "\n";
     }
     // Payment may have been processed — investigate before retrying
+    throw $e;
+}
+```
+
+{% endtab %}
+
+{% endtabs %}
+
+---
+
+### Network Errors
+
+These occur during HTTP communication with the connector — after the request may have been sent. This is where retry logic gets dangerous in payment systems.
+
+**Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `errorCode` | String error code, e.g. `"CONNECT_TIMEOUT_EXCEEDED"` — use for logging and comparisons |
+| `message` | Human-readable description |
+| `statusCode` | HTTP status code if available (optional) |
+
+**Field access by language:**
+
+- **JS:** `error.errorCode`, `error.message`, `error.statusCode`
+- **Python:** `error.error_code`, `str(error)`, `error.status_code`
+- **Rust:** `error.error_code`, `error.message`, `error.status_code`
+
+> **Retry safety:** Most network errors happen after the request was already sent to the connector. Retrying without idempotency keys can cause double charges. Only retry `CONNECT_TIMEOUT_EXCEEDED` (connection never established) with confidence. For all others, verify payment status before retrying.
+
+{% tabs %}
+
+{% tab title="Node.js" %}
+
+```javascript
+const { PaymentClient, NetworkError } = require('hyperswitch-prism');
+
+try {
+    const response = await client.authorize(request);
+} catch (error) {
+    if (error instanceof NetworkError) {
+        console.error(error.errorCode);
+        console.error(error.message);
+        if (error.statusCode) {
+            console.error(error.statusCode);
+        }
+        // Do not retry blindly — verify payment status first
+        throw error;
+    }
+}
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+from hyperswitch_prism import PaymentClient, NetworkError
+
+try:
+    response = await client.authorize(request)
+except NetworkError as error:
+    print(error.error_code)
+    print(str(error))
+    if error.status_code:
+        print(error.status_code)
+    # Do not retry blindly — verify payment status first
+    raise
+```
+
+{% endtab %}
+
+{% tab title="Java" %}
+
+```java
+import payments.NetworkError;
+
+try {
+    PaymentServiceAuthorizeResponse response = client.authorize(request);
+} catch (NetworkError e) {
+    System.err.println(e.getErrorCode());
+    System.err.println(e.getMessage());
+    if (e.getStatusCode() != null) {
+        System.err.println(e.getStatusCode());
+    }
+    // Do not retry blindly — verify payment status first
+    throw e;
+}
+```
+
+{% endtab %}
+
+{% tab title="PHP" %}
+
+```php
+use HyperswitchPrism\Errors\NetworkError;
+
+try {
+    $response = $client->authorize($request);
+} catch (NetworkError $e) {
+    echo $e->getErrorCode() . "\n";
+    echo $e->getMessage() . "\n";
+    if ($e->getStatusCode()) {
+        echo $e->getStatusCode() . "\n";
+    }
+    // Do not retry blindly — verify payment status first
     throw $e;
 }
 ```
@@ -772,6 +772,17 @@ These codes appear in `IntegrationError`. The request was never sent to the conn
 
 > **Note on `_I_D` suffix:** Error codes for variants ending in `ID` (e.g. `MissingConnectorTransactionID`) serialize as `..._I_D` due to how the code generator handles uppercase boundaries. Use the exact strings shown above in comparisons.
 
+### Connector Error Codes
+
+These codes appear in `ConnectorError`. The connector returned a 4xx/5xx response or a response that could not be parsed. The payment may have been processed.
+
+| Code | Description |
+|------|-------------|
+| `RESPONSE_DESERIALIZATION_FAILED` | Cannot parse the connector response (invalid JSON/XML, unexpected format) |
+| `RESPONSE_HANDLING_FAILED` | Error occurred while processing the connector response |
+| `UNEXPECTED_RESPONSE_ERROR` | Response structure does not match the expected schema |
+| `INTEGRITY_CHECK_FAILED` | Integrity check failed (e.g. amount or currency mismatch between request and response) |
+
 ### Network Error Codes
 
 These codes appear in `NetworkError`. The request may or may not have been sent.
@@ -787,17 +798,6 @@ These codes appear in `NetworkError`. The request may or may not have been sent.
 | `URL_PARSING_FAILED` | Request URL is malformed or uses an unsupported scheme | No — fix code |
 | `INVALID_PROXY_CONFIGURATION` | Proxy URL or configuration is invalid | No — fix configuration |
 | `INVALID_CA_CERT` | CA certificate (PEM/DER) is invalid or could not be loaded | No — fix configuration |
-
-### Connector Error Codes
-
-These codes appear in `ConnectorError`. The connector returned a 4xx/5xx response or a response that could not be parsed. The payment may have been processed.
-
-| Code | Description |
-|------|-------------|
-| `RESPONSE_DESERIALIZATION_FAILED` | Cannot parse the connector response (invalid JSON/XML, unexpected format) |
-| `RESPONSE_HANDLING_FAILED` | Error occurred while processing the connector response |
-| `UNEXPECTED_RESPONSE_ERROR` | Response structure does not match the expected schema |
-| `INTEGRITY_CHECK_FAILED` | Integrity check failed (e.g. amount or currency mismatch between request and response) |
 
 ### Payment Error Codes
 
