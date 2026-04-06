@@ -172,8 +172,8 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js/; \
 	fi
-	@cd /tmp/test-hyperswitch-js && npx tsc && \
-		NODE_PATH=/tmp/test-hyperswitch-js/node_modules node test_smoke.js \
+	@cd /tmp/test-hyperswitch-js && \
+		NODE_PATH=/tmp/test-hyperswitch-js/node_modules npx tsx test_smoke.ts \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@rm -rf /tmp/test-hyperswitch-js
 
@@ -204,7 +204,7 @@ test-composite: build-ffi-lib generate-all build-ts pack-archive
 # installs it in an isolated temp project, then runs test_smoke_grpc.ts.
 # ---------------------------------------------------------------------------
 GRPC_PROFILE    ?= release-fast
-GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
 
 # Run gRPC test assuming server is already running (used by top-level test-grpc)
 test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings build-ts pack-archive
@@ -228,7 +228,7 @@ test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc
 
 test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings build-ts pack-archive
 	@echo "Building grpc-server ($(GRPC_PROFILE))..."
-	@cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) 2>&1
+	@cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) --target $(PLATFORM) 2>&1
 	@echo "Starting gRPC server..."
 	@pkill -KILL -f grpc-server 2>/dev/null || true
 	@sleep 1

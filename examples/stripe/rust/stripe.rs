@@ -118,7 +118,7 @@ pub fn build_incremental_authorization_request() -> PaymentServiceIncrementalAut
 
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {
+    "connector_recurring_payment_id": {  // Reference to existing mandate
         "mandate_id_type": {
             "connector_mandate_id": {
                 "connector_mandate_id": "probe-mandate-123",
@@ -190,11 +190,11 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
         },
     },
     "auth_type": "NO_THREE_DS",  // Type of authentication to be used
-    "enrolled_for_3ds": false,
+    "enrolled_for_3ds": false,  // Indicates if the customer is enrolled for 3D Secure
     "return_url": "https://example.com/mandate-return",  // URL to redirect after setup
-    "setup_future_usage": "OFF_SESSION",
-    "request_incremental_authorization": false,
-    "customer_acceptance": {
+    "setup_future_usage": "OFF_SESSION",  // Indicates future usage intention
+    "request_incremental_authorization": false,  // Indicates if incremental authorization is requested
+    "customer_acceptance": {  // Details of customer acceptance
         "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
         "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
     },

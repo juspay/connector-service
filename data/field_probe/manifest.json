@@ -382,12 +382,16 @@
     "AdditionalPaymentMethodConnectorResponse": {
       "comments": {
         "apple_pay": "Apple Pay-specific response data",
+        "bank_redirect": "Bank Redirect-specific response data",
         "card": "Card-specific response data",
+        "google_pay": "Google Pay-specific response data",
         "upi": "UPI-specific response data"
       },
       "field_types": {
         "apple_pay": "ApplePayConnectorResponse",
+        "bank_redirect": "BankRedirectConnectorResponse",
         "card": "CardConnectorResponse",
+        "google_pay": "GooglePayConnectorResponse",
         "upi": "UpiConnectorResponse"
       }
     },
@@ -420,6 +424,12 @@
       "field_types": {
         "fields": "ApplePayAddressParameters"
       }
+    },
+    "ApplePayConnectorResponse": {
+      "comments": {
+        "auth_code": "Unique authorisation code generated for the payment"
+      },
+      "field_types": {}
     },
     "ApplePayCryptogramData": {
       "comments": {
@@ -557,6 +567,14 @@
       "comments": {},
       "field_types": {}
     },
+    "BankRedirectConnectorResponse": {
+      "comments": {
+        "interac": "Interac-specific customer information when using bank redirect"
+      },
+      "field_types": {
+        "interac": "InteracCustomerInfo"
+      }
+    },
     "BarclaycardConfig": {
       "comments": {},
       "field_types": {}
@@ -633,6 +651,8 @@
     },
     "CardConnectorResponse": {
       "comments": {
+        "auth_code": "Unique authorisation code generated for the payment",
+        "authentication_data": "Authentication details as JSON bytes",
         "card_network": "Card network returned by the processor",
         "domestic_network": "Domestic (co-branded) card network",
         "payment_checks": "Payment checks as JSON bytes"
@@ -736,9 +756,14 @@
     },
     "ConnectorResponseData": {
       "comments": {
-        "is_overcapture_enabled": "Additional payment method specific data Extended authorization data Whether overcapture is enabled"
+        "additional_payment_method_data": "Additional payment method specific data",
+        "extended_authorization_response_data": "Extended authorization data",
+        "is_overcapture_enabled": "Whether overcapture is enabled"
       },
-      "field_types": {}
+      "field_types": {
+        "additional_payment_method_data": "AdditionalPaymentMethodConnectorResponse",
+        "extended_authorization_response_data": "ExtendedAuthorizationResponseData"
+      }
     },
     "ConnectorResponseTransformationError": {
       "comments": {
@@ -940,6 +965,7 @@
     },
     "Customer": {
       "comments": {
+        "connector_customer_id": "Customer ID in the connector system",
         "email": "Customer's email address",
         "id": "Internal customer ID",
         "name": "Customer's full name",
@@ -961,13 +987,18 @@
     },
     "CustomerInfo": {
       "comments": {
-        "customer_name": "Full name of the customer"
+        "customer_bank_id": "Bank identifier or institution number for the customer's bank",
+        "customer_bank_name": "Name of the customer's bank for display purposes",
+        "customer_email": "Email address of the customer for notifications and receipts",
+        "customer_name": "Full name of the customer",
+        "customer_phone_number": "Phone number for SMS verification and customer contact"
       },
       "field_types": {}
     },
     "CustomerServiceCreateRequest": {
       "comments": {
         "address": "Address Information",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer_name": "Name of the customer",
         "email": "Email address of the customer",
         "merchant_customer_id": "Identification",
@@ -1027,6 +1058,7 @@
       "comments": {
         "address": "Address Information",
         "connector_customer_id": "Customer Information",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer_name": "Name of the customer",
         "email": "Email address of the customer",
         "merchant_customer_id": "Identification",
@@ -1064,11 +1096,14 @@
     },
     "DisputeResponse": {
       "comments": {
+        "connector_dispute_id": "Connector's unique identifier for the dispute",
+        "connector_transaction_id": "Transaction ID associated with the dispute",
         "dispute_amount": "Dispute Details",
         "dispute_date": "Unix timestamp",
         "dispute_reason": "Additional Context",
         "dispute_status": "Status Information",
         "due_date": "Unix timestamp",
+        "evidence_documents": "Collection of evidence documents submitted",
         "merchant_dispute_id": "Reference",
         "raw_connector_request": "Raw Request for debugging",
         "service_date": "Unix timestamp",
@@ -1078,7 +1113,8 @@
         "dispute_amount": "Money",
         "dispute_stage": "DisputeStage",
         "dispute_status": "DisputeStatus",
-        "error": "ErrorInfo"
+        "error": "ErrorInfo",
+        "evidence_documents": "EvidenceDocument"
       }
     },
     "DisputeServiceAcceptRequest": {
@@ -1126,10 +1162,13 @@
     },
     "DisputeServiceSubmitEvidenceRequest": {
       "comments": {
+        "evidence_documents": "Collection of evidence documents",
         "merchant_dispute_id": "Identification",
         "service_date": "Dates"
       },
-      "field_types": {}
+      "field_types": {
+        "evidence_documents": "EvidenceDocument"
+      }
     },
     "DisputeServiceSubmitEvidenceResponse": {
       "comments": {
@@ -1173,10 +1212,14 @@
     },
     "ErrorInfo": {
       "comments": {
-        "connector_details": "Detailed explanation"
+        "connector_details": "Detailed explanation",
+        "issuer_details": "Human-readable error message",
+        "unified_details": "Machine-readable error code"
       },
       "field_types": {
-        "connector_details": "ConnectorErrorDetails"
+        "connector_details": "ConnectorErrorDetails",
+        "issuer_details": "IssuerErrorDetails",
+        "unified_details": "UnifiedErrorDetails"
       }
     },
     "EventAckResponse": {
@@ -1237,6 +1280,14 @@
       "field_types": {
         "evidence_type": "EvidenceType"
       }
+    },
+    "ExtendedAuthorizationResponseData": {
+      "comments": {
+        "capture_before": "Unix timestamp before which capture must occur",
+        "extended_authentication_applied": "Whether extended authentication was applied",
+        "extended_authorization_last_applied_at": "Unix timestamp of when extended authentication was last applied"
+      },
+      "field_types": {}
     },
     "FfiConnectorHttpRequest": {
       "comments": {},
@@ -1327,6 +1378,12 @@
     },
     "GlobepayConfig": {
       "comments": {},
+      "field_types": {}
+    },
+    "GooglePayConnectorResponse": {
+      "comments": {
+        "auth_code": "Unique authorisation code generated for the payment"
+      },
       "field_types": {}
     },
     "GooglePayDecryptedData": {
@@ -1512,12 +1569,23 @@
         "country": "CountryAlpha2"
       }
     },
+    "InteracCustomerInfo": {
+      "comments": {
+        "customer_info": "Base customer information for Interac payments"
+      },
+      "field_types": {
+        "customer_info": "CustomerInfo"
+      }
+    },
     "IssuerErrorDetails": {
       "comments": {
         "code": "card scheme Eg: VISA, MASTERCARD etc.",
-        "message": "Human-readable error message"
+        "message": "Human-readable error message",
+        "network_details": "Network-specific error details, if applicable"
       },
-      "field_types": {}
+      "field_types": {
+        "network_details": "NetworkErrorDetails"
+      }
     },
     "ItaubankConfig": {
       "comments": {},
@@ -1550,8 +1618,10 @@
     "MandateAmountData": {
       "comments": {
         "amount": "Amount",
+        "amount_type": "Amount type for variable mandates (\"exact\", \"max\", \"variable\")",
         "currency": "Currency code (ISO 4217)",
         "end_date": "Unix timestamp for end date",
+        "frequency": "Frequency for recurring mandates (\"daily\", \"weekly\", \"monthly\")",
         "start_date": "Unix timestamp for start date"
       },
       "field_types": {
@@ -1597,7 +1667,9 @@
     "MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest": {
       "comments": {
         "connector": "The connector to create the access token for",
-        "metadata": "Additional metadata for the connector"
+        "connector_feature_data": "Connector-specific metadata for the transaction",
+        "metadata": "Additional metadata for the connector",
+        "test_mode": "A boolean value to indicate if the connector is in Test mode"
       },
       "field_types": {
         "connector": "Connector"
@@ -1606,6 +1678,7 @@
     "MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse": {
       "comments": {
         "access_token": "The access token string",
+        "expires_in_seconds": "Expiration timestamp of the token (seconds since epoch)",
         "status": "Status of the access token creation attempt",
         "status_code": "HTTP status code from the connector",
         "token_type": "Token type (e.g., \"Bearer\", \"Basic\")"
@@ -2085,6 +2158,7 @@
         "authentication_data": "Authentication Details",
         "browser_info": "Contextual Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer": "Customer Information",
         "merchant_order_id": "Payment Identification",
         "metadata": "Additional metadata for the connector",
@@ -2129,6 +2203,7 @@
         "authentication_data": "Authentication Details",
         "browser_info": "Contextual Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer": "Customer Information",
         "merchant_order_id": "Payment Identification",
         "payment_method": "Payment Method",
@@ -2172,6 +2247,7 @@
         "amount": "Amount Information",
         "browser_info": "Contextual Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer": "Customer Information",
         "description": "Description",
         "enrolled_for_3ds": "Authentication Details",
@@ -2194,6 +2270,7 @@
     "PaymentMethodAuthenticationServicePreAuthenticateResponse": {
       "comments": {
         "authentication_data": "Authentication Results",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "connector_transaction_id": "Identification",
         "raw_connector_response": "Raw Response for debugging",
         "redirection_data": "Redirection and Transaction Details",
@@ -2244,6 +2321,7 @@
       "comments": {
         "address": "Address Information",
         "amount": "Payment Information",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer": "Customer Information",
         "merchant_payment_method_id": "Identification",
         "return_url": "URLs for Redirection",
@@ -2281,6 +2359,8 @@
         "auth_type": "Authentication Details",
         "billing_descriptor": "Statement Descriptor",
         "capture_method": "Method for capturing the payment",
+        "connector_feature_data": "Connector-specific feature data for the transaction",
+        "continue_redirection_url": "URL to complete authorization",
         "customer": "Customer Information",
         "customer_acceptance": "Contextual Information",
         "l2_l3_data": "Level 2 / Level 3 data for enhanced payment processing",
@@ -2292,12 +2372,15 @@
         "order_tax_amount": "Tax amount for the order",
         "payment_method": "Payment method to be used",
         "payment_method_token": "Payment Method Token",
+        "redirection_response": "Redirection Response from client browser",
         "return_url": "URLs for Redirection and Webhooks",
         "session_token": "Session and Token Information",
         "setup_future_usage": "Behavioral Flags and Preferences",
         "setup_mandate_details": "Mandate Setup Details",
         "shipping_cost": "Cost of shipping for the order",
         "state": "State Information",
+        "statement_descriptor_name": "Complete description that appears on customers' statements",
+        "statement_descriptor_suffix": "Provides information about a card payment that customers see on",
         "test_mode": "Environment Configuration",
         "threeds_completion_indicator": "Indicates if 3DS method data was successfully completed or not",
         "tokenization_strategy": "Tokenization configuration"
@@ -2317,6 +2400,7 @@
         "payment_channel": "PaymentChannel",
         "payment_experience": "PaymentExperience",
         "payment_method": "PaymentMethod",
+        "redirection_response": "RedirectionResponse",
         "setup_future_usage": "FutureUsage",
         "setup_mandate_details": "SetupMandateDetails",
         "state": "ConnectorState",
@@ -2327,6 +2411,7 @@
     "PaymentServiceAuthorizeResponse": {
       "comments": {
         "captured_amount": "Payment Details",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "incremental_authorization_allowed": "Authorization Details",
         "mandate_reference": "Mandate and Connector Response",
         "merchant_transaction_id": "Identification",
@@ -2349,6 +2434,7 @@
         "amount_to_capture": "Capture Details",
         "browser_info": "Browser Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "merchant_capture_id": "Identification",
         "merchant_order_id": "Additional Context",
         "metadata": "Additional metadata for the connector",
@@ -2367,6 +2453,7 @@
     "PaymentServiceCaptureResponse": {
       "comments": {
         "captured_amount": "Captured amount in minor currency units",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "connector_transaction_id": "Identification",
         "incremental_authorization_allowed": "Authorization Details",
         "mandate_reference": "Mandate Details",
@@ -2385,30 +2472,37 @@
     "PaymentServiceCreateOrderRequest": {
       "comments": {
         "amount": "Amount Information",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "merchant_order_id": "Identification",
         "metadata": "Additional metadata for the connector",
+        "payment_method_type": "The type of payment method (e.g., apple_pay, google_pay)",
         "state": "State Information",
         "test_mode": "Environment Configuration",
         "webhook_url": "URLs for Redirection and Webhooks"
       },
       "field_types": {
         "amount": "Money",
+        "payment_method_type": "PaymentMethodType",
         "state": "ConnectorState"
       }
     },
     "PaymentServiceCreateOrderResponse": {
       "comments": {
+        "connector_order_id": "Identifier for the create order response",
         "merchant_order_id": "Reference",
         "raw_connector_request": "Raw Request/Response for debugging",
+        "session_data": "SDK session data for wallets (Apple Pay, Google Pay) and other SDK types",
         "status": "Status of the order creation attempt"
       },
       "field_types": {
         "error": "ErrorInfo",
+        "session_data": "ClientAuthenticationTokenData",
         "status": "PaymentStatus"
       }
     },
     "PaymentServiceDisputeRequest": {
       "comments": {
+        "connector_transaction_id": "Transaction ID to raise the dispute for",
         "merchant_dispute_id": "Identification",
         "state": "State data for access token storage and"
       },
@@ -2420,6 +2514,7 @@
       "comments": {
         "amount": "Amount Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "connector_order_reference_id": "Connector Reference Id",
         "merchant_transaction_id": "Identification",
         "metadata": "Additional metadata for the connector",
@@ -2539,17 +2634,25 @@
     },
     "PaymentServiceRefundRequest": {
       "comments": {
+        "browser_info": "Browser information, if relevant",
+        "capture_method": "Capture method related to the original payment",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "customer_id": "Merchant's customer ID",
         "merchant_account_id": "Merchant account ID for the refund",
         "merchant_refund_id": "Identification",
         "metadata": "Metadata specific to the connector",
         "payment_amount": "Amount Information",
+        "payment_method_type": "Indicates the sub type of payment method. (e.g., card,",
         "reason": "Reason for the refund",
         "refund_metadata": "Metadata specific to the refund",
         "state": "State data for access token storage and",
+        "test_mode": "A boolean value to indicate if the connector is in Test mode",
         "webhook_url": "URL for webhook notifications"
       },
       "field_types": {
+        "browser_info": "BrowserInformation",
+        "capture_method": "CaptureMethod",
+        "payment_method_type": "PaymentMethodType",
         "refund_amount": "Money",
         "state": "ConnectorState"
       }
@@ -2558,6 +2661,7 @@
       "comments": {
         "browser_info": "Browser Information",
         "cancellation_reason": "Reverse Details",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "merchant_reverse_id": "Identification",
         "metadata": "Additional metadata for the connector"
       },
@@ -2581,17 +2685,34 @@
         "address": "Address Information",
         "amount": "Mandate Details",
         "auth_type": "Type of authentication to be used",
+        "authentication_data": "Additional authentication data",
+        "billing_descriptor": "Billing Descriptor information to be sent to the payment gateway",
+        "browser_info": "Information about the customer's browser",
         "complete_authorize_url": "URL to complete authorization",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
+        "connector_testing_data": "Connector-specific testing data (JSON stringified)",
+        "customer_acceptance": "Details of customer acceptance",
+        "enable_partial_authorization": "Indicates if partial authorization is enabled",
+        "enrolled_for_3ds": "Indicates if the customer is enrolled for 3D Secure",
         "l2_l3_data": "Level 2 / Level 3 data for enhanced payment processing",
+        "locale": "Locale/language preference for the shopper (e.g., \"en-US\")",
         "merchant_order_id": "Merchant's internal reference ID",
         "merchant_recurring_payment_id": "Identification",
         "metadata": "Additional metadata for the connector",
         "off_session": "Indicates if off-session process",
+        "order_category": "Category of the order/service related to the mandate",
         "order_id": "Send the connector order identifier here if an order was created before authorize",
+        "order_tax_amount": "Tax amount, if an initial payment is part of setup",
+        "payment_channel": "Describes the channel through which the payment was initiated",
+        "payment_experience": "Preferred payment experience",
         "payment_method_token": "Payment Method Token",
+        "request_extended_authorization": "Indicates if extended authorization is requested",
+        "request_incremental_authorization": "Indicates if incremental authorization is requested",
         "return_url": "URL to redirect after setup",
         "session_token": "Session token, if applicable",
+        "setup_future_usage": "Indicates future usage intention",
         "setup_mandate_details": "Mandate setup details",
+        "shipping_cost": "Shipping cost, if an initial payment is part of setup",
         "state": "State data for access token storage and",
         "webhook_url": "URL for webhook notifications"
       },
@@ -2599,25 +2720,42 @@
         "address": "PaymentAddress",
         "amount": "Money",
         "auth_type": "AuthenticationType",
+        "authentication_data": "AuthenticationData",
+        "billing_descriptor": "BillingDescriptor",
+        "browser_info": "BrowserInformation",
         "customer": "Customer",
+        "customer_acceptance": "CustomerAcceptance",
         "l2_l3_data": "L2L3Data",
+        "payment_channel": "PaymentChannel",
+        "payment_experience": "PaymentExperience",
         "payment_method": "PaymentMethod",
+        "setup_future_usage": "FutureUsage",
         "setup_mandate_details": "SetupMandateDetails",
         "state": "ConnectorState"
       }
     },
     "PaymentServiceSetupRecurringResponse": {
       "comments": {
+        "captured_amount": "Captured amount in minor currency units",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
+        "connector_recurring_payment_id": "Identifier for the mandate registration",
+        "connector_response": "Various data regarding the response from connector",
         "error": "PaymentStatus with mandate values)",
+        "incremental_authorization_allowed": "Indicates if incremental authorization is allowed",
         "mandate_reference": "Reference to the created mandate",
-        "merchant_recurring_payment_id": "Redirection and Transaction Details",
+        "network_transaction_id": "Renamed from network_transaction_id",
+        "raw_connector_request": "Raw request to the connector for debugging",
+        "redirection_data": "Data for redirecting the customer's browser",
+        "response_headers": "Optional HTTP response headers from the connector",
         "state": "State data for access token storage and",
         "status": "Status of the mandate setup attempt (using",
         "status_code": "HTTP status code from the connector"
       },
       "field_types": {
+        "connector_response": "ConnectorResponseData",
         "error": "ErrorInfo",
         "mandate_reference": "MandateReference",
+        "redirection_data": "RedirectForm",
         "state": "ConnectorState",
         "status": "PaymentStatus"
       }
@@ -2685,6 +2823,7 @@
         "amount": "Amount Information",
         "browser_info": "Browser Information",
         "cancellation_reason": "Void Details",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "merchant_order_id": "Additional Context",
         "merchant_void_id": "Identification",
         "metadata": "Additional metadata for the connector",
@@ -2699,6 +2838,7 @@
     },
     "PaymentServiceVoidResponse": {
       "comments": {
+        "connector_feature_data": "Connector-specific metadata for the transaction",
         "connector_transaction_id": "Identification",
         "incremental_authorization_allowed": "Authorization Details",
         "mandate_reference": "Mandate Details",
@@ -2873,9 +3013,11 @@
         "address": "Address Information",
         "amount": "Amount Information",
         "authentication_data": "Authentication Data",
-        "billing_descriptor": "Shipping Cost Billing Descriptor",
+        "billing_descriptor": "Billing Descriptor",
         "browser_info": "Browser Information",
         "capture_method": "Capture Settings",
+        "connector_feature_data": "Connector-specific metadata for the transaction",
+        "connector_recurring_payment_id": "Reference to existing mandate",
         "connector_testing_data": "Testing Data",
         "customer": "Customer Information",
         "email": "Customer Information",
@@ -2889,6 +3031,7 @@
         "off_session": "Behavioral Flags and Preferences",
         "original_payment_authorized_amount": "Original Payment Details (for reference and validation in MIT flows)",
         "payment_method": "Optional payment Method Information (for network transaction flows)",
+        "shipping_cost": "Shipping cost in minor units (e.g., cents)",
         "state": "State Information"
       },
       "field_types": {
@@ -2898,6 +3041,7 @@
         "billing_descriptor": "BillingDescriptor",
         "browser_info": "BrowserInformation",
         "capture_method": "CaptureMethod",
+        "connector_recurring_payment_id": "MandateReference",
         "customer": "Customer",
         "l2_l3_data": "L2L3Data",
         "merchant_configured_currency": "Currency",
@@ -2910,7 +3054,7 @@
     },
     "RecurringPaymentServiceChargeResponse": {
       "comments": {
-        "connector_response": "Payment Details",
+        "captured_amount": "Captured amount in minor currency units",
         "connector_transaction_id": "Identification",
         "incremental_authorization_allowed": "Authorization Details",
         "network_transaction_id": "Transaction Details",
@@ -2979,16 +3123,22 @@
     },
     "RefundResponse": {
       "comments": {
+        "acquirer_reference_number": "Acquirer reference number for the refund, if provided by the",
         "connector_refund_id": "Connector's ID for the refund",
         "created_at": "Unix timestamp when the refund was created",
         "customer_name": "Name of the customer",
         "email": "Email address of the customer",
+        "merchant_refund_id": "Identifier for the synchronized resource",
+        "processed_at": "Unix timestamp when the refund was processed",
         "raw_connector_response": "Raw Response/Request for debugging",
         "refund_amount": "Refund Details",
+        "refund_metadata": "Refund-specific metadata from the connector",
         "refund_reason": "Reason for the refund",
+        "response_headers": "Optional HTTP response headers from the connector",
         "state": "connector State Information",
         "status": "Current status of the refund",
-        "status_code": "HTTP status code from the connector"
+        "status_code": "HTTP status code from the connector",
+        "updated_at": "Unix timestamp when the refund was last updated"
       },
       "field_types": {
         "error": "ErrorInfo",
@@ -3002,6 +3152,7 @@
         "browser_info": "Browser Information",
         "merchant_refund_id": "Identification",
         "payment_method_type": "Payment Method Type",
+        "refund_metadata": "Metadata specific to the refund sync",
         "refund_reason": "Refund Details",
         "state": "State Information",
         "test_mode": "Environment Configuration"
@@ -3190,7 +3341,8 @@
       "comments": {
         "code": "Machine-readable error code",
         "description": "Detailed explanation",
-        "message": "Human-readable error message"
+        "message": "Human-readable error message",
+        "user_guidance_message": "User-facing message with guidance on next steps"
       },
       "field_types": {}
     },
