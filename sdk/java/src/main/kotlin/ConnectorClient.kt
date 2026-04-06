@@ -21,13 +21,20 @@ import com.google.protobuf.Parser
  * Exception raised when req_transformer fails (integration error).
  * Wraps IntegrationError and provides access to proto fields.
  */
-class IntegrationError(val proto: types.SdkConfig.IntegrationError) : Exception(proto.getErrorMessage())
+class IntegrationError(val proto: types.SdkConfig.IntegrationError) : Exception(proto.errorMessage) {
+    val errorCode: String get() = proto.errorCode
+    val suggestedAction: String? get() = if (proto.hasSuggestedAction()) proto.suggestedAction else null
+    val docUrl: String? get() = if (proto.hasDocUrl()) proto.docUrl else null
+}
 
 /**
  * Exception raised when res_transformer fails (response transformation error).
  * Wraps ConnectorError and provides access to proto fields.
  */
-class ConnectorError(val proto: types.SdkConfig.ConnectorError) : Exception(proto.getErrorMessage())
+class ConnectorError(val proto: types.SdkConfig.ConnectorError) : Exception(proto.errorMessage) {
+    val errorCode: String get() = proto.errorCode
+    val httpStatusCode: Int? get() = if (proto.hasHttpStatusCode()) proto.httpStatusCode else null
+}
 
 open class ConnectorClient(
     val config: ConnectorConfig,

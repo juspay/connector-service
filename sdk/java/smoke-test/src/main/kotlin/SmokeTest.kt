@@ -218,21 +218,20 @@ fun testConnectorScenarios(
                 println(green("✓ ok") + grey(" — $response"))
                 result.scenarios[scenarioKey] = ScenarioResult(passed = true, result = response)
             }
+        } catch (e: IntegrationError) {
+            val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
+            println(yellow("~ connector error") + grey(" — $detail"))
+            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
+        } catch (e: ConnectorError) {
+            val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
+            println(yellow("~ connector error") + grey(" — $detail"))
+            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
         } catch (e: InvocationTargetException) {
             // Unwrap: InvocationTargetException wraps the real exception from the called method
             val cause = e.cause ?: e
-            when (cause) {
-                is IntegrationError, is ConnectorError -> {
-                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
-                    println(yellow("~ connector error") + grey(" — $detail"))
-                    result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
-                }
-                else -> {
-                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
-                    println(yellow("~ connector error") + grey(" — $detail"))
-                    result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
-                }
-            }
+            val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+            println(yellow("~ connector error") + grey(" — $detail"))
+            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
         } catch (e: Exception) {
             val detail = "${e.javaClass.simpleName}: ${e.message}"
             println(red("✗ FAILED") + " — $detail")

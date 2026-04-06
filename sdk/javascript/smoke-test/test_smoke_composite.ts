@@ -1,4 +1,4 @@
-import { PaymentClient, MerchantAuthenticationClient, types } from "hyperswitch-prism";
+import { PaymentClient, MerchantAuthenticationClient, types, IntegrationError, ConnectorError } from "hyperswitch-prism";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -91,7 +91,15 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
       return true;
     }
   } catch (e: any) {
-    console.log(`  Error creating access token: ${e.errorMessage || e.message}`);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
+    console.log(`  Error creating access token: ${e.message}`);
     return true;
   }
 
@@ -133,7 +141,15 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
       return false;
     }
   } catch (e: any) {
-    console.error("  Error:", e.errorMessage || e.message || e);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
+    console.error("  Error:", e.message || e);
     return false;
   }
 }
@@ -208,6 +224,14 @@ async function testStripeAuthorize(credsFile: string): Promise<boolean> {
       return false;
     }
   } catch (e: any) {
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`);
+      return true;
+    }
+    if (e instanceof ConnectorError) {
+      console.log(`  ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`);
+      return true;
+    }
     console.error("  FAILED:", e.message || e);
     return false;
   }
@@ -228,7 +252,7 @@ async function main(): Promise<void> {
   process.exit(allPassed ? 0 : 1);
 }
 
-main().catch((e: unknown) => {
+main().catch((e: any) => {
   console.error(e);
   process.exit(1);
 });
