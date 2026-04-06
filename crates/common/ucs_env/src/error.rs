@@ -1,6 +1,5 @@
 use domain_types::errors::{
-    ApiClientError, ConnectorFlowError, ConnectorResponseTransformationError, IntegrationError,
-    WebhookError,
+    ApiClientError, ConnectorError, ConnectorFlowError, IntegrationError, WebhookError,
 };
 use tonic::Status;
 
@@ -138,13 +137,29 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
     }
 }
 
-/// Direct gRPC status mapping for `ConnectorResponseTransformationError` (response phase).
-/// All response-phase failures are internal errors — the request reached the connector
-/// but we failed to process its response.
-impl IntoGrpcStatus for error_stack::Report<ConnectorResponseTransformationError> {
+/// Direct gRPC status mapping for `ConnectorError` (response phase).
+///
+/// - `ConnectorErrorResponse`: connector returned a 4xx/5xx; map by HTTP status range:
+///   - 4xx → `failed_precondition` (caller error: bad auth, invalid request, rate limit, etc.)
+///   - 5xx → `unavailable` (connector-side failure; caller may retry)
+/// - All UCS-side transformation failures → `internal` (UCS machinery failed)
+impl IntoGrpcStatus for error_stack::Report<ConnectorError> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
-        Status::internal(self.current_context().to_string())
+        let msg = self.current_context().to_string();
+        match self.current_context() {
+            ConnectorError::ConnectorErrorResponse(error_response) => {
+                match error_response.status_code {
+                    400..=499 => Status::failed_precondition(msg),
+                    500..=599 => Status::unavailable(msg),
+                    _ => Status::internal(msg),
+                }
+            }
+            ConnectorError::ResponseDeserializationFailed { .. }
+            | ConnectorError::ResponseHandlingFailed { .. }
+            | ConnectorError::UnexpectedResponseError { .. }
+            | ConnectorError::IntegrityCheckFailed { .. } => Status::internal(msg),
+        }
     }
 }
 

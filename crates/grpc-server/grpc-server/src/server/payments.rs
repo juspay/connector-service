@@ -29,7 +29,7 @@ use domain_types::{
         ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
         ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -2814,7 +2814,7 @@ pub fn generate_mandate_revoke_response(
     >,
 ) -> Result<
     RecurringPaymentServiceRevokeResponse,
-    error_stack::Report<ConnectorResponseTransformationError>,
+    error_stack::Report<ConnectorError>,
 > {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2

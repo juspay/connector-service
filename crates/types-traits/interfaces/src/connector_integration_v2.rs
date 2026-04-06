@@ -6,7 +6,7 @@ use common_utils::{
     CustomResult,
 };
 use domain_types::{
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
 };
@@ -115,7 +115,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         _res: domain_types::router_response_types::Response,
     ) -> CustomResult<
         RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     >
     where
         Flow: Clone,
@@ -134,7 +134,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         res: domain_types::router_response_types::Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         if let Some(event) = event_builder {
             event.set_connector_response(&json!({"error": "Error response parsing not implemented", "status_code": res.status_code}))
         }
@@ -146,7 +146,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         res: domain_types::router_response_types::Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let error_message = match res.status_code {
             500 => "internal_server_error",
             501 => "not_implemented",

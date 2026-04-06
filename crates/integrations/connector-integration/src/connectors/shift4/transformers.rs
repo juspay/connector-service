@@ -25,7 +25,7 @@ use url::Url;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::Shift4RouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 #[derive(Debug, Clone)]
 pub struct Shift4AuthType {
@@ -407,7 +407,7 @@ pub enum Shift4PaymentStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -473,7 +473,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
 impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -527,7 +527,7 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<Shift4PaymentsResponse, Self>,
@@ -621,7 +621,7 @@ pub enum Shift4RefundStatus {
 impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response
@@ -647,7 +647,7 @@ impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
 impl TryFrom<ResponseRouterData<Shift4RefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<Shift4RefundResponse, Self>) -> Result<Self, Self::Error> {
         // CRITICAL: Explicitly check the status field from the response

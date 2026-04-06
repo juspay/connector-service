@@ -12,7 +12,7 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use grpc_api_types::payments::Environment;
     use grpc_api_types::payments::{
-        ffi_result, ConnectorResponseTransformationError, FfiConnectorHttpRequest,
+        ffi_result, ConnectorError, FfiConnectorHttpRequest,
         FfiConnectorHttpResponse, FfiResult, IntegrationError,
     };
     use prost::Message;
@@ -141,7 +141,7 @@ mod uniffi_bindings_inner {
 
     /// Decode `response_bytes` as the domain `Response` and `request_bytes` as `Req`,
     /// call `handler`, and encode the result as Result proto.
-    /// If the handler returns an error, encode the ConnectorResponseTransformationError in Result.
+    /// If the handler returns an error, encode the ConnectorError in Result.
     pub fn run_res_transformer<Req, Res>(
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
@@ -150,7 +150,7 @@ mod uniffi_bindings_inner {
             crate::types::FfiRequestData<Req>,
             Response,
             Option<Environment>,
-        ) -> Result<Res, ConnectorResponseTransformationError>,
+        ) -> Result<Res, ConnectorError>,
     ) -> Vec<u8>
     where
         Req: Message + Default,
@@ -160,8 +160,8 @@ mod uniffi_bindings_inner {
             Ok(r) => r,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(e)),
                 }
                 .encode_to_vec()
             }
@@ -171,9 +171,9 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(
+                        ConnectorError {
                             error_message: format!("Request payload decode failed: {e}"),
                             error_code: "DECODE_FAILED".to_string(),
                             http_status_code: None,
@@ -188,8 +188,8 @@ mod uniffi_bindings_inner {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(e)),
                 }
                 .encode_to_vec()
             }
@@ -199,9 +199,9 @@ mod uniffi_bindings_inner {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(
+                        ConnectorError {
                             error_message: e.error_message,
                             error_code: e.error_code,
                             http_status_code: None,
@@ -253,8 +253,8 @@ mod uniffi_bindings_inner {
                 .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
+                r#type: ffi_result::Type::ConnectorError.into(),
+                payload: Some(ffi_result::Payload::ConnectorError(e)),
             }
             .encode_to_vec(),
         }
@@ -282,9 +282,9 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(
+                        ConnectorError {
                             error_message: format!("EventServiceHandleRequest decode failed: {e}"),
                             error_code: "DECODE_FAILED".to_string(),
                             http_status_code: None,
@@ -299,8 +299,8 @@ mod uniffi_bindings_inner {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(e)),
                 }
                 .encode_to_vec()
             }
@@ -310,9 +310,9 @@ mod uniffi_bindings_inner {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(
+                        ConnectorError {
                             error_message: e.error_message,
                             error_code: e.error_code,
                             http_status_code: None,
@@ -348,8 +348,8 @@ mod uniffi_bindings_inner {
                 .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
-                payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
+                r#type: ffi_result::Type::ConnectorError.into(),
+                payload: Some(ffi_result::Payload::ConnectorError(e)),
             }
             .encode_to_vec(),
         }

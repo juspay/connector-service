@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 // Auth Type
 #[derive(Debug, Clone)]
@@ -490,7 +490,7 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
         domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NuveiSessionTokenResponse, Self>,
@@ -529,7 +529,7 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
         // Extract session token
         let session_token = response.session_token.clone().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("session_token missing in Nuvei response".to_string()),
                 ),
@@ -904,7 +904,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<NuveiPaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -970,7 +970,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(response.order_id.clone())
             .ok_or_else(|| {
                 Report::new(
-                    ConnectorResponseTransformationError::response_handling_failed_with_context(
+                    ConnectorError::response_handling_failed_with_context(
                         item.http_code,
                         Some(
                             "missing transaction_id and order_id in Nuvei PSync response"
@@ -1090,7 +1090,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1130,7 +1130,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         // Extract transaction details
         let transaction_details = response.transaction_details.as_ref().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("transaction_details missing in Nuvei PSync response".to_string()),
                 ),
@@ -1168,7 +1168,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         let connector_transaction_id =
             transaction_details.transaction_id.clone().ok_or_else(|| {
                 Report::new(
-                    ConnectorResponseTransformationError::response_handling_failed_with_context(
+                    ConnectorError::response_handling_failed_with_context(
                         item.http_code,
                         Some(
                             "transaction_id missing in Nuvei PSync transaction_details".to_string(),
@@ -1203,7 +1203,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
 impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1256,7 +1256,7 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
         // Get connector transaction ID
         let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("transaction_id missing in Nuvei capture response".to_string()),
                 ),
@@ -1421,7 +1421,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1474,7 +1474,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
         // Get connector refund ID
         let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("transaction_id missing in Nuvei refund response".to_string()),
                 ),
@@ -1502,7 +1502,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NuveiRefundSyncResponse, Self>,
@@ -1557,7 +1557,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
         // Get connector refund ID
         let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("transaction_id missing in Nuvei refund sync response".to_string()),
                 ),
@@ -1676,7 +1676,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1729,7 +1729,7 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
         // Get connector transaction ID
         let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
             Report::new(
-                ConnectorResponseTransformationError::response_handling_failed_with_context(
+                ConnectorError::response_handling_failed_with_context(
                     item.http_code,
                     Some("transaction_id missing in Nuvei void response".to_string()),
                 ),
