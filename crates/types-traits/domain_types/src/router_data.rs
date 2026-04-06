@@ -13,7 +13,7 @@ use crate::{
     utils::{missing_field_err, ForeignTryFrom},
 };
 
-pub type Error = error_stack::Report<errors::ConnectorError>;
+pub type Error = error_stack::Report<errors::IntegrationError>;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "auth_type")]
@@ -163,39 +163,42 @@ impl PaysafePaymentMethodDetails {
     pub fn get_no_three_ds_account_id(
         &self,
         currency: common_enums::enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
+    ) -> Result<Secret<String>, errors::IntegrationError> {
         self.card
             .as_ref()
             .and_then(|cards| cards.get(&currency))
             .and_then(|card| card.no_three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+            .ok_or(errors::IntegrationError::InvalidConnectorConfig {
                 config: "Missing no_3ds account_id",
+                context: Default::default(),
             })
     }
 
     pub fn get_three_ds_account_id(
         &self,
         currency: common_enums::enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
+    ) -> Result<Secret<String>, errors::IntegrationError> {
         self.card
             .as_ref()
             .and_then(|cards| cards.get(&currency))
             .and_then(|card| card.three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+            .ok_or(errors::IntegrationError::InvalidConnectorConfig {
                 config: "Missing 3ds account_id",
+                context: Default::default(),
             })
     }
 
     pub fn get_ach_account_id(
         &self,
         currency: common_enums::enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
+    ) -> Result<Secret<String>, errors::IntegrationError> {
         self.ach
             .as_ref()
             .and_then(|ach| ach.get(&currency))
             .and_then(|ach| ach.account_id.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+            .ok_or(errors::IntegrationError::InvalidConnectorConfig {
                 config: "Missing ach account_id",
+                context: Default::default(),
             })
     }
 }
@@ -1401,14 +1404,16 @@ impl ConnectorSpecificConfig {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for ConnectorSpecificConfig {
-    type Error = errors::ConnectorError;
+    type Error = errors::IntegrationError;
 
     fn foreign_try_from(
         auth: grpc_api_types::payments::ConnectorSpecificConfig,
     ) -> Result<Self, Error> {
         use grpc_api_types::payments::connector_specific_config::Config as AuthType;
 
-        let err = || errors::ConnectorError::FailedToObtainAuthType;
+        let err = || errors::IntegrationError::FailedToObtainAuthType {
+            context: Default::default(),
+        };
         let auth_type = auth.config.ok_or_else(err)?;
 
         match auth_type {
@@ -1466,7 +1471,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             AuthType::Cashtocode(cashtocode) => Ok(Self::Cashtocode {
                 auth_key_map: serde_json::to_value(cashtocode.auth_key_map)
                     .and_then(serde_json::from_value)
-                    .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?,
+                    .map_err(|_| errors::IntegrationError::FailedToObtainAuthType {
+                        context: Default::default(),
+                    })?,
                 base_url: cashtocode.base_url,
             }),
             AuthType::Cryptopay(cryptopay) => Ok(Self::Cryptopay {
@@ -1721,7 +1728,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             AuthType::Payload(payload) => Ok(Self::Payload {
                 auth_key_map: serde_json::to_value(payload.auth_key_map)
                     .and_then(serde_json::from_value)
-                    .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?,
+                    .map_err(|_| errors::IntegrationError::FailedToObtainAuthType {
+                        context: Default::default(),
+                    })?,
                 base_url: payload.base_url,
             }),
             AuthType::Authipay(authipay) => Ok(Self::Authipay {
@@ -1754,7 +1763,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                     .map(|account_id| {
                         serde_json::to_value(account_id)
                             .and_then(serde_json::from_value)
-                            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)
+                            .map_err(|_| errors::IntegrationError::FailedToObtainAuthType {
+                                context: Default::default(),
+                            })
                     })
                     .transpose()?,
             }),
@@ -1865,6 +1876,16 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 terminal_id: fiservcommercehub.terminal_id.ok_or_else(err)?,
                 base_url: fiservcommercehub.base_url,
             }),
+            AuthType::Itaubank(itaubank) => Ok(Self::Itaubank {
+                client_secret: itaubank.client_secret.ok_or_else(err)?,
+                client_id: itaubank.client_id.ok_or_else(err)?,
+                base_url: itaubank.base_url,
+            }),
+            AuthType::Ppro(ppro) => Ok(Self::Ppro {
+                api_key: ppro.api_key.ok_or_else(err)?,
+                merchant_id: ppro.merchant_id.ok_or_else(err)?,
+                base_url: ppro.base_url,
+            }),
             AuthType::Archipel(archipel) => Ok(Self::Archipel {
                 api_key: archipel.ca_certificate.ok_or_else(err)?,
                 base_url: archipel.base_url,
@@ -1876,14 +1897,16 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
 impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
     for ConnectorSpecificConfig
 {
-    type Error = errors::ConnectorError;
+    type Error = errors::IntegrationError;
 
     fn foreign_try_from(
         (auth, connector): (&ConnectorAuthType, &connector_types::ConnectorEnum),
     ) -> Result<Self, Error> {
         use connector_types::ConnectorEnum;
 
-        let err = || errors::ConnectorError::FailedToObtainAuthType;
+        let err = || errors::IntegrationError::FailedToObtainAuthType {
+            context: Default::default(),
+        };
 
         match connector {
             // --- HeaderKey connectors ---
@@ -2811,8 +2834,8 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 } => Ok(Self::Finix {
                     finix_user_name: api_key.clone(),
                     finix_password: api_secret.clone(),
-                    merchant_identity_id: key1.clone(),
-                    merchant_id: key2.clone(),
+                    merchant_id: key1.clone(),
+                    merchant_identity_id: key2.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),
