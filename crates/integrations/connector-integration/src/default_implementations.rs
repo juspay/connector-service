@@ -117,6 +117,7 @@ default_impl_verify_webhook_source_v2!(
     Silverflow,
     Stax,
     Stripe,
+    Trustly,
     Trustpay,
     Trustpayments,
     Tsys,
