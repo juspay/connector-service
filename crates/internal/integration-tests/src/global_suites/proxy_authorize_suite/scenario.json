@@ -6,22 +6,20 @@
         "minor_amount": 6000,
         "currency": "USD"
       },
-      "payment_method": {
-        "card": {
-          "card_number": {
-            "value": "4111111111111111"
-          },
-          "card_exp_month": {
-            "value": "08"
-          },
-          "card_exp_year": {
-            "value": "30"
-          },
-          "card_cvc": {
-            "value": "999"
-          },
-          "card_type": "credit"
-        }
+      "card_proxy": {
+        "card_number": {
+          "value": "4111111111111111"
+        },
+        "card_exp_month": {
+          "value": "08"
+        },
+        "card_exp_year": {
+          "value": "30"
+        },
+        "card_cvc": {
+          "value": "999"
+        },
+        "card_type": "credit"
       },
       "capture_method": "AUTOMATIC",
       "customer": {

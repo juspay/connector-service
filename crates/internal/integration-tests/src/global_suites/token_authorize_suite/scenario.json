@@ -6,14 +6,13 @@
         "minor_amount": 6000,
         "currency": "USD"
       },
-      "payment_method_token": {
+      "connector_token": {
         "value": ""
       },
       "capture_method": "AUTOMATIC",
       "customer": {
         "id": "auto_generate"
       },
-      "auth_type": "NO_THREE_DS",
       "test_mode": true
     },
     "assert": {
@@ -34,14 +33,13 @@
         "minor_amount": 6000,
         "currency": "USD"
       },
-      "payment_method_token": {
+      "connector_token": {
         "value": ""
       },
       "capture_method": "MANUAL",
       "customer": {
         "id": "auto_generate"
       },
-      "auth_type": "NO_THREE_DS",
       "test_mode": true
     },
     "assert": {

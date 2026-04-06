@@ -1,47 +1,44 @@
 {
   "proxy_setup_mandate": {
     "grpc_req": {
-      "merchant_transaction_id": "auto_generate",
+      "merchant_recurring_payment_id": "auto_generate",
       "amount": {
         "minor_amount": 0,
         "currency": "USD"
       },
-      "payment_method": {
-        "card": {
-          "card_number": {
-            "value": "4111111111111111"
-          },
-          "card_exp_month": {
-            "value": "08"
-          },
-          "card_exp_year": {
-            "value": "30"
-          },
-          "card_cvc": {
-            "value": "999"
-          },
-          "card_type": "credit"
-        }
+      "card_proxy": {
+        "card_number": {
+          "value": "4111111111111111"
+        },
+        "card_exp_month": {
+          "value": "08"
+        },
+        "card_exp_year": {
+          "value": "30"
+        },
+        "card_cvc": {
+          "value": "999"
+        },
+        "card_type": "credit"
       },
       "customer": {
         "id": "auto_generate"
       },
-      "mandate_data": {
-        "customer_acceptance": {
-          "acceptance_type": "online",
-          "accepted_at": "auto_generate"
-        },
+      "setup_mandate_details": {
         "mandate_type": {
-          "multi_use": {
-            "amount": {
-              "minor_amount": 10000,
+          "mandate_type": {
+            "MultiUse": {
+              "amount": 10000,
               "currency": "USD"
             }
           }
         }
       },
-      "auth_type": "NO_THREE_DS",
-      "test_mode": true
+      "customer_acceptance": {
+        "acceptance_type": "ONLINE",
+        "accepted_at": 1704067200
+      },
+      "auth_type": "NO_THREE_DS"
     },
     "assert": {
       "status": {
