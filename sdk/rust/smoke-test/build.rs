@@ -402,10 +402,7 @@ fn main() {
         }
 
         for name in &all_names {
-            let path = examples_dir
-                .join(name.as_str())
-                .join("rust")
-                .join(format!("{name}.rs"));
+            let path = examples_dir.join(name.as_str()).join(format!("{name}.rs"));
             let canonical = path.canonicalize().unwrap_or(path.clone());
             code.push_str(&format!(
                 "pub mod {name} {{\n    include!(r\"{}\");\n}}\n",
