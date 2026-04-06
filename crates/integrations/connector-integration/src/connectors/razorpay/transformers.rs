@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
+use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -1569,7 +1569,7 @@ impl<F, Req>
         Vec<u8>, // raw_response
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn foreign_try_from(
         (upi_response, data, _status_code, _raw_response): (
