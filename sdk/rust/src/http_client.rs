@@ -113,13 +113,17 @@ impl NetworkError {
 }
 
 pub struct HttpClient {
-    client: reqwest::Client,
     options: HttpOptions,
 }
 
 impl HttpClient {
-    /// Initialize a new HttpClient with fixed infrastructure settings.
-    pub fn new(options: HttpOptions) -> Result<Self, NetworkError> {
+    /// Initialize a new HttpClient. Infallible — options are validated lazily on first execute().
+    pub fn new(options: HttpOptions) -> Self {
+        Self { options }
+    }
+
+    /// Build a reqwest::Client from the given options. Called lazily inside execute().
+    fn build_client(options: &HttpOptions) -> Result<reqwest::Client, NetworkError> {
         let connect_timeout = options
             .connect_timeout_ms
             .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
@@ -187,7 +191,7 @@ impl HttpClient {
             }
         }
 
-        let client = builder.build().map_err(|e| {
+        builder.build().map_err(|e| {
             let msg = e.to_string();
             let code = if msg.to_lowercase().contains("proxy") {
                 NetworkErrorCode::InvalidProxyConfiguration
@@ -199,9 +203,7 @@ impl HttpClient {
                 message: format!("Failed to build HTTP client: {}", e),
                 status_code: Some(500),
             }
-        })?;
-
-        Ok(Self { client, options })
+        })
     }
 
     /// Execute an HTTP request, applying per-call behavioral overrides if provided.
@@ -218,22 +220,26 @@ impl HttpClient {
             });
         }
 
+        // Merge base options with per-request overrides, then build client.
+        let effective_opts = match override_options {
+            Some(ref ov) => merge_http_options(&self.options, ov),
+            None => self.options.clone(),
+        };
+        let client = Self::build_client(&effective_opts)?;
+
         let start_time = Instant::now();
 
         let mut req_builder = match request.method {
-            Method::Get => self.client.get(&request.url),
-            Method::Post => self.client.post(&request.url),
-            Method::Put => self.client.put(&request.url),
-            Method::Delete => self.client.delete(&request.url),
-            Method::Patch => self.client.patch(&request.url),
+            Method::Get => client.get(&request.url),
+            Method::Post => client.post(&request.url),
+            Method::Put => client.put(&request.url),
+            Method::Delete => client.delete(&request.url),
+            Method::Patch => client.patch(&request.url),
         };
 
-        // Resolve and apply effective total timeout for this request.
-        // reqwest 0.11 supports only total timeout (.timeout()) at request level.
-        let effective_total_timeout = override_options
-            .as_ref()
-            .and_then(|o| o.total_timeout_ms)
-            .or(self.options.total_timeout_ms)
+        // Apply effective total timeout at request level (reqwest supports this).
+        let effective_total_timeout = effective_opts
+            .total_timeout_ms
             .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
         req_builder = req_builder.timeout(Duration::from_millis(effective_total_timeout as u64));
 

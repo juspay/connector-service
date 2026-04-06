@@ -320,22 +320,7 @@ async fn run_tests(
                 }
             };
 
-            let client = match ConnectorClient::new(config, None) {
-                Ok(c) => c,
-                Err(e) => {
-                    println!(
-                        "{}",
-                        grey(&format!("  SKIPPED (client creation failed: {e})"))
-                    );
-                    results.push(ConnectorResult {
-                        connector: instance_name.clone(),
-                        status: "skipped",
-                        scenarios: vec![],
-                        error: Some(e.to_string()),
-                    });
-                    continue;
-                }
-            };
+            let client = ConnectorClient::new(config, None);
 
             let result =
                 test_connector_scenarios(&instance_name, connector_name, client, dry_run).await;

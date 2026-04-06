@@ -18,7 +18,7 @@ fn build_client() -> ConnectorClient {
             environment: Environment::Sandbox.into(),
         }),
     };
-    ConnectorClient::new(config, None).unwrap()
+    ConnectorClient::new(config, None)
 }
 
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
