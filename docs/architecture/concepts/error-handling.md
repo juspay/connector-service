@@ -125,7 +125,6 @@ These occur when the connector returns a 4xx or 5xx response, or when the respon
 
 - **JS:** `error.errorCode`, `error.message`, `error.httpStatusCode`
 - **Python:** `error.error_code`, `error.error_message`, `error.http_status_code`
-- **Rust:** `error.error_code`, `error.error_message`, `error.http_status_code`
 
 > **Important:** The payment may have been processed at the connector even when this error is thrown. Do not retry without first verifying payment status.
 
@@ -231,7 +230,6 @@ These occur during HTTP communication with the connector — after the request m
 
 - **JS:** `error.errorCode`, `error.message`, `error.statusCode`
 - **Python:** `error.error_code`, `str(error)`, `error.status_code`
-- **Rust:** `error.error_code`, `error.message`, `error.status_code`
 
 > **Retry safety:** Most network errors happen after the request was already sent to the connector. Retrying without idempotency keys can cause double charges. Only retry `CONNECT_TIMEOUT_EXCEEDED` (connection never established) with confidence. For all others, verify payment status before retrying.
 
