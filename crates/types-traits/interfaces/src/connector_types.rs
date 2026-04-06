@@ -19,8 +19,8 @@ use domain_types::{
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
-        WebhookDetailsResponse,
+        SetupMandateRequestData, SplitSettlementData, SplitSettlementResponseData,
+        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     errors::WebhookError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -79,6 +79,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + ClientAuthentication
     + PaymentIncrementalAuthorization
     + MandateRevokeV2
+    + SplitSettlementV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
     + PayoutCreateV2
@@ -277,6 +278,16 @@ pub trait MandateRevokeV2:
     PaymentFlowData,
     MandateRevokeRequestData,
     MandateRevokeResponseData,
+>
+{
+}
+
+pub trait SplitSettlementV2:
+    ConnectorIntegrationV2<
+    connector_flow::SplitSettlement,
+    PaymentFlowData,
+    SplitSettlementData,
+    SplitSettlementResponseData,
 >
 {
 }

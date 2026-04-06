@@ -324,6 +324,20 @@ class GrpcPaymentClient:
             "payment/setup_recurring",
             req, payment_pb2.PaymentServiceSetupRecurringResponse,
         )
+    def payment_handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
+        """PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payment/payment_handle_event",
+            req, payment_pb2.EventServiceHandleResponse,
+        )
+    def split_settlement(self, req: payment_pb2.PaymentServiceSplitSettlementRequest) -> payment_pb2.PaymentServiceSplitSettlementResponse:
+        """PaymentService.SplitSettlement — Split a captured payment into multiple transfers to linked accounts. Creates transfers on a payment to distribute funds across sub-merchants."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payment/split_settlement",
+            req, payment_pb2.PaymentServiceSplitSettlementResponse,
+        )
     def token_authorize(self, req: payment_pb2.PaymentServiceTokenAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
         """PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token."""
         return _call_grpc(

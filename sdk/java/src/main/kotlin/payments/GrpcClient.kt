@@ -296,6 +296,16 @@ class GrpcPaymentClient internal constructor(
     suspend fun setup_recurring(req: PaymentServiceSetupRecurringRequest): PaymentServiceSetupRecurringResponse =
         callGrpc(config, "payment/setup_recurring", req, PaymentServiceSetupRecurringResponse.parser())
     /**
+     * PaymentService.HandleEvent — Handle incoming webhooks from payment processors. This will delegate to the appropriate service transform (could be payment or refund or dispute) based on the event type.
+     */
+    suspend fun payment_handle_event(req: EventServiceHandleRequest): EventServiceHandleResponse =
+        callGrpc(config, "payment/payment_handle_event", req, EventServiceHandleResponse.parser())
+    /**
+     * PaymentService.SplitSettlement — Split a captured payment into multiple transfers to linked accounts. Creates transfers on a payment to distribute funds across sub-merchants.
+     */
+    suspend fun split_settlement(req: PaymentServiceSplitSettlementRequest): PaymentServiceSplitSettlementResponse =
+        callGrpc(config, "payment/split_settlement", req, PaymentServiceSplitSettlementResponse.parser())
+    /**
      * PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token.
      */
     suspend fun token_authorize(req: PaymentServiceTokenAuthorizeRequest): PaymentServiceAuthorizeResponse =

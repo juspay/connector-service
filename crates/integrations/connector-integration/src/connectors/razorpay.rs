@@ -21,8 +21,8 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
         CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
         MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence,
-        Void, VoidPC,
+        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, SplitSettlement,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
@@ -37,8 +37,9 @@ use domain_types::{
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RequestDetails, ResponseId, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
-        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SplitSettlementData,
+        SplitSettlementResponseData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
     },
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -227,6 +228,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Razorpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::SplitSettlementV2 for Razorpay<T>
 {
 }
 impl<T> Razorpay<T> {
@@ -1363,4 +1369,124 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MandateRevokeResponseData,
     > for Razorpay<T>
 {
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SplitSettlement,
+        PaymentFlowData,
+        SplitSettlementData,
+        SplitSettlementResponseData,
+    > for Razorpay<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            SplitSettlement,
+            PaymentFlowData,
+            SplitSettlementData,
+            SplitSettlementResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                "application/json".to_string().into(),
+            ),
+        ];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            SplitSettlement,
+            PaymentFlowData,
+            SplitSettlementData,
+            SplitSettlementResponseData,
+        >,
+    ) -> CustomResult<String, IntegrationError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        let payment_id = &req.request.payment_id;
+        if payment_id.is_empty() {
+            return Err(IntegrationError::MissingRequiredField {
+                field_name: "payment_id",
+                context: Default::default(),
+            }
+            .into());
+        }
+        Ok(format!("{base_url}v1/payments/{payment_id}/transfers"))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            SplitSettlement,
+            PaymentFlowData,
+            SplitSettlementData,
+            SplitSettlementResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, IntegrationError> {
+        let connector_req = razorpay::RazorpaySplitSettlementRequest::try_from(&req.request)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            SplitSettlement,
+            PaymentFlowData,
+            SplitSettlementData,
+            SplitSettlementResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            SplitSettlement,
+            PaymentFlowData,
+            SplitSettlementData,
+            SplitSettlementResponseData,
+        >,
+        ConnectorResponseTransformationError,
+    > {
+        let response: razorpay::RazorpaySplitSettlementResponse = res
+            .response
+            .parse_struct("RazorpaySplitSettlementResponse")
+            .change_context(
+                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                },
+            )?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code)).change_context(
+            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                context: Default::default(),
+            },
+        )
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+        self.build_error_response(res, event_builder)
+    }
 }
