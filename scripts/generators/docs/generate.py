@@ -226,6 +226,10 @@ def _supplement_flow_metadata_from_proto(proto_dir: Path) -> None:
 
     # Build set of (service_name, rpc_name) already in metadata
     existing = {(m["service_name"], m["rpc_name"]) for m in _FLOW_METADATA}
+    # Also track which flow_keys already exist so supplemental entries from other
+    # services (e.g. PayoutService.Void → flow_key "void") don't silently overwrite
+    # canonical entries already probed under the same key (e.g. PaymentService.Void).
+    existing_flow_keys = {m["flow_key"] for m in _FLOW_METADATA}
 
     def _to_snake(name: str) -> str:
         s = _re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
@@ -238,6 +242,11 @@ def _supplement_flow_metadata_from_proto(proto_dir: Path) -> None:
         for rpc_name in rpcs:
             if (service_name, rpc_name) not in existing:
                 flow_key = _to_snake(rpc_name)
+                # Skip if a canonical entry with this flow_key already exists from
+                # another service (prevents PayoutService.Void clobbering PaymentService.Void).
+                if flow_key in existing_flow_keys:
+                    existing.add((service_name, rpc_name))
+                    continue
                 _FLOW_METADATA.append({
                     "flow_key": flow_key,
                     "service_name": service_name,
@@ -246,6 +255,7 @@ def _supplement_flow_metadata_from_proto(proto_dir: Path) -> None:
                     "service_rpc": f"{service_name}.{rpc_name}",
                 })
                 existing.add((service_name, rpc_name))
+                existing_flow_keys.add(flow_key)
 
 
 def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:

@@ -5,7 +5,7 @@
 // Stripe — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx stripe.ts checkout_autocapture
 
-import { PaymentClient, PayoutClient, MerchantAuthenticationClient, CustomerClient, RecurringPaymentClient, PaymentMethodClient } from 'hyperswitch-prism';
+import { PaymentClient, MerchantAuthenticationClient, CustomerClient, RecurringPaymentClient, RefundClient, PaymentMethodClient } from 'hyperswitch-prism';
 import { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } from 'hyperswitch-prism/types';
 
 const _defaultConfig: ConnectorConfig = {
@@ -75,10 +75,35 @@ function _buildCreateCustomerRequest(): CustomerServiceCreateRequest {
     };
 }
 
+function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequest {
+    return {
+        "merchantTransactionId": "probe_merchant_txn_001",  // Identification
+        "connectorTransactionId": connectorTransactionId,
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    };
+}
+
+function _buildIncrementalAuthorizationRequest(): PaymentServiceIncrementalAuthorizationRequest {
+    return {
+        "merchantAuthorizationId": "probe_auth_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amount": {  // new amount to be authorized (in minor currency units)
+            "minorAmount": 1100,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "incremental_auth_probe"  // Optional Fields
+    };
+}
+
 function _buildRecurringChargeRequest(): RecurringPaymentServiceChargeRequest {
     return {
         "connectorRecurringPaymentId": {
-            "connectorMandateId": "probe-mandate-123"
+            "connectorMandateId": {  // mandate_id sent by the connector
+                "connectorMandateId": "probe-mandate-123"
+            }
         },
         "amount": {  // Amount Information
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
@@ -109,6 +134,14 @@ function _buildRefundRequest(connectorTransactionId: string): PaymentServiceRefu
     };
 }
 
+function _buildRefundGetRequest(): RefundServiceGetRequest {
+    return {
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "refundId": "probe_refund_id_001"
+    };
+}
+
 function _buildSetupRecurringRequest(): PaymentServiceSetupRecurringRequest {
     return {
         "merchantRecurringPaymentId": "probe_mandate_001",  // Identification
@@ -132,11 +165,11 @@ function _buildSetupRecurringRequest(): PaymentServiceSetupRecurringRequest {
         "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used
         "enrolledFor3Ds": false,
         "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
-        "setupFutureUsage": "OFF_SESSION",
+        "setupFutureUsage": FutureUsage.OFF_SESSION,
         "requestIncrementalAuthorization": false,
         "customerAcceptance": {
-            "acceptanceType": "OFFLINE",
-            "acceptedAt": 0
+            "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
         }
     };
 }
@@ -160,6 +193,13 @@ function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
             "billingAddress": {
             }
         }
+    };
+}
+
+function _buildVoidRequest(connectorTransactionId: string): PaymentServiceVoidRequest {
+    return {
+        "merchantVoidId": "probe_void_001",  // Identification
+        "connectorTransactionId": connectorTransactionId
     };
 }
 
@@ -238,9 +278,8 @@ export async function processRefund(merchantTransactionId: string, config: Conne
 
 // Void Payment
 // Cancel an authorized but not-yet-captured payment.
-export async function processVoidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+export async function processVoidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceVoidResponse> {
     const paymentClient = new PaymentClient(config);
-    const payoutClient = new PayoutClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
     const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest(CaptureMethod.MANUAL));
@@ -254,19 +293,15 @@ export async function processVoidPayment(merchantTransactionId: string, config: 
     }
 
     // Step 2: Void — release reserved funds (cancel authorization)
-    const voidResponse = await payoutClient.void({
-        "merchantVoidId": "probe_void_001",
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-    });
+    const voidResponse = await paymentClient.void(_buildVoidRequest(authorizeResponse.connectorTransactionId));
 
     return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: voidResponse.error };
 }
 
 // Get Payment Status
 // Retrieve current payment status from the connector.
-export async function processGetPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+export async function processGetPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
     const paymentClient = new PaymentClient(config);
-    const payoutClient = new PayoutClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
     const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest(CaptureMethod.MANUAL));
@@ -280,14 +315,7 @@ export async function processGetPayment(merchantTransactionId: string, config: C
     }
 
     // Step 2: Get — retrieve current payment status from the connector
-    const getResponse = await payoutClient.get({
-        "merchantTransactionId": "probe_merchant_txn_001",
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-        "amount": {
-            "minorAmount": 1000,
-            "currency": "USD"
-        }
-    });
+    const getResponse = await paymentClient.get(_buildGetRequest(authorizeResponse.connectorTransactionId));
 
     return { status: getResponse.status, transactionId: getResponse.connectorTransactionId, error: getResponse.error };
 }
@@ -319,20 +347,6 @@ export async function createClientAuthenticationToken(merchantTransactionId: str
     return { status: createResponse.status };
 }
 
-// Flow: PaymentService.create_client_authentication_token_req_handler
-export async function createClientAuthenticationTokenReqHandler(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: create_client_authentication_token_req_handler
-    const createResponse = await paymentClient.createClientAuthenticationTokenReqHandler({
-        "merchantClientSessionId": "probe_sdk_session_001",
-        "domainContext": {
-            "minorAmount": 1000,
-            "currency": "USD"
-        }
-    });
-
-    return { status: createResponse.status };
-}
-
 // Flow: CustomerService.Create
 export async function createCustomer(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<CustomerServiceCreateResponse> {
     const customerClient = new CustomerClient(config);
@@ -342,33 +356,20 @@ export async function createCustomer(merchantTransactionId: string, config: Conn
     return { status: createResponse.status };
 }
 
-// Flow: PayoutService.Get
-export async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: Get — retrieve current payment status from the connector
-    const getResponse = await payoutClient.get({
-        "merchantTransactionId": "probe_merchant_txn_001",
-        "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {
-            "minorAmount": 1000,
-            "currency": "USD"
-        }
-    });
+// Flow: PaymentService.Get
+export async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
 
     return { status: getResponse.status };
 }
 
-// Flow: PaymentService.incremental_authorization
-export async function incrementalAuthorization(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: incremental_authorization
-    const incrementalResponse = await paymentClient.incrementalAuthorization({
-        "merchantAuthorizationId": "probe_auth_001",
-        "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {
-            "minorAmount": 1100,
-            "currency": "USD"
-        },
-        "reason": "incremental_auth_probe"
-    });
+// Flow: PaymentService.IncrementalAuthorization
+export async function incrementalAuthorization(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceIncrementalAuthorizationResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const incrementalResponse = await paymentClient.incrementalAuthorization(_buildIncrementalAuthorizationRequest());
 
     return { status: incrementalResponse.status };
 }
@@ -446,14 +447,11 @@ export async function refund(merchantTransactionId: string, config: ConnectorCon
     return { status: refundResponse.status };
 }
 
-// Flow: PaymentService.refund_get
-export async function refundGet(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: refund_get
-    const refundResponse = await paymentClient.refundGet({
-        "merchantRefundId": "probe_refund_001",
-        "connectorTransactionId": "probe_connector_txn_001",
-        "refundId": "probe_refund_id_001"
-    });
+// Flow: RefundService.Get
+export async function refundGet(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<RefundResponse> {
+    const refundClient = new RefundClient(config);
+
+    const refundResponse = await refundClient.refundGet(_buildRefundGetRequest());
 
     return { status: refundResponse.status };
 }
@@ -476,19 +474,17 @@ export async function tokenize(merchantTransactionId: string, config: ConnectorC
     return { status: tokenizeResponse.status };
 }
 
-// Flow: PayoutService.Void
-export async function voidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: Void — release reserved funds (cancel authorization)
-    const voidResponse = await payoutClient.void({
-        "merchantVoidId": "probe_void_001",
-        "connectorTransactionId": "probe_connector_txn_001"
-    });
+// Flow: PaymentService.Void
+export async function voidPayment(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceVoidResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const voidResponse = await paymentClient.void(_buildVoidRequest('probe_connector_txn_001'));
 
     return { status: voidResponse.status };
 }
 
 
-export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createClientAuthenticationTokenReqHandler, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest };
+export { processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildIncrementalAuthorizationRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest };
 
 // CLI runner
 if (require.main === module) {

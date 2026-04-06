@@ -91,6 +91,31 @@ pub fn build_create_customer_request() -> CustomerServiceCreateRequest {
     .unwrap_or_default()
 }
 
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
+    "connector_transaction_id": connector_transaction_id,
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    }))
+    .unwrap_or_default()
+}
+
+pub fn build_incremental_authorization_request() -> PaymentServiceIncrementalAuthorizationRequest {
+    serde_json::from_value::<PaymentServiceIncrementalAuthorizationRequest>(serde_json::json!({
+    "merchant_authorization_id": "probe_auth_001",  // Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    "amount": {  // new amount to be authorized (in minor currency units)
+        "minor_amount": 1100,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "reason": "incremental_auth_probe",  // Optional Fields
+    }))
+    .unwrap_or_default()
+}
+
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {
@@ -133,6 +158,15 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     .unwrap_or_default()
 }
 
+pub fn build_refund_get_request() -> RefundServiceGetRequest {
+    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",  // Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    "refund_id": "probe_refund_id_001",
+    }))
+    .unwrap_or_default()
+}
+
 pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     serde_json::from_value::<PaymentServiceSetupRecurringRequest>(serde_json::json!({
     "merchant_recurring_payment_id": "probe_mandate_001",  // Identification
@@ -161,8 +195,8 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     "setup_future_usage": "OFF_SESSION",
     "request_incremental_authorization": false,
     "customer_acceptance": {
-        "acceptance_type": "OFFLINE",
-        "accepted_at": 0,
+        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
+        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
     },
     }))
     .unwrap_or_default()
@@ -189,6 +223,14 @@ pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
         "billing_address": {
         },
     },
+    }))
+    .unwrap_or_default()
+}
+
+pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
+    "merchant_void_id": "probe_void_001",  // Identification
+    "connector_transaction_id": connector_transaction_id,
     }))
     .unwrap_or_default()
 }
@@ -334,11 +376,12 @@ pub async fn process_void_payment(
     // Step 2: Void — release reserved funds (cancel authorization)
     let void_response = client
         .void(
-            serde_json::from_value(serde_json::json!({
-                "merchant_void_id": "probe_void_001",
-                "connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize
-            }))
-            .unwrap_or_default(),
+            build_void_request(
+                authorize_response
+                    .connector_transaction_id
+                    .as_deref()
+                    .unwrap_or(""),
+            ),
             &HashMap::new(),
             None,
         )
@@ -370,15 +413,12 @@ pub async fn process_get_payment(
     // Step 2: Get — retrieve current payment status from the connector
     let get_response = client
         .get(
-            serde_json::from_value(serde_json::json!({
-                "merchant_transaction_id": "probe_merchant_txn_001",
-                "amount": {
-                    "minor_amount": 1000,
-                    "currency": "USD",
-                },
-                "connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize
-            }))
-            .unwrap_or_default(),
+            build_get_request(
+                authorize_response
+                    .connector_transaction_id
+                    .as_deref()
+                    .unwrap_or(""),
+            ),
             &HashMap::new(),
             None,
         )
@@ -437,34 +477,7 @@ pub async fn create_client_authentication_token(
             None,
         )
         .await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
-// Flow: PaymentService.create_client_authentication_token_req_handler
-#[allow(dead_code)]
-pub async fn create_client_authentication_token_req_handler(
-    client: &ConnectorClient,
-    _merchant_transaction_id: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client
-        .create_client_authentication_token_req_handler(
-            serde_json::from_value(serde_json::json!({
-            "merchant_client_session_id": "probe_sdk_session_001",
-            "domain_context": {
-                "payment": {
-                    "amount": {
-                        "minor_amount": 1000,
-                        "currency": "USD",
-                    },
-                },
-            },
-            }))
-            .unwrap_or_default(),
-            &HashMap::new(),
-            None,
-        )
-        .await?;
-    Ok(format!("status: {:?}", response.status()))
+    Ok(format!("status: {:?}", response.status_code))
 }
 
 // Flow: CustomerService.Create
@@ -479,7 +492,7 @@ pub async fn create_customer(
     Ok(format!("customer_id: {}", response.connector_customer_id))
 }
 
-// Flow: PayoutService.Get
+// Flow: PaymentService.Get
 #[allow(dead_code)]
 pub async fn get(
     client: &ConnectorClient,
@@ -487,15 +500,7 @@ pub async fn get(
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
         .get(
-            serde_json::from_value(serde_json::json!({
-            "merchant_transaction_id": "probe_merchant_txn_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD",
-            },
-            }))
-            .unwrap_or_default(),
+            build_get_request("probe_connector_txn_001"),
             &HashMap::new(),
             None,
         )
@@ -503,7 +508,7 @@ pub async fn get(
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.incremental_authorization
+// Flow: PaymentService.IncrementalAuthorization
 #[allow(dead_code)]
 pub async fn incremental_authorization(
     client: &ConnectorClient,
@@ -511,16 +516,7 @@ pub async fn incremental_authorization(
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
         .incremental_authorization(
-            serde_json::from_value(serde_json::json!({
-            "merchant_authorization_id": "probe_auth_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "amount": {
-                "minor_amount": 1100,
-                "currency": "USD",
-            },
-            "reason": "incremental_auth_probe",
-            }))
-            .unwrap_or_default(),
+            build_incremental_authorization_request(),
             &HashMap::new(),
             None,
         )
@@ -633,23 +629,14 @@ pub async fn refund(
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.refund_get
+// Flow: RefundService.Get
 #[allow(dead_code)]
 pub async fn refund_get(
     client: &ConnectorClient,
     _merchant_transaction_id: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
-        .refund_get(
-            serde_json::from_value(serde_json::json!({
-            "merchant_refund_id": "probe_refund_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "refund_id": "probe_refund_id_001",
-            }))
-            .unwrap_or_default(),
-            &HashMap::new(),
-            None,
-        )
+        .refund_get(build_refund_get_request(), &HashMap::new(), None)
         .await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -687,7 +674,7 @@ pub async fn tokenize(
     Ok(format!("token: {}", response.payment_method_token))
 }
 
-// Flow: PayoutService.Void
+// Flow: PaymentService.Void
 #[allow(dead_code)]
 pub async fn void(
     client: &ConnectorClient,
@@ -695,11 +682,7 @@ pub async fn void(
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
         .void(
-            serde_json::from_value(serde_json::json!({
-            "merchant_void_id": "probe_void_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            }))
-            .unwrap_or_default(),
+            build_void_request("probe_connector_txn_001"),
             &HashMap::new(),
             None,
         )
@@ -725,9 +708,6 @@ async fn main() {
         "create_client_authentication_token" => {
             create_client_authentication_token(&client, "order_001").await
         }
-        "create_client_authentication_token_req_handler" => {
-            create_client_authentication_token_req_handler(&client, "order_001").await
-        }
         "create_customer" => create_customer(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
         "incremental_authorization" => incremental_authorization(&client, "order_001").await,
@@ -740,7 +720,7 @@ async fn main() {
         "tokenize" => tokenize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_client_authentication_token, create_client_authentication_token_req_handler, create_customer, get, incremental_authorization, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, tokenize, void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_client_authentication_token, create_customer, get, incremental_authorization, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, tokenize, void", flow);
             return;
         }
     };
