@@ -1558,14 +1558,15 @@ def _kt_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, message_schema
 
 def render_consolidated_python(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one Python file containing all scenario functions (and flow functions) for a connector."""
+    """Return one Python file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — collect every service needed across scenarios AND flows
     all_service_names: list[str] = []
@@ -1792,14 +1793,15 @@ if __name__ == "__main__":
 
 def render_consolidated_javascript(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one JavaScript file containing all scenario functions (and flow functions) for a connector."""
+    """Return one JavaScript/TypeScript file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — scenarios + flows
     all_service_names: list[str] = []

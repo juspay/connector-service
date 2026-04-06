@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L147) · [JavaScript](../../examples/nuvei/nuvei.js#L133) · [Kotlin](../../examples/nuvei/nuvei.kt#L127) · [Rust](../../examples/nuvei/nuvei.rs#L142)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L147) · [JavaScript](../../examples/nuvei/nuvei.js) · [Kotlin](../../examples/nuvei/nuvei.kt#L127) · [Rust](../../examples/nuvei/nuvei.rs#L142)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L166) · [JavaScript](../../examples/nuvei/nuvei.js#L152) · [Kotlin](../../examples/nuvei/nuvei.kt#L143) · [Rust](../../examples/nuvei/nuvei.rs#L158)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L166) · [JavaScript](../../examples/nuvei/nuvei.js) · [Kotlin](../../examples/nuvei/nuvei.kt#L143) · [Rust](../../examples/nuvei/nuvei.rs#L158)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L191) · [JavaScript](../../examples/nuvei/nuvei.js#L178) · [Kotlin](../../examples/nuvei/nuvei.kt#L165) · [Rust](../../examples/nuvei/nuvei.rs#L181)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L191) · [JavaScript](../../examples/nuvei/nuvei.js) · [Kotlin](../../examples/nuvei/nuvei.kt#L165) · [Rust](../../examples/nuvei/nuvei.rs#L181)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L216) · [JavaScript](../../examples/nuvei/nuvei.js#L204) · [Kotlin](../../examples/nuvei/nuvei.kt#L187) · [Rust](../../examples/nuvei/nuvei.rs#L204)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L216) · [JavaScript](../../examples/nuvei/nuvei.js) · [Kotlin](../../examples/nuvei/nuvei.kt#L187) · [Rust](../../examples/nuvei/nuvei.rs#L204)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L238) · [JavaScript](../../examples/nuvei/nuvei.js#L226) · [Kotlin](../../examples/nuvei/nuvei.kt#L206) · [Rust](../../examples/nuvei/nuvei.rs#L223)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L238) · [JavaScript](../../examples/nuvei/nuvei.js) · [Kotlin](../../examples/nuvei/nuvei.kt#L206) · [Rust](../../examples/nuvei/nuvei.rs#L223)
 
 ## API Reference
 
@@ -277,7 +277,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L260) · [JavaScript](../../examples/nuvei/nuvei.js#L247) · [Kotlin](../../examples/nuvei/nuvei.kt#L224) · [Rust](../../examples/nuvei/nuvei.rs#L241)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L260) · [TypeScript](../../examples/nuvei/nuvei.ts#L247) · [Kotlin](../../examples/nuvei/nuvei.kt#L224) · [Rust](../../examples/nuvei/nuvei.rs#L241)
 
 #### PaymentService.Capture
 
@@ -288,7 +288,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L269) · [JavaScript](../../examples/nuvei/nuvei.js#L256) · [Kotlin](../../examples/nuvei/nuvei.kt#L236) · [Rust](../../examples/nuvei/nuvei.rs#L253)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L269) · [TypeScript](../../examples/nuvei/nuvei.ts#L256) · [Kotlin](../../examples/nuvei/nuvei.kt#L236) · [Rust](../../examples/nuvei/nuvei.rs#L253)
 
 #### PaymentService.Get
 
@@ -299,7 +299,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L287) · [JavaScript](../../examples/nuvei/nuvei.js#L274) · [Kotlin](../../examples/nuvei/nuvei.kt#L261) · [Rust](../../examples/nuvei/nuvei.rs#L267)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L287) · [TypeScript](../../examples/nuvei/nuvei.ts#L274) · [Kotlin](../../examples/nuvei/nuvei.kt#L261) · [Rust](../../examples/nuvei/nuvei.rs#L267)
 
 #### PaymentService.Refund
 
@@ -310,7 +310,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L296) · [JavaScript](../../examples/nuvei/nuvei.js#L283) · [Kotlin](../../examples/nuvei/nuvei.kt#L269) · [Rust](../../examples/nuvei/nuvei.rs#L274)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L296) · [TypeScript](../../examples/nuvei/nuvei.ts#L283) · [Kotlin](../../examples/nuvei/nuvei.kt#L269) · [Rust](../../examples/nuvei/nuvei.rs#L274)
 
 #### PaymentService.Void
 
@@ -321,7 +321,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L314) · [JavaScript](../../examples/nuvei/nuvei.js#L301) · [Kotlin](../../examples/nuvei/nuvei.kt#L291) · [Rust](../../examples/nuvei/nuvei.rs#L288)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L314) · [TypeScript](../../examples/nuvei/nuvei.ts) · [Kotlin](../../examples/nuvei/nuvei.kt#L291) · [Rust](../../examples/nuvei/nuvei.rs#L288)
 
 ### Refunds
 
@@ -334,7 +334,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L305) · [JavaScript](../../examples/nuvei/nuvei.js#L292) · [Kotlin](../../examples/nuvei/nuvei.kt#L279) · [Rust](../../examples/nuvei/nuvei.rs#L281)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L305) · [TypeScript](../../examples/nuvei/nuvei.ts#L292) · [Kotlin](../../examples/nuvei/nuvei.kt#L279) · [Rust](../../examples/nuvei/nuvei.rs#L281)
 
 ### Authentication
 
@@ -347,4 +347,4 @@ Create a server-side session with the connector. Establishes session state for m
 | **Request** | `MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/nuvei/nuvei.py#L278) · [JavaScript](../../examples/nuvei/nuvei.js#L265) · [Kotlin](../../examples/nuvei/nuvei.kt#L246) · [Rust](../../examples/nuvei/nuvei.rs#L260)
+**Examples:** [Python](../../examples/nuvei/nuvei.py#L278) · [TypeScript](../../examples/nuvei/nuvei.ts#L265) · [Kotlin](../../examples/nuvei/nuvei.kt#L246) · [Rust](../../examples/nuvei/nuvei.rs#L260)

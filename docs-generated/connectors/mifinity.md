@@ -206,7 +206,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Seicomart | ⚠ |
 | Pay Easy | ⚠ |
 
-**Examples:** [Python](../../examples/mifinity/mifinity.py) · [JavaScript](../../examples/mifinity/mifinity.js) · [Kotlin](../../examples/mifinity/mifinity.kt) · [Rust](../../examples/mifinity/mifinity.rs)
+**Examples:** [Python](../../examples/mifinity/mifinity.py) · [TypeScript](../../examples/mifinity/mifinity.ts) · [Kotlin](../../examples/mifinity/mifinity.kt) · [Rust](../../examples/mifinity/mifinity.rs)
 
 #### PaymentService.Get
 
@@ -217,4 +217,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/mifinity/mifinity.py) · [JavaScript](../../examples/mifinity/mifinity.js) · [Kotlin](../../examples/mifinity/mifinity.kt#L36) · [Rust](../../examples/mifinity/mifinity.rs#L38)
+**Examples:** [Python](../../examples/mifinity/mifinity.py#L37) · [TypeScript](../../examples/mifinity/mifinity.ts#L36) · [Kotlin](../../examples/mifinity/mifinity.kt#L36) · [Rust](../../examples/mifinity/mifinity.rs#L38)
