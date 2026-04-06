@@ -39,7 +39,7 @@ try:
         MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
         PaymentServiceAuthorizeRequest,
         IntegrationError,
-        ConnectorResponseTransformationError,
+        ConnectorError,
         PaymentAddress
     )
 except ImportError as e:
@@ -200,12 +200,10 @@ async def test_paypal_authorize(creds_file: str) -> bool:
             print(f"  FAILED: Expected CHARGED, got {response.status}")
             return False
     except IntegrationError as e:
-        print(f"  IntegrationError: {e.error_code} - {e.error_message}")
+        print(f"  IntegrationError: {e.error_message} (code={e.error_code}, action={getattr(e, 'suggested_action', None)}, doc={getattr(e, 'doc_url', None)})")
         return False
-    except ConnectorResponseTransformationError as e:
-        print(
-            f"  ConnectorResponseTransformationError: {e.error_code} - {e.error_message}"
-        )
+    except ConnectorError as e:
+        print(f"  ConnectorError: {e.error_message} (code={e.error_code}, http={getattr(e, 'http_status_code', None)})")
         return False
     except Exception as e:
         print(f"  Error: {e}")

@@ -456,7 +456,7 @@ pub struct TrustlyPaymentsResponseData {
 impl<F, T> TryFrom<ResponseRouterData<TrustlyPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: ResponseRouterData<TrustlyPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -660,7 +660,7 @@ impl From<TrustlyRefundResult> for common_enums::RefundStatus {
 impl TryFrom<ResponseRouterData<TrustlyRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<TrustlyRefundResponse, Self>,

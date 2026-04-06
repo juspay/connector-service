@@ -18,7 +18,7 @@ use serde::Serialize;
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError};
+use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 
 // Wallet type constants
 const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";
@@ -606,7 +606,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapAuthorizeResponse, Self>,
@@ -649,7 +649,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
 impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapCaptureResponse, Self>,
@@ -689,7 +689,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<BluesnapVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
@@ -722,7 +722,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
 impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapPSyncResponse, Self>,
@@ -757,7 +757,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
 impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapRefundResponse, Self>,
@@ -816,7 +816,7 @@ pub fn map_webhook_event_to_incoming_webhook_event(
 impl TryFrom<ResponseRouterData<BluesnapRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BluesnapRefundSyncResponse, Self>,
