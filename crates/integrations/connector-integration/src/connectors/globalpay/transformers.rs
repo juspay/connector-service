@@ -279,8 +279,13 @@ pub enum InitiatorType {
     Payer,
 }
 
-// Note: In the GlobalPay UCP API, "initiator" is a flat string field ("PAYER" or "MERCHANT"),
-// not a nested object. The InitiatorType enum serializes directly to the string value.
+#[derive(Debug, Serialize)]
+pub struct Initiator {
+    #[serde(rename = "type")]
+    pub initiator_type: Option<InitiatorType>,
+    pub id: Option<String>,
+    pub stored_credential: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -310,10 +315,10 @@ pub enum StoredCredentialReason {
 
 #[derive(Debug, Serialize)]
 pub struct StoredCredential {
-    pub model: Option<StoredCredentialType>,
+    #[serde(rename = "type")]
+    pub credential_type: Option<StoredCredentialType>,
     pub sequence: Option<StoredCredentialSequence>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reason: Option<StoredCredentialReason>,
+    pub initiator: Option<InitiatorType>,
 }
 
 // ===== APM / BANK REDIRECT STRUCTURES =====
@@ -348,7 +353,7 @@ pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capture_mode: Option<GlobalpayCaptureMode>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub initiator: Option<InitiatorType>,
+    pub initiator: Option<Initiator>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notifications: Option<GlobalpayNotifications>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -369,18 +374,12 @@ pub struct GlobalpayPaymentMethod<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub number: Option<RawCardNumber<T>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expiry_month: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expiry_year: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cvv: Option<Secret<String>>,
+    pub number: RawCardNumber<T>,
+    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<String>,
+    pub cvv: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cvv_indicator: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub brand_reference: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -410,11 +409,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
-
-        // Determine if this is a mandate (MIT) payment
-        let is_mandate_payment = item.request.is_mandate_payment();
-        let network_txn_id = item.request.get_optional_network_transaction_id();
-
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Convert to 2-digit year using built-in helper method
@@ -435,12 +429,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     name: item.request.customer_name.clone().map(Secret::new),
                     entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
                     card: Some(GlobalpayCard {
-                        number: Some(card_data.card_number.clone()),
-                        expiry_month: Some(card_data.card_exp_month.clone()),
-                        expiry_year: Some(expiry_year_2digit),
-                        cvv: Some(card_data.card_cvc.clone()),
+                        number: card_data.card_number.clone(),
+                        expiry_month: card_data.card_exp_month.clone(),
+                        expiry_year: expiry_year_2digit,
+                        cvv: card_data.card_cvc.clone(),
                         cvv_indicator,
-                        brand_reference: network_txn_id.clone(),
                     }),
                     apm: None,
                 }
@@ -498,33 +491,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             None
         };
 
-        // Build stored credential and initiator for MIT (Merchant Initiated Transaction)
-        let (initiator, stored_credential) = if is_mandate_payment {
-            if network_txn_id.is_some() {
-                // Subsequent MIT: merchant-initiated with stored credentials
-                (
-                    Some(InitiatorType::Merchant),
-                    Some(StoredCredential {
-                        model: Some(StoredCredentialType::Recurring),
-                        sequence: Some(StoredCredentialSequence::Subsequent),
-                        reason: Some(StoredCredentialReason::Incremental),
-                    }),
-                )
-            } else {
-                // Initial CIT: payer-initiated, first transaction storing credentials
-                (
-                    Some(InitiatorType::Payer),
-                    Some(StoredCredential {
-                        model: Some(StoredCredentialType::Recurring),
-                        sequence: Some(StoredCredentialSequence::First),
-                        reason: None,
-                    }),
-                )
-            }
-        } else {
-            (None, None)
-        };
-
         Ok(Self {
             account_name: constants::ACCOUNT_NAME.to_string(),
             channel: constants::CHANNEL_CNP.to_string(),
@@ -542,9 +508,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             country,
             capture_mode,
-            initiator,
+            initiator: None,
             notifications,
-            stored_credential,
+            stored_credential: None,
             payment_method,
         })
     }
@@ -673,10 +639,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
         // Determine status based on connector status and presence of redirect
         let status = AttemptStatus::from(item.response.status.clone());
 
-        // Extract network transaction ID (brand_reference) from card response
-        // GlobalPay returns brand_reference which is the scheme-provided reference
-        // for stored credential transactions (MIT). This must be stored and sent
-        // back in subsequent merchant-initiated transactions.
+        // Extract network transaction ID from card response
         let network_txn_id = item
             .response
             .payment_method
@@ -684,21 +647,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             .and_then(|pm| pm.card.as_ref())
             .and_then(|card| card.brand_reference.as_ref())
             .map(|s| s.peek().to_string());
-
-        // Build mandate_reference for MIT flows
-        // The payment method id from the response can be used as connector_mandate_id
-        let mandate_reference = item
-            .response
-            .payment_method
-            .as_ref()
-            .and_then(|pm| pm.id.as_ref())
-            .map(|id| {
-                Box::new(MandateReference {
-                    connector_mandate_id: Some(id.peek().to_string()),
-                    payment_method_id: None,
-                    connector_mandate_request_reference_id: None,
-                })
-            });
 
         // Handle failure responses separately
         let response = match status {
@@ -738,7 +686,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data,
-                mandate_reference,
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
@@ -1109,6 +1057,17 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
 
 // ===== REPEAT PAYMENT (MIT) FLOW STRUCTURES =====
 
+/// Stored credential data for MIT transactions.
+/// Uses GlobalPay's MIT-specific field names (model, reason) which differ from the
+/// CIT stored_credential fields.
+#[derive(Debug, Serialize)]
+pub struct MitStoredCredential {
+    pub model: Option<StoredCredentialType>,
+    pub sequence: Option<StoredCredentialSequence>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<StoredCredentialReason>,
+}
+
 /// Request for merchant-initiated transactions (MIT) via RepeatPayment flow.
 /// GlobalPay uses the same /transactions endpoint but with initiator=MERCHANT
 /// and stored_credential fields for subsequent recurring payments.
@@ -1123,7 +1082,7 @@ pub struct GlobalpayRepeatPaymentRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capture_mode: Option<GlobalpayCaptureMode>,
     pub initiator: InitiatorType,
-    pub stored_credential: StoredCredential,
+    pub stored_credential: MitStoredCredential,
     pub payment_method: GlobalpayRepeatPaymentMethod<T>,
 }
 
@@ -1255,7 +1214,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             country,
             capture_mode,
             initiator: InitiatorType::Merchant,
-            stored_credential: StoredCredential {
+            stored_credential: MitStoredCredential {
                 model: Some(StoredCredentialType::Recurring),
                 sequence: Some(StoredCredentialSequence::Subsequent),
                 reason: Some(StoredCredentialReason::Incremental),
