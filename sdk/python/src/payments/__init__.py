@@ -7,12 +7,15 @@
 
 from payments._generated_service_clients import (
     CustomerClient,
-    PaymentClient,
     DisputeClient,
+    EventClient,
     MerchantAuthenticationClient,
+    PaymentClient,
     PaymentMethodAuthenticationClient,
     PaymentMethodClient,
+    PayoutClient,
     RecurringPaymentClient,
+    RefundClient,
 )
 from payments.grpc_client import GrpcClient, GrpcConfig
 

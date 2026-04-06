@@ -30,13 +30,14 @@ use grpc_api_types::payments::{
     PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceProxyAuthorizeRequest,
+    PaymentServiceGetResponse, PaymentServiceIncrementalAuthorizationRequest,
+    PaymentServiceIncrementalAuthorizationResponse, PaymentServiceProxyAuthorizeRequest,
     PaymentServiceProxySetupRecurringRequest, PaymentServiceRefundRequest,
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceTokenAuthorizeRequest, PaymentServiceTokenSetupRecurringRequest,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
-    RecurringPaymentServiceChargeResponse, RefundResponse, RequestConfig,
+    RecurringPaymentServiceChargeResponse, RefundResponse, RefundServiceGetRequest, RequestConfig,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
@@ -292,6 +293,13 @@ impl ConnectorClient {
         refund_res_handler
     );
     impl_flow_method!(
+        refund_get,
+        RefundServiceGetRequest,
+        RefundResponse,
+        refund_get_req_handler,
+        refund_get_res_handler
+    );
+    impl_flow_method!(
         void,
         PaymentServiceVoidRequest,
         PaymentServiceVoidResponse,
@@ -325,6 +333,13 @@ impl ConnectorClient {
         PaymentServiceCreateOrderResponse,
         create_order_req_handler,
         create_order_res_handler
+    );
+    impl_flow_method!(
+        incremental_authorization,
+        PaymentServiceIncrementalAuthorizationRequest,
+        PaymentServiceIncrementalAuthorizationResponse,
+        incremental_authorization_req_handler,
+        incremental_authorization_res_handler
     );
 
     // ── Recurring / tokenization ──────────────────────────────────────────────

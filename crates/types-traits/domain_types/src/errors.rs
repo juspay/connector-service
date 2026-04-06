@@ -506,6 +506,20 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
     }
 }
 
+/// Conversion from IntegrationError to gRPC ConnectorResponseTransformationError.
+/// Used when generate_*_response functions return IntegrationError.
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for IntegrationError
+{
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message: self.to_string(),
+            error_code: self.error_code().to_string(),
+            http_status_code: None,
+        }
+    }
+}
+
 /// Errors that occur during webhook processing
 #[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]

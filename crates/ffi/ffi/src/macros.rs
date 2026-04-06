@@ -218,13 +218,9 @@ macro_rules! res_transformer {
             })?;
 
             domain_types::types::$generate_response_fn(response)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
-                    let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
-                        error_message: ctx.to_string(),
-                        error_code: ctx.error_code().to_string(),
-                        http_status_code: ctx.http_status_code().map(u32::from),
-                    }
+                .map_err(|e| {
+                    use common_utils::errors::ErrorSwitch;
+                    ErrorSwitch::switch(e.current_context())
                 })
         }
     };
