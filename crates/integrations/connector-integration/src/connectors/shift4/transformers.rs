@@ -15,9 +15,9 @@ use domain_types::{
         Shift4ClientAuthenticationResponse as Shift4ClientAuthenticationResponseDomain,
     },
     payment_method_data::{
-        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankRedirectData, CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificConfig,
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -149,7 +149,15 @@ pub struct Shift4PaymentsRequest<T: PaymentMethodDataTypes> {
 #[serde(untagged)]
 pub enum Shift4PaymentMethod<T: PaymentMethodDataTypes> {
     Card(Shift4CardPayment<T>),
+    TokenPayment(Shift4TokenPayment),
     BankRedirect(Shift4BankRedirectPayment),
+}
+
+/// Token-based payment — the `card` field carries a token ID from Shift4 Components SDK
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4TokenPayment {
+    pub card: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -332,6 +340,24 @@ impl<T: PaymentMethodDataTypes>
                         cardholder_name,
                     },
                 })
+            }
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                Shift4PaymentMethod::TokenPayment(Shift4TokenPayment { card: token })
             }
             PaymentMethodData::BankRedirect(_bank_redirect_data) => {
                 let bank_redirect_method = Shift4BankRedirectMethod::try_from(item)?;
