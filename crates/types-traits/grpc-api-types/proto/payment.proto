@@ -1536,7 +1536,14 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    NoonClientAuthenticationResponse noon = 8;
   }
+}
+
+// Noon SDK initialization data — order_id and checkout_url for client-side checkout
+message NoonClientAuthenticationResponse {
+  uint64 order_id = 1;
+  SecretString checkout_url = 2;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

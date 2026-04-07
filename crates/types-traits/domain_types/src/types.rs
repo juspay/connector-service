@@ -9744,6 +9744,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Noon(noon_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Noon(
+                        grpc_api_types::payments::NoonClientAuthenticationResponse {
+                            order_id: noon_data.order_id,
+                            checkout_url: Some(noon_data.checkout_url),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(
