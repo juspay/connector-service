@@ -7352,7 +7352,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // --- TryFrom: AdyenOrderCreateResponse -> PaymentCreateOrderResponse ---
 
 impl TryFrom<AdyenOrderCreateResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: AdyenOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -7383,7 +7383,7 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
