@@ -13,8 +13,8 @@ use domain_types::{
         RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData,
     },
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificConfig,
+    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -284,6 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let payment_method_type = requests::JpmorganPaymentMethodType {
                     card: Some(card),
                     ach: None,
+                    token: None,
                 };
 
                 let amount = JpmorganAmountConvertor::convert(
@@ -372,6 +373,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let payment_method_type = requests::JpmorganPaymentMethodType {
                     card: None,
                     ach: Some(ach),
+                    token: None,
                 };
 
                 let amount = JpmorganAmountConvertor::convert(
@@ -386,6 +388,84 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         context: Default::default(),
                     },
                 )?;
+
+                Ok(Self {
+                    capture_method,
+                    currency: router_data.request.currency,
+                    amount,
+                    merchant,
+                    payment_method_type,
+                    account_holder,
+                    statement_descriptor,
+                })
+            }
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                // TODO: CardToken flow uses the payment_method_token obtained from
+                // CreateClientAuthenticationToken to make the payment without raw card details.
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let capture_method = map_capture_method(router_data.request.capture_method)?;
+
+                let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
+
+                let merchant =
+                    requests::JpmorganMerchant {
+                        merchant_software: requests::JpmorganMerchantSoftware {
+                            company_name: auth.company_name.clone().ok_or(
+                                IntegrationError::MissingRequiredField {
+                                    field_name: "company_name",
+                                    context: Default::default(),
+                                },
+                            )?,
+                            product_name: auth.product_name.clone().ok_or(
+                                IntegrationError::MissingRequiredField {
+                                    field_name: "product_name",
+                                    context: Default::default(),
+                                },
+                            )?,
+                        },
+                        soft_merchant: requests::JpmorganSoftMerchant {
+                            merchant_purchase_description: auth
+                                .merchant_purchase_description
+                                .clone()
+                                .ok_or(IntegrationError::MissingRequiredField {
+                                    field_name: "merchant_purchase_description",
+                                    context: Default::default(),
+                                })?,
+                        },
+                    };
+
+                // For CardToken, the token is passed in the payment_method_type
+                // instead of raw card details
+                let payment_method_type = requests::JpmorganPaymentMethodType {
+                    card: None,
+                    ach: None,
+                    token: Some(token),
+                };
+
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name: Secret::new("NA".to_string()),
+                    last_name: Secret::new("NA".to_string()),
+                };
+                let statement_descriptor = Secret::new("Statement Descriptor".to_string());
 
                 Ok(Self {
                     capture_method,

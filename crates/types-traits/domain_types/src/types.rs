@@ -543,7 +543,7 @@ impl Connectors {
             _ => {
                 // Connector not supported for URL patching - return error
                 return Err(IntegrationError::InvalidDataFormat {
-                    field_name: "connector", 
+                    field_name: "connector",
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
                             "Connector '{}' is not supported for dynamic URL patching from superposition. \
@@ -11579,7 +11579,7 @@ pub fn tokenized_authorize_to_base(
         payment_method: Some(grpc_payment_types::PaymentMethod {
             payment_method: Some(grpc_payment_types::payment_method::PaymentMethod::Token(
                 grpc_payment_types::TokenPaymentMethodType {
-                    token: v.connector_token,
+                    token: v.connector_token.clone(),
                 },
             )),
         }),
@@ -11614,7 +11614,7 @@ pub fn tokenized_authorize_to_base(
         order_category: None,
         order_details: Vec::new(),
         order_tax_amount: None,
-        payment_method_token: None,
+        payment_method_token: v.connector_token,
         redirection_response: None,
         request_extended_authorization: None,
         request_incremental_authorization: None,

@@ -37,6 +37,9 @@ pub struct JpmorganPaymentMethodType<T: PaymentMethodDataTypes> {
     pub card: Option<JpmorganCard<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ach: Option<JpmorganAch>,
+    /// Token obtained from client-side SDK (CardToken flow)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
