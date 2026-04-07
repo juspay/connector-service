@@ -457,6 +457,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     id: None,
                 }
             }
+            
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
             PaymentMethodData::CardToken(CardToken { .. }) => {
                 let token = item
                     .resource_common_data
