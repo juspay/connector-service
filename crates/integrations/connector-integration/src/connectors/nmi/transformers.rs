@@ -10,8 +10,8 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
-        BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        ApplePayPaymentData, BankDebitData, GpayTokenizationData, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -136,6 +136,8 @@ pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Ach(Box<AchData>),
     GooglePay(Box<GooglePayData>),
     GooglePayDecrypt(Box<GooglePayDecryptedData>),
+    ApplePay(Box<ApplePayData>),
+    ApplePayDecrypt(Box<ApplePayDecryptedData>),
 }
 
 // ===== GOOGLE PAY DATA =====
@@ -144,6 +146,23 @@ pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
 pub struct GooglePayData {
     #[serde(rename = "payment_token")]
     payment_token: Secret<String>,
+}
+
+// ===== APPLE PAY DATA =====
+
+#[derive(Debug, Serialize)]
+pub struct ApplePayData {
+    #[serde(rename = "payment_token")]
+    payment_token: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApplePayDecryptedData {
+    decrypted_applepay_data: DecryptedDataIndicator,
+    ccnumber: Secret<String>,
+    ccexp: Secret<String>,
+    cavv: Option<Secret<String>>,
+    eci: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -490,6 +509,58 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         ),
                     }
+                }
+                PaymentMethodData::Wallet(WalletData::ApplePay(apple_pay_data)) => {
+                    match &apple_pay_data.payment_data {
+                        ApplePayPaymentData::Decrypted(decrypted_data) => {
+                            let ccexp =
+                                decrypted_data.get_expiry_date_as_mmyy().change_context(
+                                    IntegrationError::RequestEncodingFailed {
+                                        context: Default::default(),
+                                    },
+                                )?;
+                            (
+                                NmiPaymentMethod::ApplePayDecrypt(Box::new(
+                                    ApplePayDecryptedData {
+                                        decrypted_applepay_data: DecryptedDataIndicator::Decrypted,
+                                        ccnumber: Secret::new(
+                                            decrypted_data
+                                                .application_primary_account_number
+                                                .get_card_no(),
+                                        ),
+                                        ccexp,
+                                        cavv: Some(
+                                            decrypted_data
+                                                .payment_data
+                                                .online_payment_cryptogram
+                                                .clone(),
+                                        ),
+                                        eci: decrypted_data
+                                            .payment_data
+                                            .eci_indicator
+                                            .clone(),
+                                    },
+                                )),
+                                TransactionType::Sale,
+                            )
+                        }
+                        ApplePayPaymentData::Encrypted(token) => (
+                            NmiPaymentMethod::ApplePay(Box::new(ApplePayData {
+                                payment_token: Secret::new(token.clone()),
+                            })),
+                            if router_data.request.is_auto_capture() {
+                                TransactionType::Sale
+                            } else {
+                                TransactionType::Auth
+                            },
+                        ),
+                    }
+                }
+                PaymentMethodData::Wallet(_) => {
+                    return Err(error_stack::report!(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("nmi"),
+                        Default::default(),
+                    )));
                 }
                 _ => {
                     let txn_type = if router_data.request.is_auto_capture() {
