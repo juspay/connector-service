@@ -1454,19 +1454,21 @@ impl Revolv3InvoiceWebhookBody {
 }
 
 impl WebhookInvoiceStatus {
-    pub fn to_event_type(&self) -> EventType {
+    pub fn to_event_type(&self) -> Result<EventType, errors::ConnectorError> {
         match self {
-            Self::Paid | Self::MerchantPaid => EventType::PaymentIntentSuccess,
-            Self::Void | Self::MerchantCancelled => EventType::PaymentIntentCancelled,
-            Self::Refund | Self::PartialRefund => EventType::RefundSuccess,
-            Self::RefundDeclined | Self::RefundFailed => EventType::RefundFailure,
+            Self::Paid | Self::MerchantPaid => Ok(EventType::PaymentIntentSuccess),
+            Self::Void | Self::MerchantCancelled => Ok(EventType::PaymentIntentCancelled),
+            Self::Refund | Self::PartialRefund => Ok(EventType::RefundSuccess),
+            Self::RefundDeclined | Self::RefundFailed => Ok(EventType::RefundFailure),
             Self::Pending
             | Self::Recycle
             | Self::OneTimePaymentPending
             | Self::BatchPending
-            | Self::CapturePending
-            | Self::RefundPending => EventType::PaymentIntentProcessing,
-            Self::Noncollectable | Self::Failed => EventType::PaymentIntentFailure,
+            | Self::CapturePending => Ok(EventType::PaymentIntentProcessing),
+            Self::RefundPending => Err(errors::ConnectorError::NotImplemented(
+                "Webhook handling for refund pending event".to_string(),
+            )),
+            Self::Noncollectable | Self::Failed => Ok(EventType::PaymentIntentFailure),
         }
     }
 

@@ -194,7 +194,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         match webhook_body_data {
             Revolv3WebhookBodyData::InvoiceData(invoice_webhook) => {
-                Ok(invoice_webhook.get_invoice_status().to_event_type())
+                Ok(invoice_webhook.get_invoice_status().to_event_type()?)
             }
             Revolv3WebhookBodyData::TestData(_) => Ok(EventType::EndpointVerification),
         }
