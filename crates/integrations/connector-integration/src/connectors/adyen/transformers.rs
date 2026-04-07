@@ -17,10 +17,10 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, CardDetailUpdate, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateReference, MandateReferenceId,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodUpdate, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodUpdate,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
