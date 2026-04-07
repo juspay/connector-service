@@ -835,6 +835,7 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
+    tracing::info!(?response, "received raw response from connector");
 
     handle_response(response).await
 }
