@@ -41,11 +41,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           components: clippy
+
+      - name: Install Rust (nightly for fmt)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -55,7 +61,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2.7.8
 
       - name: Run Clippy
-        run: cargo clippy --all-features --all-targets
+        run: cargo +stable clippy --all-features --all-targets
 
       - name: Run Composite Request Schema Checks
         run: cargo test -p composite-service --test composite_request_schema_check
@@ -160,10 +166,12 @@ jobs:
 
   sdk-test:
     name: SDK Tests
-    runs-on: macos-latest
+    runs-on: ubuntu-latest  # OPTIMIZATION: Use Ubuntu instead of macOS (2-3x faster, cheaper)
 
     env:
       RUSTFLAGS: "-D warnings"
+      PROFILE: dev  # OPTIMIZATION: Use debug profile instead of release (5x faster compilation)
+      CARGO_INCREMENTAL: 1  # OPTIMIZATION: Enable incremental compilation for dev profile
 
     steps:
       - name: Checkout code
@@ -190,17 +198,47 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python codegen dependencies
-        run: make -C sdk install-deps
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'  # OPTIMIZATION: Cache npm dependencies
+          cache-dependency-path: |
+            sdk/javascript/package-lock.json
+            sdk/tests/package.json
+
+      - name: Cache pip dependencies  # OPTIMIZATION: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('sdk/python/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - uses: Swatinem/rust-cache@v2.7.8
         with:
           cache-on-failure: true
+          key: sdk-test-${{ runner.os }}  # OPTIMIZATION: Separate cache key for SDK tests
+
+      - name: Cache FFI library  # OPTIMIZATION: Cache compiled FFI library
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/*/*/libconnector_service_ffi.so
+            target/*/*/libconnector_service_ffi.dylib
+          key: ffi-lib-${{ runner.os }}-${{ hashFiles('crates/ffi/**/*.rs', 'crates/ffi/**/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: |
+            ffi-lib-${{ runner.os }}-
+
+      - name: Install Python codegen dependencies
+        run: |
+          pip install -r sdk/python/requirements.txt grpcio-tools protobuf
+          make -C sdk install-deps
+
+      - name: Install Node dependencies
+        run: |
+          cd sdk/javascript && npm ci && cd ../..
+          cd sdk/tests && npm install && cd ../..
 
       - name: Create connector credentials for SDK tests
         shell: bash
@@ -214,6 +252,26 @@ jobs:
             echo "No CONNECTOR_SPECIFIC_AUTH secret found, will run in dry-run mode"
           fi
 
+      - name: Build FFI library once  # OPTIMIZATION: Build FFI once and reuse
+        run: |
+          # Determine target triple (matches PLATFORM detection in common.mk)
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "aarch64" ]; then
+            PLATFORM="aarch64-unknown-linux-gnu"
+          else
+            PLATFORM="x86_64-unknown-linux-gnu"
+          fi
+          # PROFILE=dev maps to 'debug' output directory in Cargo
+          PROFILE_DIR="debug"
+          LIB_PATH="target/${PLATFORM}/${PROFILE_DIR}/libconnector_service_ffi.so"
+          if [ ! -f "$LIB_PATH" ]; then
+            echo "Building FFI library (cache miss)..."
+            cargo build -p ffi --no-default-features --features uniffi \
+              --profile dev --target "$PLATFORM"
+          else
+            echo "Using cached FFI library: $LIB_PATH"
+          fi
+
       - name: Run SDK Tests
         shell: bash
         run: |
@@ -222,7 +280,8 @@ jobs:
           else
             echo "Running SDK tests without connector credentials (dry-run mode)"
           fi
-          make -C sdk test
+          # Skip FFI rebuild during test - already built above
+          make -C sdk test FFI_SKIP_BUILD=1
 
       - name: Regenerate SDK code
         shell: bash
@@ -233,18 +292,32 @@ jobs:
         run: |
           git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
 
-  docs-check:
-    name: Check Connector Documentation
+  docs-update:
+    name: Auto-update Connector Documentation
     runs-on: ubuntu-latest
+    # Only run on PRs (not push or merge_group), and only for human authors
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'github-actions[bot]'
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Checkout the PR branch so we can commit to it
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust
+      - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+
+      - name: Install Rust (nightly for fmt)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -253,30 +326,55 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2.7.8
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests
+          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests grpcio-tools
 
-      - name: Check if connector documentation is up to date
-        shell: bash
+      - name: Generate documentation
         run: |
-          # Run field-probe to regenerate probe data (quick check mode)
-          echo "Running field-probe to check for documentation changes..."
-          cargo run -p field-probe -- --quick-check 2>&1 | head -20 || true
-          
-          # Generate documentation
-          make all-connectors-doc 2>&1 | tail -10
-          
-          # Check if any documentation files changed
-          if git diff --quiet data/field_probe/ docs-generated/all_connector.md; then
-            echo "✓ Connector documentation is up to date"
+          echo "Generating connector documentation..."
+          make docs CONNECTORS=all 2>&1 | tail -20
+
+      - name: Format Rust code
+        run: |
+          echo "Formatting Rust code..."
+          cargo +nightly fmt --all
+
+      - name: Check for doc changes
+        id: check_doc_changes
+        run: |
+          if git diff --quiet data/field_probe/ docs-generated/ examples/; then
+            echo "No documentation changes detected"
+            echo "has_doc_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "ERROR: Connector documentation is out of date."
-            echo ""
-            echo "The following files have changes:"
-            git diff --name-only data/field_probe/ docs-generated/all_connector.md
-            echo ""
-            echo "Please run 'make all-connectors-doc' locally and commit the changes."
-            exit 1
+            echo "Documentation changes detected"
+            git diff --stat data/field_probe/ docs-generated/ examples/
+            echo "has_doc_changes=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Commit and push doc changes
+        if: steps.check_doc_changes.outputs.has_doc_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add data/field_probe/ docs-generated/ examples/
+          git commit -m "docs: auto-update connector documentation
+
+          Regenerated field probe data, documentation, and examples.
+          
+          - Updated data/field_probe/*.json
+          - Updated docs-generated/
+          - Updated examples/ (Python, TypeScript, Kotlin, Rust)
+          - Formatted Rust code with cargo +nightly fmt
+          
+          This commit was automatically generated by GitHub Actions."
+          
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          echo "✓ Documentation changes committed to PR #${{ github.event.pull_request.number }}"

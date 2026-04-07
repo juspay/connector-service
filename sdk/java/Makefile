@@ -1,5 +1,5 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist clean
+        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -16,6 +16,7 @@ GENERATED_KOTLIN := $(SDK_ROOT)/src/main/kotlin/generated
 GENERATED_JAVA   := $(SDK_ROOT)/src/main/java/generated
 NATIVE_DIR       := $(SDK_ROOT)/src/main/resources/native
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-java
+PACKAGE_VERSION  := $(shell cd $(SDK_ROOT) && ./gradlew properties -q 2>/dev/null | grep "^version:" | awk '{print $$2}')
 
 # Note: BINDGEN is defined in common.mk
 
@@ -117,7 +118,7 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/payments-client-0.1.0.jar
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -128,7 +129,7 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
-	@echo "Published to ~/.m2/repository/com/hyperswitch/payments-client/0.1.0/"
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/$(PACKAGE_VERSION)/"
 
 # ---------------------------------------------------------------------------
 # test-package
@@ -199,6 +200,24 @@ dist:
 		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution JAR created in $(PACKAGE_DIR)/"
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes to Maven Central (requires proper credentials and signing).
+# For local testing, use 'install' which publishes to ~/.m2.
+# Requires OSSRH_USERNAME and OSSRH_PASSWORD to be set for authentication.
+# ---------------------------------------------------------------------------
+publish: pack-archive
+	@if [ -z "$(OSSRH_USERNAME)" ] || [ -z "$(OSSRH_PASSWORD)" ]; then \
+		echo "Error: OSSRH_USERNAME and/or OSSRH_PASSWORD not set"; \
+		echo "Set them with:"; \
+		echo "  export OSSRH_USERNAME=your_username"; \
+		echo "  export OSSRH_PASSWORD=your_token"; \
+		exit 1; \
+	fi
+	@echo "Publishing hyperswitch-prism to Maven Central..."
+	@$(SDK_ROOT)/gradlew publish
+	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)

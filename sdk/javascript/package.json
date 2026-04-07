@@ -7,7 +7,8 @@
   "files": [
     "dist/src/**/*.js",
     "dist/src/**/*.d.ts",
-    "dist/src/payments/generated/*"
+    "dist/src/payments/generated/*",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc && cp -r src/payments/generated dist/src/payments/ && cp src/payments/_generated_flows.js dist/src/payments/",
