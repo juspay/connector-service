@@ -3430,12 +3430,54 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+    Adyen(AdyenClientAuthenticationResponse),
+    /// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
+    Checkout(CheckoutClientAuthenticationResponse),
+    /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+    Cybersource(CybersourceClientAuthenticationResponse),
+    /// Nuvei SDK initialization data — session_token for client-side SDK operations
+    Nuvei(NuveiClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Adyen's session_id and session_data for browser-side Adyen Drop-in/Components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdyenClientAuthenticationResponse {
+    /// The unique identifier of the session
+    pub session_id: String,
+    /// The session data required to initialize the Adyen SDK
+    pub session_data: Secret<String>,
+}
+
+/// Checkout.com's payment_session_token and payment_session_secret for Frames/Flow SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckoutClientAuthenticationResponse {
+    /// The payment session identifier
+    pub payment_session_id: String,
+    /// The base64-encoded token for client-side SDK initialization
+    pub payment_session_token: Secret<String>,
+    /// The secret for secure client-side operations
+    pub payment_session_secret: Secret<String>,
+}
+
+/// Cybersource's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CybersourceClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
+}
+
+/// Nuvei's session_token for client-side SDK operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NuveiClientAuthenticationResponse {
+    /// The session token for Nuvei client-side SDK
+    pub session_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

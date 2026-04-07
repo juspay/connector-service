@@ -9731,6 +9731,53 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Adyen(adyen_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Adyen(
+                        grpc_api_types::payments::AdyenClientAuthenticationResponse {
+                            session_id: adyen_data.session_id,
+                            session_data: Some(adyen_data.session_data),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Checkout(checkout_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Checkout(
+                        grpc_api_types::payments::CheckoutClientAuthenticationResponse {
+                            payment_session_id: checkout_data.payment_session_id,
+                            payment_session_token: Some(checkout_data.payment_session_token),
+                            payment_session_secret: Some(checkout_data.payment_session_secret),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Cybersource(
+                        grpc_api_types::payments::CybersourceClientAuthenticationResponse {
+                            capture_context: Some(cybersource_data.capture_context),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Nuvei(nuvei_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Nuvei(
+                        grpc_api_types::payments::NuveiClientAuthenticationResponse {
+                            session_token: Some(nuvei_data.session_token),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

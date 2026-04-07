@@ -1533,14 +1533,27 @@ message ClientAuthenticationTokenData {
 message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
-    // AdyenClientAuthenticationResponse adyen = 2;    // future
-    // CheckoutClientAuthenticationResponse checkout = 3; // future
+    AdyenClientAuthenticationResponse adyen = 2;
+    CheckoutClientAuthenticationResponse checkout = 3;
+    CybersourceClientAuthenticationResponse cybersource = 4;
+    NuveiClientAuthenticationResponse nuvei = 5;
   }
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
 message StripeClientAuthenticationResponse {
   SecretString client_secret = 1;
+}
+
+// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+message AdyenClientAuthenticationResponse {
+  string session_id = 1;
+  SecretString session_data = 2;
+}
+
+// Nuvei SDK initialization data — session_token for client-side SDK operations
+message NuveiClientAuthenticationResponse {
+  SecretString session_token = 1;
 }
 
 // Google Pay Session Data

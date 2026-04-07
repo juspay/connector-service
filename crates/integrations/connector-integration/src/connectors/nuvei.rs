@@ -41,10 +41,11 @@ use std::fmt::Debug;
 pub mod transformers;
 
 use transformers::{
-    NuveiCaptureRequest, NuveiCaptureResponse, NuveiErrorResponse, NuveiPaymentRequest,
-    NuveiPaymentResponse, NuveiRefundRequest, NuveiRefundResponse, NuveiRefundSyncRequest,
-    NuveiRefundSyncResponse, NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest,
-    NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
+    NuveiCaptureRequest, NuveiCaptureResponse, NuveiClientAuthRequest, NuveiClientAuthResponse,
+    NuveiErrorResponse, NuveiPaymentRequest, NuveiPaymentResponse, NuveiRefundRequest,
+    NuveiRefundResponse, NuveiRefundSyncRequest, NuveiRefundSyncResponse,
+    NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest, NuveiSyncResponse,
+    NuveiVoidRequest, NuveiVoidResponse,
 };
 
 use super::macros;
@@ -246,6 +247,12 @@ macros::create_all_prerequisites!(
             request_body: NuveiVoidRequest,
             response_body: NuveiVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: NuveiClientAuthRequest,
+            response_body: NuveiClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -643,15 +650,34 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Nuvei<T>
-{
-}
+// Implement ClientAuthenticationToken flow using macro
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nuvei,
+    curl_request: Json(NuveiClientAuthRequest),
+    curl_response: NuveiClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}/getSessionToken.do", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
