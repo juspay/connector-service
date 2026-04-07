@@ -1,137 +1,72 @@
-# Fraud Interface Specification for Hyperswitch Prism
+# Fraud Interface Specification
 
 ## Document Information
-- **Version**: 2.1.0
-- **Date**: 2026-04-06
-- **Status**: Reviewed and Approved
-- **Author**: AI Design Agent
-- **Reviewer**: Spec Verifier Agent
+- **Version**: 3.0.0
+- **Date**: 2026-04-07
+- **Status**: Updated - Phase 3 Corrections Applied
 
-## 1. Executive Summary
+## Overview
 
-This document specifies the Fraud interface for Hyperswitch Prism, enabling unified integration with fraud detection providers like Signifyd and Riskified. The interface follows the same architectural patterns as Payments and Payouts services, ensuring consistency across the Prism library.
+This document defines the gRPC interface for fraud detection services in Hyperswitch Prism, designed to support multiple fraud detection providers including **Signifyd** and **Riskified**.
 
-### Key Objectives
-1. Provide a unified API for fraud detection across multiple providers
-2. Support both Pre-Auth and Post-Auth fraud check workflows
-3. Enable transaction lifecycle management (sale, checkout, fulfillment, returns)
-4. Maintain consistency with existing Prism interface patterns
-5. Support webhook-based asynchronous fraud decisions
+**Important Note on Provider Differences**:
+- **Signifyd** and **Riskified** have fundamentally different API models
+- Some proto methods have **provider-specific field requirements** documented below
+- **Riskified does not support the `Get` method** - it relies entirely on webhooks
+- **Riskified uses Major Units** for amounts (dollars), Signifyd uses Minor Units (cents)
 
-## 2. Architecture Design
+---
 
-### 2.1 Service Definition
+## Service Definition
 
 ```protobuf
 service FraudService {
-  // EvaluatePreAuthorization evaluates fraud risk BEFORE payment authorization.
-  // Prevents fraudulent transactions from being submitted to payment processors.
-  // High-risk merchants who want to decline suspicious orders before processing payment, reducing chargeback fees.
-  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) 
+  // Pre-authorization fraud evaluation
+  // Signifyd: POST /v3/orders/events/checkouts
+  // Riskified: POST /decide (synchronous mode)
+  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest)
       returns (FraudServiceEvaluatePreAuthorizationResponse);
   
-  // EvaluatePostAuthorization updates fraud case with payment authorization results including AVS/CVV verification.
-  // Enriching fraud decisions with actual payment gateway responses for model training and chargeback defense.
-  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) 
+  // Post-authorization fraud evaluation with auth results
+  // Signifyd: POST /v3/orders/events/transactions
+  // Riskified: POST /decision (transaction success) or /checkout_denied (failure)
+  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest)
       returns (FraudServiceEvaluatePostAuthorizationResponse);
   
-  // RecordTransactionData records completed transaction for post-hoc fraud evaluation.
-  // Merchants using synchronous payment flows who need fraud protection without separate pre-auth checks.
-  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) 
+  // Record completed transaction for post-hoc evaluation
+  // Signifyd: POST /v3/orders/events/sales
+  // Riskified: POST /decide (async submission)
+  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest)
       returns (FraudServiceRecordTransactionDataResponse);
   
-  // RecordFulfillmentData notifies the fraud provider when an order is shipped with tracking and delivery information.
-  // Required for chargeback guarantee protection and improving fraud models with delivery confirmation.
-  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) 
+  // Record fulfillment/shipment data
+  // Signifyd: POST /v3/orders/events/fulfillments
+  // Riskified: POST /fulfill
+  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest)
       returns (FraudServiceRecordFulfillmentDataResponse);
   
-  // RecordReturnData captures customer return and refund information for fraud pattern analysis.
-  // Identifying return fraud patterns and enabling fee adjustments on Riskified's chargeback guarantee.
-  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) 
+  // Record return/refund data
+  // Signifyd: POST /v3/orders/events/returns/records
+  // Riskified: POST /partial_refund
+  rpc RecordReturnData(FraudServiceRecordReturnDataRequest)
       returns (FraudServiceRecordReturnDataResponse);
   
-  // Get retrieves the current fraud decision and case status from the provider for polling or reconciliation.
-  // Recovering from webhook failures, manual review workflows, and syncing internal state with provider.
+  // Retrieve fraud decision/status
+  // Signifyd: GET /v3/decisions/{orderId}
+  // Riskified: NOT SUPPORTED - decisions arrive via webhooks only
   rpc Get(FraudServiceGetRequest) returns (FraudServiceGetResponse);
 }
 ```
 
-**Note**: Exactly 6 RPC methods (no Cancel). Cancel is not uniformly supported by providers and is handled via webhook updates.
+---
 
-### 2.2 Data Flow
+## Core Enumerations
 
-Three primary integration patterns:
+### FraudCheckStatus
 
-**Pattern A: Pre-Authorization Fraud Check (EvaluatePreAuthorization → EvaluatePostAuthorization)**
-```
-Customer Checkout → Pre-Auth API → Fraud Decision → Payment Auth → Post-Auth API → Fulfillment
-                          ↓              ↓                              ↓
-                    [ACCEPT]      APPROVED                       [SUCCESS]
-                    [REJECT]      DECLINED                       [FAILURE]
-                    [REVIEW]      Manual Review
-
-Use EvaluatePreAuthorization when: Evaluating fraud BEFORE charging customer's card
-Use EvaluatePostAuthorization when: Updating fraud case with payment auth result (AVS/CVV)
-```
-
-**Pattern B: Post-Authorization Fraud Check (RecordTransactionData)**
-```
-Payment Auth → RecordTransactionData API → Fulfillment
-                      ↓
-                [Fraud Decision]
-                (with full payment context)
-
-Use RecordTransactionData when: Payment already captured, evaluate fraud post-hoc
-```
-
-**Pattern C: Status Synchronization (Get)**
-```
-Get API (poll) ←→ Webhook (async) ←→ Get API (reconcile)
-
-Use Get when: Webhook failed, manual review, or status reconciliation
-```
-
-### Flow Relationships
-
-| From Flow | To Flow | When to Transition |
-|-----------|---------|-------------------|
-| EvaluatePreAuthorization | EvaluatePostAuthorization | After payment authorization attempt |
-| EvaluatePostAuthorization | RecordFulfillmentData | After successful auth and fraud evaluation |
-| RecordTransactionData | RecordFulfillmentData | After fraud evaluation of completed payment |
-| RecordFulfillmentData | RecordReturnData | If customer returns shipped items |
-| Any | Get | For status polling or reconciliation |
-
-### 2.3 Request/Response ID Pattern
-
-Following the existing pattern from payments and payouts:
-
-| Service | Merchant ID Pattern | Connector ID Pattern |
-|---------|---------------------|---------------------|
-| Payment | `merchant_transaction_id` | `connector_transaction_id` |
-| Payout | `merchant_payout_id` | `connector_payout_id` |
-| **Fraud** | `merchant_fraud_id` | `connector_fraud_id` |
-
-## 3. Protocol Buffer Schema
-
-### 3.1 File: `fraud.proto`
+Matches Hyperswitch's existing enum exactly - **NO additions allowed**.
 
 ```protobuf
-syntax = "proto3";
-
-package types;
-
-import "payment.proto";
-import "payment_methods.proto";
-import "google/protobuf/empty.proto";
-
-option go_package = "github.com/juspay/connector-service/crates/types-traits/grpc-api-types/proto;proto";
-
-// ============================================================================
-// FRAUD ENUMERATIONS (Package level - following payment.proto pattern)
-// ============================================================================
-
-// Status of a fraud check - MUST MATCH Hyperswitch FraudCheckStatus EXACTLY
-// From: crates/common_enums/src/enums.rs
 enum FraudCheckStatus {
   FRAUD_CHECK_STATUS_UNSPECIFIED = 0;
   FRAUD_CHECK_STATUS_PENDING = 1;
@@ -140,777 +75,563 @@ enum FraudCheckStatus {
   FRAUD_CHECK_STATUS_MANUAL_REVIEW = 4;
   FRAUD_CHECK_STATUS_TRANSACTION_FAILURE = 5;
 }
+```
 
-// Fraud check action recommendation
+**Provider Mapping**:
+
+| Status | Signifyd Mapping | Riskified Mapping |
+|--------|------------------|-------------------|
+| `PENDING` | `PENDING`, `CHALLENGE` | `pending`, `processing` |
+| `FRAUD` | `REJECT` | `declined`, `canceled` |
+| `LEGIT` | `ACCEPT` | `approved` |
+| `MANUAL_REVIEW` | `HOLD`, `REVIEW` | `review` |
+| `TRANSACTION_FAILURE` | Gateway errors | Gateway errors |
+
+### FraudAction
+
+```protobuf
 enum FraudAction {
   FRAUD_ACTION_UNSPECIFIED = 0;
   FRAUD_ACTION_ACCEPT = 1;
   FRAUD_ACTION_REJECT = 2;
 }
+```
 
-enum FulfillmentStatus {
-  FULFILLMENT_STATUS_UNSPECIFIED = 0;
-  FULFILLMENT_STATUS_PENDING = 1;
-  FULFILLMENT_STATUS_PARTIAL = 2;
-  FULFILLMENT_STATUS_COMPLETE = 3;
-  FULFILLMENT_STATUS_REPLACEMENT = 4;
-  FULFILLMENT_STATUS_CANCELLED = 5;
+---
+
+## Request/Response Messages
+
+### Common Types
+
+```protobuf
+message Money {
+  int64 minor_amount = 1;
+  string currency = 2;
 }
 
-enum RefundMethod {
-  REFUND_METHOD_UNSPECIFIED = 0;
-  REFUND_METHOD_STORE_CREDIT = 1;
-  REFUND_METHOD_ORIGINAL_PAYMENT_INSTRUMENT = 2;
-  REFUND_METHOD_NEW_PAYMENT_INSTRUMENT = 3;
+message Customer {
+  string id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string phone = 5;
 }
 
-// ============================================================================
-// CORE FRAUD DATA MESSAGES
-// ============================================================================
+message Address {
+  string line1 = 1;
+  string line2 = 2;
+  string city = 3;
+  string state = 4;
+  string zip = 5;
+  string country = 6;
+}
 
-message FraudProduct {
+message BrowserInformation {
+  string user_agent = 1;
+  string ip_address = 2;
+  string accept_language = 3;
+  string color_depth = 4;
+  string java_enabled = 5;
+  string javascript_enabled = 6;
+  string screen_height = 7;
+  string screen_width = 8;
+  string time_zone = 9;
+}
+
+// Signifyd-specific: Product details
+message Product {
+  string id = 1;
+  string sku = 2;
+  string title = 3;
+  int32 quantity = 4;
+  int64 price = 5;
+  string category = 6;
+  string brand = 7;
+  bool requires_shipping = 8;
+}
+
+// Signifyd-specific: Shipment details  
+message Shipment {
+  string carrier = 1;
+  string tracking_number = 2;
+  string tracking_url = 3;
+  Address destination = 4;
+  repeated string products = 5;
+}
+
+// Signifyd-specific: Purchase wrapper
+message Purchase {
+  string created_at = 1;  // ISO8601 format
+  string order_channel = 2;  // WEB, PHONE, POS, MOBILE_APP
+  int64 total_price = 3;
+  int64 total_shipping_cost = 4;
+  string currency = 5;
+  string confirmation_email = 6;
+  string confirmation_phone = 7;
+  repeated Product products = 8;
+  repeated Shipment shipments = 9;
+}
+
+// Riskified-specific: Line item
+message LineItem {
+  string price = 1;  // String in MAJOR units for Riskified
+  int32 quantity = 2;
+  string title = 3;
+  string product_type = 4;  // physical, digital, other
+  bool requires_shipping = 5;
+  string product_id = 6;
+  string category = 7;
+  string brand = 8;
+}
+
+// Riskified-specific: Shipping line
+message ShippingLine {
+  string code = 1;
+  string price = 2;  // String in MAJOR units
+  string source = 3;
+  string title = 4;
+}
+```
+
+---
+
+### EvaluatePreAuthorization
+
+**Purpose**: Evaluate fraud risk BEFORE payment authorization
+
+```protobuf
+message FraudServiceEvaluatePreAuthorizationRequest {
+  // ========== COMMON REQUIRED FIELDS ==========
+  string merchant_fraud_id = 1;  // Unique ID for this fraud check
+  string order_id = 2;           // Merchant's order ID
+  Money amount = 3;              // Amount (minor units for Signifyd, will convert for Riskified)
+  Customer customer = 4;
+  Address billing_address = 5;
+  Address shipping_address = 6;
+  BrowserInformation browser_info = 7;
+  string session_id = 8;         // Riskified: cart_token / beacon session
+  
+  // ========== SIGNIFYD-SPECIFIC FIELDS ==========
+  // Required for Signifyd, ignored by Riskified
+  string checkout_id = 10;       // Signifyd: Unique checkout attempt ID
+  Purchase purchase = 11;        // Signifyd: Purchase details with products
+  string coverage_requests = 12; // Signifyd: FRAUD, INR, SNAD, ALL, NONE
+  
+  // ========== RISKIFIED-SPECIFIC FIELDS ==========
+  // Required for Riskified, ignored by Signifyd
+  repeated LineItem line_items = 20;       // Riskified: Cart line items
+  repeated ShippingLine shipping_lines = 21; // Riskified: Shipping methods
+  string vendor_name = 22;                 // Riskified: Merchant name
+  string gateway = 23;                     // Riskified: Payment gateway name
+  string referring_site = 24;              // Riskified: Referrer URL
+  string cart_token = 25;                  // Riskified: Session identifier
+  string total_discounts = 26;             // Riskified: Discount amount (major units)
+}
+
+message FraudServiceEvaluatePreAuthorizationResponse {
+  string fraud_id = 1;                    // Provider's check/case ID
+  FraudCheckStatus status = 2;
+  FraudAction recommended_action = 3;
+  FraudScore score = 4;
+  repeated FraudReason reasons = 5;
+  string case_id = 6;                     // Signifyd case ID
+  string redirect_url = 7;                // 3DS/challenge URL if applicable
+  google.protobuf.Struct connector_metadata = 8;
+}
+```
+
+**Signifyd Endpoint**: `POST https://api.signifyd.com/v3/orders/events/checkouts`
+- Synchronous response
+- Returns `checkpointAction`: ACCEPT, REJECT, HOLD, CHALLENGE
+
+**Riskified Endpoint**: `POST /decide`
+- May return immediately with `submitted` or `processing`
+- Final decision arrives via webhook
+
+---
+
+### EvaluatePostAuthorization
+
+**Purpose**: Update fraud case with payment authorization results
+
+```protobuf
+message FraudServiceEvaluatePostAuthorizationRequest {
+  // ========== COMMON REQUIRED FIELDS ==========
+  string merchant_fraud_id = 1;
+  string order_id = 2;
+  string connector_transaction_id = 3;  // Payment gateway transaction ID
+  string session_id = 4;
+  bool authorization_success = 5;       // true = approved, false = declined
+  
+  // Authorization details (when successful)
+  string authorization_code = 6;
+  string avs_result = 7;                // AVS response code
+  string cvv_result = 8;                // CVV response code
+  
+  // Error details (when failed)
+  string error_code = 9;
+  string error_message = 10;
+  
+  // ========== SIGNIFYD-SPECIFIC FIELDS ==========
+  string checkout_id = 15;              // Links to original checkout
+  TransactionDetails transaction = 16;  // Signifyd transaction wrapper
+  
+  // ========== RISKIFIED-SPECIFIC FIELDS ==========
+  // Riskified uses separate endpoints for success vs failure:
+  // - Success: POST /decision
+  // - Failure: POST /checkout_denied
+  string decided_at = 20;               // ISO8601 timestamp
+  string currency = 21;                 // For Riskified major unit conversion
+}
+
+message TransactionDetails {
+  string transaction_id = 1;
+  string gateway_status_code = 2;       // e.g., "A01" for approved
+  string payment_method = 3;            // CREDIT_CARD, etc.
+  int64 amount = 4;
+  string currency = 5;
+  string gateway = 6;                   // Gateway name
+  string card_bin = 7;                  // First 6 digits
+  string card_last_four = 8;
+  string card_expiry_month = 9;
+  string card_expiry_year = 10;
+}
+
+message FraudServiceEvaluatePostAuthorizationResponse {
+  string fraud_id = 1;
+  FraudCheckStatus status = 2;
+  FraudAction recommended_action = 3;
+  FraudScore score = 4;
+  string case_id = 5;
+  google.protobuf.Struct connector_metadata = 6;
+}
+```
+
+**Signifyd Endpoint**: `POST /v3/orders/events/transactions`
+- Updates existing case with transaction details
+
+**Riskified Endpoints**:
+- **Success**: `POST /decision` - Reports approved transaction
+- **Failure**: `POST /checkout_denied` - Reports declined transaction
+
+---
+
+### RecordTransactionData
+
+**Purpose**: Record completed transaction for post-hoc evaluation
+
+```protobuf
+message FraudServiceRecordTransactionDataRequest {
+  // ========== COMMON REQUIRED FIELDS ==========
+  string merchant_fraud_id = 1;
+  string order_id = 2;
+  string session_id = 3;
+  Money amount = 4;
+  Customer customer = 5;
+  
+  // ========== SIGNIFYD-SPECIFIC FIELDS ==========
+  Purchase purchase = 10;
+  string decision_delivery = 11;  // SYNC or ASYNC_ONLY
+  string coverage_requests = 12;
+  
+  // ========== RISKIFIED-SPECIFIC FIELDS ==========
+  repeated LineItem line_items = 20;
+  repeated ShippingLine shipping_lines = 21;
+  string vendor_name = 22;
+  string gateway = 23;
+  string cart_token = 24;
+  string currency = 25;
+  string total_price = 26;  // Major units
+}
+
+message FraudServiceRecordTransactionDataResponse {
+  string fraud_id = 1;
+  FraudCheckStatus status = 2;
+  FraudAction recommended_action = 3;
+  string case_id = 4;
+  google.protobuf.Struct connector_metadata = 5;
+}
+```
+
+**Signifyd Endpoint**: `POST /v3/orders/events/sales`
+- Used when fraud check happens after payment authorization
+- Supports SYNC or ASYNC_ONLY decision delivery
+
+**Riskified Endpoint**: `POST /decide` (async mode)
+- Submits order for async evaluation
+- Decision arrives via webhook
+
+---
+
+### RecordFulfillmentData
+
+**Purpose**: Notify fraud provider of order shipment
+
+```protobuf
+message FraudServiceRecordFulfillmentDataRequest {
+  // ========== COMMON REQUIRED FIELDS ==========
+  string merchant_fraud_id = 1;
+  string order_id = 2;
+  string session_id = 3;
+  string fulfillment_id = 4;
+  
+  // ========== COMMON SHIPMENT DATA ==========
+  string carrier = 5;              // e.g., "UPS", "FedEx"
+  string tracking_number = 6;
+  string tracking_url = 7;
+  string fulfillment_status = 8;   // PARTIAL, COMPLETE, REPLACEMENT, CANCELED
+  
+  // ========== SIGNIFYD-SPECIFIC ==========
+  repeated string products = 10;   // Product IDs/SKUs in shipment
+  Address destination = 11;        // Override shipping address
+  
+  // ========== RISKIFIED-SPECIFIC ==========
+  string created_at = 20;          // ISO8601 fulfillment timestamp
+}
+
+message FraudServiceRecordFulfillmentDataResponse {
+  string fraud_id = 1;
+  bool recorded = 2;
+  google.protobuf.Struct connector_metadata = 3;
+}
+```
+
+**Signifyd Endpoint**: `POST /v3/orders/events/fulfillments`
+- Required for chargeback guarantee protection
+
+**Riskified Endpoint**: `POST /fulfill`
+- Reports shipment/fulfillment data
+
+---
+
+### RecordReturnData
+
+**Purpose**: Record customer returns/refunds
+
+```protobuf
+message FraudServiceRecordReturnDataRequest {
+  // ========== COMMON REQUIRED FIELDS ==========
+  string merchant_fraud_id = 1;
+  string order_id = 2;
+  string session_id = 3;
+  string return_id = 4;
+  
+  // Return details
+  Money refund_amount = 5;
+  string refund_method = 6;        // e.g., "ORIGINAL_PAYMENT"
+  string reason = 7;
+  
+  // Items being returned
+  repeated ReturnItem items = 8;
+  
+  // ========== SIGNIFYD-SPECIFIC ==========
+  string refund_transaction_id = 10;
+  
+  // ========== RISKIFIED-SPECIFIC ==========
+  string refunded_at = 20;         // ISO8601 timestamp
+}
+
+message ReturnItem {
   string product_id = 1;
-  string product_name = 2;
-  string product_type = 3;
-  int64 quantity = 4;
-  int64 unit_price = 5;
-  int64 total_amount = 6;
-  optional string brand = 7;
-  optional string category = 8;
-  optional string sub_category = 9;
-  optional string sku = 10;
-  optional bool requires_shipping = 11;
+  string sku = 2;
+  int32 quantity = 3;
+  int64 amount = 4;
+  string reason = 5;
 }
 
-message FraudDestination {
-  SecretString full_name = 1;
-  optional string organization = 2;
-  optional SecretString email = 3;
-  Address address = 4;
+message FraudServiceRecordReturnDataResponse {
+  string fraud_id = 1;
+  bool recorded = 2;
+  google.protobuf.Struct connector_metadata = 3;
+}
+```
+
+**Signifyd Endpoint**: `POST /v3/orders/events/returns/records`
+
+**Riskified Endpoint**: `POST /partial_refund`
+
+---
+
+### Get (Status Retrieval)
+
+```protobuf
+message FraudServiceGetRequest {
+  string merchant_fraud_id = 1;
+  string order_id = 2;
+  string fraud_id = 3;  // Optional: provider's case ID
 }
 
-message FraudShipment {
-  string shipment_id = 1;
-  repeated FraudProduct products = 2;
-  FraudDestination destination = 3;
-  optional string tracking_company = 4;
-  repeated string tracking_numbers = 5;
-  repeated string tracking_urls = 6;
-  optional string carrier = 7;
-  optional string fulfillment_method = 8;
-  optional string shipment_status = 9;
-  optional int64 shipped_at = 10;
+message FraudServiceGetResponse {
+  string fraud_id = 1;
+  FraudCheckStatus status = 2;
+  FraudAction recommended_action = 3;
+  FraudScore score = 4;
+  repeated FraudReason reasons = 5;
+  string case_id = 6;
+  string decision_timestamp = 7;  // ISO8601
+  google.protobuf.Struct connector_metadata = 8;
 }
+```
 
+**Signifyd Endpoint**: `GET /v3/decisions/{orderId}`
+- Returns current decision for order
+
+**Riskified**: **NOT SUPPORTED**
+- Riskified does not provide a GET endpoint
+- Implementations should return error or use webhook cache
+
+---
+
+## Supporting Types
+
+```protobuf
 message FraudScore {
   int32 score = 1;
-  optional string risk_level = 2;
-  optional int32 threshold = 3;
+  string provider_scale = 2;  // e.g., "0-100", "0-1000"
 }
 
 message FraudReason {
   string code = 1;
   string message = 2;
-  optional string description = 3;
-}
-
-// ============================================================================
-// EVALUATE PRE-AUTHORIZATION REQUEST/RESPONSE
-// ============================================================================
-
-message FraudServiceEvaluatePreAuthorizationRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_id = 3;
-  Money amount = 4;
-  optional PaymentMethod payment_method = 5;
-  Customer customer = 6;                     // REQUIRED
-  repeated FraudProduct products = 7;
-  BrowserInformation browser_info = 8;       // REQUIRED
-  optional Address shipping_address = 9;
-  optional Address billing_address = 10;
-  optional string connector_name = 11;
-  optional SecretString connector_feature_data = 12;
-  optional string webhook_url = 13;
-  optional string previous_fraud_id = 14;
-  optional ConnectorState connector_state = 15;
-  string device_fingerprint = 16;            // NEW
-  string session_id = 17;                    // NEW
-  bool synchronous = 18;                     // NEW
-}
-
-message FraudServiceEvaluatePreAuthorizationResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  FraudAction recommended_action = 5;
-  optional FraudScore score = 6;
-  repeated FraudReason reasons = 7;
-  optional string case_id = 8;
-  optional ErrorInfo error = 9;
-  uint32 status_code = 10;
-  optional SecretString connector_metadata = 11;
-  optional string redirect_url = 12;
-  optional ConnectorState connector_state = 13;
-  optional SecretString raw_connector_response = 14;
-  optional SecretString raw_connector_request = 15;
-}
-
-// ============================================================================
-// EVALUATE POST-AUTHORIZATION REQUEST/RESPONSE
-// ============================================================================
-
-message FraudServiceEvaluatePostAuthorizationRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_id = 3;
-  string connector_transaction_id = 4;       // REQUIRED
-  Money amount = 5;
-  optional PaymentMethod payment_method = 6;
-  AuthorizationStatus authorization_status = 7;
-  optional string error_code = 8;
-  optional string error_message = 9;
-  optional string connector_name = 10;
-  optional SecretString connector_feature_data = 11;
-  optional string webhook_url = 12;
-  optional ConnectorState connector_state = 13;
-  string session_id = 14;                    // NEW
-}
-
-message FraudServiceEvaluatePostAuthorizationResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  FraudAction recommended_action = 5;
-  optional FraudScore score = 6;
-  repeated FraudReason reasons = 7;
-  optional string case_id = 8;
-  optional ErrorInfo error = 9;
-  uint32 status_code = 10;
-  optional SecretString connector_metadata = 11;
-  optional ConnectorState connector_state = 12;
-  optional SecretString raw_connector_response = 13;
-  optional SecretString raw_connector_request = 14;
-}
-
-// ============================================================================
-// RECORD TRANSACTION DATA REQUEST/RESPONSE
-// ============================================================================
-
-message FraudServiceRecordTransactionDataRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  Money amount = 3;
-  string session_id = 4;                     // NEW - was optional
-  optional Customer customer = 5;
-  repeated FraudProduct products = 6;
-  optional BrowserInformation browser_info = 7;
-  optional Address shipping_address = 8;
-  optional Address billing_address = 9;
-  optional SecretString connector_feature_data = 10;
-  optional string webhook_url = 11;
-  optional ConnectorState connector_state = 12;
-}
-
-message FraudServiceRecordTransactionDataResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  FraudAction recommended_action = 5;
-  optional FraudScore score = 6;
-  repeated FraudReason reasons = 7;
-  optional ErrorInfo error = 8;
-  uint32 status_code = 9;
-  optional SecretString connector_metadata = 10;
-  optional ConnectorState connector_state = 11;
-  optional SecretString raw_connector_response = 12;
-  optional SecretString raw_connector_request = 13;
-}
-
-// ============================================================================
-// RECORD FULFILLMENT DATA REQUEST/RESPONSE
-// ============================================================================
-
-message FraudServiceRecordFulfillmentDataRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_id = 3;
-  FulfillmentStatus fulfillment_status = 4;
-  repeated FraudShipment shipments = 5;
-  optional SecretString connector_feature_data = 6;
-  optional string webhook_url = 7;
-  optional ConnectorState connector_state = 8;
-  string session_id = 9;                     // NEW
-}
-
-message FraudServiceRecordFulfillmentDataResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  repeated string shipment_ids = 5;
-  optional ErrorInfo error = 6;
-  uint32 status_code = 7;
-  optional SecretString connector_metadata = 8;
-  optional ConnectorState connector_state = 9;
-  optional SecretString raw_connector_response = 10;
-  optional SecretString raw_connector_request = 11;
-}
-
-// ============================================================================
-// RECORD RETURN DATA REQUEST/RESPONSE
-// ============================================================================
-
-message FraudServiceRecordReturnDataRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_id = 3;
-  optional string refund_transaction_id = 4;
-  Money amount = 5;
-  RefundMethod refund_method = 6;
-  optional string return_reason = 7;
-  optional string return_reason_code = 8;
-  optional SecretString connector_feature_data = 9;
-  optional string webhook_url = 10;
-  optional ConnectorState connector_state = 11;
-  string session_id = 12;                    // NEW
-}
-
-message FraudServiceRecordReturnDataResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  optional string return_id = 5;
-  optional ErrorInfo error = 6;
-  uint32 status_code = 7;
-  optional SecretString connector_metadata = 8;
-  optional ConnectorState connector_state = 9;
-  optional SecretString raw_connector_response = 10;
-  optional SecretString raw_connector_request = 11;
-}
-
-// ============================================================================
-// GET REQUEST/RESPONSE (Status Sync)
-// ============================================================================
-
-message FraudServiceGetRequest {
-  string merchant_fraud_id = 1;        // REQUIRED
-  string order_id = 2;                       // REQUIRED
-  optional string connector_fraud_id = 3;
-  optional string case_id = 4;
-}
-
-message FraudServiceGetResponse {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  FraudCheckStatus fraud_check_status = 4;
-  FraudAction recommended_action = 5;
-  optional FraudScore score = 6;
-  repeated FraudReason reasons = 7;
-  optional string case_id = 8;
-  optional string reviewed_by = 9;
-  optional int64 reviewed_at = 10;
-  optional ErrorInfo error = 11;
-  uint32 status_code = 12;
-  optional SecretString connector_metadata = 13;
-  optional ConnectorState connector_state = 14;
-}
-
-// ============================================================================
-// FRAUD-SPECIFIC EVENT CONTENT (for webhooks)
-// ============================================================================
-
-message FraudEventContent {
-  optional string merchant_fraud_id = 1;
-  optional string order_id = 2;
-  optional string connector_fraud_id = 3;
-  WebhookEventType event_type = 4;
-  FraudCheckStatus fraud_check_status = 5;
-  FraudAction recommended_action = 6;
-  optional FraudScore score = 7;
-  repeated FraudReason reasons = 8;
-  optional string case_id = 9;
-  int64 event_timestamp = 10;
+  string description = 3;
+  float weight = 4;
 }
 ```
-
-### 3.2 Service Registration (in `services.proto`)
-
-```protobuf
-import "fraud.proto";
-
-service FraudService {
-  rpc EvaluatePreAuthorization(FraudServiceEvaluatePreAuthorizationRequest) 
-      returns (FraudServiceEvaluatePreAuthorizationResponse);
-  rpc EvaluatePostAuthorization(FraudServiceEvaluatePostAuthorizationRequest) 
-      returns (FraudServiceEvaluatePostAuthorizationResponse);
-  rpc RecordTransactionData(FraudServiceRecordTransactionDataRequest) 
-      returns (FraudServiceRecordTransactionDataResponse);
-  rpc RecordFulfillmentData(FraudServiceRecordFulfillmentDataRequest) 
-      returns (FraudServiceRecordFulfillmentDataResponse);
-  rpc RecordReturnData(FraudServiceRecordReturnDataRequest) 
-      returns (FraudServiceRecordReturnDataResponse);
-  rpc Get(FraudServiceGetRequest) returns (FraudServiceGetResponse);
-}
-```
-
-**Note**: Exactly 6 RPC methods. No Cancel method (not uniformly supported by providers).
-
-## 4. Rust Domain Types (Following Payouts Pattern)
-
-### 4.1 Folder Structure
-
-Following the payouts pattern, create:
-```
-crates/types-traits/domain_types/src/
-├── fraud/
-│   ├── mod.rs                    (re-exports)
-│   ├── fraud_types.rs            (FraudFlowData, request/response types)
-│   ├── fraud_method_data.rs      (if needed for provider-specific data)
-│   ├── router_request_types.rs   (gRPC request transformations)
-│   └── types.rs                  (ForeignTryFrom implementations)
-├── connector_flow.rs             (Fraud* flow markers - ADD HERE)
-└── lib.rs                        (add 'pub mod fraud;')
-```
-
-### 4.2 File: `crates/types-traits/domain_types/src/connector_flow.rs` (Additions)
-
-Add fraud flow markers alongside existing payout flows:
-
-```rust
-// ============================================================================
-// FRAUD FLOW MARKERS (Add after Payout flows, before FlowName enum)
-// ============================================================================
-
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePreAuthorization;
-
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePostAuthorization;
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordTransactionData;
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordFulfillmentData;
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordReturnData;
-
-#[derive(Debug, Clone)]
-pub struct FraudGet;
-
-// ============================================================================
-// FLOW NAME ENUM (Add fraud variants)
-// ============================================================================
-
-#[derive(strum::Display)]
-#[strum(serialize_all = "snake_case")]
-pub enum FlowName {
-    // ... existing variants
-    Authorize,
-    Refund,
-    // ... other existing variants
-    PayoutEnrollDisburseAccount,
-    // Fraud flows - NEW
-    FraudEvaluatePreAuthorization,
-    FraudEvaluatePostAuthorization,
-    FraudRecordTransactionData,
-    FraudRecordFulfillmentData,
-    FraudRecordReturnData,
-    FraudGet,
-}
-```
-
-### 4.3 File: `crates/types-traits/domain_types/src/fraud/mod.rs`
-
-```rust
-pub mod fraud_types;
-pub mod router_request_types;
-pub mod types;
-```
-
-### 4.4 File: `crates/types-traits/domain_types/src/fraud/fraud_types.rs`
-
-```rust
-//! Fraud check domain types - Following the payouts pattern
-
-use crate::{
-    connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
-    types::Connectors,
-};
-use hyperswitch_masking::Secret;
-
-// ============================================================================
-// FRAUD FLOW DATA (Equivalent to PayoutFlowData)
-// ============================================================================
-
-#[derive(Debug, Clone)]
-pub struct FraudFlowData {
-    pub merchant_fraud_id: Option<String>,
-    pub order_id: Option<String>,
-    pub connector_fraud_id: Option<String>,
-    pub connectors: Connectors,
-    pub connector_state: Option<crate::types::ConnectorState>,
-    pub raw_connector_response: Option<Secret<String>>,
-    pub raw_connector_request: Option<Secret<String>>,
-    pub connector_response_headers: Option<http::HeaderMap>,
-}
-
-impl FraudFlowData {
-    pub fn new(connectors: Connectors) -> Self {
-        Self {
-            merchant_fraud_id: None,
-            order_id: None,
-            connector_fraud_id: None,
-            connectors,
-            connector_state: None,
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-        }
-    }
-}
-
-impl RawConnectorRequestResponse for FraudFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
-        self.raw_connector_response = response;
-    }
-
-    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
-        self.raw_connector_response.clone()
-    }
-
-    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
-        self.raw_connector_request.clone()
-    }
-
-    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
-        self.raw_connector_request = request;
-    }
-}
-
-impl ConnectorResponseHeaders for FraudFlowData {
-    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
-        self.connector_response_headers = headers;
-    }
-
-    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
-        self.connector_response_headers.as_ref()
-    }
-}
-
-// ============================================================================
-// REQUEST DATA TYPES (Equivalent to PayoutCreateRequest, etc.)
-// ============================================================================
-
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePreAuthorizationRequest {
-    pub amount: i64,
-    pub currency: common_enums::Currency,
-    pub customer: Option<crate::connector_types::ConnectorCustomerData>,
-    pub payment_method: Option<crate::payment_method_data::PaymentMethodData>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
-    pub shipping_address: Option<crate::payment_address::Address>,
-    pub billing_address: Option<crate::payment_address::Address>,
-    pub connector_name: Option<String>,
-    pub previous_fraud_id: Option<String>,
-    pub device_fingerprint: String,
-    pub session_id: String,
-    pub synchronous: bool,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudEvaluatePreAuthorizationResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub recommended_action: FraudAction,
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub redirect_url: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudEvaluatePostAuthorizationRequest {
-    pub amount: i64,
-    pub currency: common_enums::Currency,
-    pub payment_method: Option<crate::payment_method_data::PaymentMethodData>,
-    pub authorization_status: common_enums::AuthorizationStatus,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
-    pub connector_name: Option<String>,
-    pub connector_transaction_id: String,
-    pub session_id: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudEvaluatePostAuthorizationResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub recommended_action: FraudAction,
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordTransactionDataRequest {
-    pub amount: i64,
-    pub currency: common_enums::Currency,
-    pub customer: Option<crate::connector_types::ConnectorCustomerData>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
-    pub shipping_address: Option<crate::payment_address::Address>,
-    pub billing_address: Option<crate::payment_address::Address>,
-    pub session_id: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudRecordTransactionDataResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub recommended_action: FraudAction,
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordFulfillmentDataRequest {
-    pub fulfillment_status: FulfillmentStatus,
-    pub shipments: Vec<FraudShipment>,
-    pub session_id: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudRecordFulfillmentDataResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub shipment_ids: Vec<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudRecordReturnDataRequest {
-    pub amount: i64,
-    pub currency: common_enums::Currency,
-    pub refund_method: RefundMethod,
-    pub return_reason: Option<String>,
-    pub return_reason_code: Option<String>,
-    pub session_id: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudRecordReturnDataResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub return_id: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudGetRequest {
-    pub merchant_fraud_id: Option<String>,
-    pub order_id: Option<String>,
-    pub connector_fraud_id: Option<String>,
-    pub case_id: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudGetResponse {
-    pub fraud_id: String,
-    pub status: FraudCheckStatus,
-    pub recommended_action: FraudAction,
-    pub score: Option<FraudScore>,
-    pub reasons: Vec<FraudReason>,
-    pub case_id: Option<String>,
-    pub reviewed_by: Option<String>,
-    pub reviewed_at: Option<i64>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-// ============================================================================
-// SUPPORTING TYPES (Hyperswitch-Aligned - DO NOT MODIFY)
-// ============================================================================
-
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FraudCheckStatus {
-    Pending,
-    Fraud,
-    Legit,
-    ManualReview,
-    TransactionFailure,
-}
-
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FraudAction {
-    Accept,
-    Reject,
-}
-
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum FulfillmentStatus {
-    Pending,
-    Partial,
-    Complete,
-    Replacement,
-    Cancelled,
-}
-
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum RefundMethod {
-    StoreCredit,
-    OriginalPaymentInstrument,
-    NewPaymentInstrument,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudScore {
-    pub score: i32,
-    pub risk_level: Option<String>,
-    pub threshold: Option<i32>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudReason {
-    pub code: String,
-    pub message: String,
-    pub description: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FraudProduct {
-    pub product_id: String,
-    pub product_name: String,
-    pub product_type: String,
-    pub quantity: i64,
-    pub unit_price: i64,
-    pub total_amount: i64,
-    pub brand: Option<String>,
-    pub category: Option<String>,
-    pub sub_category: Option<String>,
-    pub sku: Option<String>,
-    pub requires_shipping: Option<bool>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudDestination {
-    pub full_name: Secret<String>,
-    pub organization: Option<String>,
-    pub email: Option<Secret<String>>,
-    pub address: crate::payment_address::Address,
-}
-
-#[derive(Debug, Clone)]
-pub struct FraudShipment {
-    pub shipment_id: String,
-    pub products: Vec<FraudProduct>,
-    pub destination: FraudDestination,
-    pub tracking_company: Option<String>,
-    pub tracking_numbers: Vec<String>,
-    pub tracking_urls: Vec<String>,
-    pub carrier: Option<String>,
-    pub fulfillment_method: Option<String>,
-    pub shipment_status: Option<String>,
-    pub shipped_at: Option<i64>,
-}
-```
-
-### 4.5 File: `crates/types-traits/domain_types/src/fraud/router_request_types.rs`
-
-Similar to payouts, define any specific request type conversions needed.
-
-### 4.6 File: `crates/types-traits/domain_types/src/fraud/types.rs`
-
-Similar to payouts, implement `ForeignTryFrom` for gRPC → domain type conversions.
-
-### 4.7 Update: `crates/types-traits/domain_types/src/lib.rs`
-
-```rust
-pub mod fraud;  // Add after 'pub mod payouts;'
-```
-
-## 5. Interface Traits (connector-integration crate)
-
-**Note**: Following the PaymentService pattern, there is NO separate trait file in the `interfaces` crate. Instead, connector traits are defined in the `connector-integration` crate.
-
-When implementing fraud connectors, follow this pattern in `crates/integrations/connector-integration/src/connectors/{connector}.rs`:
-
-```rust
-use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-use domain_types::{
-    connector_flow,
-    fraud::fraud_types::*,
-};
-
-impl ConnectorIntegrationV2<
-    connector_flow::FraudEvaluatePreAuthorization,
-    FraudFlowData,
-    FraudEvaluatePreAuthorizationRequest,
-    FraudEvaluatePreAuthorizationResponse,
-> for Signifyd {
-    // Implementation
-}
-```
-
-## 6. Webhook Events
-
-### 6.1 Extend payment.proto WebhookEventType
-
-```protobuf
-enum WebhookEventType {
-  // ... existing events
-  FRM_APPROVED = 28;         // Maps to LEGIT status
-  FRM_REJECTED = 29;         // Maps to FRAUD status
-  FRM_REVIEW_REQUIRED = 60;  // Maps to MANUAL_REVIEW status
-}
-```
-
-**Note**: Status mapping:
-- `FRM_APPROVED` → `FraudCheckStatus.LEGIT`
-- `FRM_REJECTED` → `FraudCheckStatus.FRAUD`
-- `FRM_REVIEW_REQUIRED` → `FraudCheckStatus.MANUAL_REVIEW`
-
-## 7. Alignment Summary
-
-| Aspect | Payments | Payouts | Fraud |
-|--------|----------|---------|-------|
-| Service Name | PaymentService | PayoutService | FraudService |
-| Core Flows | 8 flows | 8 flows | 6 flows |
-| Status Enum | PaymentStatus | PayoutStatus | FraudCheckStatus |
-| Merchant ID | merchant_transaction_id | merchant_payout_id | merchant_fraud_id |
-| Connector ID | connector_transaction_id | connector_payout_id | connector_fraud_id |
-| Flow Data | PaymentFlowData | PayoutFlowData | FraudFlowData |
-| Folder Structure | flat | `payouts/` | `fraud/` (following payouts) |
-| Traits in interfaces | No | No | No (following pattern) |
-
-## 8. Implementation Checklist
-
-See `02-implementation-plan.md` for detailed step-by-step implementation instructions.
 
 ---
 
-**Next Steps**: 
-1. Review implementation plan
-2. Begin Phase 1 (Protocol Buffers)
-3. Continue with Phase 2 (Domain Types - following payouts pattern)
-4. Implement connectors in Phase 3
+## Authentication
 
-## 9. Document History
+### Signifyd
+
+**Method**: Basic Auth with Base64-encoded API Key
+
+```
+Authorization: Basic {base64_encoded_api_key}
+Content-Type: application/json
+```
+
+**Implementation**:
+```rust
+let auth_api_key = format!(
+    "Basic {}",
+    BASE64_ENGINE.encode(auth.api_key.peek())
+);
+```
+
+**Configuration**:
+```toml
+[signifyd]
+base_url = "https://api.signifyd.com/"
+api_key = "your_api_key"
+```
+
+### Riskified
+
+**Method**: HMAC-SHA256 Signature (Hex-encoded)
+
+**Headers**:
+```
+Content-Type: application/json
+X-RISKIFIED-SHOP-DOMAIN: {shop_domain}
+X-RISKIFIED-HMAC-SHA256: {hex_hmac_signature}
+Accept: application/vnd.riskified.com; version=2
+```
+
+**Signature Generation**:
+```rust
+pub fn generate_authorization_signature(
+    &self,
+    auth: &RiskifiedAuthType,
+    payload: &str,
+) -> CustomResult<String, ConnectorError> {
+    let key = hmac::Key::new(
+        hmac::HMAC_SHA256,
+        auth.secret_token.expose().as_bytes(),
+    );
+    let signature_value = hmac::sign(&key, payload.as_bytes());
+    let digest = signature_value.as_ref();
+    Ok(hex::encode(digest))  // HEX encoding, NOT Base64
+}
+```
+
+**Configuration**:
+```toml
+[riskified]
+base_url = "https://riskified.com/"
+secret_token = "your_secret_token"
+shop_domain = "your_shop.myshopify.com"
+```
+
+---
+
+## Currency Unit Handling
+
+| Provider | Currency Unit | Notes |
+|----------|---------------|-------|
+| **Signifyd** | `CurrencyUnit::Minor` | Uses cents (e.g., $100.00 = 10000) |
+| **Riskified** | `CurrencyUnit::Major` | Uses dollars (e.g., $100.00 = "100.00") |
+
+**Implementation Pattern**:
+```rust
+impl ConnectorCommon for Signifyd {
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Minor
+    }
+}
+
+impl ConnectorCommon for Riskified {
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Major
+    }
+}
+```
+
+---
+
+## Webhook Events
+
+### Signifyd Webhooks
+
+**Header**: `SIGNIFYD-TOPIC: ORDER_CHECKPOINT_ACTION_UPDATE`
+
+**Events**:
+| Signifyd Event | Hyperswitch Mapping |
+|----------------|---------------------|
+| `checkpointAction: ACCEPT` | `FRM_APPROVED` |
+| `checkpointAction: REJECT` | `FRM_REJECTED` |
+| `checkpointAction: HOLD` | `FRM_REVIEW_REQUIRED` |
+
+**Signature Header**: `x-signifyd-sec-hmac-sha256`
+- Algorithm: HMAC-SHA256
+- Key: Webhook secret
+
+### Riskified Webhooks
+
+**Body Structure**:
+```json
+{
+  "id": "order_id",
+  "status": "Approved"  // or "Declined"
+}
+```
+
+**Events**:
+| Riskified Status | Hyperswitch Mapping |
+|------------------|---------------------|
+| `Approved` | `FRM_APPROVED` |
+| `Declined` | `FRM_REJECTED` |
+
+**Signature Header**: `x-riskified-hmac-sha256`
+- Algorithm: HMAC-SHA256
+- Encoding: Base64
+
+---
+
+## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-04-06 | Initial specification |
-| 2.0.0 | 2026-04-06 | Hyperswitch-aligned enums, renamed methods |
-| 2.1.0 | 2026-04-06 | **Fixed folder structure** to follow payouts pattern, removed separate interfaces traits |
+| 2.0.0 | 2026-04-06 | Renamed methods to verb-noun format |
+| 3.0.0 | 2026-04-07 | **Fixed provider-specific fields**, corrected endpoints, added auth details, documented currency units |
