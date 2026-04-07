@@ -5,12 +5,14 @@ use common_utils::{
 };
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, CreateOrder, PSync, PaymentMethodToken, RSync, Refund, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -842,3 +844,171 @@ pub type MollieCaptureResponse = MolliePaymentsResponse;
 pub type MolliePSyncResponse = MolliePaymentsResponse;
 pub type MollieVoidResponse = MolliePaymentsResponse;
 pub type MollieRSyncResponse = MollieRefundResponse;
+
+// ===== CREATE ORDER FLOW TYPES AND TRANSFORMERS =====
+
+// Mollie CreateOrder Request structure
+// POST /v2/payments - creates a payment and returns checkout URL + payment ID
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCreateOrderRequest {
+    pub amount: MollieAmount,
+    pub description: String,
+    pub redirect_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhook_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+// Mollie CreateOrder Response structure
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCreateOrderResponse {
+    pub id: String,
+    pub resource: String,
+    pub mode: String,
+    pub status: MolliePaymentStatus,
+    pub amount: MollieAmount,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    #[serde(rename = "_links")]
+    pub links: MollieLinks,
+}
+
+// Request transformer for CreateOrder flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        MollieRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for MollieCreateOrderRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: MollieRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Convert amount to string major unit format (e.g., "10.00" for $10.00)
+        let converter = StringMajorUnitForConnector;
+        let amount_value = converter
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })
+            .attach_printable("Failed to convert amount to string major unit")?;
+
+        // Build metadata with order reference
+        let mut metadata_map = serde_json::Map::new();
+        metadata_map.insert(
+            "orderId".to_string(),
+            serde_json::Value::String(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        );
+
+        // Build description from connector_request_reference_id
+        let description = format!(
+            "Payment {}",
+            router_data
+                .resource_common_data
+                .connector_request_reference_id
+        );
+
+        // Get redirect URL - Mollie requires a valid redirect URL
+        let redirect_url = router_data
+            .resource_common_data
+            .get_return_url()
+            .unwrap_or_else(|| "https://example.com/redirect".to_string());
+
+        // Get webhook URL if available
+        let webhook_url = router_data.request.webhook_url.clone();
+
+        Ok(Self {
+            amount: MollieAmount {
+                currency: router_data.request.currency,
+                value: amount_value,
+            },
+            description,
+            redirect_url,
+            webhook_url,
+            metadata: Some(serde_json::Value::Object(metadata_map)),
+        })
+    }
+}
+
+// Response transformer for CreateOrder flow
+impl
+    TryFrom<
+        ResponseRouterData<
+            MollieCreateOrderResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MollieCreateOrderResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        // Map the status from Mollie response
+        let status = response.status.to_attempt_status();
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id: response.id.clone(),
+                session_data: None,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                reference_id: Some(response.id),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
