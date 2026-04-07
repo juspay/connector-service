@@ -3478,6 +3478,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Jpmorgan(JpmorganClientAuthenticationResponse),
     /// Payload SDK initialization data — client_token for Payload.js Checkout/Secure Input SDK
     Payload(PayloadClientAuthenticationResponse),
+    /// Billwerk SDK initialization data — session_id for Billwerk Checkout session
+    Billwerk(BillwerkClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3676,6 +3678,13 @@ pub struct JpmorganClientAuthenticationResponse {
 pub struct PayloadClientAuthenticationResponse {
     /// The client token ID returned from POST /access_tokens for client-side SDK initialization
     pub client_token: Secret<String>,
+}
+
+/// Billwerk's session_id for client-side Billwerk Checkout session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillwerkClientAuthenticationResponse {
+    /// The checkout session ID for client-side Billwerk Checkout initialization
+    pub session_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
