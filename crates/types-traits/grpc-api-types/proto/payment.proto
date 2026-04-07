@@ -1536,7 +1536,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    DatatransClientAuthenticationResponse datatrans = 8;
   }
+}
+
+// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
+message DatatransClientAuthenticationResponse {
+  SecretString transaction_id = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

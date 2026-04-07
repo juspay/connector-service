@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
+    Datatrans(DatatransClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Datatrans's transaction_id for client-side Secure Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatatransClientAuthenticationResponse {
+    /// The transaction ID returned from Secure Fields init, used as a client auth token
+    pub transaction_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
