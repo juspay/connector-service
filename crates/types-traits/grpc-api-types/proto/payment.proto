@@ -1563,7 +1563,16 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexixpayClientAuthenticationResponse nexixpay = 29;
     PeachpaymentsClientAuthenticationResponse peachpayments = 30;
     PproClientAuthenticationResponse ppro = 31;
+    RevolutClientAuthenticationResponse revolut = 32;
   }
+}
+
+// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+message RevolutClientAuthenticationResponse {
+  // The order ID created on Revolut
+  string order_id = 1;
+  // The client authentication token for SDK initialization
+  SecretString token = 2;
 }
 
 // Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization

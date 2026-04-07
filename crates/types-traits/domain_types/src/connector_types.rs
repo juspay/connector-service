@@ -3490,6 +3490,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Peachpayments(PeachpaymentsClientAuthenticationResponse),
     /// Ppro SDK initialization data — charge_id and redirect_url for client-side payment authentication
     Ppro(PproClientAuthenticationResponse),
+    /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+    Revolut(RevolutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3738,6 +3740,15 @@ pub struct PproClientAuthenticationResponse {
     pub charge_id: String,
     /// The redirect URL for client-side payment authentication
     pub redirect_url: Option<String>,
+}
+
+/// Revolut's order_id and token for client-side Revolut Pay widget initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevolutClientAuthenticationResponse {
+    /// The order ID created on Revolut
+    pub order_id: String,
+    /// The client authentication token for SDK initialization
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
