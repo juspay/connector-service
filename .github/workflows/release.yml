@@ -13,17 +13,21 @@ on:
         required: false
         default: true
         type: boolean
-      publish_sdk:
-        description: 'Publish SDK to registry'
+      publish_java:
+        description: 'Publish Java SDK to Maven Central'
         required: false
-        default: 'none'
-        type: choice
-        options:
-          - none
-          - java
-          - python
-          - javascript
-          - all
+        default: false
+        type: boolean
+      publish_python:
+        description: 'Publish Python SDK to PyPI'
+        required: false
+        default: false
+        type: boolean
+      publish_javascript:
+        description: 'Publish JavaScript SDK to npm'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -55,7 +59,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ inputs.branch }}
 
       - name: Install git-cliff
         run: |
@@ -432,7 +436,7 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [version-and-changelog, collect-sdks]
-    if: ${{ github.event.inputs.dry_run == 'false' }}
+    if: ${{ inputs.dry_run == false }}
     permissions:
       contents: write
     steps:
@@ -478,7 +482,7 @@ jobs:
     name: Publish Java SDK to Maven Central
     runs-on: ubuntu-latest
     needs: [version-and-changelog, create-release]
-    if: ${{ inputs.dry_run == 'false' && (inputs.publish_sdk == 'java' || inputs.publish_sdk == 'all') }}
+    if: ${{ inputs.dry_run == 'false' && inputs.publish_java == true }}
     steps:
       - uses: actions/checkout@v4
 
@@ -528,7 +532,7 @@ jobs:
     name: Publish Python SDK to PyPI
     runs-on: ubuntu-latest
     needs: [version-and-changelog, create-release]
-    if: ${{ inputs.dry_run == 'false' && (inputs.publish_sdk == 'python' || inputs.publish_sdk == 'all') }}
+    if: ${{ inputs.dry_run == 'false' && inputs.publish_python == true }}
     steps:
       - uses: actions/checkout@v4
 
@@ -574,7 +578,7 @@ jobs:
     name: Publish JavaScript SDK to npm
     runs-on: ubuntu-latest
     needs: [version-and-changelog, create-release]
-    if: ${{ inputs.dry_run == 'false' && (inputs.publish_sdk == 'javascript' || inputs.publish_sdk == 'all') }}
+    if: ${{ inputs.dry_run == 'false' && inputs.publish_javascript == true }}
     steps:
       - uses: actions/checkout@v4
 
@@ -616,7 +620,7 @@ jobs:
     name: Dry Run Summary
     runs-on: ubuntu-latest
     needs: [version-and-changelog, collect-sdks]
-    if: ${{ github.event.inputs.dry_run != 'false' }}
+    if: ${{ inputs.dry_run != false }}
     steps:
       - name: Download SDK artifacts
         uses: actions/download-artifact@v4
