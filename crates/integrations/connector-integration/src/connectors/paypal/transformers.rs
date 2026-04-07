@@ -13,15 +13,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, RepeatPayment,
+        VerifyWebhookSource,
     },
     connector_types::{
         MandateReference, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId,
-        ServerAuthenticationTokenResponseData, SetupMandateRequestData,
-        VerifyWebhookSourceFlowData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, ServerAuthenticationTokenResponseData,
+        SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -767,7 +767,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // --- TryFrom: PaypalOrderCreateResponse -> PaymentCreateOrderResponse ---
 
 impl TryFrom<PaypalOrderCreateResponse> for PaymentCreateOrderResponse {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(response: PaypalOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -779,18 +779,7 @@ impl TryFrom<PaypalOrderCreateResponse> for PaymentCreateOrderResponse {
 
 // --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            PaypalOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<PaypalOrderCreateResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -798,18 +787,10 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            PaypalOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<PaypalOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
