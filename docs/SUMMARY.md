@@ -2,7 +2,6 @@
 
 - [Product Overview](README.md)
   - [Installation & Configuration](getting-started/installation.md)
-  - [Create Payment Order](getting-started/create-order.md)
   - [First Payment](getting-started/first-payment.md)
   - [Extend to More Flows](getting-started/extend-to-more-flows.md)
 
@@ -21,9 +20,12 @@
   - [Money Struct](architecture/frameworks/money-struct.md)
   - [Versioning](architecture/versioning.md)
 
+
+
+  
+
 - [API Reference Overview](api-reference/README.md)
-  - [Payment Service Overview](api-reference/services/payment-service/README.md)
-    - [Create Order](api-reference/services/payment-service/create-order.md)
+    - [Payment Service Overview](api-reference/services/payment-service/README.md)
     - [Authorize](api-reference/services/payment-service/authorize.md)
     - [Capture](api-reference/services/payment-service/capture.md)
     - [Void](api-reference/services/payment-service/void.md)

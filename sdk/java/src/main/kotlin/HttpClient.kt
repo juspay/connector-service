@@ -31,7 +31,7 @@ class NetworkError(
     val code: NetworkErrorCode = NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
     val statusCode: Int? = null
 ) : Exception(message) {
-    /** String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. "CONNECT_TIMEOUT"). */
+    /** String error code for parity with IntegrationError/ConnectorError (e.g. "CONNECT_TIMEOUT"). */
     val errorCode: String get() = code.name
 }
 

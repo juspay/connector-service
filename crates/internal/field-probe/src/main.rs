@@ -38,7 +38,6 @@ use rayon::prelude::*;
 mod auth;
 mod config;
 mod error_parsing;
-mod flow_metadata;
 mod flow_registry;
 mod json_utils;
 mod normalizer;
@@ -52,10 +51,9 @@ mod status;
 mod types;
 
 use config::get_config;
-use flow_metadata::{parse_message_schemas, parse_services_proto};
 use orchestrator::probe_connector;
 use registry::all_connectors;
-use types::{CompactConnectorResult, CompactFlowResult, ErrorStats, ProbeManifest};
+use types::{CompactConnectorResult, CompactFlowResult, ErrorStats};
 
 fn main() {
     // Load config first (initializes PROBE_CONFIG)
@@ -79,11 +77,6 @@ fn main() {
         connectors.len(),
         skip_set.len()
     );
-
-    // Generate flow metadata from services.proto
-    eprintln!("Generating flow metadata from services.proto...");
-    let flow_metadata = parse_services_proto();
-    eprintln!("Generated {} flow metadata entries", flow_metadata.len());
 
     let results: Vec<_> = connectors
         .par_iter()
@@ -200,24 +193,6 @@ fn main() {
             ),
             Err(e) => eprintln!("  Warning: Failed to write {:?}: {e}", connector_file),
         }
-    }
-
-    // Write manifest file with flow metadata and connector list
-    let message_schemas = parse_message_schemas();
-    let manifest = ProbeManifest {
-        flow_metadata,
-        connectors: connector_names,
-        message_schemas,
-        schema_version: "2.0.0".to_string(),
-    };
-
-    let manifest_json =
-        serde_json::to_string_pretty(&manifest).expect("Failed to serialize manifest");
-
-    let manifest_path = output_dir.join("manifest.json");
-    match std::fs::write(&manifest_path, &manifest_json) {
-        Ok(()) => eprintln!("Wrote manifest to {:?}", manifest_path),
-        Err(e) => eprintln!("Warning: Failed to write manifest: {e}"),
     }
 
     eprintln!(

@@ -72,6 +72,10 @@ fn load_supported_flows(examples_dir: &Path, connector: &str) -> Option<HashSet<
         "create_access_token",
         "create_session_token",
         "create_sdk_session_token",
+        "tokenized_authorize",
+        "tokenized_setup_recurring",
+        "proxied_authorize",
+        "proxied_setup_recurring",
     ];
     let mut supported = HashSet::new();
     for flow_key in all_flow_keys {
@@ -112,6 +116,10 @@ fn main() {
         ("create_customer", "process_create_customer"),
         ("tokenize", "process_tokenize"),
         ("authentication", "process_authentication"),
+        ("tokenized_checkout", "process_tokenized_checkout"),
+        ("tokenized_recurring", "process_tokenized_recurring"),
+        ("proxy_checkout", "process_proxy_checkout"),
+        ("proxy_3ds_checkout", "process_proxy_3ds_checkout"),
     ];
 
     // Flow metadata for gRPC dispatch via builder functions.
@@ -125,6 +133,24 @@ fn main() {
             "authorize",
             "build_authorize_request",
             false,
+            false,
+        ),
+        (
+            "capture",
+            "payment",
+            "capture",
+            "build_capture_request",
+            true,
+            false,
+        ),
+        ("void", "payment", "void", "build_void_request", true, false),
+        ("get", "payment", "get", "build_get_request", true, false),
+        (
+            "refund",
+            "payment",
+            "refund",
+            "build_refund_request",
+            true,
             false,
         ),
         (
@@ -241,6 +267,38 @@ fn main() {
             false,
             false,
         ),
+        (
+            "tokenized_authorize",
+            "tokenized_payment",
+            "tokenized_authorize",
+            "build_tokenized_authorize_request",
+            false,
+            false,
+        ),
+        (
+            "tokenized_setup_recurring",
+            "tokenized_payment",
+            "tokenized_setup_recurring",
+            "build_tokenized_setup_recurring_request",
+            false,
+            false,
+        ),
+        (
+            "proxied_authorize",
+            "proxy_payment",
+            "proxied_authorize",
+            "build_proxied_authorize_request",
+            false,
+            false,
+        ),
+        (
+            "proxied_setup_recurring",
+            "proxy_payment",
+            "proxied_setup_recurring",
+            "build_proxied_setup_recurring_request",
+            false,
+            false,
+        ),
     ];
 
     let allowed_connectors: Vec<String> = std::env::var("CONNECTORS")
@@ -255,7 +313,6 @@ fn main() {
     for connector_name in &allowed_connectors {
         let rs_file = examples_dir
             .join(connector_name)
-            .join("rust")
             .join(format!("{connector_name}.rs"));
         if !rs_file.exists() {
             continue;
@@ -278,6 +335,26 @@ fn main() {
         for (key, fn_name) in all_scenarios {
             if content.contains(&format!("pub async fn {fn_name}(")) {
                 present.push((*key, *fn_name));
+            }
+        }
+        // Also discover direct flow functions (authorize, capture, void, etc.)
+        let direct_flows = [
+            ("authorize", "authorize"),
+            ("capture", "capture"),
+            ("void", "void"),
+            ("get", "get"),
+            ("refund", "refund"),
+            ("reverse", "reverse"),
+            ("create_customer", "create_customer"),
+            ("tokenize", "tokenize"),
+            ("setup_recurring", "setup_recurring"),
+            ("recurring_charge", "recurring_charge"),
+        ];
+        for (key, fn_name) in direct_flows {
+            if content.contains(&format!("pub async fn {fn_name}("))
+                && !present.iter().any(|(k, _)| *k == key)
+            {
+                present.push((key, fn_name));
             }
         }
         if !present.is_empty() {
@@ -324,10 +401,7 @@ fn main() {
         }
 
         for name in &all_names {
-            let path = examples_dir
-                .join(name.as_str())
-                .join("rust")
-                .join(format!("{name}.rs"));
+            let path = examples_dir.join(name.as_str()).join(format!("{name}.rs"));
             let canonical = path.canonicalize().unwrap_or(path.clone());
             code.push_str(&format!(
                 "pub mod {name} {{\n    include!(r\"{}\");\n}}\n",
@@ -482,8 +556,8 @@ fn main() {
                     };
 
                     let ret = match flow_key {
-                    "authorize" =>
-                        "format!(\"txn_id: {}, status_code: {}, error: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code, r.error.as_deref().unwrap_or(\"-\"))",
+                        "authorize" | "tokenized_authorize" | "proxied_authorize" =>
+                            "format!(\"txn_id: {}, status_code: {}, error: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code, r.error.as_deref().unwrap_or(\"-\"))",
                         "get" | "reverse" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id, r.status_code)",
                         "refund" =>
@@ -492,7 +566,7 @@ fn main() {
                             "format!(\"token: {}\", r.payment_method_token)",
                         "create_customer" =>
                             "format!(\"customer_id: {}, status_code: {}\", r.connector_customer_id, r.status_code)",
-                        "setup_recurring" =>
+                        "setup_recurring" | "tokenized_setup_recurring" | "proxied_setup_recurring" =>
                             "format!(\"recurring_id: {}, status_code: {}\", r.connector_recurring_payment_id.as_deref().unwrap_or(\"-\"), r.status_code)",
                         "recurring_charge" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code)",

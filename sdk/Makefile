@@ -3,7 +3,7 @@
 # This Makefile should be run from the repository root
 
 .PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
-        generate-descriptor generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
+        generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
         test test-rust test-grpc test-python test-javascript test-java \
         dist dist-python dist-javascript dist-java
 
@@ -128,54 +128,38 @@ generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
 generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
 	@$(MAKE) -C $(MAKEFILE_DIR)javascript generate-flows
 
-generate-kotlin: ## Regenerate Kotlin SDK client (flows)
-	@$(MAKE) -C $(MAKEFILE_DIR)java generate-flows
+generate-kotlin: ## Regenerate Kotlin SDK client (flows + bindings)
+	@$(MAKE) -C $(MAKEFILE_DIR)java generate-bindings generate-flows
 
-# ---------------------------------------------------------------------------
-# generate-descriptor
-# Generates the proto descriptor file used by all SDK codegen scripts.
-# This is a prerequisite for generate-client-* targets.
-# ---------------------------------------------------------------------------
-generate-descriptor:
-	@echo "Generating proto descriptor..."
-	@mkdir -p $(REPO_ROOT)/scripts/generators/code
-	@protoc \
-		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
-		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
-		--include_source_info \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
-	@echo "Descriptor written to scripts/generators/code/services.desc"
+
 
 # ---------------------------------------------------------------------------
 # generate-client-python
 # Delegates to python/Makefile to generate Python client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-python: generate-descriptor
+generate-client-python:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python generate-client
 
 # ---------------------------------------------------------------------------
 # generate-client-javascript
 # Delegates to javascript/Makefile to generate JavaScript client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-javascript: generate-descriptor
+generate-client-javascript:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript generate-client
 
 # ---------------------------------------------------------------------------
 # generate-client-java
 # Delegates to java/Makefile to generate Java/Kotlin client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-java: generate-descriptor
+generate-client-java:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java generate-client
 
 # ---------------------------------------------------------------------------
 # generate
 # Main entry point for regenerating all SDK clients.
-# Generates the descriptor, then delegates to each SDK's generate-client target.
+# Delegates to each SDK's generate-client target.
 # ---------------------------------------------------------------------------
-generate: install-deps generate-descriptor generate-rust generate-grpc-client generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
+generate: install-deps generate-rust generate-grpc-client generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
 	@echo
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
 	@mkdir -p $(REPO_ROOT)/sdk/python/src/payments/generated
@@ -211,30 +195,59 @@ else
   BUILD_FLAGS = 
 endif
 
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
+
+# Internal target: wait for gRPC server to be ready (checks TCP port 8000)
+_wait-for-server:
+	@echo "Waiting for gRPC server (up to 30s)..."
+	@for i in $$(seq 1 30); do \
+		if nc -z localhost 8000 2>/dev/null || bash -c 'exec 3<>/dev/tcp/localhost/8000' 2>/dev/null; then \
+			echo "Server ready."; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Server did not start within 30s"; \
+	exit 1
+
 test-grpc: ## Run gRPC smoke tests for all SDKs (Rust + JS + Python + Kotlin) with a combined summary. Use QUIET=0 for verbose output.
 	@{ \
+		set -o pipefail; \
 		RUST_EXIT=0; JS_EXIT=0; PY_EXIT=0; KT_EXIT=0; \
 		\
 		printf "\n\033[1m═══ gRPC Smoke Tests ═══\033[0m\n\n"; \
-		printf "\033[1m── Rust gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/rust test-grpc \
+		\
+		printf "Building grpc-server ($(GRPC_PROFILE))...\n"; \
+		cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) 2>&1 | grep -v "^   Compiling\|^   Finished" || true; \
+		\
+		printf "\nStarting gRPC server (shared across all tests)...\n"; \
+		pkill -KILL -f grpc-server 2>/dev/null || true; \
+		sleep 1; \
+		cd $(REPO_ROOT) && $(GRPC_SERVER_BIN) > /tmp/grpc-server.log 2>&1 & \
+		$(MAKE) -C $(REPO_ROOT)/sdk _wait-for-server; \
+		\
+		printf "\n\033[1m── Rust gRPC ──\033[0m\n"; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/rust test-grpc-no-server \
 			GRPC_CONNECTOR=$(GRPC_CONNECTOR) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | grep -v "^   Compiling\|^   Finished\|^     Running" || true; \
 		RUST_EXIT=$$?; \
 		\
 		printf "\n\033[1m── JavaScript gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-grpc-no-server \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20; \
 		JS_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Python gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20 || true; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/python test-grpc-no-server \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -20; \
 		PY_EXIT=$$?; \
 		\
 		printf "\n\033[1m── Kotlin gRPC ──\033[0m\n"; \
-		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc \
-			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30 || true; \
+		$(MAKE) -C $(REPO_ROOT)/sdk/java test-grpc-no-server \
+			CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE) 2>&1 | tail -30; \
 		KT_EXIT=$$?; \
+		\
+		printf "\nStopping gRPC server...\n"; \
+		pkill -f grpc-server 2>/dev/null || true; \
 		\
 		printf "\n\033[1m══ gRPC Results Summary ══\033[0m\n"; \
 		[ $$RUST_EXIT -eq 0 ] \
@@ -287,7 +300,6 @@ dist-java: build-ffi-lib ## Build FFI → Build Java JAR
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
-	@rm -f $(REPO_ROOT)/scripts/generators/code/services.desc
 	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs
 	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean

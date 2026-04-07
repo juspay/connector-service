@@ -13,15 +13,15 @@ To add a new flow: implement a req_transformer in services/payments.rs and run `
 
 Error Handling:
   FFI transformers return raw bytes that may represent either a success proto or an
-  error proto (IntegrationError for req_transformer, ConnectorResponseTransformationError for res_transformer).
-  On error, the decoded proto (IntegrationError or ConnectorResponseTransformationError) is raised directly.
+  error proto (IntegrationError for req_transformer, ConnectorError for res_transformer).
+  On error, the decoded proto (IntegrationError or ConnectorError) is raised directly.
   Callers can catch the specific error type:
 
       try:
           response = await client.authorize(request)
       except IntegrationError as e:
           print(e.error_code, e.error_message)
-      except ConnectorResponseTransformationError as e:
+      except ConnectorError as e:
           print(e.error_code, e.error_message)
 """
 
@@ -40,7 +40,7 @@ from .generated.sdk_config_pb2 import (
     FfiConnectorHttpResponse,
     HttpConfig,
     IntegrationError as IntegrationErrorProto,
-    ConnectorResponseTransformationError as ConnectorResponseTransformationErrorProto,
+    ConnectorError as ConnectorErrorProto,
     FfiResult,
 )
 
@@ -60,13 +60,13 @@ class IntegrationError(Exception):
         return getattr(self._proto, name)
 
 
-class ConnectorResponseTransformationError(Exception):
+class ConnectorError(Exception):
     """Exception raised when res_transformer fails (response transformation error).
 
-    Wraps ConnectorResponseTransformationError proto and provides transparent access to proto fields.
+    Wraps ConnectorError proto and provides transparent access to proto fields.
     """
 
-    def __init__(self, proto: ConnectorResponseTransformationErrorProto):
+    def __init__(self, proto: ConnectorErrorProto):
         super().__init__(proto.error_message)
         self._proto = proto
 
@@ -88,7 +88,7 @@ def check_req(result_bytes: bytes) -> Any:
 
     Raises:
         IntegrationError: If the result type is INTEGRATION_ERROR.
-        ConnectorResponseTransformationError: If the result type is CONNECTOR_RESPONSE_TRANSFORMATION_ERROR.
+        ConnectorError: If the result type is CONNECTOR_ERROR.
         ValueError: If the result type is unknown or invalid.
     """
     result = FfiResult()
@@ -102,8 +102,8 @@ def check_req(result_bytes: bytes) -> Any:
         return result.http_request
     elif result_type == FfiResult.INTEGRATION_ERROR:
         raise IntegrationError(result.integration_error)
-    elif result_type == FfiResult.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
-        raise ConnectorResponseTransformationError(result.connector_response_transformation_error)
+    elif result_type == FfiResult.CONNECTOR_ERROR:
+        raise ConnectorError(result.connector_error)
     else:
         raise ValueError(f"Unknown result type: {result_type}")
 
@@ -119,7 +119,7 @@ def check_res(result_bytes: bytes) -> Any:
         FfiConnectorHttpResponse on success (HTTP_RESPONSE type).
 
     Raises:
-        ConnectorResponseTransformationError: If the result type is CONNECTOR_RESPONSE_TRANSFORMATION_ERROR.
+        ConnectorError: If the result type is CONNECTOR_ERROR.
         IntegrationError: If the result type is INTEGRATION_ERROR.
         ValueError: If the result type is unknown or invalid.
     """
@@ -132,8 +132,8 @@ def check_res(result_bytes: bytes) -> Any:
     if result_type == FfiResult.HTTP_RESPONSE:
         # Return the typed HTTP response directly
         return result.http_response
-    elif result_type == FfiResult.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
-        raise ConnectorResponseTransformationError(result.connector_response_transformation_error)
+    elif result_type == FfiResult.CONNECTOR_ERROR:
+        raise ConnectorError(result.connector_error)
     elif result_type == FfiResult.INTEGRATION_ERROR:
         raise IntegrationError(result.integration_error)
     else:
@@ -214,7 +214,7 @@ class _ConnectorClientBase:
         """
         Execute a full payment flow round-trip asynchronously.
 
-        Errors from the FFI layer are raised as IntegrationError or ConnectorResponseTransformationError directly.
+        Errors from the FFI layer are raised as IntegrationError or ConnectorError directly.
 
         Args:
             flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
@@ -227,7 +227,7 @@ class _ConnectorClientBase:
 
         Raises:
             IntegrationError: On req_transformer failures.
-            ConnectorResponseTransformationError: On res_transformer failures.
+            ConnectorError: On res_transformer failures.
         """
         req_transformer = getattr(_ffi, f"{flow}_req_transformer")
         res_transformer = getattr(_ffi, f"{flow}_res_transformer")
@@ -270,7 +270,7 @@ class _ConnectorClientBase:
         res_bytes = res_proto.SerializeToString()
 
         # 5. Parse connector response via FFI
-        #    Parse result bytes as response_cls; if that fails, parse as ConnectorResponseTransformationError.
+        #    Parse result bytes as response_cls; if that fails, parse as ConnectorError.
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
         http_response = check_res(result_bytes_res)
         
@@ -291,7 +291,7 @@ class _ConnectorClientBase:
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
 
         Used for inbound flows like webhook processing where the connector sends
-        data to us. Errors are raised as ConnectorResponseTransformationError directly.
+        data to us. Errors are raised as ConnectorError directly.
 
         Args:
             flow: Flow name matching the FFI transformer (e.g. "handle_event").
@@ -303,7 +303,7 @@ class _ConnectorClientBase:
             Decoded domain response proto.
 
         Raises:
-            ConnectorResponseTransformationError: On FFI transformer failures.
+            ConnectorError: On FFI transformer failures.
         """
         transformer = getattr(_ffi, f"{flow}_transformer")
 

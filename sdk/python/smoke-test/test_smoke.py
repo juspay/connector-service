@@ -3,7 +3,7 @@
 Multi-connector smoke test for the hyperswitch-payments SDK.
 
 Loads connector credentials from external JSON file and runs all scenario
-functions found in examples/{connector}/python/ for each connector.
+functions found in examples/{connector}/ for each connector.
 
 Each scenario file (checkout_card.py, refund.py, etc.) is auto-generated and
 exports a process_{scenario_key}(merchant_transaction_id, config=...) function.
@@ -51,7 +51,7 @@ try:
         SdkOptions,
         Environment,
         IntegrationError,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     )
     from payments.generated.connector_service_ffi import InternalError
 except ImportError as e:
@@ -155,7 +155,7 @@ async def test_connector_scenarios(
     """
     Discover and run all Python scenario functions for a connector.
 
-    Loads examples_dir/{connector_name}/python/{connector_name}.py and calls each
+    Loads examples_dir/{connector_name}/{connector_name}.py and calls each
     process_* function found in _SCENARIO_NAMES order.
     process_{scenario_key}(txn_id, config=config) function.
     """
@@ -170,7 +170,7 @@ async def test_connector_scenarios(
         result["status"] = "dry_run"
         return result
 
-    connector_dir = examples_dir / connector_name / "python"
+    connector_dir = examples_dir / connector_name
     if not connector_dir.exists():
         result["status"] = "skipped"
         result["scenarios"] = {"skipped": True, "reason": "no_examples_dir"}
@@ -241,18 +241,32 @@ async def test_connector_scenarios(
                     response_display = f"<{type(response).__name__}>"
                 print(_green(f"    [{scenario_key}] OK") + f" — {response_display}", flush=True)
                 result["scenarios"][scenario_key] = {"passed": True, "result": response}
-        except (IntegrationError, ConnectorResponseTransformationError, InternalError) as e:
-            # Connector rejected our test data — SDK round-trip succeeded.
-            # IntegrationError/ConnectorResponseTransformationError: FFI completed a full cycle, connector returned error.
-            # UniffiError (e.g. HandlerError): FFI-level connector rejection before HTTP
-            # (e.g. InvalidWalletToken — bad probe token rejected during request building).
+        except IntegrationError as e:
+            # Request-phase error — SDK round-trip succeeded.
+            detail = f"IntegrationError: {e.error_message} (code={e.error_code}, action={getattr(e, 'suggested_action', None)}, doc={getattr(e, 'doc_url', None)})"
+            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {detail}", flush=True)
+            result["scenarios"][scenario_key] = {
+                "passed": True,
+                "connector_error": detail,
+            }
+        except ConnectorError as e:
+            # Response-phase error — SDK round-trip succeeded.
+            http_status = getattr(e, 'http_status_code', None)
+            detail = f"ConnectorError: {e.error_message} (code={e.error_code}, http={http_status})"
+            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {detail}", flush=True)
+            result["scenarios"][scenario_key] = {
+                "passed": True,
+                "connector_error": detail,
+            }
+        except InternalError as e:
+            # FFI-level connector rejection before HTTP (e.g. InvalidWalletToken)
             msg = getattr(e, 'error_message', None) or str(e)
             code = getattr(e, 'error_code', None)
             detail = f"{code}: {msg}" if code else msg
-            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {type(e).__name__}: {detail}", flush=True)
+            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — InternalError: {detail}", flush=True)
             result["scenarios"][scenario_key] = {
                 "passed": True,
-                "connector_error": f"{type(e).__name__}: {detail}",
+                "connector_error": f"InternalError: {detail}",
             }
         except Exception as e:
             # Unexpected Python-level failure — import crash, serialization bug, etc.

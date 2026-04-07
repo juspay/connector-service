@@ -1,6 +1,6 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-composite test-grpc dist clean
-	#
+        generate-flows pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
+
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
@@ -12,8 +12,11 @@ CONNECTORS ?= stripe
 include $(SDK_ROOT)/../common.mk
 
 # SDK-specific paths continued
-GENERATED_OUT := $(SDK_ROOT)/src/payments/generated
-PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-python
+GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
+PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-python
+PACKAGE_NAME     := $(shell python3 -c "t = open('$(SDK_ROOT)/pyproject.toml').read(); print([l.split('=')[1].strip().strip('\"') for l in t.split('\n') if l.startswith('name =')][0])")
+PACKAGE_VERSION  := $(shell python3 -c "t = open('$(SDK_ROOT)/pyproject.toml').read(); print([l.split('=')[1].strip().strip('\"') for l in t.split('\n') if l.startswith('version =')][0])")
+WHEEL_FILE       := $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-$(PACKAGE_VERSION)-py3-none-any.whl
 
 # Note: BINDGEN is defined in common.mk
 
@@ -102,12 +105,10 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
-# codegen script. Depends on generate-descriptor to ensure the proto descriptor
-# exists, and install-codegen-deps so jinja2 etc. are available (CI and local).
+# codegen script. Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating Python flow methods..."
-	@$(MAKE) -C $(REPO_ROOT)/sdk generate-descriptor
 	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang python
 	@echo "Python flow methods generated."
 
@@ -119,8 +120,9 @@ generate-flows: install-codegen-deps
 # ---------------------------------------------------------------------------
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
+	@rm -f $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-*.whl
 	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
-	@echo "Wheel built in $(PACKAGE_DIR)/"
+	@echo "Wheel built: $(WHEEL_FILE)"
 
 # ---------------------------------------------------------------------------
 # install
@@ -151,7 +153,7 @@ test-package: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
@@ -176,7 +178,7 @@ test-composite: generate-all pack-archive
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-composite \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cd /tmp/test-hyperswitch-py-composite && python3 test_smoke_composite.py --creds-file creds.json
 	@rm -rf /tmp/test-hyperswitch-py-composite
@@ -189,6 +191,27 @@ test-composite: generate-all pack-archive
 # ---------------------------------------------------------------------------
 GRPC_PROFILE    ?= release-fast
 GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+
+# Run gRPC test assuming server is already running (used by top-level test-grpc)
+test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
+	@echo "Testing gRPC flows in isolation..."
+	@rm -rf /tmp/test-hyperswitch-py-grpc
+	@mkdir -p /tmp/test-hyperswitch-py-grpc
+	@python3 -m pip install \
+		--target /tmp/test-hyperswitch-py-grpc \
+		$(WHEEL_FILE) \
+		--force-reinstall
+	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-py-grpc/; \
+	else \
+		echo "  Note: no creds.json found, test will use placeholder credentials"; \
+	fi
+	@cd /tmp/test-hyperswitch-py-grpc && PYTHONPATH=/tmp/test-hyperswitch-py-grpc FORCE_COLOR=1 \
+		python3 test_smoke_grpc.py \
+		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
+	@rm -rf /tmp/test-hyperswitch-py-grpc
 
 test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@echo "Building grpc-server ($(GRPC_PROFILE))..."
@@ -203,7 +226,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-grpc
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-grpc \
-		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		$(WHEEL_FILE) \
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
@@ -238,6 +261,24 @@ dist:
 	@# dist always ships release-optimised binaries (lto=thin, codegen-units=1).
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution wheel created in $(PACKAGE_DIR)/"
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes the package to PyPI.
+# Requires TWINE_USERNAME and TWINE_PASSWORD to be set.
+# ---------------------------------------------------------------------------
+publish: pack-archive
+	@if [ -z "$(TWINE_USERNAME)" ] || [ -z "$(TWINE_PASSWORD)" ]; then \
+		echo "Error: TWINE_USERNAME or TWINE_PASSWORD is not set"; \
+		echo "Set them with:"; \
+		echo "  export TWINE_USERNAME=__token__"; \
+		echo "  export TWINE_PASSWORD=pypi-xxxxx"; \
+		exit 1; \
+	fi
+	@echo "Publishing hyperswitch-prism to PyPI..."
+	@python3 -m pip install twine --quiet
+	@python3 -m twine upload $(WHEEL_FILE)
+	@echo "Published hyperswitch-prism to PyPI."
 
 clean:
 	@rm -rf $(GENERATED_OUT)
