@@ -1536,7 +1536,14 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    PayloadClientAuthenticationResponse payload = 8;
   }
+}
+
+// Payload SDK initialization data — client_token for Payload.js Checkout/Secure Input SDK
+message PayloadClientAuthenticationResponse {
+  // The client token ID returned from POST /access_tokens for client-side SDK initialization
+  SecretString client_token = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations
