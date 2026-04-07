@@ -1533,10 +1533,8 @@ message ClientAuthenticationTokenData {
 message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
-    AdyenClientAuthenticationResponse adyen = 2;
     CheckoutClientAuthenticationResponse checkout = 3;
     CybersourceClientAuthenticationResponse cybersource = 4;
-    NuveiClientAuthenticationResponse nuvei = 5;
     MollieClientAuthenticationResponse mollie = 6;
     GlobalpayClientAuthenticationResponse globalpay = 7;
     BluesnapClientAuthenticationResponse bluesnap = 8;
