@@ -1553,12 +1553,21 @@ message ConnectorSpecificClientAuthenticationResponse {
     BamboraClientAuthenticationResponse bambora = 19;
     BamboraapacClientAuthenticationResponse bamboraapac = 20;
     PaytmClientAuthenticationResponse paytm = 21;
+    MifinityClientAuthenticationResponse mifinity = 22;
   }
 }
 
 // Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
 message PaytmClientAuthenticationResponse {
   SecretString txn_token = 1;
+}
+
+// Mifinity SDK initialization data — initialization_token for iframe initialization
+message MifinityClientAuthenticationResponse {
+  // The initialization token for client-side iframe rendering
+  SecretString initialization_token = 1;
+  // The trace ID for tracking the payment transaction
+  string trace_id = 2;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

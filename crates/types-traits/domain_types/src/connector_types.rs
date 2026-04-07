@@ -3470,6 +3470,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Bamboraapac(BamboraapacClientAuthenticationResponse),
     /// Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
     Paytm(PaytmClientAuthenticationResponse),
+    /// Mifinity SDK initialization data — initialization_token for iframe initialization
+    Mifinity(MifinityClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3632,6 +3634,15 @@ pub struct BamboraapacClientAuthenticationResponse {
 pub struct PaytmClientAuthenticationResponse {
     /// The transaction token returned from Paytm's initiateTransaction API
     pub txn_token: Secret<String>,
+}
+
+/// Mifinity's initialization_token for client-side iframe initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MifinityClientAuthenticationResponse {
+    /// The initialization token returned from Mifinity's init-iframe API
+    pub initialization_token: Secret<String>,
+    /// The trace ID for tracking the payment transaction
+    pub trace_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
