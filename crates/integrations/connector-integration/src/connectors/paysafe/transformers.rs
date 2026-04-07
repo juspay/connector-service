@@ -8,9 +8,9 @@ use domain_types::{
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
-        PaysafeClientAuthenticationResponse as PaysafeClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaysafeClientAuthenticationResponse as PaysafeClientAuthenticationResponseDomain,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
@@ -986,37 +986,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let account_id = account_id.get_no_three_ds_account_id(router_data.request.currency)?;
 
         // Billing details are optional for ClientAuthenticationToken flow
-        let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)
-            .unwrap_or(None);
+        let billing_details =
+            create_paysafe_billing_details(&router_data.resource_common_data).unwrap_or(None);
 
         // Build return_links from the return URL if available
-        let return_links = router_data
-            .resource_common_data
-            .get_return_url()
-            .map(|redirect_url: String| {
-                vec![
-                    ReturnLink {
-                        rel: LinkType::Default,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnCompleted,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnFailed,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnCancelled,
-                        href: redirect_url,
-                        method: Method::Get.to_string(),
-                    },
-                ]
-            });
+        let return_links =
+            router_data
+                .resource_common_data
+                .get_return_url()
+                .map(|redirect_url: String| {
+                    vec![
+                        ReturnLink {
+                            rel: LinkType::Default,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnCompleted,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnFailed,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnCancelled,
+                            href: redirect_url,
+                            method: Method::Get.to_string(),
+                        },
+                    ]
+                });
 
         Ok(Self {
             merchant_ref_num: router_data

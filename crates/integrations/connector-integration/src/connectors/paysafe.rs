@@ -45,9 +45,8 @@ use transformers::{
     self as paysafe, PaysafeAuthorizeResponse, PaysafeCaptureRequest, PaysafeCaptureResponse,
     PaysafeClientAuthRequest, PaysafeClientAuthResponse, PaysafeErrorResponse,
     PaysafePaymentMethodTokenRequest, PaysafePaymentMethodTokenResponse, PaysafePaymentsRequest,
-    PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse,
-    PaysafeRepeatPaymentRequest, PaysafeRepeatPaymentResponse, PaysafeSyncResponse,
-    PaysafeVoidRequest, PaysafeVoidResponse,
+    PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse, PaysafeRepeatPaymentRequest,
+    PaysafeRepeatPaymentResponse, PaysafeSyncResponse, PaysafeVoidRequest, PaysafeVoidResponse,
 };
 
 use super::macros;
@@ -699,7 +698,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Paysafe<T>
 {
 }
-
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
