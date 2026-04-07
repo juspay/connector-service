@@ -18,13 +18,13 @@ use domain_types::{
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, MandateReference,
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData,
         PaypalClientAuthenticationResponse as PaypalClientAuthenticationResponseDomain,
         PaypalFlow as PaypalFlowDomain, PaypalTransactionInfo as PaypalTransactionInfoDomain,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SdkNextAction, ServerAuthenticationTokenResponseData,
-        SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        ResponseId, SdkNextAction, ServerAuthenticationTokenResponseData, SetupMandateRequestData,
+        VerifyWebhookSourceFlowData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -3533,8 +3533,8 @@ impl TryFrom<ResponseRouterData<PaypalClientAuthTokenResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let session_data =
-            ClientAuthenticationTokenData::Paypal(Box::new(PaypalClientAuthenticationResponseDomain {
+        let session_data = ClientAuthenticationTokenData::Paypal(Box::new(
+            PaypalClientAuthenticationResponseDomain {
                 connector: "paypal".to_string(),
                 session_token: response.client_token.clone(),
                 sdk_next_action: SdkNextAction {
@@ -3546,7 +3546,8 @@ impl TryFrom<ResponseRouterData<PaypalClientAuthTokenResponse, Self>>
                     currency_code: item.router_data.request.currency,
                     total_price: item.router_data.request.amount,
                 }),
-            }));
+            },
+        ));
 
         Ok(Self {
             response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
