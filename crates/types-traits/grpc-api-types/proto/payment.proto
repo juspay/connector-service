@@ -1535,12 +1535,21 @@ message ConnectorSpecificClientAuthenticationResponse {
     StripeClientAuthenticationResponse stripe = 1;
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
+    JpmorganClientAuthenticationResponse jpmorgan = 4;
   }
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
 message StripeClientAuthenticationResponse {
   SecretString client_secret = 1;
+}
+
+// Jpmorgan SDK initialization data — transaction_id for client-side payment session
+message JpmorganClientAuthenticationResponse {
+  // The transaction ID that serves as the client authentication token
+  string transaction_id = 1;
+  // The request ID for tracking purposes
+  string request_id = 2;
 }
 
 // Google Pay Session Data

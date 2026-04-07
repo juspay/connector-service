@@ -3430,12 +3430,23 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Jpmorgan SDK initialization data — transaction_id for client-side payment session
+    Jpmorgan(JpmorganClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Jpmorgan's transaction_id for client-side payment session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JpmorganClientAuthenticationResponse {
+    /// The transaction ID that serves as the client authentication token
+    pub transaction_id: String,
+    /// The request ID for tracking purposes
+    pub request_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

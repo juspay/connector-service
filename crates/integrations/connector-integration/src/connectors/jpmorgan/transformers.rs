@@ -1,8 +1,11 @@
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::pii::SecretSerdeValue;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, ServerAuthenticationToken, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, Refund, ServerAuthenticationToken, Void},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        JpmorganClientAuthenticationResponse as JpmorganClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
@@ -693,6 +696,75 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
                 status,
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Obtains an OAuth2 access token from JPMorgan for client-side SDK initialization.
+/// The access_token serves as the client authentication token.
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::JpmorganClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        _item: JpmorganRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            grant_type: String::from("client_credentials"),
+            scope: String::from("jpm:payments:sandbox"),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<responses::JpmorganClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Jpmorgan(
+                JpmorganClientAuthenticationResponseDomain {
+                    transaction_id: response.access_token.peek().to_string(),
+                    request_id: response.token_type,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
     }
