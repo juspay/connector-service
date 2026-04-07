@@ -179,9 +179,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | PayPal SDK | ⚠ |
 | Amazon Pay | ⚠ |
 | Cash App | ⚠ |
-| PayPal | ⚠ |
+| PayPal | ✓ |
 | WeChat Pay | ⚠ |
-| Alipay | ⚠ |
+| Alipay | ✓ |
 | Revolut Pay | ⚠ |
 | MiFinity | ⚠ |
 | Bluecode | ⚠ |
@@ -355,6 +355,16 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 ```python
 "payment_method": {
     "ideal": {
+    }
+}
+```
+
+##### PayPal Redirect
+
+```python
+"payment_method": {
+    "paypal_redirect": {  # PayPal.
+        "email": {"value": "test@example.com"}  # PayPal's email address.
     }
 }
 ```
