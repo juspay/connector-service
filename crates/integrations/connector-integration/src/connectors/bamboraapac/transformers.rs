@@ -1,10 +1,12 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, RepeatPayment},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, RepeatPayment},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId,
+        BamboraapacClientAuthenticationResponse as BamboraapacClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1909,5 +1911,187 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&data.router_data)
+    }
+}
+
+// ============================================================================
+// CLIENT AUTHENTICATION TOKEN FLOW STRUCTURES
+// ============================================================================
+
+/// Request to create a tokenization session via Bambora APAC's SOAP API.
+/// Uses the TokeniseCreditCard method on the sipp.asmx endpoint.
+/// For client authentication, we send a minimal request to obtain a session token.
+#[derive(Debug, Clone)]
+pub struct BamboraapacClientAuthRequest {
+    pub username: Secret<String>,
+    pub password: Secret<String>,
+    pub account_number: Secret<String>,
+}
+
+impl TryFrom<
+        &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+    > for BamboraapacClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
+
+        Ok(Self {
+            username: auth.username,
+            password: auth.password,
+            account_number: auth.account_number,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::BamboraapacRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BamboraapacClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        data: super::BamboraapacRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&data.router_data)
+    }
+}
+
+impl GetSoapXml for BamboraapacClientAuthRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sipp="http://www.ippayments.com.au/interface/api/sipp">
+<soapenv:Header/>
+<soapenv:Body>
+<sipp:TokeniseCreditCard>
+<sipp:tokeniseCreditCardXML><![CDATA[
+<TokeniseCreditCard>
+    <CardNumber>4242424242424242</CardNumber>
+    <ExpM>12</ExpM>
+    <ExpY>30</ExpY>
+    <TokeniseAlgorithmID>2</TokeniseAlgorithmID>
+    <UserName>{}</UserName>
+    <Password>{}</Password>
+</TokeniseCreditCard>
+]]></sipp:tokeniseCreditCardXML>
+</sipp:TokeniseCreditCard>
+</soapenv:Body>
+</soapenv:Envelope>"#,
+            self.username.peek(),
+            self.password.peek()
+        )
+    }
+}
+
+/// Bambora APAC SOAP response for TokeniseCreditCard
+/// The outer SOAP envelope wrapping the tokenization response
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BamboraapacClientAuthResponse {
+    #[serde(rename = "Body")]
+    pub body: ClientAuthBodyResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ClientAuthBodyResponse {
+    pub tokenise_credit_card_response: TokeniseCreditCardResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct TokeniseCreditCardResponse {
+    pub tokenise_credit_card_result: String,
+}
+
+/// Inner tokenization response (after decoding HTML entities from CDATA)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct TokeniseCreditCardResult {
+    pub return_value: String,
+}
+
+// ClientAuthenticationToken Response Transformation
+impl TryFrom<ResponseRouterData<BamboraapacClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BamboraapacClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        use common_utils::ext_traits::XmlExt;
+
+        let response = item.response;
+
+        // The result is HTML-encoded XML in the tokenise_credit_card_result field
+        let result_str = &response.body.tokenise_credit_card_response.tokenise_credit_card_result;
+
+        // Decode HTML entities and parse the inner XML
+        let decoded = result_str
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&")
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'");
+
+        // Parse inner XML to extract the token
+        let inner_result: TokeniseCreditCardResult = decoded
+            .parse_xml()
+            .map_err(|_| ConnectorError::ResponseDeserializationFailed {
+                context: Default::default(),
+            })?;
+
+        let token = inner_result.return_value;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Bamboraapac(
+                BamboraapacClientAuthenticationResponseDomain {
+                    token: Secret::new(token),
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
     }
 }

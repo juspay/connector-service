@@ -1551,6 +1551,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     DatatransClientAuthenticationResponse datatrans = 17;
     BarclaycardClientAuthenticationResponse barclaycard = 18;
     BamboraClientAuthenticationResponse bambora = 19;
+    BamboraapacClientAuthenticationResponse bamboraapac = 20;
   }
 }
 
@@ -1571,6 +1572,11 @@ message BarclaycardClientAuthenticationResponse {
 
 // Bambora SDK initialization data — token for Custom Checkout initialization
 message BamboraClientAuthenticationResponse {
+  SecretString token = 1;
+}
+
+// Bambora APAC SDK initialization data — token for client-side tokenization
+message BamboraapacClientAuthenticationResponse {
   SecretString token = 1;
 }
 

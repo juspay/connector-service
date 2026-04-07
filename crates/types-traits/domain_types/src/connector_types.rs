@@ -3466,6 +3466,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Barclaycard(BarclaycardClientAuthenticationResponse),
     /// Bambora SDK initialization data — token for Custom Checkout initialization
     Bambora(BamboraClientAuthenticationResponse),
+    /// Bambora APAC SDK initialization data — token for client-side tokenization
+    Bamboraapac(BamboraapacClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3613,6 +3615,13 @@ pub struct BarclaycardClientAuthenticationResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BamboraClientAuthenticationResponse {
     /// The tokenization token returned from Bambora's tokenization API
+    pub token: Secret<String>,
+}
+
+/// Bambora APAC's token for client-side tokenization via SOAP API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraapacClientAuthenticationResponse {
+    /// The tokenization token returned from Bambora APAC's SOAP tokenization API
     pub token: Secret<String>,
 }
 
