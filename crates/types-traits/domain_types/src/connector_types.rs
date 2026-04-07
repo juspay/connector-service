@@ -3454,6 +3454,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Wellsfargo(WellsfargoClientAuthenticationResponse),
     /// Fiserv SDK initialization data — session_id for Payment.js SDK initialization
     Fiserv(FiservClientAuthenticationResponse),
+    /// Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
+    Elavon(ElavonClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3558,6 +3560,13 @@ pub struct WellsfargoClientAuthenticationResponse {
 pub struct FiservClientAuthenticationResponse {
     /// The session ID for client-side Payment.js SDK initialization
     pub session_id: Secret<String>,
+}
+
+/// Elavon's ssl_txn_auth_token for Converge Hosted Payments SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElavonClientAuthenticationResponse {
+    /// The session token (ssl_txn_auth_token) for client-side Converge Hosted Payments
+    pub session_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

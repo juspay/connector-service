@@ -9,8 +9,11 @@ use common_utils::{
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        ElavonClientAuthenticationResponse as ElavonClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId as DomainResponseId,
@@ -1463,6 +1466,109 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
                 ..router_data.resource_common_data
             },
             ..router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Request to create a session token (ssl_txn_auth_token) via Elavon Converge
+/// Hosted Payments endpoint. The token is returned to the frontend for
+/// client-side payment completion.
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct ElavonClientAuthRequest {
+    pub ssl_merchant_id: Secret<String>,
+    pub ssl_user_id: Secret<String>,
+    pub ssl_pin: Secret<String>,
+    pub ssl_transaction_type: String,
+    pub ssl_amount: StringMajorUnit,
+    pub ssl_transaction_currency: Currency,
+    pub ssl_invoke_receipt: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for ElavonClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: ElavonRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
+
+        let amount_converter = StringMajorUnitForConnector;
+        let amount = amount_converter
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(IntegrationError::AmountConversionFailed {
+                context: Default::default(),
+            })?;
+
+        Ok(Self {
+            ssl_merchant_id: auth_type.ssl_merchant_id,
+            ssl_user_id: auth_type.ssl_user_id,
+            ssl_pin: auth_type.ssl_pin,
+            ssl_transaction_type: "ccsale".to_string(),
+            ssl_amount: amount,
+            ssl_transaction_currency: router_data.request.currency,
+            ssl_invoke_receipt: "false".to_string(),
+        })
+    }
+}
+
+/// Response from Elavon Converge Hosted Payments session token endpoint.
+/// The response body contains the ssl_txn_auth_token as plain text.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ElavonClientAuthResponse {
+    pub ssl_txn_auth_token: Secret<String>,
+}
+
+impl TryFrom<ResponseRouterData<ElavonClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<ElavonClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Elavon(
+                ElavonClientAuthenticationResponseDomain {
+                    session_token: response.ssl_txn_auth_token,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }

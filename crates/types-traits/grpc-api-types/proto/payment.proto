@@ -1545,7 +1545,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     BankOfAmericaClientAuthenticationResponse bank_of_america = 11;
     WellsfargoClientAuthenticationResponse wellsfargo = 12;
     FiservClientAuthenticationResponse fiserv = 13;
+    ElavonClientAuthenticationResponse elavon = 14;
   }
+}
+
+// Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
+message ElavonClientAuthenticationResponse {
+  SecretString session_token = 1;
 }
 
 // BankOfAmerica SDK initialization data — capture_context JWT for Flex Microform SDK
