@@ -1538,6 +1538,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     CybersourceClientAuthenticationResponse cybersource = 4;
     NuveiClientAuthenticationResponse nuvei = 5;
     MollieClientAuthenticationResponse mollie = 6;
+    GlobalpayClientAuthenticationResponse globalpay = 7;
   }
 }
 
@@ -1545,6 +1546,13 @@ message ConnectorSpecificClientAuthenticationResponse {
 message MollieClientAuthenticationResponse {
   string payment_id = 1;
   SecretString checkout_url = 2;
+}
+
+// Globalpay SDK initialization data — access_token for client-side SDK operations
+message GlobalpayClientAuthenticationResponse {
+  SecretString access_token = 1;
+  optional string token_type = 2;
+  optional int64 expires_in = 3;
 }
 
 // Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
