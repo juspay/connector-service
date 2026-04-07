@@ -3,8 +3,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, ClientAuthenticationToken},
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData,
         RapydClientAuthenticationResponse as RapydClientAuthenticationResponseDomain,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
@@ -619,18 +619,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                router_data.request.amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
 
-        let country = router_data
-            .request
-            .country
-            .map(|c| c.to_string());
+        let country = router_data.request.country.map(|c| c.to_string());
 
         Ok(Self {
             amount,
@@ -675,9 +669,11 @@ impl TryFrom<ResponseRouterData<RapydClientAuthResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let data = response.data.ok_or(ConnectorError::ResponseDeserializationFailed {
-            context: Default::default(),
-        })?;
+        let data = response
+            .data
+            .ok_or(ConnectorError::ResponseDeserializationFailed {
+                context: Default::default(),
+            })?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Rapyd(

@@ -42,11 +42,10 @@ use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
     CaptureRequest, RapydAuthType, RapydClientAuthRequest, RapydClientAuthResponse,
-    RapydPaymentsRequest,
-    RapydPaymentsResponse as RapydCaptureResponse, RapydPaymentsResponse as RapydPSyncResponse,
-    RapydPaymentsResponse, RapydPaymentsResponse as RapydVoidResponse,
-    RapydPaymentsResponse as RapydAuthorizeResponse, RapydRefundRequest, RefundResponse,
-    RefundResponse as RapydRSyncResponse,
+    RapydPaymentsRequest, RapydPaymentsResponse as RapydCaptureResponse,
+    RapydPaymentsResponse as RapydPSyncResponse, RapydPaymentsResponse,
+    RapydPaymentsResponse as RapydVoidResponse, RapydPaymentsResponse as RapydAuthorizeResponse,
+    RapydRefundRequest, RefundResponse, RefundResponse as RapydRSyncResponse,
 };
 
 use super::macros;
