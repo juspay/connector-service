@@ -1548,12 +1548,18 @@ message ConnectorSpecificClientAuthenticationResponse {
     ElavonClientAuthenticationResponse elavon = 14;
     NoonClientAuthenticationResponse noon = 15;
     PaysafeClientAuthenticationResponse paysafe = 16;
+    DatatransClientAuthenticationResponse datatrans = 17;
   }
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK
 message PaysafeClientAuthenticationResponse {
   SecretString payment_handle_token = 1;
+}
+
+// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
+message DatatransClientAuthenticationResponse {
+  SecretString transaction_id = 1;
 }
 
 // Noon SDK initialization data — order_id and checkout_url for client-side checkout

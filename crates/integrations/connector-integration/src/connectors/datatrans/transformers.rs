@@ -4,8 +4,11 @@ use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        DatatransClientAuthenticationResponse as DatatransClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
@@ -771,6 +774,98 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
             },
             response: Ok(payments_response_data),
             ..item.router_data.clone()
+        })
+    }
+}
+
+// ===== CLIENT AUTHENTICATION TOKEN FLOW STRUCTURES =====
+
+/// Request to initialize a Datatrans Secure Fields transaction.
+/// Returns a transactionId that serves as a client authentication token.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransClientAuthRequest {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+    pub return_url: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for DatatransClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: super::DatatransRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        Ok(Self {
+            amount: router_data.request.amount,
+            currency: router_data.request.currency,
+            return_url: router_data
+                .resource_common_data
+                .return_url
+                .clone()
+                .unwrap_or_else(|| "https://example.com/return".to_string()),
+        })
+    }
+}
+
+/// Datatrans Secure Fields init response — contains the transactionId
+/// used as a client authentication token (valid for 30 minutes).
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransClientAuthResponse {
+    pub transaction_id: String,
+}
+
+impl TryFrom<ResponseRouterData<DatatransClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DatatransClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Datatrans(
+                DatatransClientAuthenticationResponseDomain {
+                    transaction_id: Secret::new(response.transaction_id),
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }

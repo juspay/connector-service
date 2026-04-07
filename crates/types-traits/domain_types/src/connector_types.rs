@@ -3460,6 +3460,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Noon(NoonClientAuthenticationResponse),
     /// Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK
     Paysafe(PaysafeClientAuthenticationResponse),
+    /// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
+    Datatrans(DatatransClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3587,6 +3589,13 @@ pub struct NoonClientAuthenticationResponse {
 pub struct PaysafeClientAuthenticationResponse {
     /// The payment handle token for client-side Paysafe.js SDK
     pub payment_handle_token: Secret<String>,
+}
+
+/// Datatrans's transaction_id for client-side Secure Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatatransClientAuthenticationResponse {
+    /// The transaction ID returned from Secure Fields init, used as a client auth token
+    pub transaction_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
