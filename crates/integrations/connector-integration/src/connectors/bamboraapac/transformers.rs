@@ -5,8 +5,8 @@ use domain_types::{
         BamboraapacClientAuthenticationResponse as BamboraapacClientAuthenticationResponseDomain,
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1928,7 +1928,8 @@ pub struct BamboraapacClientAuthRequest {
     pub account_number: Secret<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         &RouterDataV2<
             ClientAuthenticationToken,
             PaymentFlowData,
@@ -2059,7 +2060,10 @@ impl TryFrom<ResponseRouterData<BamboraapacClientAuthResponse, Self>>
         let response = item.response;
 
         // The result is HTML-encoded XML in the tokenise_credit_card_result field
-        let result_str = &response.body.tokenise_credit_card_response.tokenise_credit_card_result;
+        let result_str = &response
+            .body
+            .tokenise_credit_card_response
+            .tokenise_credit_card_result;
 
         // Decode HTML entities and parse the inner XML
         let decoded = result_str
@@ -2070,11 +2074,12 @@ impl TryFrom<ResponseRouterData<BamboraapacClientAuthResponse, Self>>
             .replace("&apos;", "'");
 
         // Parse inner XML to extract the token
-        let inner_result: TokeniseCreditCardResult = decoded
-            .parse_xml()
-            .map_err(|_| ConnectorError::ResponseDeserializationFailed {
-                context: Default::default(),
-            })?;
+        let inner_result: TokeniseCreditCardResult =
+            decoded
+                .parse_xml()
+                .map_err(|_| ConnectorError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                })?;
 
         let token = inner_result.return_value;
 
