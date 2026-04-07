@@ -178,15 +178,58 @@
 ### Python SDK
 - [Python SDK Overview](sdks/python/README.md)
 
+#### Payment Service
+- [Payment Service Overview](sdks/python/payment-service/README.md)
+- [Create Order](sdks/python/payment-service/create-order.md)
+- [Authorize](sdks/python/payment-service/authorize.md)
+- [Capture](sdks/python/payment-service/capture.md)
+- [Void](sdks/python/payment-service/void.md)
+- [Refund](sdks/python/payment-service/refund.md)
+- [Get](sdks/python/payment-service/get.md)
+- [Reverse](sdks/python/payment-service/reverse.md)
+- [Setup Recurring](sdks/python/payment-service/setup-recurring.md)
+- [Incremental Authorization](sdks/python/payment-service/incremental-authorization.md)
+- [Verify Redirect Response](sdks/python/payment-service/verify-redirect-response.md)
+
+#### Recurring Payment Service
+- [Recurring Payment Service Overview](sdks/python/recurring-payment-service/README.md)
+- [Charge](sdks/python/recurring-payment-service/charge.md)
+- [Revoke](sdks/python/recurring-payment-service/revoke.md)
+
 #### Refund Service
 - [Refund Service Overview](sdks/python/refund-service/README.md)
 - [Get](sdks/python/refund-service/get.md)
 
-#### Payout Service
-- [Payout Service Overview](sdks/python/payout-service/README.md)
+#### Dispute Service
+- [Dispute Service Overview](sdks/python/dispute-service/README.md)
+- [Accept](sdks/python/dispute-service/accept.md)
+- [Defend](sdks/python/dispute-service/defend.md)
+- [Get](sdks/python/dispute-service/get.md)
+- [Submit Evidence](sdks/python/dispute-service/submit-evidence.md)
+
+#### Event Service
+- [Event Service Overview](sdks/python/event-service/README.md)
+- [Handle](sdks/python/event-service/handle.md)
+
+#### Payment Method Service
+- [Payment Method Service Overview](sdks/python/payment-method-service/README.md)
+- [Tokenize](sdks/python/payment-method-service/tokenize.md)
+
+#### Customer Service
+- [Customer Service Overview](sdks/python/customer-service/README.md)
+- [Create](sdks/python/customer-service/create.md)
 
 #### Payment Method Authentication Service
 - [Payment Method Authentication Service Overview](sdks/python/payment-method-authentication-service/README.md)
 - [Pre-authenticate](sdks/python/payment-method-authentication-service/pre-authenticate.md)
 - [Authenticate](sdks/python/payment-method-authentication-service/authenticate.md)
 - [Post-authenticate](sdks/python/payment-method-authentication-service/post-authenticate.md)
+
+#### Merchant Authentication Service
+- [Merchant Authentication Service Overview](sdks/python/merchant-authentication-service/README.md)
+- [Create Access Token](sdks/python/merchant-authentication-service/create-access-token.md)
+- [Create Session Token](sdks/python/merchant-authentication-service/create-session-token.md)
+- [Create SDK Session Token](sdks/python/merchant-authentication-service/create-sdk-session-token.md)
+
+#### Payout Service
+- [Payout Service Overview](sdks/python/payout-service/README.md)
