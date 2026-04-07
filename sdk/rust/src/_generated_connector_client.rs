@@ -150,7 +150,7 @@ macro_rules! impl_flow_method {
                 .get_or_create_client(&effective_http_config)
                 .map_err(SdkError::from)?;
             let http_response = http_client
-                .execute(http_req, None)
+                .execute(http_req, Some(effective_http_config))
                 .await
                 .map_err(SdkError::from)?;
 

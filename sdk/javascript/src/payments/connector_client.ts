@@ -96,8 +96,9 @@ export class ConnectorClient {
     const cacheKey = generateProxyCacheKey(httpConfig.proxy);
 
     // Fast path - check cache
-    if (this.dispatcherCache.has(cacheKey)) {
-      return this.dispatcherCache.get(cacheKey)!;
+    const cached = this.dispatcherCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Slow path - create new dispatcher
