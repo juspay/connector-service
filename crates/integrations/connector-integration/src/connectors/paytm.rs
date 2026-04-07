@@ -44,8 +44,14 @@ use serde::Serialize;
 use transformers as paytm;
 
 use self::{
-    request::{PaytmAuthorizeRequest, PaytmClientAuthRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},
-    response::{PaytmClientAuthResponse, PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
+    request::{
+        PaytmAuthorizeRequest, PaytmClientAuthRequest, PaytmInitiateTxnRequest,
+        PaytmTransactionStatusRequest,
+    },
+    response::{
+        PaytmClientAuthResponse, PaytmInitiateTxnResponse, PaytmProcessTxnResponse,
+        PaytmTransactionStatusResponse,
+    },
 };
 use crate::{connectors::macros, types::ResponseRouterData};
 use domain_types::errors::ConnectorError;

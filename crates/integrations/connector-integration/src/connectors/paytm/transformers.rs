@@ -12,12 +12,14 @@ use cbc::{
 use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, ClientAuthenticationToken, PSync, ServerSessionAuthenticationToken},
+    connector_flow::{
+        Authorize, ClientAuthenticationToken, PSync, ServerSessionAuthenticationToken,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
-        PaytmClientAuthenticationResponse as PaytmClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData,
+        PaytmClientAuthenticationResponse as PaytmClientAuthenticationResponseDomain, ResponseId,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
     },
     errors::{ConnectorError, IntegrationError},
@@ -42,23 +44,22 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 pub use super::request::{
-    PaytmAmount, PaytmAuthorizeRequest, PaytmClientAuthRequest, PaytmEnableMethod,
-    PaytmExtendInfo, PaytmGoodsInfo, PaytmInitiateReqBody, PaytmInitiateTxnRequest,
-    PaytmNativeProcessRequestBody, PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes,
-    PaytmProcessHeadTypes, PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo,
-    PaytmTransactionStatusReqBody, PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
+    PaytmAmount, PaytmAuthorizeRequest, PaytmClientAuthRequest, PaytmEnableMethod, PaytmExtendInfo,
+    PaytmGoodsInfo, PaytmInitiateReqBody, PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody,
+    PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes, PaytmProcessHeadTypes,
+    PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo, PaytmTransactionStatusReqBody,
+    PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
 };
 pub use super::response::{
     PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,
     PaytmCallbackErrorResponse, PaytmClientAuthResponse, PaytmDeepLinkInfo, PaytmErrorBody,
     PaytmErrorResponse, PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp,
-    PaytmNativeProcessRespBodyTypes, PaytmNativeProcessSuccessResp,
-    PaytmNativeProcessTxnResponse, PaytmProcessFailureResp, PaytmProcessHead,
-    PaytmProcessRespBodyTypes, PaytmProcessSuccessResp, PaytmProcessTxnResponse,
-    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo, PaytmSessionTokenErrorBody,
-    PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody, PaytmSuccessTransactionResponse,
-    PaytmTransactionStatusRespBody, PaytmTransactionStatusRespBodyTypes,
-    PaytmTransactionStatusResponse, PaytmTxnInfo,
+    PaytmNativeProcessRespBodyTypes, PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse,
+    PaytmProcessFailureResp, PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp,
+    PaytmProcessTxnResponse, PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo,
+    PaytmSessionTokenErrorBody, PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody,
+    PaytmSuccessTransactionResponse, PaytmTransactionStatusRespBody,
+    PaytmTransactionStatusRespBodyTypes, PaytmTransactionStatusResponse, PaytmTxnInfo,
 };
 
 // PayTM API Constants
