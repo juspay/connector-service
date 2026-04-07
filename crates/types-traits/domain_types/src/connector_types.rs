@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Peachpayments SDK initialization data — access_token for Embedded Checkout initialization
+    Peachpayments(PeachpaymentsClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3444,6 +3446,17 @@ pub struct StripeClientAuthenticationResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalpayClientAuthenticationResponse {
     /// The OAuth access token for client-side operations
+    pub access_token: Secret<String>,
+    /// The token type (e.g., "Bearer")
+    pub token_type: Option<String>,
+    /// The number of seconds until the token expires
+    pub expires_in: Option<i64>,
+}
+
+/// Peachpayments' access_token for client-side Embedded Checkout initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeachpaymentsClientAuthenticationResponse {
+    /// The OAuth access token for client-side Embedded Checkout API calls
     pub access_token: Secret<String>,
     /// The token type (e.g., "Bearer")
     pub token_type: Option<String>,

@@ -1536,6 +1536,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    PeachpaymentsClientAuthenticationResponse peachpayments = 30;
   }
 }
 
@@ -1543,6 +1544,16 @@ message ConnectorSpecificClientAuthenticationResponse {
 message GlobalpayClientAuthenticationResponse {
   SecretString access_token = 1;
   optional string token_type = 2;
+  optional int64 expires_in = 3;
+}
+
+// Peachpayments SDK initialization data — access_token for Embedded Checkout initialization
+message PeachpaymentsClientAuthenticationResponse {
+  // The OAuth access token for client-side Embedded Checkout API calls
+  SecretString access_token = 1;
+  // The token type (e.g., "Bearer")
+  optional string token_type = 2;
+  // The number of seconds until the token expires
   optional int64 expires_in = 3;
 }
 
