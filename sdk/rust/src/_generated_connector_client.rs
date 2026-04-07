@@ -2,10 +2,10 @@
 // Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
 
 use std::collections::HashMap;
-use std::error::Error;
 
+use crate::error::SdkError;
 use crate::http_client::{
-    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest, NetworkError,
+    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest,
 };
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
@@ -81,7 +81,7 @@ macro_rules! impl_flow_method {
             request: $req_type,
             metadata: &HashMap<String, String>,
             options: Option<RequestConfig>,
-        ) -> Result<$res_type, Box<dyn Error>> {
+        ) -> Result<$res_type, SdkError> {
             use connector_service_ffi::handlers::payments::{$req_handler, $res_handler};
 
             let ffi_options = self.resolve_ffi_options(&options);
@@ -90,21 +90,46 @@ macro_rules! impl_flow_method {
                 .and_then(|o| o.http.as_ref())
                 .map(NativeHttpOptions::from);
 
-            let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
-            let environment = Some(grpc_api_types::payments::Environment::try_from(
-                ffi_options.environment,
-            )?);
+            let ffi_request =
+                build_ffi_request(request.clone(), metadata, &ffi_options).map_err(|e| {
+                    SdkError::IntegrationError {
+                        error_code: "SDK_INTERNAL_ERROR".to_string(),
+                        error_message: format!("{:?}", e),
+                        suggested_action: None,
+                        doc_url: None,
+                    }
+                })?;
+            let environment = Some(
+                grpc_api_types::payments::Environment::try_from(ffi_options.environment).map_err(
+                    |e| SdkError::IntegrationError {
+                        error_code: "INVALID_ENVIRONMENT".to_string(),
+                        error_message: format!("{:?}", e),
+                        suggested_action: None,
+                        doc_url: None,
+                    },
+                )?,
+            );
 
             let connector_request = $req_handler(ffi_request, environment)
-                .map_err(|e| format!("{} req_handler failed: {:?}", stringify!($method), e))?
-                .ok_or("No connector request generated")?;
+                .map_err(SdkError::from)?
+                .ok_or_else(|| SdkError::IntegrationError {
+                    error_code: "NO_REQUEST_GENERATED".to_string(),
+                    error_message: "No connector request was generated".to_string(),
+                    suggested_action: None,
+                    doc_url: None,
+                })?;
 
             let (body, boundary) = connector_request
                 .body
                 .as_ref()
                 .map(|b| b.get_body_bytes())
                 .transpose()
-                .map_err(|e| format!("Body extraction failed: {e}"))?
+                .map_err(|e| SdkError::IntegrationError {
+                    error_code: "BODY_EXTRACTION_FAILED".to_string(),
+                    error_message: format!("{e}"),
+                    suggested_action: None,
+                    doc_url: None,
+                })?
                 .unwrap_or((None, None));
             let mut headers = connector_request.get_headers_map();
             if let Some(boundary) = boundary {
@@ -119,7 +144,11 @@ macro_rules! impl_flow_method {
                 headers,
                 body,
             };
-            let http_response = self.http_client.execute(http_req, override_opts).await?;
+            let http_response = self
+                .http_client
+                .execute(http_req, override_opts)
+                .await
+                .map_err(SdkError::from)?;
 
             let mut header_map = http::HeaderMap::new();
             for (key, value) in &http_response.headers {
@@ -135,11 +164,16 @@ macro_rules! impl_flow_method {
                 status_code: http_response.status_code,
             };
 
-            let ffi_request_for_res = build_ffi_request(request, metadata, &ffi_options)?;
-            match $res_handler(ffi_request_for_res, response, environment) {
-                Ok(resp) => Ok(resp),
-                Err(e) => Err(format!("{} failed: {:?}", stringify!($method), e).into()),
-            }
+            let ffi_request_for_res =
+                build_ffi_request(request, metadata, &ffi_options).map_err(|e| {
+                    SdkError::IntegrationError {
+                        error_code: "SDK_INTERNAL_ERROR".to_string(),
+                        error_message: format!("{:?}", e),
+                        suggested_action: None,
+                        doc_url: None,
+                    }
+                })?;
+            $res_handler(ffi_request_for_res, response, environment).map_err(SdkError::from)
         }
     };
 }
@@ -147,25 +181,22 @@ macro_rules! impl_flow_method {
 impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
+    /// Returns `Err(SdkError::NetworkError)` if the HTTP client cannot be constructed
+    /// (e.g. invalid proxy URL or CA certificate).
+    ///
     /// # Arguments
     /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
-    pub fn new(
-        config: ConnectorConfig,
-        options: Option<RequestConfig>,
-    ) -> Result<Self, NetworkError> {
+    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, SdkError> {
         let defaults = options.unwrap_or_default();
 
-        // Map the Protobuf options to native transport options
         let native_opts = match defaults.http.as_ref() {
             Some(http_proto) => NativeHttpOptions::from(http_proto),
             None => NativeHttpOptions::default(),
         };
 
-        let http_client = HttpClient::new(native_opts)?;
-
         Ok(Self {
-            http_client,
+            http_client: HttpClient::new(native_opts).map_err(SdkError::from)?,
             config,
         })
     }
@@ -448,26 +479,57 @@ pub fn build_ffi_request<T>(
     payload: T,
     metadata: &HashMap<String, String>,
     options: &FfiOptions,
-) -> Result<FfiRequestData<T>, Box<dyn Error>> {
-    let proto_config = options
-        .connector_config
-        .as_ref()
-        .ok_or("Missing connector_config in FfiOptions")?;
+) -> Result<FfiRequestData<T>, SdkError> {
+    let proto_config =
+        options
+            .connector_config
+            .as_ref()
+            .ok_or_else(|| SdkError::IntegrationError {
+                error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+                error_message: "Missing connector_config in FfiOptions".to_string(),
+                suggested_action: Some(
+                    "Provide connector_config when constructing ConnectorClient".to_string(),
+                ),
+                doc_url: None,
+            })?;
 
-    let config_variant = proto_config
-        .config
-        .as_ref()
-        .ok_or("Missing config variant in ConnectorSpecificConfig")?;
+    let config_variant =
+        proto_config
+            .config
+            .as_ref()
+            .ok_or_else(|| SdkError::IntegrationError {
+                error_code: "MISSING_CONFIG_VARIANT".to_string(),
+                error_message: "Missing config variant in ConnectorSpecificConfig".to_string(),
+                suggested_action: Some(
+                    "Set the connector-specific config (e.g. stripe.api_key)".to_string(),
+                ),
+                doc_url: None,
+            })?;
 
     let connector =
         domain_types::connector_types::ConnectorEnum::foreign_try_from(config_variant.clone())
-            .map_err(|e| format!("Connector mapping failed: {e}"))?;
+            .map_err(|e| SdkError::IntegrationError {
+                error_code: "CONNECTOR_MAPPING_FAILED".to_string(),
+                error_message: format!("Connector mapping failed: {e}"),
+                suggested_action: None,
+                doc_url: None,
+            })?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-        .map_err(|e| format!("Connector config mapping failed: {e}"))?;
+        .map_err(|e| SdkError::IntegrationError {
+            error_code: "CONNECTOR_CONFIG_MAPPING_FAILED".to_string(),
+            error_message: format!("Connector config mapping failed: {e}"),
+            suggested_action: None,
+            doc_url: None,
+        })?;
 
-    let masked_metadata = ffi_headers_to_masked_metadata(metadata)
-        .map_err(|e| format!("Metadata mapping failed: {:?}", e))?;
+    let masked_metadata =
+        ffi_headers_to_masked_metadata(metadata).map_err(|e| SdkError::IntegrationError {
+            error_code: "METADATA_MAPPING_FAILED".to_string(),
+            error_message: format!("Metadata mapping failed: {:?}", e),
+            suggested_action: None,
+            doc_url: None,
+        })?;
 
     Ok(FfiRequestData {
         payload,
