@@ -1787,7 +1787,7 @@ where
     impl<'de> de::Visitor<'de> for StringOrNumber {
         type Value = Option<String>;
 
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             formatter.write_str("a string or a number")
         }
 
@@ -1863,10 +1863,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter_webhooks
-            .convert(
-                router_data.request.amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1900,7 +1897,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // --- TryFrom: NuveiOpenOrderResponse -> PaymentCreateOrderResponse ---
 
 impl TryFrom<NuveiOpenOrderResponse> for PaymentCreateOrderResponse {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(response: NuveiOpenOrderResponse) -> Result<Self, Self::Error> {
         let order_id = response.order_id.unwrap_or_default();
@@ -1913,18 +1910,7 @@ impl TryFrom<NuveiOpenOrderResponse> for PaymentCreateOrderResponse {
 
 // --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiOpenOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -1932,27 +1918,19 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NuveiOpenOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<NuveiOpenOrderResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
         // Check if the request status is ERROR
-        if matches!(response.status, NuveiPaymentStatus::Error | NuveiPaymentStatus::Failed) {
-            let error_code = response
-                .err_code
-                .map(|c| c.to_string())
-                .unwrap_or_default();
+        if matches!(
+            response.status,
+            NuveiPaymentStatus::Error | NuveiPaymentStatus::Failed
+        ) {
+            let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
                 .clone()
