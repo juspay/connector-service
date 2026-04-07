@@ -132,7 +132,7 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
     if merged.HasField("proxy"):
         proxies = resolve_proxies(merged.proxy)
         if proxies:
-            mounts = {k: httpx.AsyncHTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
+            mounts = {k: httpx.AsyncHTTPTransport(proxy=v, verify=verify) if v else None for k, v in proxies.items()}
 
     try:
         client = httpx.AsyncClient(

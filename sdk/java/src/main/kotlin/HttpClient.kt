@@ -5,9 +5,15 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 data class HttpRequest(
     val url: String,
@@ -59,6 +65,32 @@ object HttpClient {
                 if (config?.hasTotalTimeoutMs() == true) config.totalTimeoutMs.toLong() else HttpDefault.TOTAL_TIMEOUT_MS_VALUE.toLong(), 
                 TimeUnit.MILLISECONDS
             )
+
+            // Configure custom CA cert (Client Level)
+            if (config?.hasCaCert() == true) {
+                val ca = config.caCert
+                val pemBytes: ByteArray? = when {
+                    ca.hasPem() -> ca.pem.toByteArray(Charsets.UTF_8)
+                    ca.hasDer() -> ca.der.toByteArray()
+                    else -> null
+                }
+                if (pemBytes != null) {
+                    val cf = CertificateFactory.getInstance("X.509")
+                    val cert = cf.generateCertificate(ByteArrayInputStream(pemBytes))
+                    val ks = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
+                        load(null, null)
+                        setCertificateEntry("mitmproxy", cert)
+                    }
+                    val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply {
+                        init(ks)
+                    }
+                    val sslCtx = SSLContext.getInstance("TLS").apply {
+                        init(null, tmf.trustManagers, null)
+                    }
+                    val tm = tmf.trustManagers.first() as X509TrustManager
+                    builder.sslSocketFactory(sslCtx.socketFactory, tm)
+                }
+            }
 
             // Configure Proxy (Client Level)
             if (config?.hasProxy() == true) {

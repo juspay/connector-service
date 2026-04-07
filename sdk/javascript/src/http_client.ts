@@ -92,11 +92,12 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
     }
   }
 
-  const dispatcherOptions: any = {
-    connect: {
-      timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
-      ca,
-    },
+  const connectOptions: any = {
+    timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS,
+    ca,
+  };
+
+  const commonOptions: any = {
     headersTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     bodyTimeout: config.responseTimeoutMs ?? Defaults.RESPONSE_TIMEOUT_MS,
     keepAliveTimeout: config.keepAliveTimeoutMs ?? Defaults.KEEP_ALIVE_TIMEOUT_MS,
@@ -104,9 +105,20 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
 
   const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
   try {
-    return proxyUrl
-      ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
-      : new Agent(dispatcherOptions);
+    if (proxyUrl) {
+      // For a CONNECT proxy:
+      //   - `connect`     governs TLS to the proxy itself (HTTP proxy → no TLS needed)
+      //   - `requestTls`  governs TLS for the tunneled origin connection (the CONNECT tunnel)
+      //                   This is where the custom CA must live so Node trusts the
+      //                   mitmproxy-issued leaf certificate for api.stripe.com, etc.
+      return new ProxyAgent({
+        uri: proxyUrl,
+        ...commonOptions,
+        connect: { timeout: config.connectTimeoutMs ?? Defaults.CONNECT_TIMEOUT_MS },
+        requestTls: { ca },
+      });
+    }
+    return new Agent({ ...commonOptions, connect: connectOptions });
   } catch (error: any) {
     const code = proxyUrl ? types.NetworkErrorCode.INVALID_PROXY_CONFIGURATION : types.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE;
     throw new NetworkError(`Internal HTTP setup failed: ${error.message}`, code, 500);
