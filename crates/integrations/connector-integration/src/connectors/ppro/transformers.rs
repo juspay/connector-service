@@ -53,6 +53,8 @@ pub struct PproPaymentsRequest {
     pub consumer: Option<PproConsumer>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_settings: Option<Vec<PproAuthenticationSettings>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhooks_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -237,6 +239,12 @@ where
             amount,
             consumer,
             authentication_settings,
+            webhooks_url: router_data
+                .request
+                .webhook_url
+                .as_ref()
+                .filter(|url| url.starts_with("https://"))
+                .cloned(),
         })
     }
 }
