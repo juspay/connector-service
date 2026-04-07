@@ -378,6 +378,7 @@ pub struct GiftCardDetails {
     pub cvc: Secret<String>,
 }
 
+// TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
 #[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct CardToken {
