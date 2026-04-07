@@ -1535,7 +1535,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     StripeClientAuthenticationResponse stripe = 1;
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
+    CybersourceClientAuthenticationResponse cybersource = 4;
   }
+}
+
+// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+message CybersourceClientAuthenticationResponse {
+  SecretString capture_context = 1;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()

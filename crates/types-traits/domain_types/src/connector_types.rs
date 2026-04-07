@@ -3430,12 +3430,21 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+    Cybersource(CybersourceClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Cybersource's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CybersourceClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
