@@ -26,9 +26,9 @@ use domain_types::{
     errors::{ConnectorError, IntegrationError},
     payment_address::Address,
     payment_method_data::{
-        self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        self, CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
 };
@@ -118,6 +118,13 @@ pub enum PaymentInformation<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Cards(Box<CardPaymentInformation<T>>),
+    FluidData(Box<FluidDataPaymentInformation>),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidDataPaymentInformation {
+    fluid_data: FluidData,
 }
 
 #[derive(Debug, Serialize)]
@@ -600,6 +607,58 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
                 .into()),
             },
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let fluid_data = FluidData {
+                    value: token,
+                    descriptor: None,
+                };
+
+                let email = item
+                    .router_data
+                    .request
+                    .get_email()
+                    .or(item.router_data.resource_common_data.get_billing_email())?;
+                let bill_to = build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )?;
+                let order_information = OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                let processing_information = ProcessingInformation::try_from((&item, None, None))?;
+
+                Ok(Self {
+                    processing_information,
+                    payment_information: PaymentInformation::FluidData(Box::new(
+                        FluidDataPaymentInformation { fluid_data },
+                    )),
+                    order_information,
+                    client_reference_information: ClientReferenceInformation {
+                        code: Some(
+                            item.router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        ),
+                    },
+                    consumer_authentication_information: None,
+                    merchant_defined_information: None,
+                })
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
@@ -614,7 +673,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
@@ -1764,6 +1822,49 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                 ))?,
             },
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let fluid_data = FluidData {
+                    value: token,
+                    descriptor: None,
+                };
+
+                let order_information = OrderInformationWithBill::try_from(&item)?;
+                let processing_information = ProcessingInformation::try_from((&item, None, None))?;
+
+                Ok(Self {
+                    processing_information,
+                    payment_information: PaymentInformation::FluidData(Box::new(
+                        FluidDataPaymentInformation { fluid_data },
+                    )),
+                    order_information,
+                    client_reference_information: ClientReferenceInformation {
+                        code: Some(
+                            item.router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        ),
+                    },
+                    consumer_authentication_information: None,
+                    merchant_defined_information: None,
+                })
+            }
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
@@ -1778,7 +1879,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
@@ -2455,7 +2555,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract the origin from the return_url for target_origins
         let target_origin = url::Url::parse(&return_url)
-            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("hyperswitch.io")))
+            .map(|u| {
+                format!(
+                    "{}://{}",
+                    u.scheme(),
+                    u.host_str().unwrap_or("hyperswitch.io")
+                )
+            })
             .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
 
         Ok(Self {
@@ -2508,12 +2614,13 @@ impl<'de> Deserialize<'de> for BankOfAmericaClientAuthResponse {
             }
 
             fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ok(BankOfAmericaClientAuthResponse {
-                    capture_context: v,
-                })
+                Ok(BankOfAmericaClientAuthResponse { capture_context: v })
             }
 
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
                 let mut key_id = None;
                 while let Some(key) = map.next_key::<String>()? {
                     if key == "keyId" {
@@ -2550,9 +2657,7 @@ impl TryFrom<ResponseRouterData<BankOfAmericaClientAuthResponse, Self>>
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::BankOfAmerica(
-                BankOfAmericaClientAuthenticationResponseDomain {
-                    capture_context,
-                },
+                BankOfAmericaClientAuthenticationResponseDomain { capture_context },
             ),
         ));
 
