@@ -9744,6 +9744,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Mollie(mollie_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Mollie(
+                        grpc_api_types::payments::MollieClientAuthenticationResponse {
+                            payment_id: mollie_data.payment_id,
+                            checkout_url: Some(mollie_data.checkout_url),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Mollie SDK initialization data — checkout_url for client-side redirect/components
+    Mollie(MollieClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,15 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Mollie's checkout_url for client-side redirect or Mollie Components initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MollieClientAuthenticationResponse {
+    /// The payment ID created on Mollie's side
+    pub payment_id: String,
+    /// The checkout URL for client-side redirect to complete payment
+    pub checkout_url: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
