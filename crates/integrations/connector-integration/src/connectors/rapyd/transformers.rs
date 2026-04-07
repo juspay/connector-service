@@ -689,7 +689,7 @@ impl TryFrom<ResponseRouterData<RapydCreateOrderResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<RapydCreateOrderResponse, Self>,
