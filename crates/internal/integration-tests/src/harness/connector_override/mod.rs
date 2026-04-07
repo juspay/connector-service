@@ -10,6 +10,7 @@ mod default;
 mod helcim;
 mod json_merge;
 mod loader;
+mod token_pm;
 
 /// Connector-specific behavior extension points.
 ///
@@ -77,6 +78,12 @@ impl OverrideRegistry {
 
         if connector.eq_ignore_ascii_case("helcim") {
             return Box::new(helcim::HelcimConnectorOverride::new());
+        }
+
+        if connector.eq_ignore_ascii_case("stax")
+            || connector.eq_ignore_ascii_case("braintree")
+        {
+            return Box::new(token_pm::TokenPaymentMethodOverride::new(connector));
         }
 
         Box::new(default::DefaultConnectorOverride::new(
