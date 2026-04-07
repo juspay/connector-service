@@ -305,7 +305,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   ConnectorResponseData: { "additionalPaymentMethodData": "AdditionalPaymentMethodConnectorResponse", "extendedAuthorizationResponseData": "ExtendedAuthorizationResponseData" },
   PaymentMethodUpdate: { "card": "CardDetailUpdate" },
   ClientAuthenticationTokenData: { "googlePay": "GpayClientAuthenticationResponse", "paypal": "PaypalClientAuthenticationResponse", "applePay": "ApplepayClientAuthenticationResponse", "connectorSpecific": "ConnectorSpecificClientAuthenticationResponse" },
-  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse" },
+  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse", "billwerk": "BillwerkClientAuthenticationResponse" },
   GpayClientAuthenticationResponse: { "googlePaySession": "GooglePaySessionResponse" },
   GooglePaySessionResponse: { "merchantInfo": "GpayMerchantInfo", "shippingAddressParameters": "GpayShippingAddressParameters", "allowedPaymentMethods": "GpayAllowedPaymentMethods", "transactionInfo": "GpayTransactionInfo", "secrets": "SecretInfoToInitiateSdk" },
   GpayAllowedPaymentMethods: { "parameters": "GpayAllowedMethodsParameters", "tokenizationSpecification": "GpayTokenizationSpecification" },
