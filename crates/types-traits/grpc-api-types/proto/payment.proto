@@ -1550,6 +1550,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     PaysafeClientAuthenticationResponse paysafe = 16;
     DatatransClientAuthenticationResponse datatrans = 17;
     BarclaycardClientAuthenticationResponse barclaycard = 18;
+    BamboraClientAuthenticationResponse bambora = 19;
   }
 }
 
@@ -1566,6 +1567,11 @@ message DatatransClientAuthenticationResponse {
 // Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
 message BarclaycardClientAuthenticationResponse {
   SecretString capture_context = 1;
+}
+
+// Bambora SDK initialization data — token for Custom Checkout initialization
+message BamboraClientAuthenticationResponse {
+  SecretString token = 1;
 }
 
 // Noon SDK initialization data — order_id and checkout_url for client-side checkout

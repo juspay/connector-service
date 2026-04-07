@@ -3464,6 +3464,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Datatrans(DatatransClientAuthenticationResponse),
     /// Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
     Barclaycard(BarclaycardClientAuthenticationResponse),
+    /// Bambora SDK initialization data — token for Custom Checkout initialization
+    Bambora(BamboraClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3605,6 +3607,13 @@ pub struct DatatransClientAuthenticationResponse {
 pub struct BarclaycardClientAuthenticationResponse {
     /// The capture context JWT token for client-side Flex Microform SDK
     pub capture_context: Secret<String>,
+}
+
+/// Bambora's token for client-side Custom Checkout SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraClientAuthenticationResponse {
+    /// The tokenization token returned from Bambora's tokenization API
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
