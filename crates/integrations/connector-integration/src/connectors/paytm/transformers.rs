@@ -14,8 +14,8 @@ use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
     connector_flow::{Authorize, CreateOrder, PSync, ServerSessionAuthenticationToken},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, ResponseId,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
     },
     errors::{ConnectorError, IntegrationError},
@@ -44,8 +44,7 @@ pub use super::request::{
     PaytmExtendInfo, PaytmGoodsInfo, PaytmInitiateReqBody, PaytmInitiateTxnRequest,
     PaytmNativeProcessRequestBody, PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes,
     PaytmProcessHeadTypes, PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo,
-    PaytmTransactionStatusReqBody, PaytmTransactionStatusRequest, PaytmTxnTokenType,
-    PaytmUserInfo,
+    PaytmTransactionStatusReqBody, PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
 };
 pub use super::response::{
     PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,
