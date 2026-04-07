@@ -3430,6 +3430,22 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+    Adyen(AdyenClientAuthenticationResponse),
+    /// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
+    Checkout(CheckoutClientAuthenticationResponse),
+    /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+    Cybersource(CybersourceClientAuthenticationResponse),
+    /// Nuvei SDK initialization data — session_token for client-side SDK operations
+    Nuvei(NuveiClientAuthenticationResponse),
+    /// Mollie SDK initialization data — checkout_url for client-side redirect/components
+    Mollie(MollieClientAuthenticationResponse),
+    /// Globalpay SDK initialization data — access_token for client-side SDK operations
+    Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+    Bluesnap(BluesnapClientAuthenticationResponse),
+    /// Rapyd SDK initialization data — checkout_id and redirect_url for client-side checkout
+    Rapyd(RapydClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3438,6 +3454,75 @@ pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
 }
 
+/// Adyen's session_id and session_data for browser-side Adyen Drop-in/Components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdyenClientAuthenticationResponse {
+    /// The unique identifier of the session
+    pub session_id: String,
+    /// The session data required to initialize the Adyen SDK
+    pub session_data: Secret<String>,
+}
+
+/// Checkout.com's payment_session_token and payment_session_secret for Frames/Flow SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckoutClientAuthenticationResponse {
+    /// The payment session identifier
+    pub payment_session_id: String,
+    /// The base64-encoded token for client-side SDK initialization
+    pub payment_session_token: Secret<String>,
+    /// The secret for secure client-side operations
+    pub payment_session_secret: Secret<String>,
+}
+
+/// Cybersource's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CybersourceClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
+}
+
+/// Nuvei's session_token for client-side SDK operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NuveiClientAuthenticationResponse {
+    /// The session token for Nuvei client-side SDK
+    pub session_token: Secret<String>,
+}
+
+/// Mollie's checkout_url for client-side redirect or Mollie Components initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MollieClientAuthenticationResponse {
+    /// The payment ID created on Mollie's side
+    pub payment_id: String,
+    /// The checkout URL for client-side redirect to complete payment
+    pub checkout_url: Secret<String>,
+}
+
+/// Globalpay's access_token for client-side SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlobalpayClientAuthenticationResponse {
+    /// The OAuth access token for client-side operations
+    pub access_token: Secret<String>,
+    /// The token type (e.g., "Bearer")
+    pub token_type: Option<String>,
+    /// The number of seconds until the token expires
+    pub expires_in: Option<i64>,
+}
+
+/// Bluesnap's pfToken for client-side Hosted Payment Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BluesnapClientAuthenticationResponse {
+    /// The Hosted Payment Fields token for client-side SDK initialization
+    pub pf_token: Secret<String>,
+}
+
+/// Rapyd's checkout_id and redirect_url for client-side checkout page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RapydClientAuthenticationResponse {
+    /// The checkout page identifier
+    pub checkout_id: String,
+    /// The redirect URL for the client-side checkout experience
+    pub redirect_url: String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GpayClientAuthenticationResponse {
