@@ -125,8 +125,9 @@ async function testPaypalAuthorize(credsFile: string): Promise<boolean> {
         expiresInSeconds,
       },
     },
+    address: { billingAddress: {} },
     authType: types.AuthenticationType.NO_THREE_DS,
-    address: {},
+    returnUrl: "https://example.com/return",
     orderDetails: [],
   };
 
@@ -212,8 +213,9 @@ async function testStripeIntegrationError(credsFile: string): Promise<boolean> {
       },
     },
     captureMethod: types.CaptureMethod.AUTOMATIC,
+    address: { billingAddress: {} },
     authType: types.AuthenticationType.NO_THREE_DS,
-    address: {},
+    returnUrl: "https://example.com/return",
     orderDetails: [],
   };
 
@@ -274,8 +276,9 @@ async function testStripeConnectorError(credsFile: string): Promise<boolean> {
         cardHolderName: { value: "Test User" },
       },
     },
+    address: { billingAddress: {} },
     authType: types.AuthenticationType.NO_THREE_DS,
-    address: {},
+    returnUrl: "https://example.com/return",
     orderDetails: [],
   };
 
@@ -333,8 +336,9 @@ async function testStripeAuthorize(credsFile: string): Promise<boolean> {
         cardHolderName: { value: "Test User" },
       },
     },
+    address: { billingAddress: {} },
     authType: types.AuthenticationType.NO_THREE_DS,
-    address: {},
+    returnUrl: "https://example.com/return",
     orderDetails: []
   };
 
