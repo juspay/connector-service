@@ -9,14 +9,14 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 use error_stack;
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -309,6 +309,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     fields: None,
                     address: None,
                     digital_wallet,
+                })
+            }
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+                Some(PaymentMethod {
+                    pm_type: token.peek().to_string(),
+                    fields: None,
+                    address: None,
+                    digital_wallet: None,
                 })
             }
             _ => None,
