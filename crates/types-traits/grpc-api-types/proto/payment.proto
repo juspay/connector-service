@@ -1536,7 +1536,16 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    MifinityClientAuthenticationResponse mifinity = 22;
   }
+}
+
+// Mifinity SDK initialization data — initialization_token for iframe initialization
+message MifinityClientAuthenticationResponse {
+  // The initialization token for client-side iframe rendering
+  SecretString initialization_token = 1;
+  // The trace ID for tracking the payment transaction
+  string trace_id = 2;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

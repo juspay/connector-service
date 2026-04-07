@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Mifinity SDK initialization data — initialization_token for iframe initialization
+    Mifinity(MifinityClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,15 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Mifinity's initialization_token for client-side iframe initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MifinityClientAuthenticationResponse {
+    /// The initialization token returned from Mifinity's init-iframe API
+    pub initialization_token: Secret<String>,
+    /// The trace ID for tracking the payment transaction
+    pub trace_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
