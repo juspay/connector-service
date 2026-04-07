@@ -1,5 +1,5 @@
 {
-  "authorize": {
+  "PaymentService/Authorize": {
     "no3ds_auto_capture_google_pay_encrypted": {
       "grpc_req": {
         "connector_feature_data": {
@@ -191,7 +191,7 @@
       }
     }
   },
-  "capture": {
+  "PaymentService/Capture": {
     "capture_full_amount": {
       "grpc_req": {
         "connector_feature_data": {
@@ -214,7 +214,7 @@
       }
     }
   },
-  "void": {
+  "PaymentService/Void": {
     "void_authorized_payment": {
       "grpc_req": {
         "connector_feature_data": {
@@ -246,7 +246,7 @@
       }
     }
   },
-  "refund": {
+  "PaymentService/Refund": {
     "refund_full_amount": {
       "grpc_req": {
         "connector_feature_data": {
@@ -281,7 +281,7 @@
       }
     }
   },
-  "refund_sync": {
+  "RefundService/Get": {
     "refund_sync": {
       "grpc_req": {
         "connector_feature_data": {
@@ -297,7 +297,7 @@
       }
     }
   },
-  "get": {
+  "PaymentService/Get": {
     "sync_payment": {
       "grpc_req": {
         "connector_feature_data": {

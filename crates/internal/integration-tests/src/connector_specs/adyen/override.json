@@ -1,5 +1,5 @@
 {
-  "authorize": {
+  "PaymentService/Authorize": {
     "no3ds_auto_capture_credit_card": {
       "grpc_req": {
         "payment_method": {
@@ -216,14 +216,14 @@
       }
     }
   },
-  "refund": {
+  "PaymentService/Refund": {
     "refund_with_reason": {
       "grpc_req": {
         "reason": "CUSTOMER REQUEST"
       }
     }
   },
-  "setup_recurring": {
+  "PaymentService/SetupRecurring": {
     "setup_recurring": {
       "grpc_req": {
         "return_url": "https://google.com",

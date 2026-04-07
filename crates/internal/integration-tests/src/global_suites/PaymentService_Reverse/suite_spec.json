@@ -1,0 +1,9 @@
+{
+  "suite": "PaymentService/Reverse",
+  "suite_type": "dependent",
+  "depends_on": [
+    "PaymentService/Authorize",
+    "PaymentService/Capture"
+  ],
+  "strict_dependencies": true
+}

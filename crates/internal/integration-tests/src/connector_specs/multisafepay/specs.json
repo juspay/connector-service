@@ -1,9 +1,9 @@
 {
   "connector": "multisafepay",
   "supported_suites": [
-    "authorize",
-    "refund",
-    "get",
-    "refund_sync"
+    "PaymentService/Authorize",
+    "PaymentService/Refund",
+    "PaymentService/Get",
+    "RefundService/Get"
   ]
 }

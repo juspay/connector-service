@@ -1,0 +1,8 @@
+{
+  "suite": "PaymentService/IncrementalAuthorization",
+  "suite_type": "dependent",
+  "depends_on": [
+    "PaymentService/Authorize"
+  ],
+  "strict_dependencies": true
+}
