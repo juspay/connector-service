@@ -3436,6 +3436,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Checkout(CheckoutClientAuthenticationResponse),
     /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
     Cybersource(CybersourceClientAuthenticationResponse),
+    /// Nuvei SDK initialization data — session_token for client-side SDK operations
+    Nuvei(NuveiClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3469,6 +3471,13 @@ pub struct CheckoutClientAuthenticationResponse {
 pub struct CybersourceClientAuthenticationResponse {
     /// The capture context JWT token for client-side Flex Microform SDK
     pub capture_context: Secret<String>,
+}
+
+/// Nuvei's session_token for client-side SDK operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NuveiClientAuthenticationResponse {
+    /// The session token for Nuvei client-side SDK
+    pub session_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

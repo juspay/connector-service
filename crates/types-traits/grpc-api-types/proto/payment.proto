@@ -1536,6 +1536,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     AdyenClientAuthenticationResponse adyen = 2;
     CheckoutClientAuthenticationResponse checkout = 3;
     CybersourceClientAuthenticationResponse cybersource = 4;
+    NuveiClientAuthenticationResponse nuvei = 5;
   }
 }
 
@@ -1560,6 +1561,11 @@ message StripeClientAuthenticationResponse {
 message AdyenClientAuthenticationResponse {
   string session_id = 1;
   SecretString session_data = 2;
+}
+
+// Nuvei SDK initialization data — session_token for client-side SDK operations
+message NuveiClientAuthenticationResponse {
+  SecretString session_token = 1;
 }
 
 // Google Pay Session Data

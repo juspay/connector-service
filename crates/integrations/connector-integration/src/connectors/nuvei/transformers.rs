@@ -1,7 +1,10 @@
 use common_utils::{pii, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        NuveiClientAuthenticationResponse as NuveiClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
@@ -1733,6 +1736,158 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
             },
             response: Ok(payments_response_data),
             ..router_data.clone()
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Nuvei session token for client-side SDK initialization.
+/// Uses the same /getSessionToken.do endpoint as ServerSessionAuthenticationToken
+/// but returns the response in the ClientAuthenticationToken format.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiClientAuthRequest {
+    pub merchant_id: Secret<String>,
+    pub merchant_site_id: Secret<String>,
+    pub client_request_id: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
+    pub checksum: String,
+}
+
+/// Nuvei session token response for ClientAuthenticationToken flow.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiClientAuthResponse {
+    pub session_token: Option<String>,
+    pub internal_request_id: Option<i64>,
+    pub status: NuveiPaymentStatus,
+    pub err_code: Option<i32>,
+    pub reason: Option<String>,
+    pub merchant_id: Option<String>,
+    pub merchant_site_id: Option<String>,
+    pub version: Option<String>,
+    pub client_request_id: Option<String>,
+}
+
+// ClientAuthenticationToken Request Transformation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NuveiRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NuveiClientAuthRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: NuveiRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Extract auth data
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
+
+        let time_stamp = NuveiAuthType::get_timestamp();
+        let client_request_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        // Generate checksum for getSessionToken: merchantId + merchantSiteId + clientRequestId + timeStamp + merchantSecretKey
+        let checksum = auth.generate_checksum(&[
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
+            &client_request_id,
+            &time_stamp.to_string(),
+        ]);
+
+        Ok(Self {
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
+            client_request_id,
+            time_stamp,
+            checksum,
+        })
+    }
+}
+
+// ClientAuthenticationToken Response Transformation
+impl TryFrom<ResponseRouterData<NuveiClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NuveiClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        // Check if the overall request status is ERROR
+        if matches!(response.status, NuveiPaymentStatus::Error) {
+            let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
+            let error_message = response
+                .reason
+                .clone()
+                .unwrap_or_else(|| "Unknown error".to_string());
+
+            return Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: error_code,
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            });
+        }
+
+        // Extract session token
+        let session_token = response.session_token.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("session_token missing in Nuvei response".to_string()),
+            ))
+        })?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Nuvei(
+                NuveiClientAuthenticationResponseDomain {
+                    session_token: Secret::new(session_token),
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }
