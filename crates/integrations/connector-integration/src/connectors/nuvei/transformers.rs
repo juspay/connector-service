@@ -7,10 +7,11 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    utils::get_unimplemented_payment_method_error_message,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -131,6 +132,15 @@ pub struct NuveiPaymentRequest<
     pub checksum: String,
 }
 
+/// External token for digital wallet payments (Apple Pay, Google Pay, Samsung Pay)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiExternalToken {
+    /// The external token value (encrypted wallet token)
+    pub external_token_provider: String,
+    pub mobile_token: Secret<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiPaymentOption<
@@ -140,6 +150,8 @@ pub struct NuveiPaymentOption<
     pub card: Option<NuveiCard<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alternative_payment_method: Option<NuveiAlternativePaymentMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_token: Option<NuveiExternalToken>,
 }
 
 #[derive(Debug, Serialize)]
@@ -664,6 +676,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         cvv: card_data.card_cvc.clone(),
                     }),
                     alternative_payment_method: None,
+                    external_token: None,
                 }
             }
             PaymentMethodData::BankTransfer(bank_transfer_data) => {
@@ -714,6 +727,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 routing_number: Secret::new(routing_number.to_string()),
                                 sec_code,
                             }),
+                            external_token: None,
                         }
                     }
                     other => {
@@ -726,6 +740,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }
             }
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                WalletData::ApplePay(apple_pay_data) => {
+                    let token = apple_pay_data
+                        .payment_data
+                        .get_encrypted_apple_pay_payment_data_mandatory()
+                        .change_context(IntegrationError::MissingRequiredField {
+                            field_name: "apple_pay.payment_data",
+                            context: Default::default(),
+                        })?
+                        .clone();
+                    NuveiPaymentOption {
+                        card: None,
+                        alternative_payment_method: None,
+                        external_token: Some(NuveiExternalToken {
+                            external_token_provider: "ApplePay".to_string(),
+                            mobile_token: Secret::new(token),
+                        }),
+                    }
+                }
+                WalletData::GooglePay(gpay_data) => {
+                    let token = gpay_data
+                        .tokenization_data
+                        .get_encrypted_google_pay_token()
+                        .change_context(IntegrationError::MissingRequiredField {
+                            field_name: "google_pay.tokenization_data",
+                            context: Default::default(),
+                        })?;
+                    NuveiPaymentOption {
+                        card: None,
+                        alternative_payment_method: None,
+                        external_token: Some(NuveiExternalToken {
+                            external_token_provider: "GooglePay".to_string(),
+                            mobile_token: Secret::new(token),
+                        }),
+                    }
+                }
+                WalletData::SamsungPay(samsung_pay_data) => {
+                    let token = samsung_pay_data.payment_credential.token_data.data.clone();
+                    NuveiPaymentOption {
+                        card: None,
+                        alternative_payment_method: None,
+                        external_token: Some(NuveiExternalToken {
+                            external_token_provider: "SamsungPay".to_string(),
+                            mobile_token: token,
+                        }),
+                    }
+                }
+                _ => {
+                    return Err(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("nuvei"),
+                        Default::default(),
+                    )
+                    .into())
+                }
+            },
             _ => {
                 return Err(IntegrationError::NotSupported {
                     message: "Payment method not supported".to_string(),
