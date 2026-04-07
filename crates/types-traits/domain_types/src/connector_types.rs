@@ -3444,6 +3444,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Globalpay(GlobalpayClientAuthenticationResponse),
     /// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
     Bluesnap(BluesnapClientAuthenticationResponse),
+    /// Rapyd SDK initialization data — checkout_id and redirect_url for client-side checkout
+    Rapyd(RapydClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3511,6 +3513,15 @@ pub struct GlobalpayClientAuthenticationResponse {
 pub struct BluesnapClientAuthenticationResponse {
     /// The Hosted Payment Fields token for client-side SDK initialization
     pub pf_token: Secret<String>,
+}
+
+/// Rapyd's checkout_id and redirect_url for client-side checkout page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RapydClientAuthenticationResponse {
+    /// The checkout page identifier
+    pub checkout_id: String,
+    /// The redirect URL for the client-side checkout experience
+    pub redirect_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

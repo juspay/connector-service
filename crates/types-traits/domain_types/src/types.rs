@@ -9814,6 +9814,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Rapyd(rapyd_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Rapyd(
+                        grpc_api_types::payments::RapydClientAuthenticationResponse {
+                            checkout_id: rapyd_data.checkout_id,
+                            redirect_url: rapyd_data.redirect_url,
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

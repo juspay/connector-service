@@ -1,8 +1,11 @@
 use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit, StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RapydClientAuthenticationResponse as RapydClientAuthenticationResponseDomain,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
@@ -564,6 +567,130 @@ impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id,
                 refund_status,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Rapyd checkout page/session. The checkout id and redirect_url
+/// are returned to the frontend for client-side payment completion.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct RapydClientAuthRequest {
+    pub amount: StringMajorUnit,
+    pub currency: common_enums::Currency,
+    pub country: Option<String>,
+    pub merchant_reference_id: Option<String>,
+    pub complete_checkout_url: Option<String>,
+    pub cancel_checkout_url: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RapydRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for RapydClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: RapydRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                router_data.request.amount,
+                router_data.request.currency,
+            )
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
+        let country = router_data
+            .request
+            .country
+            .map(|c| c.to_string());
+
+        Ok(Self {
+            amount,
+            currency: router_data.request.currency,
+            country,
+            merchant_reference_id: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+            complete_checkout_url: None,
+            cancel_checkout_url: None,
+        })
+    }
+}
+
+/// Rapyd checkout response containing checkout id and redirect_url for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RapydClientAuthResponse {
+    pub status: Status,
+    pub data: Option<RapydCheckoutResponseData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RapydCheckoutResponseData {
+    pub id: String,
+    pub redirect_url: String,
+}
+
+impl TryFrom<ResponseRouterData<RapydClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<RapydClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let data = response.data.ok_or(ConnectorError::ResponseDeserializationFailed {
+            context: Default::default(),
+        })?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Rapyd(
+                RapydClientAuthenticationResponseDomain {
+                    checkout_id: data.id,
+                    redirect_url: data.redirect_url,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
                 status_code: item.http_code,
             }),
             ..item.router_data

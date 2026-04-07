@@ -1540,6 +1540,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     MollieClientAuthenticationResponse mollie = 6;
     GlobalpayClientAuthenticationResponse globalpay = 7;
     BluesnapClientAuthenticationResponse bluesnap = 8;
+    RapydClientAuthenticationResponse rapyd = 9;
   }
 }
 
@@ -1559,6 +1560,12 @@ message GlobalpayClientAuthenticationResponse {
 // Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
 message BluesnapClientAuthenticationResponse {
   SecretString pf_token = 1;
+}
+
+// Rapyd SDK initialization data — checkout_id + redirect_url for client-side checkout
+message RapydClientAuthenticationResponse {
+  string checkout_id = 1;
+  string redirect_url = 2;
 }
 
 // Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
