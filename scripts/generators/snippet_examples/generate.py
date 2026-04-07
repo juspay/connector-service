@@ -1558,14 +1558,15 @@ def _kt_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, message_schema
 
 def render_consolidated_python(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one Python file containing all scenario functions (and flow functions) for a connector."""
+    """Return one Python file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — collect every service needed across scenarios AND flows
     all_service_names: list[str] = []
@@ -1792,14 +1793,15 @@ if __name__ == "__main__":
 
 def render_consolidated_javascript(
     connector_name: str,
-    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_items: "list[tuple[str, dict, str]]",
     flow_metadata: dict[str, dict],
     message_schemas: dict,
-    flow_items: "list[tuple[str, dict, str]] | None" = None,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
 ) -> str:
-    """Return one JavaScript file containing all scenario functions (and flow functions) for a connector."""
+    """Return one JavaScript/TypeScript file containing all flow functions (and scenario functions) for a connector."""
     db        = _SchemaDB(message_schemas)
     conn_enum = _conn_enum(connector_name)
+    scenarios_with_payloads = scenarios_with_payloads or []
 
     # Merged imports — scenarios + flows
     all_service_names: list[str] = []
@@ -1814,6 +1816,28 @@ def render_consolidated_javascript(
             all_service_names.append(svc)
 
     client_imports = ", ".join(_client_class(svc) for svc in all_service_names)
+
+    # Collect enum types used in payload fields (for Currency.USD, CaptureMethod.MANUAL, etc.)
+    ts_enum_types: set[str] = set()
+    for scenario, flow_payloads in scenarios_with_payloads:
+        for fk in scenario.flows:
+            payload = dict(flow_payloads.get(fk, {}))
+            if fk == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+            grpc_req = flow_metadata.get(fk, {}).get("grpc_request", "")
+            ts_enum_types.update(_collect_ts_enum_types(payload, grpc_req, db))
+    for flow_key, proto_req, _ in (flow_items or []):
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+        ts_enum_types.update(_collect_ts_enum_types(proto_req, grpc_req, db))
+    
+    # Build enum imports string
+    enum_imports = ", ".join(sorted(ts_enum_types)) if ts_enum_types else ""
+    types_imports = "ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment"
+    if enum_imports:
+        types_imports += f", {enum_imports}"
 
     # Build one function block per scenario
     func_blocks:   list[str] = []
@@ -1973,7 +1997,7 @@ def render_consolidated_javascript(
         func_blocks.append(
             f"// {scenario.title}\n"
             f"// {scenario.description}\n"
-            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {scenario_return_type} {{\n"
+            f"async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {scenario_return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
@@ -2029,17 +2053,17 @@ def render_consolidated_javascript(
             return_type = "Promise<any>"
         func_blocks.append(
             f"// Flow: {svc}.{rpc_name}{pm_part}\n"
-            f"export async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {return_type} {{\n"
+            f"async function {func_name}(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): {return_type} {{\n"
             f"{body}\n"
             f"}}"
         )
 
-    # Also export _build*Request helpers so the gRPC smoke test can call them directly.
-    builder_export_names = [
+    # Export both process* functions and _build*Request helpers
+    export_items = func_names_js + [
         "_build" + "".join(w.title() for w in fk.split("_")) + "Request"
         for fk in sorted(js_has_builder)
     ]
-    exports          = ", ".join(func_names_js + builder_export_names)
+    exports = ", ".join(export_items)
     js_builders_text = "\n\n".join(js_builder_fns)
     js_builders_section = f"\n\n{js_builders_text}\n" if js_builder_fns else ""
     funcs_text       = "\n\n".join(func_blocks)
@@ -2053,8 +2077,8 @@ def render_consolidated_javascript(
 // {connector_name.title()} — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx {connector_name}.ts {first_scenario}
 
-import {{ {client_imports} }} from 'hyperswitch-prism';
-import {{ ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment }} from 'hyperswitch-prism/types';
+import {{ {client_imports}, types }} from 'hyperswitch-prism';
+const {{ {types_imports} }} = types;
 
 const _defaultConfig: ConnectorConfig = {{
     options: {{
@@ -2071,7 +2095,10 @@ const _defaultConfig: ConnectorConfig = {{
 {funcs_text}
 
 
-export {{ {exports} }};
+// Export all process* functions for the smoke test
+export {{
+    {exports}
+}};
 
 // CLI runner
 if (require.main === module) {{
@@ -2163,10 +2190,10 @@ def render_scenario_section(
     # Link to example files with line numbers if available
     scenario_key = scenario.key
     camel_scenario = "".join(w.capitalize() for w in scenario_key.split("_"))
-    base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
-    base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
-    base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
-    base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+    base_py = f"../../examples/{connector_name}/{connector_name}.py"
+    base_js = f"../../examples/{connector_name}/{connector_name}.js"
+    base_kt = f"../../examples/{connector_name}/{connector_name}.kt"
+    base_rs = f"../../examples/{connector_name}/{connector_name}.rs"
     
     # Get line numbers from the generated files
     ln_py = line_numbers.get("python", 0) if line_numbers else 0
@@ -3448,7 +3475,7 @@ def render_llms_txt_entry(
         if any(v.get("status") == "supported" for v in fdata.values())
     ]
     scenario_keys = [s.key for s in scenarios]
-    example_paths = [f"examples/{connector_name}/python/{connector_name}.py"] if scenario_keys else []
+    example_paths = [f"examples/{connector_name}/{connector_name}.py"] if scenario_keys else []
 
     lines = [
         f"## {display_name}",

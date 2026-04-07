@@ -1592,7 +1592,7 @@ pub fn generate_payout_create_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceCreateResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
@@ -1627,7 +1627,7 @@ pub fn generate_payout_transfer_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceTransferResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1671,7 +1671,7 @@ pub fn generate_payout_get_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceGetResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1715,7 +1715,7 @@ pub fn generate_payout_void_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceVoidResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1759,7 +1759,7 @@ pub fn generate_payout_stage_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceStageResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1803,7 +1803,7 @@ pub fn generate_payout_create_link_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceCreateLinkResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1847,7 +1847,7 @@ pub fn generate_payout_create_recipient_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceCreateRecipientResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
@@ -1895,7 +1895,7 @@ pub fn generate_payout_enroll_disburse_account_response(
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountResponse,
-    error_stack::Report<crate::errors::ConnectorResponseTransformationError>,
+    error_stack::Report<crate::errors::ConnectorError>,
 > {
     match router_data_v2.response {
         Ok(response) => {
