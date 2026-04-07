@@ -1,7 +1,9 @@
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::pii::SecretSerdeValue;
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, Refund, ServerAuthenticationToken, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, Refund, ServerAuthenticationToken, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse,
