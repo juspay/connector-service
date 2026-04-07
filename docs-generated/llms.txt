@@ -107,7 +107,7 @@ connector_id: bluesnap
 doc: docs/connectors/bluesnap.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, ApplePay, ApplePayDecrypted, Card, GooglePay, GooglePayDecrypted, Sepa
-flows: authorize, capture, get, handle_event, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, create_client_authentication_token, get, handle_event, proxy_authorize, refund, refund_get, void
 examples_python: examples/bluesnap/bluesnap.py
 
 ## Braintree
