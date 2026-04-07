@@ -3,11 +3,11 @@ use domain_types::{
     connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, Refund},
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
         RevolutClientAuthenticationResponse as RevolutClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, WebhookDetailsResponse,
+        WebhookDetailsResponse,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
@@ -1045,7 +1045,7 @@ pub struct RevolutClientAuthRequest {
     pub currency: common_enums::Currency,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         RevolutRouterData<
             RouterDataV2<
