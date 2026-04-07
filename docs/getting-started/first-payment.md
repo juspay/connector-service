@@ -675,7 +675,7 @@ $capture = $stripeClient->capture([
     'connectorTransactionId' => $auth->getConnectorTransactionId(),
     'amountToCapture' => ['minorAmount' => 1000, 'currency' => 'USD']
 ]);
-echo "Captured: " . $capture->getStatus() . "\n";
+echo "Captured: " . $capture->status . "\n";
 
 // 3. Process a partial refund
 $refund = $stripeClient->refund([
@@ -719,6 +719,8 @@ const auth = await stripeClient.authorize({
 ### Network Timeout
 
 ```javascript
+const { NetworkError } = require('hyperswitch-prism');
+
 try {
   const auth = await stripeClient.authorize(request);
 } catch (error) {
@@ -788,7 +790,7 @@ await stripeClient.refund({
 
 - **One error handler** works for all connectors
 - **Unified error codes** tell you exactly what happened
-- **Request IDs** enable support to trace issues
+- **connectorTransactionId** is the key identifier for all operations
 - **Same code** works for Stripe, Adyen, PayPal, and 50+ more
 
 See [extending payment flows](./extend-to-more-flows.md) for subscriptions, 3D Secure, and more.

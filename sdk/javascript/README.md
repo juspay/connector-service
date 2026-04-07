@@ -83,11 +83,10 @@ let authorizeRequest: types.PaymentServiceAuthorizeRequest = {
       cardHolderName: { value: 'John Doe' },
     }
   },
-  customer: {
-    email: { value: 'customer@example.com' },
-    name: 'John Doe',
-  },
-  testMode: true,
+  address: { billingAddress: {} },
+  authType: types.AuthenticationType.NO_THREE_DS,
+  returnUrl: "https://example.com/return",
+  orderDetails: [],
 };
 
 const response = await client.authorize(authorizeRequest);
