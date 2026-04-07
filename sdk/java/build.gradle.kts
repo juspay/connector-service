@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.hyperswitch"
-version = "0.1.0"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -51,7 +51,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.hyperswitch"
-            artifactId = "payments-client"
+            artifactId = "hyperswitch-prism"
             from(components["java"])
         }
     }
