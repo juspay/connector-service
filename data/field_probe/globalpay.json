@@ -510,7 +510,28 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://apis.sandbox.globalpay.com/ucp/accesstoken",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-gp-version": "2021-03-22"
+          },
+          "body": "{\"app_id\":\"probe_id\",\"nonce\":\"probeNonceVal001\",\"secret\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\",\"grant_type\":\"client_credentials\"}"
+        }
       }
     },
     "create_customer": {
