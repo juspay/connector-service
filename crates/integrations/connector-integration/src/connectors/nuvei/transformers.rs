@@ -10,9 +10,9 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificConfig,
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::{Report, ResultExt};
@@ -143,6 +143,8 @@ pub struct NuveiPaymentOption<
     pub card: Option<NuveiCard<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alternative_payment_method: Option<NuveiAlternativePaymentMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_payment_option_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -667,6 +669,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         cvv: card_data.card_cvc.clone(),
                     }),
                     alternative_payment_method: None,
+                    user_payment_option_id: None,
                 }
             }
             PaymentMethodData::BankTransfer(bank_transfer_data) => {
@@ -717,6 +720,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 routing_number: Secret::new(routing_number.to_string()),
                                 sec_code,
                             }),
+                            user_payment_option_id: None,
                         }
                     }
                     other => {
@@ -727,6 +731,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                         .into())
                     }
+                }
+            }
+            // TODO: Handle additional CardToken fields (card_holder_name, card_cvc) if needed by Nuvei
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                NuveiPaymentOption {
+                    card: None,
+                    alternative_payment_method: None,
+                    user_payment_option_id: Some(token),
                 }
             }
             _ => {
