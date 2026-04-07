@@ -63,16 +63,17 @@ fn bold(t: &str) -> String {
 
 #[derive(Debug)]
 struct ScenarioResult {
-    status: &'static str,  // "passed" | "skipped" | "failed"
-    message: Option<String>,
-    reason: Option<String>,  // for skipped
+    status: &'static str, // "passed" | "skipped" | "failed"
+    #[allow(dead_code)]
+    message: Option<String>, // stored but not currently displayed
+    reason: Option<String>, // for skipped
     error: Option<String>,
 }
 
 #[derive(Debug)]
 struct ConnectorResult {
     connector: String,
-    status: &'static str,  // "passed" | "failed" | "skipped"
+    status: &'static str, // "passed" | "failed" | "skipped"
     scenarios: Vec<(String, ScenarioResult)>,
     error: Option<String>,
 }
@@ -204,7 +205,9 @@ fn parse_args() -> Args {
             "--help" | "-h" => {
                 println!("Usage: grpc-smoke-test [options]");
                 println!("  --creds-file <path>   JSON credentials file");
-                println!("  --endpoint <url>      gRPC server endpoint (default: http://localhost:8000)");
+                println!(
+                    "  --endpoint <url>      gRPC server endpoint (default: http://localhost:8000)"
+                );
                 println!("  --connector <name>    Connector name (default: stripe)");
                 std::process::exit(0);
             }
@@ -284,13 +287,31 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
 fn print_result(result: &ConnectorResult) {
     match result.status {
         "passed" => {
-            let passed_count = result.scenarios.iter().filter(|(_, s)| s.status == "passed").count();
-            let skipped_count = result.scenarios.iter().filter(|(_, s)| s.status == "skipped").count();
-            println!("{} ({} passed, {} skipped)", green("  PASSED"), passed_count, skipped_count);
+            let passed_count = result
+                .scenarios
+                .iter()
+                .filter(|(_, s)| s.status == "passed")
+                .count();
+            let skipped_count = result
+                .scenarios
+                .iter()
+                .filter(|(_, s)| s.status == "skipped")
+                .count();
+            println!(
+                "{} ({} passed, {} skipped)",
+                green("  PASSED"),
+                passed_count,
+                skipped_count
+            );
             for (key, detail) in &result.scenarios {
                 match detail.status {
                     "passed" => println!("{}    {}: ✓", green(""), key),
-                    "skipped" => println!("{}    {}: ~ skipped ({})", yellow(""), key, detail.reason.as_deref().unwrap_or("unknown")),
+                    "skipped" => println!(
+                        "{}    {}: ~ skipped ({})",
+                        yellow(""),
+                        key,
+                        detail.reason.as_deref().unwrap_or("unknown")
+                    ),
                     _ => {}
                 }
             }
@@ -303,7 +324,11 @@ fn print_result(result: &ConnectorResult) {
             println!("{}", red("  FAILED"));
             for (key, detail) in &result.scenarios {
                 if detail.status == "failed" {
-                    println!("{} — {}", red(&format!("    {}: ✗ FAILED", key)), detail.error.as_deref().unwrap_or("unknown error"));
+                    println!(
+                        "{} — {}",
+                        red(&format!("    {}: ✗ FAILED", key)),
+                        detail.error.as_deref().unwrap_or("unknown error")
+                    );
                 }
             }
             if let Some(e) = &result.error {
@@ -356,9 +381,18 @@ fn print_summary(results: &[ConnectorResult]) -> i32 {
     );
     println!();
     println!("Flow results:");
-    println!("{}", green(&format!("  {} flows PASSED", total_flows_passed)));
+    println!(
+        "{}",
+        green(&format!("  {} flows PASSED", total_flows_passed))
+    );
     if total_flows_skipped > 0 {
-        println!("{}", yellow(&format!("  {} flows SKIPPED (connector errors)", total_flows_skipped)));
+        println!(
+            "{}",
+            yellow(&format!(
+                "  {} flows SKIPPED (connector errors)",
+                total_flows_skipped
+            ))
+        );
     }
     if total_flows_failed > 0 {
         println!("{}", red(&format!("  {} flows FAILED", total_flows_failed)));
@@ -378,10 +412,7 @@ fn print_summary(results: &[ConnectorResult]) -> i32 {
     }
 
     if passed == 0 && skipped > 0 {
-        println!(
-            "{}",
-            yellow("All tests skipped (no valid flows found)")
-        );
+        println!("{}", yellow("All tests skipped (no valid flows found)"));
         return 1;
     }
 
@@ -447,36 +478,49 @@ async fn main() {
             print!("  [{key}] running … ");
             use std::io::Write;
             std::io::stdout().flush().ok();
-            
+
             match scenario_result {
                 Ok(msg) => {
                     println!("{} {}", green("PASSED"), grey(&format!("— {msg}")));
-                    result.scenarios.push((key, ScenarioResult {
-                        status: "passed",
-                        message: Some(msg),
-                        reason: None,
-                        error: None,
-                    }));
+                    result.scenarios.push((
+                        key,
+                        ScenarioResult {
+                            status: "passed",
+                            message: Some(msg),
+                            reason: None,
+                            error: None,
+                        },
+                    ));
                 }
                 Err(e) => {
                     let detail = e.to_string();
                     if is_transport_error(&detail) {
                         println!("{} {}", red("FAILED"), grey(&format!("— {detail}")));
-                        result.scenarios.push((key, ScenarioResult {
-                            status: "failed",
-                            message: None,
-                            reason: None,
-                            error: Some(detail),
-                        }));
+                        result.scenarios.push((
+                            key,
+                            ScenarioResult {
+                                status: "failed",
+                                message: None,
+                                reason: None,
+                                error: Some(detail),
+                            },
+                        ));
                         result.status = "failed";
                     } else {
-                        println!("{} {}", yellow("SKIPPED (connector error)"), grey(&format!("— {detail}")));
-                        result.scenarios.push((key, ScenarioResult {
-                            status: "skipped",
-                            message: Some(detail),
-                            reason: Some("connector_error".to_string()),
-                            error: None,
-                        }));
+                        println!(
+                            "{} {}",
+                            yellow("SKIPPED (connector error)"),
+                            grey(&format!("— {detail}"))
+                        );
+                        result.scenarios.push((
+                            key,
+                            ScenarioResult {
+                                status: "skipped",
+                                message: Some(detail),
+                                reason: Some("connector_error".to_string()),
+                                error: None,
+                            },
+                        ));
                     }
                 }
             }
@@ -484,10 +528,15 @@ async fn main() {
 
         // Update connector status based on scenarios
         if result.status != "failed" {
-            let all_passed_or_skipped = result.scenarios.iter().all(|(_, s)| {
-                s.status == "passed" || s.status == "skipped"
-            });
-            result.status = if all_passed_or_skipped { "passed" } else { "failed" };
+            let all_passed_or_skipped = result
+                .scenarios
+                .iter()
+                .all(|(_, s)| s.status == "passed" || s.status == "skipped");
+            result.status = if all_passed_or_skipped {
+                "passed"
+            } else {
+                "failed"
+            };
         }
     }
 

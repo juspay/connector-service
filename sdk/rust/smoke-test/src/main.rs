@@ -115,16 +115,17 @@ async fn run_connector_scenarios(
 
 #[derive(Debug)]
 struct ScenarioResult {
-    status: &'static str,  // "passed" | "skipped" | "failed"
-    message: Option<String>,
-    reason: Option<String>,  // for skipped
+    status: &'static str, // "passed" | "skipped" | "failed"
+    #[allow(dead_code)]
+    message: Option<String>, // stored but not currently displayed
+    reason: Option<String>, // for skipped
     error: Option<String>,
 }
 
 #[derive(Debug)]
 struct ConnectorResult {
     connector: String,
-    status: &'static str,  // "passed" | "failed" | "skipped" | "dry_run"
+    status: &'static str, // "passed" | "failed" | "skipped" | "dry_run"
     scenarios: Vec<(String, ScenarioResult)>,
     error: Option<String>,
 }
@@ -223,8 +224,16 @@ async fn test_connector_scenarios(
 fn print_result(result: &ConnectorResult) {
     match result.status {
         "passed" => {
-            let passed_count = result.scenarios.iter().filter(|(_, s)| s.status == "passed").count();
-            let skipped_count = result.scenarios.iter().filter(|(_, s)| s.status == "skipped").count();
+            let passed_count = result
+                .scenarios
+                .iter()
+                .filter(|(_, s)| s.status == "passed")
+                .count();
+            let skipped_count = result
+                .scenarios
+                .iter()
+                .filter(|(_, s)| s.status == "skipped")
+                .count();
             println!(
                 "{} ({} passed, {} skipped)",
                 green("  PASSED"),
@@ -234,7 +243,12 @@ fn print_result(result: &ConnectorResult) {
             for (key, detail) in &result.scenarios {
                 match detail.status {
                     "passed" => println!("{}    {}: ✓", green(""), key),
-                    "skipped" => println!("{}    {}: ~ skipped ({})", yellow(""), key, detail.reason.as_deref().unwrap_or("unknown")),
+                    "skipped" => println!(
+                        "{}    {}: ~ skipped ({})",
+                        yellow(""),
+                        key,
+                        detail.reason.as_deref().unwrap_or("unknown")
+                    ),
                     _ => {}
                 }
             }
@@ -423,9 +437,18 @@ fn print_summary(results: &[ConnectorResult]) -> i32 {
     );
     println!();
     println!("Flow results:");
-    println!("{}", green(&format!("  {} flows PASSED", total_flows_passed)));
+    println!(
+        "{}",
+        green(&format!("  {} flows PASSED", total_flows_passed))
+    );
     if total_flows_skipped > 0 {
-        println!("{}", yellow(&format!("  {} flows SKIPPED (connector errors)", total_flows_skipped)));
+        println!(
+            "{}",
+            yellow(&format!(
+                "  {} flows SKIPPED (connector errors)",
+                total_flows_skipped
+            ))
+        );
     }
     if total_flows_failed > 0 {
         println!("{}", red(&format!("  {} flows FAILED", total_flows_failed)));

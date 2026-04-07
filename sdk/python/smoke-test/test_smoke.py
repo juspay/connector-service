@@ -316,18 +316,33 @@ async def test_connector_scenarios(
         # Coverage validation failed
         result["status"] = "failed"
         result["error"] = scenarios_or_error
-        print(_red(f"    COVERAGE VIOLATION: {scenarios_or_error}"), flush=True)
+        print(_red(f"    COVERAGE VIILATION: {scenarios_or_error}"), flush=True)
         return result
     
     scenario_fns = scenarios_or_error
     
-    if not scenario_fns:
-        result["status"] = "skipped"
-        result["scenarios"] = {"skipped": True, "reason": "no_scenario_files"}
-        return result
-
+    # Test ALL flows from manifest - mark unimplemented as "not_implemented"
     any_failed = False
-    for scenario_key, process_fn in scenario_fns:
+    for flow_name in manifest:
+        # Find if this flow has an implementation
+        process_fn = None
+        for key, fn in scenario_fns:
+            if key == flow_name:
+                process_fn = fn
+                break
+        
+        scenario_key = flow_name
+        
+        if process_fn is None:
+            # Flow exists in manifest but not implemented for this connector
+            print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No process_{flow_name} function found"), flush=True)
+            result["scenarios"][scenario_key] = {
+                "status": "not_implemented",
+                "reason": f"Flow '{flow_name}' not implemented for connector '{connector_name}'",
+            }
+            continue
+        
+        # Flow is implemented - run it
 
         txn_id = f"smoke_{scenario_key}_{os.urandom(4).hex()}"
         print(f"    [{scenario_key}] running (txn={txn_id}) ...", flush=True)

@@ -9,16 +9,21 @@ type GrpcModule<'a> = (
 );
 
 /// Load flows.json manifest and return the list of valid flow names.
+/// Returns empty vec if file doesn't exist (allows CI builds without generated files).
 fn load_flow_manifest(repo_root: &Path) -> Vec<String> {
     let manifest_path = repo_root.join("sdk").join("generated").join("flows.json");
     println!("cargo:rerun-if-changed={}", manifest_path.display());
 
-    let text = fs::read_to_string(&manifest_path).unwrap_or_else(|_| {
-        panic!(
-            "flows.json not found at {}. Run: make generate",
-            manifest_path.display()
-        )
-    });
+    let text = match fs::read_to_string(&manifest_path) {
+        Ok(t) => t,
+        Err(_) => {
+            println!(
+                "cargo:warning=flows.json not found at {}. Skipping smoke test generation.",
+                manifest_path.display()
+            );
+            return Vec::new();
+        }
+    };
 
     // Simple JSON extraction for flows array
     let flows_start = text

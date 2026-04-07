@@ -118,7 +118,8 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
+	@rm -f $(PACKAGE_DIR)/hyperswitch-prism-*.jar
+	@cp $(SDK_ROOT)/build/libs/hyperswitch-prism-$(PACKAGE_VERSION).jar $(PACKAGE_DIR)/
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
