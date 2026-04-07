@@ -1537,7 +1537,14 @@ message ConnectorSpecificClientAuthenticationResponse {
     CheckoutClientAuthenticationResponse checkout = 3;
     CybersourceClientAuthenticationResponse cybersource = 4;
     NuveiClientAuthenticationResponse nuvei = 5;
+    MollieClientAuthenticationResponse mollie = 6;
   }
+}
+
+// Mollie SDK initialization data — payment_id + checkout_url for client-side redirect
+message MollieClientAuthenticationResponse {
+  string payment_id = 1;
+  SecretString checkout_url = 2;
 }
 
 // Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
