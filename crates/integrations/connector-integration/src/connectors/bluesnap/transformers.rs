@@ -2,11 +2,13 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::AttemptStatus;
 use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        BluesnapClientAuthenticationResponse as BluesnapClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
@@ -14,7 +16,7 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
@@ -833,6 +835,90 @@ impl TryFrom<ResponseRouterData<BluesnapRefundSyncResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id.clone(),
                 refund_status,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Bluesnap Hosted Payment Fields token request.
+/// The POST /services/2/payment-fields-tokens endpoint does not require a JSON body;
+/// it returns a pfToken in the Location header of the response.
+/// However, to use the macro framework we define an empty request body.
+#[derive(Debug, Serialize)]
+pub struct BluesnapClientAuthRequest {}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::BluesnapRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BluesnapClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        _item: super::BluesnapRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
+/// Bluesnap Hosted Payment Fields token response.
+/// The pfToken is extracted from the Location header (last path segment)
+/// or from the JSON response body if present.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapClientAuthResponse {
+    pub pf_token: Option<Secret<String>>,
+}
+
+impl TryFrom<ResponseRouterData<BluesnapClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BluesnapClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        // Extract the pfToken from the response
+        let pf_token = response.pf_token.ok_or(
+            ConnectorError::ResponseDeserializationFailed {
+                context: Default::default(),
+            },
+        )?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Bluesnap(
+                BluesnapClientAuthenticationResponseDomain { pf_token },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
                 status_code: item.http_code,
             }),
             ..item.router_data

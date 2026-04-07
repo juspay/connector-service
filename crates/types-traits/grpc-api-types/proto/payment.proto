@@ -1539,6 +1539,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     NuveiClientAuthenticationResponse nuvei = 5;
     MollieClientAuthenticationResponse mollie = 6;
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    BluesnapClientAuthenticationResponse bluesnap = 8;
   }
 }
 
@@ -1553,6 +1554,11 @@ message GlobalpayClientAuthenticationResponse {
   SecretString access_token = 1;
   optional string token_type = 2;
   optional int64 expires_in = 3;
+}
+
+// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+message BluesnapClientAuthenticationResponse {
+  SecretString pf_token = 1;
 }
 
 // Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK

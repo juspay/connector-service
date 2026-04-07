@@ -3442,6 +3442,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Mollie(MollieClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+    Bluesnap(BluesnapClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3502,6 +3504,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Bluesnap's pfToken for client-side Hosted Payment Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BluesnapClientAuthenticationResponse {
+    /// The Hosted Payment Fields token for client-side SDK initialization
+    pub pf_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
