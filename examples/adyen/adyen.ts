@@ -5,7 +5,7 @@
 // Adyen — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx adyen.ts checkout_autocapture
 
-import { PaymentClient, DisputeClient, EventClient, RecurringPaymentClient, types } from 'hyperswitch-prism';
+import { PaymentClient, MerchantAuthenticationClient, DisputeClient, EventClient, RecurringPaymentClient, types } from 'hyperswitch-prism';
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, AcceptanceType, AuthenticationType, CaptureMethod, Currency, FutureUsage, PaymentMethodType } = types;
 
 const _defaultConfig: ConnectorConfig = {
@@ -65,6 +65,16 @@ function _buildCaptureRequest(connectorTransactionId: string): PaymentServiceCap
         "amountToCapture": {  // Capture Details.
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+    };
+}
+
+function _buildCreateClientAuthenticationTokenRequest(): MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    return {
+        "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure.
+        "domainContext": {
+            "minorAmount": 1000,
+            "currency": "USD"
         }
     };
 }
@@ -385,6 +395,15 @@ async function capture(merchantTransactionId: string, config: ConnectorConfig = 
     return { status: captureResponse.status };
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+async function createClientAuthenticationToken(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse> {
+    const merchantAuthenticationClient = new MerchantAuthenticationClient(config);
+
+    const createResponse = await merchantAuthenticationClient.createClientAuthenticationToken(_buildCreateClientAuthenticationTokenRequest());
+
+    return { status: createResponse.status };
+}
+
 // Flow: DisputeService.Accept
 async function disputeAccept(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<DisputeServiceAcceptResponse> {
     const disputeClient = new DisputeClient(config);
@@ -478,7 +497,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildVoidRequest
 };
 
 // CLI runner

@@ -35,7 +35,7 @@ connector_id: adyen
 doc: docs/connectors/adyen.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment
 payment_methods: Ach, Affirm, Afterpay, Alfamart, ApplePay, ApplePayDecrypted, Bacs, BancontactCard, BcaBankTransfer, Bizum, Blik, BniVaBankTransfer, Boleto, BriVaBankTransfer, Card, CimbVaBankTransfer, DanamonVaBankTransfer, Eps, FamilyMart, GooglePay, GooglePayDecrypted, Ideal, Indomaret, Klarna, Lawson, MandiriVaBankTransfer, MiniStop, OnlineBankingCzechRepublic, OnlineBankingFinland, OnlineBankingFpx, OnlineBankingSlovakia, OnlineBankingThailand, OpenBankingUk, Oxxo, PayEasy, PermataBankTransfer, Pix, Seicomart, Sepa, SevenEleven, Trustly
-flows: authorize, capture, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, void
+flows: authorize, capture, create_client_authentication_token, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, void
 examples_python: examples/adyen/adyen.py
 
 ## Airwallex
