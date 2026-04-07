@@ -15,7 +15,8 @@ use domain_types::{
         RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AdyenClientAuthenticationResponse as AdyenClientAuthenticationResponseDomain,
+        AcceptDisputeData,
+        AdyenClientAuthenticationResponse as AdyenClientAuthenticationResponseDomain,
         CardDetailUpdate, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateReference, MandateReferenceId, PaymentFlowData,

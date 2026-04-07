@@ -69,10 +69,10 @@ use transformers::{
     self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenClientAuthRequest,
     AdyenClientAuthResponse, AdyenDefendDisputeRequest, AdyenDefendDisputeResponse,
     AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse, AdyenDisputeSubmitEvidenceRequest,
-    AdyenNotificationRequestItemWH, AdyenPSyncResponse, AdyenPaymentRequest,
-    AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest, AdyenRefundResponse,
-    AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse, AdyenSubmitEvidenceResponse,
-    AdyenVoidRequest, AdyenVoidResponse, SetupMandateRequest, SetupMandateResponse,
+    AdyenNotificationRequestItemWH, AdyenPSyncResponse, AdyenPaymentRequest, AdyenPaymentResponse,
+    AdyenRedirectRequest, AdyenRefundRequest, AdyenRefundResponse, AdyenRepeatPaymentRequest,
+    AdyenRepeatPaymentResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse,
+    SetupMandateRequest, SetupMandateResponse,
 };
 
 use super::macros;
