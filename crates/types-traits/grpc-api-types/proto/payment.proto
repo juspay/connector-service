@@ -1536,7 +1536,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    BamboraClientAuthenticationResponse bambora = 8;
   }
+}
+
+// Bambora SDK initialization data — token for Custom Checkout initialization
+message BamboraClientAuthenticationResponse {
+  SecretString token = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

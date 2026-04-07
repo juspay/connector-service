@@ -51,7 +51,8 @@ pub(crate) mod headers {
 }
 
 use transformers::{
-    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraPSyncResponse,
+    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse,
+    BamboraClientAuthRequest, BamboraClientAuthResponse, BamboraPSyncResponse,
     BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
     BamboraVoidRequest, BamboraVoidResponse,
 };
@@ -93,6 +94,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: BamboraRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: BamboraClientAuthRequest,
+            response_body: BamboraClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [amount_converter: FloatMajorUnit],
@@ -646,15 +653,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Bambora<T>
-{
-}
+// ClientAuthenticationToken flow — calls Bambora tokenization API to create a token
+// for Custom Checkout SDK initialization
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Bambora,
+    curl_request: Json(BamboraClientAuthRequest),
+    curl_response: BamboraClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            // Tokenization endpoint does not require authentication
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            // The tokenization endpoint does not use the /v1 API path prefix.
+            // Base URL is typically https://api.na.bambora.com/v1, so we strip the trailing /v1.
+            let base = self.connector_base_url_payments(req);
+            let tokenization_base = base.trim_end_matches("/v1");
+            Ok(format!(
+                "{}/scripts/tokenization/tokens",
+                tokenization_base
+            ))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
