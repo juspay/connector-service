@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
+    Paytm(PaytmClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Paytm's txn_token for client-side Paytm JS Checkout SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaytmClientAuthenticationResponse {
+    /// The transaction token returned from Paytm's initiateTransaction API
+    pub txn_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

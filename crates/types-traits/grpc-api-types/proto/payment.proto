@@ -1536,8 +1536,15 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    PaytmClientAuthenticationResponse paytm = 8;
   }
 }
+
+// Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
+message PaytmClientAuthenticationResponse {
+  SecretString txn_token = 1;
+}
+
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations
 message GlobalpayClientAuthenticationResponse {
