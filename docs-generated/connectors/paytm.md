@@ -219,7 +219,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L64) · [Rust](../../examples/paytm/rust/paytm.rs#L77)
+**Examples:** [Python](../../examples/paytm/paytm.py#L74) · [TypeScript](../../examples/paytm/paytm.ts#L68) · [Kotlin](../../examples/paytm/paytm.kt#L64) · [Rust](../../examples/paytm/paytm.rs#L77)
 
 #### PaymentService.Get
 
@@ -230,7 +230,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L91) · [Rust](../../examples/paytm/rust/paytm.rs#L96)
+**Examples:** [Python](../../examples/paytm/paytm.py#L92) · [TypeScript](../../examples/paytm/paytm.ts#L86) · [Kotlin](../../examples/paytm/paytm.kt#L91) · [Rust](../../examples/paytm/paytm.rs#L96)
 
 ### Authentication
 
@@ -243,4 +243,4 @@ Create a server-side session with the connector. Establishes session state for m
 | **Request** | `MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L76) · [Rust](../../examples/paytm/rust/paytm.rs#L89)
+**Examples:** [Python](../../examples/paytm/paytm.py#L83) · [TypeScript](../../examples/paytm/paytm.ts#L77) · [Kotlin](../../examples/paytm/paytm.kt#L76) · [Rust](../../examples/paytm/paytm.rs#L89)

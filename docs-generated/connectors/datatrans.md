@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L139) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L126) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L103) · [Rust](../../examples/datatrans/rust/datatrans.rs#L131)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L139) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L103) · [Rust](../../examples/datatrans/datatrans.rs#L131)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L158) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L145) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L119) · [Rust](../../examples/datatrans/rust/datatrans.rs#L147)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L158) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L119) · [Rust](../../examples/datatrans/datatrans.rs#L147)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L183) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L171) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L141) · [Rust](../../examples/datatrans/rust/datatrans.rs#L170)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L183) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L141) · [Rust](../../examples/datatrans/datatrans.rs#L170)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L208) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L197) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L163) · [Rust](../../examples/datatrans/rust/datatrans.rs#L193)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L208) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L163) · [Rust](../../examples/datatrans/datatrans.rs#L193)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L230) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L219) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L182) · [Rust](../../examples/datatrans/rust/datatrans.rs#L212)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L230) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L182) · [Rust](../../examples/datatrans/datatrans.rs#L212)
 
 ## API Reference
 
@@ -277,7 +277,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L252) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L240) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L200) · [Rust](../../examples/datatrans/rust/datatrans.rs#L230)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L252) · [TypeScript](../../examples/datatrans/datatrans.ts#L240) · [Kotlin](../../examples/datatrans/datatrans.kt#L200) · [Rust](../../examples/datatrans/datatrans.rs#L230)
 
 #### PaymentService.Capture
 
@@ -288,7 +288,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L261) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L249) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L212) · [Rust](../../examples/datatrans/rust/datatrans.rs#L242)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L261) · [TypeScript](../../examples/datatrans/datatrans.ts#L249) · [Kotlin](../../examples/datatrans/datatrans.kt#L212) · [Rust](../../examples/datatrans/datatrans.rs#L242)
 
 #### PaymentService.Get
 
@@ -299,7 +299,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L270) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L258) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L222) · [Rust](../../examples/datatrans/rust/datatrans.rs#L249)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L270) · [TypeScript](../../examples/datatrans/datatrans.ts#L258) · [Kotlin](../../examples/datatrans/datatrans.kt#L222) · [Rust](../../examples/datatrans/datatrans.rs#L249)
 
 #### PaymentService.ProxyAuthorize
 
@@ -310,7 +310,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L279) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L267) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L230) · [Rust](../../examples/datatrans/rust/datatrans.rs#L256)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L279) · [TypeScript](../../examples/datatrans/datatrans.ts#L267) · [Kotlin](../../examples/datatrans/datatrans.kt#L230) · [Rust](../../examples/datatrans/datatrans.rs#L256)
 
 #### PaymentService.Refund
 
@@ -321,7 +321,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L288) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L276) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L258) · [Rust](../../examples/datatrans/rust/datatrans.rs#L263)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L288) · [TypeScript](../../examples/datatrans/datatrans.ts#L276) · [Kotlin](../../examples/datatrans/datatrans.kt#L258) · [Rust](../../examples/datatrans/datatrans.rs#L263)
 
 #### PaymentService.Void
 
@@ -332,7 +332,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L306) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L294) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L280) · [Rust](../../examples/datatrans/rust/datatrans.rs#L277)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L306) · [TypeScript](../../examples/datatrans/datatrans.ts) · [Kotlin](../../examples/datatrans/datatrans.kt#L280) · [Rust](../../examples/datatrans/datatrans.rs#L277)
 
 ### Refunds
 
@@ -345,4 +345,4 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L297) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L285) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L268) · [Rust](../../examples/datatrans/rust/datatrans.rs#L270)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L297) · [TypeScript](../../examples/datatrans/datatrans.ts#L285) · [Kotlin](../../examples/datatrans/datatrans.kt#L268) · [Rust](../../examples/datatrans/datatrans.rs#L270)

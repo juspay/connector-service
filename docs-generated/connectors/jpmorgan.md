@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L196) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L180) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L140) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L186)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L196) · [JavaScript](../../examples/jpmorgan/jpmorgan.js) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L140) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L186)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L215) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L199) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L156) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L202)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L215) · [JavaScript](../../examples/jpmorgan/jpmorgan.js) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L156) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L202)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L240) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L225) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L178) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L225)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L240) · [JavaScript](../../examples/jpmorgan/jpmorgan.js) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L178) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L225)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L265) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L251) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L200) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L248)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L265) · [JavaScript](../../examples/jpmorgan/jpmorgan.js) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L200) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L248)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L287) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L273) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L219) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L267)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L287) · [JavaScript](../../examples/jpmorgan/jpmorgan.js) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L219) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L267)
 
 ## API Reference
 
@@ -290,7 +290,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L309) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L294) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L237) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L285)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L309) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L294) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L237) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L285)
 
 #### PaymentService.Capture
 
@@ -301,7 +301,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L318) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L303) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L249) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L297)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L318) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L303) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L249) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L297)
 
 #### PaymentService.Get
 
@@ -312,7 +312,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L336) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L321) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L269) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L311)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L336) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L321) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L269) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L311)
 
 #### PaymentService.ProxyAuthorize
 
@@ -323,7 +323,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L345) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L330) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L277) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L318)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L345) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L330) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L277) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L318)
 
 #### PaymentService.Refund
 
@@ -334,7 +334,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L354) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L339) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L312) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L325)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L354) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L339) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L312) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L325)
 
 #### PaymentService.Void
 
@@ -345,7 +345,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L372) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L357) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L341) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L339)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L372) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L341) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L339)
 
 ### Refunds
 
@@ -358,7 +358,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L363) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L348) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L322) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L332)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L363) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L348) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L322) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L332)
 
 ### Authentication
 
@@ -371,4 +371,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/jpmorgan/python/jpmorgan.py#L327) · [JavaScript](../../examples/jpmorgan/javascript/jpmorgan.js#L312) · [Kotlin](../../examples/jpmorgan/kotlin/jpmorgan.kt#L259) · [Rust](../../examples/jpmorgan/rust/jpmorgan.rs#L304)
+**Examples:** [Python](../../examples/jpmorgan/jpmorgan.py#L327) · [TypeScript](../../examples/jpmorgan/jpmorgan.ts#L312) · [Kotlin](../../examples/jpmorgan/jpmorgan.kt#L259) · [Rust](../../examples/jpmorgan/jpmorgan.rs#L304)
