@@ -1543,11 +1543,17 @@ message ConnectorSpecificClientAuthenticationResponse {
     RapydClientAuthenticationResponse rapyd = 9;
     Shift4ClientAuthenticationResponse shift4 = 10;
     BankOfAmericaClientAuthenticationResponse bank_of_america = 11;
+    WellsfargoClientAuthenticationResponse wellsfargo = 12;
   }
 }
 
 // BankOfAmerica SDK initialization data — capture_context JWT for Flex Microform SDK
 message BankOfAmericaClientAuthenticationResponse {
+  SecretString capture_context = 1;
+}
+
+// Wellsfargo SDK initialization data — capture_context JWT for Flex Microform SDK
+message WellsfargoClientAuthenticationResponse {
   SecretString capture_context = 1;
 }
 

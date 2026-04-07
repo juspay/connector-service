@@ -3450,6 +3450,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Shift4(Shift4ClientAuthenticationResponse),
     /// BankOfAmerica SDK initialization data — capture_context JWT for Flex Microform SDK
     BankOfAmerica(BankOfAmericaClientAuthenticationResponse),
+    /// Wellsfargo SDK initialization data — capture_context JWT for Flex Microform SDK
+    Wellsfargo(WellsfargoClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3538,6 +3540,13 @@ pub struct Shift4ClientAuthenticationResponse {
 /// BankOfAmerica's capture_context JWT for Flex Microform SDK initialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BankOfAmericaClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
+}
+
+/// Wellsfargo's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WellsfargoClientAuthenticationResponse {
     /// The capture context JWT token for client-side Flex Microform SDK
     pub capture_context: Secret<String>,
 }
