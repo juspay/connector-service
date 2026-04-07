@@ -3488,6 +3488,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexixpay(NexixpayClientAuthenticationResponse),
     /// Peachpayments SDK initialization data — access_token for Embedded Checkout initialization
     Peachpayments(PeachpaymentsClientAuthenticationResponse),
+    /// Ppro SDK initialization data — charge_id and redirect_url for client-side payment authentication
+    Ppro(PproClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3727,6 +3729,15 @@ pub struct PeachpaymentsClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Ppro's charge_id and redirect_url for client-side payment authentication
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PproClientAuthenticationResponse {
+    /// The payment charge ID for tracking the payment
+    pub charge_id: String,
+    /// The redirect URL for client-side payment authentication
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

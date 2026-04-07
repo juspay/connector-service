@@ -1562,6 +1562,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexinetsClientAuthenticationResponse nexinets = 28;
     NexixpayClientAuthenticationResponse nexixpay = 29;
     PeachpaymentsClientAuthenticationResponse peachpayments = 30;
+    PproClientAuthenticationResponse ppro = 31;
   }
 }
 
@@ -1581,6 +1582,14 @@ message PeachpaymentsClientAuthenticationResponse {
   optional string token_type = 2;
   // The number of seconds until the token expires
   optional int64 expires_in = 3;
+}
+
+// Ppro SDK initialization data — charge_id and redirect_url for client-side payment authentication
+message PproClientAuthenticationResponse {
+  // The payment charge ID for tracking the payment
+  string charge_id = 1;
+  // The redirect URL for client-side payment authentication
+  optional string redirect_url = 2;
 }
 
 // Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
