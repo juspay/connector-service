@@ -250,6 +250,11 @@ where
             | Some(PaymentMethodData::MobilePayment(..))
             | Some(PaymentMethodData::Upi(..))
             | Some(PaymentMethodData::OpenBanking(_))
+            // TODO: Implement CardToken support for Redsys InSite SDK flow.
+            // After CreateClientAuthenticationToken returns merchant_parameters/signature,
+            // the InSite JS SDK tokenizes card data and returns an operationId.
+            // CardToken should extract payment_method_token and pass it as Ds_Merchant_Identifier
+            // in the authorize request, following the Globalpay .map() pattern.
             | Some(PaymentMethodData::CardToken(..))
             | Some(PaymentMethodData::NetworkToken(..))
             | Some(PaymentMethodData::CardDetailsForNetworkTransactionId(_))
