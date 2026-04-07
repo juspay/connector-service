@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Redsys SDK initialization data — merchant_parameters, signature, and signature_version for InSite SDK
+    Redsys(RedsysClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3451,6 +3453,16 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub expires_in: Option<i64>,
 }
 
+/// Redsys's merchant_parameters, signature, and signature_version for client-side InSite SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedsysClientAuthenticationResponse {
+    /// Base64-encoded merchant parameters JSON for client-side SDK initialization
+    pub merchant_parameters: Secret<String>,
+    /// HMAC-SHA256 signature of the merchant parameters
+    pub signature: Secret<String>,
+    /// Signature version identifier (e.g., "HMAC_SHA256_V1")
+    pub signature_version: String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GpayClientAuthenticationResponse {

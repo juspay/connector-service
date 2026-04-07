@@ -1536,7 +1536,18 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    RedsysClientAuthenticationResponse redsys = 8;
   }
+}
+
+// Redsys SDK initialization data — merchant_parameters, signature, and signature_version for InSite SDK
+message RedsysClientAuthenticationResponse {
+  // Base64-encoded merchant parameters JSON for client-side SDK initialization
+  SecretString merchant_parameters = 1;
+  // HMAC-SHA256 signature of the merchant parameters
+  SecretString signature = 2;
+  // Signature version identifier (e.g., "HMAC_SHA256_V1")
+  string signature_version = 3;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

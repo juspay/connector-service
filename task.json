@@ -1,0 +1,217 @@
+{
+  "flow": "Create PRs for CreateClientAuthenticationToken - connectors missing PRs",
+  "source_branch": "feat/grace_client_flow",
+  "port": 7070,
+  "note": "Each connector gets a fresh branch from main with ONLY its changes. Subagent cherry-picks or re-applies the connector-specific changes, builds, tests with grpcurl, runs clippy and fmt, then creates a PR.",
+  "tasks": [
+    {
+      "id": 1,
+      "connector": "PayPal",
+      "status": "success",
+      "started_at": "2026-04-07T16:00:00Z",
+      "finished_at": "2026-04-07T16:15:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/976",
+      "branch": "feat/grace-paypal-clientauthenticationtoken"
+    },
+    {
+      "id": 2,
+      "connector": "Mollie",
+      "status": "success",
+      "started_at": "2026-04-07T16:15:00Z",
+      "finished_at": "2026-04-07T16:30:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/977",
+      "branch": "feat/grace-mollie-clientauthenticationtoken"
+    },
+    {
+      "id": 3,
+      "connector": "Shift4",
+      "status": "success",
+      "started_at": "2026-04-07T16:30:00Z",
+      "finished_at": "2026-04-07T16:45:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/978",
+      "branch": "feat/grace-shift4-clientauthenticationtoken"
+    },
+    {
+      "id": 4,
+      "connector": "BankOfAmerica",
+      "status": "success",
+      "started_at": "2026-04-07T17:00:00Z",
+      "finished_at": "2026-04-07T17:15:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/979",
+      "branch": "feat/grace-bankofamerica-clientauthenticationtoken"
+    },
+    {
+      "id": 5,
+      "connector": "Wellsfargo",
+      "status": "success",
+      "started_at": "2026-04-07T17:15:00Z",
+      "finished_at": "2026-04-07T17:35:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/981",
+      "branch": "feat/grace-wellsfargo-clientauthenticationtoken"
+    },
+    {
+      "id": 6,
+      "connector": "Datatrans",
+      "status": "success",
+      "started_at": "2026-04-07T17:35:00Z",
+      "finished_at": "2026-04-07T17:55:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/982",
+      "branch": "feat/grace-datatrans-clientauthenticationtoken"
+    },
+    {
+      "id": 7,
+      "connector": "Barclaycard",
+      "status": "success",
+      "started_at": "2026-04-07T17:55:00Z",
+      "finished_at": "2026-04-07T18:15:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/983",
+      "branch": "feat/grace-barclaycard-clientauthenticationtoken"
+    },
+    {
+      "id": 8,
+      "connector": "Bambora",
+      "status": "success",
+      "started_at": "2026-04-07T18:15:00Z",
+      "finished_at": "2026-04-07T18:30:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/984",
+      "branch": "feat/grace-bambora-clientauthenticationtoken"
+    },
+    {
+      "id": 9,
+      "connector": "Paytm",
+      "status": "success",
+      "started_at": "2026-04-07T18:30:00Z",
+      "finished_at": "2026-04-07T18:45:00Z",
+      "error": null,
+      "retries": 0,
+      "pr": "https://github.com/juspay/hyperswitch-prism/pull/986",
+      "branch": "feat/grace-paytm-clientauthenticationtoken"
+    },
+    {
+      "id": 10,
+      "connector": "Redsys",
+      "status": "running",
+      "started_at": "2026-04-07T18:45:00Z",
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 11,
+      "connector": "Payload",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 12,
+      "connector": "Multisafepay",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 13,
+      "connector": "Nexinets",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 14,
+      "connector": "Nexixpay",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 15,
+      "connector": "Peachpayments",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 16,
+      "connector": "Revolut",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 17,
+      "connector": "Fiserv",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 18,
+      "connector": "Noon",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    },
+    {
+      "id": 19,
+      "connector": "Mifinity",
+      "status": "queued",
+      "started_at": null,
+      "finished_at": null,
+      "error": null,
+      "retries": 0,
+      "pr": null,
+      "branch": null
+    }
+  ]
+}
