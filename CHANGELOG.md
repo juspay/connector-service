@@ -19,6 +19,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.07.1
+
+### Features
+
+- **tests:** Comprehensive connector test harness with 57 connectors, 22 suites, and credential masking ([#771](https://github.com/juspay/connector-service/pull/771)) ([`74b8f0d`](https://github.com/juspay/connector-service/commit/74b8f0de7a8e612934d77901dce81b8a0e32de7b))
+
+### Bug Fixes
+
+- Unify errorcodes, errrohandling in same doc ([#933](https://github.com/juspay/connector-service/pull/933)) ([`5d737a5`](https://github.com/juspay/connector-service/commit/5d737a51593f8e3361d7231b6518cb549364fabc))
+- Remove rust release pipeline for package ([#971](https://github.com/juspay/connector-service/pull/971)) ([`850324d`](https://github.com/juspay/connector-service/commit/850324d9b33b34f9c565f9c52459a7e9736ec774))
+
+### Miscellaneous Tasks
+
+- Add publish command ci ([#974](https://github.com/juspay/connector-service/pull/974)) ([`c2af0f4`](https://github.com/juspay/connector-service/commit/c2af0f42a4e4ffd5e353d7fd89e105e3c900f9c9))
+
+**Full Changelog:** [`2026.04.07.0...2026.04.07.1`](https://github.com/juspay/connector-service/compare/2026.04.07.0...2026.04.07.1)
+
+- - -
+
 ## 2026.04.07.0
 
 ### Refactors
