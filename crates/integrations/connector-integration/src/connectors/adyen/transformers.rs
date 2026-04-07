@@ -1493,18 +1493,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(google_pay_wallet_data)
             }
             WalletData::ApplePay(data) => {
-                let apple_pay_encrypted_data = data
-                    .payment_data
-                    .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(IntegrationError::MissingRequiredField {
-                        field_name: "Apple pay encrypted data",
-                        context: Default::default(),
-                    })?;
-                let apple_pay_data = AdyenApplePay {
-                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()),
+                let apple_pay_wallet_data = match &data.payment_data {
+                    ApplePayPaymentData::Decrypted(decrypt_data) => {
+                        let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
+                        let exp_month = decrypt_data.get_expiry_month();
+
+                        let apple_pay_decrypt_data = AdyenApplePayDecryptData {
+                            number: decrypt_data.application_primary_account_number.clone(),
+                            expiry_month: exp_month,
+                            expiry_year: expiry_year_4_digit,
+                            brand: data.payment_method.network.clone(),
+                        };
+
+                        Self::ApplePayDecrypt(Box::new(apple_pay_decrypt_data))
+                    }
+                    ApplePayPaymentData::Encrypted(encrypted_str) => {
+                        let apple_pay_data = AdyenApplePay {
+                            apple_pay_token: Secret::new(encrypted_str.clone()),
+                        };
+
+                        Self::ApplePay(Box::new(apple_pay_data))
+                    }
                 };
-                Ok(Self::ApplePay(Box::new(apple_pay_data)))
+                Ok(apple_pay_wallet_data)
             }
+
             WalletData::AliPayRedirect(_) => Ok(Self::AliPay),
             WalletData::AliPayHkRedirect(_) => Ok(Self::AliPayHk),
             WalletData::DanaRedirect { .. } => Ok(Self::Dana),
